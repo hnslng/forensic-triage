@@ -215,7 +215,7 @@ function updateCaseSessionUi(message = "") {
   $("caseStop").disabled = !activeCaseNumber || runningPaths.size > 0;
   $("activeCaseDisplay").classList.toggle("locked", !activeCaseNumber);
   $("activeCaseNumber").textContent = activeCaseNumber || "KEIN FALL";
-  $("activeCaseOperator").textContent = activeCaseNumber ? `BEARBEITER: ${activeOperator}` : "SCAN GESPERRT";
+  $("activeCaseOperator").textContent = activeCaseNumber ? `| ${activeOperator}` : "";
   if (message) {
     $("caseStartMessage").textContent = message;
   } else if (!draftCase || !draftOperator) {
@@ -308,11 +308,7 @@ function renderCaseHistory(cases) {
   </button>`).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
 
-async function refresh(loadLatest = false, manual = false) {
-  if (manual) {
-    $("deviceRefresh").disabled = true;
-    setSystemState("DATENTRÄGER WERDEN AKTUALISIERT", "busy");
-  }
+async function refresh(loadLatest = false) {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
@@ -320,11 +316,25 @@ async function refresh(loadLatest = false, manual = false) {
     renderDevices(data.devices || [], data.active_devices || []);
     renderCaseHistory(data.cases || []);
     if (loadLatest && data.latest) renderRecord(data.latest);
-    if (manual) setSystemState(activeCaseNumber ? "DATENTRÄGER AKTUELL" : "KEIN FALL AKTIV");
   } catch (_) {
     setSystemState("VERBINDUNG PRÜFEN", "error");
+  }
+}
+
+async function refreshMediaDevices() {
+  $("deviceRefresh").disabled = true;
+  setSystemState("DATENTRÄGER WERDEN NEU EINGELESEN", "busy");
+  try {
+    const response = await fetch("/api/devices/refresh", { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Datenträger konnten nicht aktualisiert werden");
+    renderDevices(data.devices || [], data.active_devices || []);
+    const restored = Number(data.reactivated?.length || 0);
+    setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "KEIN FALL AKTIV"));
+  } catch (error) {
+    setSystemState(`FEHLER: ${error.message}`, "error");
   } finally {
-    if (manual) $("deviceRefresh").disabled = false;
+    $("deviceRefresh").disabled = false;
   }
 }
 
@@ -625,7 +635,7 @@ $("autoScanToggle").addEventListener("change", () => {
   if (!activeCaseNumber) setSystemState("KEIN FALL AKTIV", "locked");
   scheduleAutoScan(100);
 });
-$("deviceRefresh").addEventListener("click", () => refresh(false, true));
+$("deviceRefresh").addEventListener("click", refreshMediaDevices);
 $("deviceList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);

@@ -76,8 +76,8 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return devices
 
 
-def discover_media_devices() -> list[dict[str, Any]]:
-    """Return USB media and visible optical drives without touching their contents."""
+def list_block_devices() -> list[dict[str, Any]]:
+    """Read the current kernel block-device inventory."""
     completed = subprocess.run(
         [
             "lsblk", "--json", "--bytes", "--output",
@@ -87,7 +87,25 @@ def discover_media_devices() -> list[dict[str, Any]]:
         text=True,
         capture_output=True,
     )
-    return parse_media_devices(json.loads(completed.stdout).get("blockdevices", []))
+    return json.loads(completed.stdout).get("blockdevices", [])
+
+
+def discover_media_devices() -> list[dict[str, Any]]:
+    """Return USB media and visible optical drives without touching their contents."""
+    return parse_media_devices(list_block_devices())
+
+
+def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
+    """Return validated USB disk nodes whose medium was software-ejected."""
+    return [
+        str(node["path"])
+        for node in nodes
+        if node.get("type") == "disk"
+        and node.get("tran") == "usb"
+        and int(node.get("size") or 0) == 0
+        and re.fullmatch(r"/dev/sd[a-z]+", str(node.get("path", "")))
+        and node.get("path") != "/dev/sda"
+    ]
 
 
 def active_device_paths() -> list[str]:
@@ -302,6 +320,9 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/devices/eject":
             self._post_eject()
             return
+        if route == "/api/devices/refresh":
+            self._post_device_refresh()
+            return
         decision_match = re.fullmatch(r"/api/media/(\d+)/decision", route)
         if decision_match:
             self._post_decision(int(decision_match.group(1)))
@@ -371,6 +392,21 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Auswerfen fehlgeschlagen: {exc}"})
         except (json.JSONDecodeError, ValueError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
+    def _post_device_refresh(self) -> None:
+        """Reactivate software-ejected USB media, then return fresh hardware state."""
+        try:
+            paths = ejected_usb_paths(list_block_devices())
+            for path in paths:
+                subprocess.run(["/usr/bin/eject", "-t", path], check=False, text=True, capture_output=True)
+            subprocess.run(["/usr/bin/udevadm", "settle"], check=True, text=True, capture_output=True)
+            self._json(HTTPStatus.OK, {
+                "devices": discover_media_devices(),
+                "reactivated": paths,
+                "active_devices": active_device_paths(),
+            })
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträger konnten nicht aktualisiert werden: {exc}"})
 
     def _read_payload(self) -> dict[str, Any]:
         length = min(int(self.headers.get("Content-Length", "0")), 8192)

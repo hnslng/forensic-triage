@@ -16,8 +16,7 @@
         </div>
         <div id="activeCaseDisplay" class="active-case-display locked">
           <small>AKTIVER FALL</small>
-          <strong id="activeCaseNumber">KEIN FALL</strong>
-          <span id="activeCaseOperator">SCAN GESPERRT</span>
+          <strong><span id="activeCaseNumber">KEIN FALL</span><em id="activeCaseOperator"></em></strong>
         </div>
       </header>
 
@@ -48,10 +47,9 @@
                 <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
               </div>
               <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
-              <p class="sighting-note">SICHTUNGSNUMMER AUTOMATISCH · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
             </section>
             <section class="case-browser">
-              <details id="casePicker" class="case-picker disclosure">
+              <details id="casePicker" class="case-picker disclosure" open>
                 <summary><span>BESTEHENDEN FALL WÄHLEN</span><small id="caseListCount">0 FALLAKTEN</small></summary>
                 <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
               </details>
@@ -59,7 +57,6 @@
                 <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ ALS ZIP</a>
                 <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
               </div>
-              <p class="case-browser-note">AUSWAHL ALLEIN ÄNDERT DEN AKTIVEN FALL NICHT.</p>
             </section>
           </div>
         </details>

@@ -1,6 +1,6 @@
 import json
 
-from forensic_triage.web import EVIDENCE_PATTERN, latest_result, parse_media_devices
+from forensic_triage.web import EVIDENCE_PATTERN, ejected_usb_paths, latest_result, parse_media_devices
 
 
 def test_evidence_number_is_strict() -> None:
@@ -45,3 +45,15 @@ def test_media_discovery_supports_multiple_usb_and_marks_optical_pending() -> No
     assert [item["scan_supported"] for item in devices] == [True, True, False, False]
     assert "/dev/sde" not in [item["path"] for item in devices]
     assert devices[-1]["media_type"] == "optical"
+
+
+def test_only_valid_zero_byte_usb_disks_are_reactivated() -> None:
+    nodes = [
+        {"path": "/dev/sdb", "type": "disk", "tran": "usb", "size": 0},
+        {"path": "/dev/sdc", "type": "disk", "tran": "usb", "size": 10},
+        {"path": "/dev/sda", "type": "disk", "tran": "usb", "size": 0},
+        {"path": "/dev/nvme0n1", "type": "disk", "tran": "usb", "size": 0},
+        {"path": "/dev/sdd", "type": "disk", "tran": "sata", "size": 0},
+    ]
+
+    assert ejected_usb_paths(nodes) == ["/dev/sdb"]
