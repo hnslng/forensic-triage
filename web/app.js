@@ -146,7 +146,11 @@ $("refreshButton").addEventListener("click", refresh);
 $("keyboardButton").addEventListener("click", () => openKeyboard(activeInput));
 $("keyboardClose").addEventListener("click", () => { $("screenKeyboard").hidden = true; });
 for (const input of document.querySelectorAll(".case-input")) {
-  input.addEventListener("focus", () => { activeInput = input; $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : "BEWEISMITTEL"; });
+  input.addEventListener("focus", () => {
+    activeInput = input;
+    $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : "BEWEISMITTEL";
+    if (window.matchMedia("(pointer: coarse)").matches) openKeyboard(input);
+  });
   input.addEventListener("input", updateScanAvailability);
 }
 buildKeyboard();
