@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "file_count": 960,
+  "directory_count": 18,
+  "total_file_bytes": 553421052,
+  "extensions": {
+    "(ohne Endung)": 3,
+    "7z": 3,
+    "csv": 10,
+    "db": 2,
+    "docx": 30,
+    "eml": 3,
+    "flac": 30,
+    "gif": 200,
+    "jpg": 300,
+    "mp3": 150,
+    "mp4": 10,
+    "pdf": 70,
+    "png": 100,
+    "pst": 2,
+    "rar": 5,
+    "sqlite": 3,
+    "unbekannt4": 1,
+    "unbekannt5": 1,
+    "unbekannt6": 1,
+    "unbekannt7": 1,
+    "xlsx": 25,
+    "zip": 10
+  },
+  "categories_by_count": {
+    "Archive": 18,
+    "Audio": 180,
+    "Bilder": 600,
+    "Datenbanken": 5,
+    "Dokumente": 100,
+    "E-Mail": 5,
+    "Tabellen": 35,
+    "Unbekannt": 7,
+    "Video": 10
+  },
+  "categories_by_bytes": {
+    "Archive": 52224,
+    "Audio": 552960,
+    "Bilder": 1843200,
+    "Datenbanken": 9216,
+    "Dokumente": 307200,
+    "E-Mail": 9216,
+    "Tabellen": 107520,
+    "Unbekannt": 21756,
+    "Video": 550517760
+  },
+  "largest_files": [
+    {
+      "path": "TRIAGE_TESTDATA/Video/video_0001.mp4",
+      "size": 209715200
+    },
+    {
+      "path": "TRIAGE_TESTDATA/Video/video_0002.mp4",
+      "size": 157286400
+    },
+    {
+      "path": "TRIAGE_TESTDATA/Video/video_0003.mp4",
+      "size": 104857600
+    },
+    {
+      "path": "TRIAGE_TESTDATA/Video/video_0004.mp4",
+      "size": 52428800
+    },
+    {
+      "path": "TRIAGE_TESTDATA/Video/video_0005.mp4",
+      "size": 26214400
+    }
+  ],
+  "keyword_hits": {
+    "Rechnung": 20,
+    "Buchhaltung": 10,
+    "FIBU": 5,
+    "DATEV": 3,
+    "Kunden": 15,
+    "Kassabuch": 4,
+    "Steuerberater": 3
+  }
+}
