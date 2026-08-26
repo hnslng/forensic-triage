@@ -59,6 +59,33 @@ def test_non_selection_requires_reason(tmp_path) -> None:
         store.record_decision(media_id, "not_selected", None, "", "HL")
 
 
+def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-TREE", "SICHT-001")
+    (result_dir / "files.csv").write_text(
+        "path,size,extension,category\n"
+        "partition_001/docs/report.pdf,10,.pdf,Dokumente\n"
+        "partition_001/docs/note.txt,2,.txt,Dokumente\n"
+        "partition_001/photo.jpg,5,.jpg,Bilder\n",
+        encoding="utf-8",
+    )
+    media_id = store.record_scan(
+        "FALL-TREE", "SICHT-001", "HL", {"path": "/dev/sdb"}, result_dir,
+    )["media"]["id"]
+
+    root = store.directory_inventory(media_id)
+    assert root["entries"] == [{
+        "kind": "directory", "name": "partition_001", "path": "partition_001",
+        "file_count": 3, "size": 17,
+    }]
+    partition = store.directory_inventory(media_id, "partition_001")
+    assert [entry["name"] for entry in partition["entries"]] == ["docs", "photo.jpg"]
+    assert partition["entries"][0]["file_count"] == 2
+    paged = store.directory_inventory(media_id, "partition_001", limit=1)
+    assert paged["has_more"] is True
+    assert store.directory_inventory(media_id, "partition_001", limit=1, offset=1)["entries"][0]["name"] == "photo.jpg"
+
+
 def test_evidence_number_is_assigned_only_when_secured(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     assert store.next_sighting_number("FALL-1") == "SICHT-001"

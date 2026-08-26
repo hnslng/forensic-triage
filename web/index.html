@@ -56,6 +56,10 @@
           </div>
           <div id="deviceList" class="device-list"></div>
           <div id="mediaCards" class="media-cards"></div>
+          <details id="offlineMediaPanel" class="offline-media disclosure" hidden>
+            <summary><span>○</span> OFFLINE-HISTORIE <b id="offlineMediaCount">0 MEDIEN</b></summary>
+            <div id="offlineMediaCards" class="media-cards offline-cards"></div>
+          </details>
         </article>
       </section>
 
@@ -124,7 +128,7 @@
 
         <div id="documentationGrid" class="documentation-grid" hidden>
           <details class="panel archive-panel disclosure">
-            <summary class="panel-title"><span>06</span> DOKUMENTATION &amp; NACHWEIS <small>WIRD AUTOMATISCH ERSTELLT</small></summary>
+            <summary class="panel-title"><span>06</span> NACHWEIS <small>AUTOMATISCH · KEINE EINGABE NÖTIG</small></summary>
             <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
             <div class="archive-proof-grid">
               <div><b>DATEILISTE</b><span>Vollständiges Inhaltsverzeichnis gespeichert</span></div>
@@ -181,13 +185,14 @@
         </div>
 
         <details id="inventoryPanel" class="panel inventory-panel disclosure" hidden>
-          <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>OPTIONAL DATEINAMEN &amp; PFADE DURCHSUCHEN</small></summary>
+          <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
           <div class="inventory-tools">
             <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
-            <button id="inventoryLoad" type="button">VERZEICHNIS LADEN</button>
+            <button id="inventoryLoad" type="button">ANZEIGEN</button>
             <span id="inventoryCount">—</span>
           </div>
-          <div class="table-wrap inventory-table">
+          <div id="inventoryTree" class="inventory-tree"></div>
+          <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
             <table>
               <thead><tr><th>PFAD</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
               <tbody id="inventoryFiles"></tbody>

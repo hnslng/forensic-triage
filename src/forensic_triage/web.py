@@ -217,6 +217,22 @@ class TriageHandler(BaseHTTPRequestHandler):
             except ValueError:
                 self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Limit."})
             return
+        tree_match = re.fullmatch(r"/api/media/(\d+)/tree", route)
+        if tree_match:
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                result = self.server.case_store.directory_inventory(
+                    int(tree_match.group(1)),
+                    str(query.get("prefix", [""])[0]),
+                    int(query.get("limit", ["300"])[0]),
+                    int(query.get("offset", ["0"])[0]),
+                )
+                self._json(HTTPStatus.OK, result)
+            except KeyError as exc:
+                self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+            except ValueError as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
         media_match = re.fullmatch(r"/api/media/(\d+)", route)
         if media_match:
             result = self.server.case_store.media_detail(int(media_match.group(1)))

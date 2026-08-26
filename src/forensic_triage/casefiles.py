@@ -430,6 +430,58 @@ class CaseStore:
                     })
         return {"total": total, "shown": len(matches), "files": matches}
 
+    def directory_inventory(self, media_id: int, prefix: str = "", limit: int = 300, offset: int = 0) -> dict[str, Any]:
+        """Return one directory level for the lazy web explorer."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT result_path FROM media WHERE id=?",
+                (media_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError("Medienakte nicht gefunden.")
+        normalized_prefix = "/".join(part for part in prefix.replace("\\", "/").split("/") if part)
+        if any(part in {".", ".."} for part in normalized_prefix.split("/") if part):
+            raise ValueError("Ungültiger Verzeichnispfad.")
+        inventory_path = self.root / str(row["result_path"]) / "files.csv"
+        folders: dict[str, dict[str, Any]] = {}
+        files: list[dict[str, Any]] = []
+        base = f"{normalized_prefix}/" if normalized_prefix else ""
+        with inventory_path.open(encoding="utf-8", newline="") as handle:
+            for item in csv.DictReader(handle):
+                path = str(item.get("path", "")).replace("\\", "/").strip("/")
+                if base and not path.startswith(base):
+                    continue
+                remainder = path[len(base):] if base else path
+                if not remainder:
+                    continue
+                first, separator, _rest = remainder.partition("/")
+                child_path = f"{base}{first}" if base else first
+                size = int(item.get("size", 0) or 0)
+                if separator:
+                    folder = folders.setdefault(child_path, {
+                        "kind": "directory", "name": first, "path": child_path,
+                        "file_count": 0, "size": 0,
+                    })
+                    folder["file_count"] += 1
+                    folder["size"] += size
+                else:
+                    files.append({
+                        "kind": "file", "name": first, "path": child_path,
+                        "size": size, "extension": item.get("extension", ""),
+                        "category": item.get("category", "Unbekannt"),
+                    })
+        entries = sorted(folders.values(), key=lambda entry: entry["name"].casefold())
+        entries.extend(sorted(files, key=lambda entry: entry["name"].casefold()))
+        capped = max(1, min(limit, 500))
+        start = max(0, offset)
+        page = entries[start:start + capped]
+        next_offset = start + len(page)
+        return {
+            "prefix": normalized_prefix, "total": len(entries), "shown": len(page),
+            "offset": start, "next_offset": next_offset,
+            "has_more": next_offset < len(entries), "entries": page,
+        }
+
     def list_cases(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

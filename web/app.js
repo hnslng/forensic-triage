@@ -11,6 +11,7 @@ let currentCaseMedia = [];
 let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
+let inventoryTreeMediaId = null;
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -78,8 +79,15 @@ function renderDecision(media) {
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   if (record.media) {
+    if (inventoryTreeMediaId !== record.media.id) {
+      inventoryTreeMediaId = null;
+      $("inventoryTree").innerHTML = "";
+      $("inventorySearchResults").hidden = true;
+      $("inventorySearch").value = "";
+      $("inventoryCount").textContent = "—";
+    }
     const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
-    $("detailConnectionState").textContent = connected ? "● DATENTRÄGER EINGESTECKT" : "○ DATENTRÄGER NICHT EINGESTECKT";
+    $("detailConnectionState").textContent = connected ? "● DATENTRÄGER ONLINE" : "○ DATENTRÄGER OFFLINE";
     $("detailConnectionState").className = connected ? "connected" : "disconnected";
     renderArchive(record.archive);
     renderDecision(record.media);
@@ -127,27 +135,32 @@ function renderMediaCards(media) {
     const alreadyRecorded = device.serial && media.some((medium) => medium.serial === device.serial);
     if (alreadyRecorded && deviceStates.get(device.path) === "ready") deviceStates.set(device.path, "complete");
   }
-  $("mediaCards").innerHTML = media.map((medium) => {
+  const renderCard = (medium, connected) => {
     const title = medium.evidence_number || "NUR GESICHTET";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
-    const connected = devices.some((device) => device.serial && device.serial === medium.serial);
-    return `<button class="media-card complete${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
+    return `<button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
       <span class="media-card-top"><b>${escapeHtml(title)}</b>${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
-      <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● EINGESTECKT" : "○ NICHT EINGESTECKT"}</span>
+      <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
     </button>`;
-  }).join("");
+  };
+  const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
+  const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
+  $("mediaCards").innerHTML = onlineMedia.map((medium) => renderCard(medium, true)).join("");
+  $("offlineMediaCards").innerHTML = offlineMedia.map((medium) => renderCard(medium, false)).join("");
+  $("offlineMediaPanel").hidden = offlineMedia.length === 0;
+  $("offlineMediaCount").textContent = `${offlineMedia.length} ${offlineMedia.length === 1 ? "MEDIUM" : "MEDIEN"}`;
   updateDashboardState();
 }
 
 function updateDashboardState() {
-  const total = currentCaseMedia.length;
-  const connected = devices.length;
-  $("deviceCount").textContent = `${total} GESICHTET · ${connected} VERBUNDEN`;
-  $("deviceEmpty").hidden = total > 0 || connected > 0;
+  const online = devices.length;
+  const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial)).length;
+  $("deviceCount").textContent = `${online} ONLINE · ${offline} OFFLINE`;
+  $("deviceEmpty").hidden = online > 0;
 }
 
 function updateOrderSummary() {
@@ -190,7 +203,7 @@ function renderDevices(items, activePaths = []) {
     const type = device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = !device.scan_supported || state === "scanning";
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● EINGESTECKT</em></span>
+      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● ONLINE</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
       <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "SCHREIBSCHUTZPRÜFUNG BEIM START")}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
@@ -365,15 +378,55 @@ async function saveDecision() {
   }
 }
 
+function treeEntriesHtml(entries) {
+  return entries.map((entry) => {
+    if (entry.kind === "directory") {
+      return `<details class="tree-folder" data-loaded="false">
+        <summary data-tree-prefix="${escapeHtml(entry.path)}"><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${Number(entry.file_count).toLocaleString("de-AT")} DATEIEN · ${formatBytes(entry.size)}</small></summary>
+        <div class="tree-children"><p class="tree-loading">ORDNER ÖFFNEN …</p></div>
+      </details>`;
+    }
+    return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(entry.category)} · ${formatBytes(entry.size)}</small></div>`;
+  }).join("") || '<p class="tree-loading">ORDNER IST LEER</p>';
+}
+
+async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offset = 0) {
+  if (!currentMediaId) return;
+  if (offset === 0) target.innerHTML = '<p class="tree-loading">VERZEICHNIS WIRD GELADEN …</p>';
+  else target.querySelector(".tree-more")?.remove();
+  try {
+    const response = await fetch(`/api/media/${currentMediaId}/tree?prefix=${encodeURIComponent(prefix)}&limit=300&offset=${offset}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Verzeichnis nicht verfügbar");
+    const entries = treeEntriesHtml(data.entries || []);
+    if (offset === 0) target.innerHTML = entries;
+    else target.insertAdjacentHTML("beforeend", entries);
+    if (data.has_more) target.insertAdjacentHTML("beforeend", `<button class="tree-more" type="button" data-tree-prefix="${escapeHtml(prefix)}" data-tree-offset="${Number(data.next_offset)}">WEITERE EINTRÄGE LADEN</button>`);
+    inventoryTreeMediaId = currentMediaId;
+    $("inventoryCount").textContent = `${data.total} EINTRÄGE AUF DIESER EBENE`;
+  } catch (error) {
+    target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
+  }
+}
+
 async function loadInventory() {
   if (!currentMediaId) return;
+  const search = $("inventorySearch").value.trim();
+  if (!search) {
+    $("inventorySearchResults").hidden = true;
+    $("inventoryTree").hidden = false;
+    await loadInventoryTree();
+    return;
+  }
   $("inventoryCount").textContent = "LÄDT …";
   try {
-    const query = encodeURIComponent($("inventorySearch").value.trim());
+    const query = encodeURIComponent(search);
     const response = await fetch(`/api/media/${currentMediaId}/files?q=${query}&limit=250`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Verzeichnis nicht verfügbar");
     $("inventoryCount").textContent = `${data.shown} / ${data.total} ANGEZEIGT`;
+    $("inventoryTree").hidden = true;
+    $("inventorySearchResults").hidden = false;
     $("inventoryFiles").innerHTML = data.files.map((file) => `
       <tr><td>${escapeHtml(file.path)}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${formatBytes(file.size)}</td></tr>
     `).join("");
@@ -418,11 +471,32 @@ $("mediaCards").addEventListener("click", (event) => {
   const card = event.target.closest("button[data-media-id]");
   if (card) openMedia(Number(card.dataset.mediaId));
 });
+$("offlineMediaCards").addEventListener("click", (event) => {
+  const card = event.target.closest("button[data-media-id]");
+  if (card) openMedia(Number(card.dataset.mediaId));
+});
 $("backDashboard").addEventListener("click", showDashboard);
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
+$("inventoryPanel").addEventListener("toggle", () => {
+  if ($("inventoryPanel").open && currentMediaId && inventoryTreeMediaId !== currentMediaId) loadInventoryTree();
+});
+$("inventoryTree").addEventListener("click", (event) => {
+  const more = event.target.closest("button.tree-more");
+  if (more) {
+    loadInventoryTree(more.dataset.treePrefix, more.parentElement, Number(more.dataset.treeOffset));
+    return;
+  }
+  const summary = event.target.closest("summary[data-tree-prefix]");
+  if (!summary) return;
+  const folder = summary.parentElement;
+  if (!folder.open && folder.dataset.loaded !== "true") {
+    folder.dataset.loaded = "true";
+    setTimeout(() => loadInventoryTree(summary.dataset.treePrefix, folder.querySelector(".tree-children")), 0);
+  }
+});
 $("caseMedia").addEventListener("click", (event) => {
   const row = event.target.closest("tr[data-media-id]");
   if (row) openMedia(Number(row.dataset.mediaId));
