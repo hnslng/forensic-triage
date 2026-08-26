@@ -12,6 +12,7 @@ let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
 let inventoryTreeMediaId = null;
+let caseHistorySignature = "";
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -93,6 +94,7 @@ function renderRecord(record) {
     renderDecision(record.media);
     loadCase(record.media.case_number);
     $("inventoryPanel").hidden = false;
+    if ($("inventoryPanel").open) loadInventoryTree();
   }
 }
 
@@ -105,6 +107,9 @@ async function loadCase(caseNumber) {
     currentCaseMedia = [];
     renderMediaCards([]);
     $("casePanel").hidden = true;
+    $("caseDownload").classList.add("disabled");
+    $("caseDownload").setAttribute("aria-disabled", "true");
+    $("caseDownload").href = "#";
     return;
   }
   try {
@@ -114,6 +119,9 @@ async function loadCase(caseNumber) {
       currentCaseMedia = [];
       renderMediaCards([]);
       $("casePanel").hidden = true;
+      $("caseDownload").classList.add("disabled");
+      $("caseDownload").setAttribute("aria-disabled", "true");
+      $("caseDownload").href = "#";
       return;
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
@@ -122,6 +130,9 @@ async function loadCase(caseNumber) {
     renderDevices(devices);
     $("casePanel").hidden = false;
     $("casePanelNumber").textContent = data.case.case_number;
+    $("caseDownload").classList.remove("disabled");
+    $("caseDownload").setAttribute("aria-disabled", "false");
+    $("caseDownload").href = `/api/cases/${encodeURIComponent(data.case.case_number)}/export.zip`;
     $("caseMedia").innerHTML = data.media.map((medium) => `
       <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
     `).join("");
@@ -270,12 +281,24 @@ function buildKeyboard() {
   });
 }
 
+function renderCaseHistory(cases) {
+  const signature = JSON.stringify((cases || []).map((item) => [item.case_number, item.media_count]));
+  if (signature === caseHistorySignature) return;
+  caseHistorySignature = signature;
+  const selected = $("caseHistory").value;
+  $("caseHistory").innerHTML = '<option value="">— Fall auswählen —</option>' + (cases || []).map((item) =>
+    `<option value="${escapeHtml(item.case_number)}">${escapeHtml(item.case_number)} · ${Number(item.media_count)} MEDIEN</option>`
+  ).join("");
+  if ([...$("caseHistory").options].some((option) => option.value === selected)) $("caseHistory").value = selected;
+}
+
 async function refresh(loadLatest = false) {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
     renderDevices(data.devices || [], data.active_devices || []);
+    renderCaseHistory(data.cases || []);
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
     $("systemState").textContent = "VERBINDUNG PRÜFEN";
@@ -451,6 +474,7 @@ async function openMedia(mediaId) {
 }
 
 function showDashboard() {
+  if ($("evidenceModal").open) $("evidenceModal").close();
   $("results").hidden = true;
   $("dashboardView").hidden = false;
   currentMediaId = null;
@@ -475,7 +499,17 @@ $("offlineMediaCards").addEventListener("click", (event) => {
   const card = event.target.closest("button[data-media-id]");
   if (card) openMedia(Number(card.dataset.mediaId));
 });
-$("backDashboard").addEventListener("click", showDashboard);
+$("homeLogo").addEventListener("click", showDashboard);
+$("openEvidenceModal").addEventListener("click", () => $("evidenceModal").showModal());
+$("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close());
+$("evidenceModal").addEventListener("click", (event) => {
+  if (event.target === $("evidenceModal")) $("evidenceModal").close();
+});
+$("caseHistory").addEventListener("change", () => {
+  if (!$("caseHistory").value) return;
+  $("caseNumber").value = $("caseHistory").value;
+  $("caseNumber").dispatchEvent(new Event("input", { bubbles: true }));
+});
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);

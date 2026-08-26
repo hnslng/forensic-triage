@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import logging
 import re
 import subprocess
 import threading
+import zipfile
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -171,6 +173,28 @@ class TriageHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _case_zip(self, case_number: str) -> None:
+        detail = self.server.case_store.case_detail(case_number)
+        if detail is None:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "Fallakte nicht gefunden."})
+            return
+        safe_case = str(detail["case"]["case_number"])
+        self.server.case_store.refresh_exports(safe_case)
+        case_dir = self.server.case_store.case_path(safe_case)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for path in sorted(item for item in case_dir.rglob("*") if item.is_file()):
+                archive.write(path, arcname=f"TRIAGE-{safe_case}/{path.relative_to(case_dir)}")
+        body = buffer.getvalue()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", f'attachment; filename="TRIAGE-{safe_case}.zip"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
         if route == "/api/status":
@@ -189,6 +213,13 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         if route == "/api/cases":
             self._json(HTTPStatus.OK, {"cases": self.server.case_store.list_cases()})
+            return
+        export_match = re.fullmatch(r"/api/cases/([^/]+)/export\.zip", route)
+        if export_match:
+            try:
+                self._case_zip(export_match.group(1))
+            except ValueError as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
         if route.startswith("/api/cases/"):
             case_number = route.removeprefix("/api/cases/")

@@ -13,7 +13,7 @@
       <header class="masthead">
         <div>
           <p class="eyebrow">FORENSIC FIELD UTILITY / LOCAL ONLY</p>
-          <h1>TRIAGE<span>//</span>BOX</h1>
+          <h1><button id="homeLogo" class="brand-home" type="button" aria-label="Zum Hauptdashboard">TRIAGE<span>//</span>BOX</button></h1>
         </div>
         <div class="system-state"><i></i><span id="systemState">SYSTEM BEREIT</span></div>
       </header>
@@ -34,6 +34,12 @@
             <label for="operator">BEARBEITER / KÜRZEL
               <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
             </label>
+          </div>
+          <div class="case-history-row">
+            <label for="caseHistory">VORHANDENEN FALL ÖFFNEN
+              <select id="caseHistory"><option value="">— Fall auswählen —</option></select>
+            </label>
+            <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ FALLDATEN ALS ZIP</a>
           </div>
           <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
           <div class="action-row">
@@ -87,16 +93,12 @@
       </section>
 
       <section id="results" class="results" hidden>
-        <nav class="detail-nav" aria-label="Detailnavigation">
-          <button id="backDashboard" type="button">← ZURÜCK ZUM HAUPTDASHBOARD</button>
-          <span id="detailConnectionState">STATUS DES DATENTRÄGERS</span>
-        </nav>
         <div class="result-head">
           <div>
             <p class="eyebrow">LETZTE AUSWERTUNG</p>
-            <h2 id="resultEvidence">BM-FAST-001</h2>
+            <div class="result-title-line"><h2 id="resultEvidence">BM-FAST-001</h2><span id="detailConnectionState">STATUS DES DATENTRÄGERS</span></div>
           </div>
-          <div class="result-stamp">SCAN ABGESCHLOSSEN <b id="resultDuration">0,732 s</b></div>
+          <div class="result-actions"><button id="openEvidenceModal" type="button">NACHWEIS ANZEIGEN</button><div class="result-stamp">SCAN ABGESCHLOSSEN <b id="resultDuration">0,732 s</b></div></div>
         </div>
 
         <div class="metrics">
@@ -126,28 +128,22 @@
           </article>
         </div>
 
-        <div id="documentationGrid" class="documentation-grid" hidden>
-          <details class="panel archive-panel disclosure">
-            <summary class="panel-title"><span>06</span> NACHWEIS <small>AUTOMATISCH · KEINE EINGABE NÖTIG</small></summary>
-            <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
-            <div class="archive-proof-grid">
-              <div><b>DATEILISTE</b><span>Vollständiges Inhaltsverzeichnis gespeichert</span></div>
-              <div><b>FALLPROTOKOLL</b><span>Medium und Entscheidung nachvollziehbar</span></div>
-              <div><b>EREIGNISSE</b><span>Scan und Bearbeitung mit Zeitstempel</span></div>
-              <div><b>MANIPULATIONSKONTROLLE</b><span><strong id="archiveManifestCount">0</strong> Dateien mit SHA-256 erfasst</span></div>
+        <div id="documentationGrid" class="detail-workspace" hidden>
+          <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
+            <summary class="panel-title"><span>06</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
+            <div class="inventory-tools">
+              <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
+              <button id="inventoryLoad" type="button">ANZEIGEN</button>
+              <span id="inventoryCount">—</span>
             </div>
-            <details class="technical-paths">
-              <summary>TECHNISCHE ABLAGEPFADE ANZEIGEN</summary>
-              <dl class="archive-list">
-                <div><dt>FALLORDNER</dt><dd id="archiveCasePath">—</dd></div>
-                <div><dt>DATEILISTE</dt><dd id="archiveInventory">files.csv</dd></div>
-                <div><dt>FALLPROTOKOLL</dt><dd id="archiveRegister">media-register.csv</dd></div>
-                <div><dt>BERICHT</dt><dd id="archiveReport">case-report.txt</dd></div>
-                <div><dt>EREIGNISSE</dt><dd id="archiveAudit">audit.log</dd></div>
-              </dl>
-            </details>
+            <div id="inventoryTree" class="inventory-tree"></div>
+            <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
+              <table>
+                <thead><tr><th>PFAD</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
+                <tbody id="inventoryFiles"></tbody>
+              </table>
+            </div>
           </details>
-
           <article class="panel decision-panel">
             <div class="panel-title"><span>07</span> WAS PASSIERT MIT DIESEM DATENTRÄGER?</div>
             <p class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
@@ -184,28 +180,32 @@
           </article>
         </div>
 
-        <details id="inventoryPanel" class="panel inventory-panel disclosure" hidden>
-          <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
-          <div class="inventory-tools">
-            <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
-            <button id="inventoryLoad" type="button">ANZEIGEN</button>
-            <span id="inventoryCount">—</span>
-          </div>
-          <div id="inventoryTree" class="inventory-tree"></div>
-          <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
-            <table>
-              <thead><tr><th>PFAD</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
-              <tbody id="inventoryFiles"></tbody>
-            </table>
-          </div>
-        </details>
-
         <footer>
           <span>ERGEBNIS: NUR GROBSICHTUNG — KEINE FACHLICHE BEWERTUNG</span>
           <button id="refreshButton" type="button">↻ STATUS AKTUALISIEREN</button>
         </footer>
       </section>
     </main>
+    <dialog id="evidenceModal" class="evidence-modal">
+      <div class="modal-head"><div><span>◆</span> DOKUMENTATION &amp; NACHWEIS</div><button id="closeEvidenceModal" type="button">SCHLIESSEN ×</button></div>
+      <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
+      <div class="archive-proof-grid">
+        <div><b>DATEILISTE</b><span>Vollständiges Inhaltsverzeichnis gespeichert</span></div>
+        <div><b>FALLPROTOKOLL</b><span>Medium und Entscheidung nachvollziehbar</span></div>
+        <div><b>EREIGNISSE</b><span>Scan und Bearbeitung mit Zeitstempel</span></div>
+        <div><b>MANIPULATIONSKONTROLLE</b><span><strong id="archiveManifestCount">0</strong> Dateien mit SHA-256 erfasst</span></div>
+      </div>
+      <details class="technical-paths">
+        <summary>TECHNISCHE ABLAGEPFADE ANZEIGEN</summary>
+        <dl class="archive-list">
+          <div><dt>FALLORDNER</dt><dd id="archiveCasePath">—</dd></div>
+          <div><dt>DATEILISTE</dt><dd id="archiveInventory">files.csv</dd></div>
+          <div><dt>FALLPROTOKOLL</dt><dd id="archiveRegister">media-register.csv</dd></div>
+          <div><dt>BERICHT</dt><dd id="archiveReport">case-report.txt</dd></div>
+          <div><dt>EREIGNISSE</dt><dd id="archiveAudit">audit.log</dd></div>
+        </dl>
+      </details>
+    </dialog>
     <script src="/app.js" defer></script>
   </body>
 </html>
