@@ -35,7 +35,10 @@
           </div>
           <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
           <div class="action-row">
-            <button id="scanAllButton" type="button"><span>▶</span> ALLE MEDIEN SCANNEN</button>
+            <label class="auto-toggle" for="autoScanToggle">
+              <input id="autoScanToggle" type="checkbox" checked />
+              <span>AUTO-SCAN EIN</span><small>STARTET, SOBALD AUFTRAG + MEDIUM BEREIT SIND</small>
+            </label>
             <button id="keyboardButton" class="keyboard-button" type="button">⌨ BILDSCHIRMTASTATUR</button>
           </div>
           <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
@@ -80,14 +83,15 @@
           <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
         </div>
 
+        <article class="panel keywords-panel keyword-strip">
+          <div class="panel-title"><span>03</span> STICHWORTTREFFER</div>
+          <div id="keywords" class="keyword-list"></div>
+        </article>
+
         <div class="analysis-grid">
           <article class="panel categories-panel">
-            <div class="panel-title"><span>03</span> DATEITYPEN</div>
+            <div class="panel-title"><span>04</span> DATEITYPEN</div>
             <div id="categories" class="bar-list"></div>
-          </article>
-          <article class="panel keywords-panel">
-            <div class="panel-title"><span>04</span> STICHWÖRTER</div>
-            <div id="keywords" class="keyword-list"></div>
           </article>
           <article class="panel files-panel">
             <div class="panel-title"><span>05</span> GRÖSSTE DATEIEN</div>
@@ -116,31 +120,35 @@
 
           <article class="panel decision-panel">
             <div class="panel-title"><span>07</span> ENTSCHEIDUNG DOKUMENTIEREN</div>
-            <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
-            <div class="decision-buttons">
-              <button type="button" data-decision="secure">SICHERN</button>
-              <button type="button" data-decision="not_selected">NICHT AUSGEWÄHLT</button>
-              <button type="button" data-decision="review">WEITERE PRÜFUNG</button>
+            <div class="decision-headline">
+              <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
+              <div class="decision-buttons">
+                <button type="button" data-decision="secure">SICHERN</button>
+                <button type="button" data-decision="not_selected">NICHT AUSGEWÄHLT</button>
+                <button type="button" data-decision="review">WEITERE PRÜFUNG</button>
+              </div>
             </div>
-            <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
-              <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
-            </label>
-            <label for="decisionReason">BEGRÜNDUNG
-              <select id="decisionReason">
-                <option value="">— auswählen —</option>
-                <option value="no_indicators">Keine fallbezogenen Indikatoren</option>
-                <option value="known_media">Bekanntes Installations-/Systemmedium</option>
-                <option value="empty">Leer / keine zugänglichen Dateien</option>
-                <option value="duplicate">Duplikat eines anderen Mediums</option>
-                <option value="out_of_scope">Außerhalb des Untersuchungsumfangs</option>
-                <option value="technical">Technische Grobsichtung nicht möglich</option>
-                <option value="other">Sonstige Begründung</option>
-              </select>
-            </label>
-            <label for="decisionNote">ERGÄNZENDE NOTIZ
-              <textarea id="decisionNote" rows="2" maxlength="1000" placeholder="Kurze, sachliche Begründung …"></textarea>
-            </label>
-            <button id="saveDecision" class="save-decision" type="button" disabled>ENTSCHEIDUNG PROTOKOLLIEREN</button>
+            <div class="decision-fields">
+              <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
+                <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
+              </label>
+              <label for="decisionReason">BEGRÜNDUNG
+                <select id="decisionReason">
+                  <option value="">— auswählen —</option>
+                  <option value="no_indicators">Keine fallbezogenen Indikatoren</option>
+                  <option value="known_media">Bekanntes Installations-/Systemmedium</option>
+                  <option value="empty">Leer / keine zugänglichen Dateien</option>
+                  <option value="duplicate">Duplikat eines anderen Mediums</option>
+                  <option value="out_of_scope">Außerhalb des Untersuchungsumfangs</option>
+                  <option value="technical">Technische Grobsichtung nicht möglich</option>
+                  <option value="other">Sonstige Begründung</option>
+                </select>
+              </label>
+              <label for="decisionNote">ERGÄNZENDE NOTIZ
+                <textarea id="decisionNote" rows="2" maxlength="1000" placeholder="Kurze, sachliche Begründung …"></textarea>
+              </label>
+              <button id="saveDecision" class="save-decision" type="button" disabled>ENTSCHEIDUNG PROTOKOLLIEREN</button>
+            </div>
             <p id="decisionMessage" class="decision-message"></p>
           </article>
         </div>

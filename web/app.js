@@ -17,6 +17,7 @@ const deviceStates = new Map();
 const runningPaths = new Set();
 let batchTotal = 0;
 let batchDone = 0;
+let autoStartTimer = null;
 let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
@@ -143,13 +144,12 @@ function renderDevices(items, activePaths = []) {
     </article>`;
   }).join("");
   updateScanAvailability();
+  scheduleAutoScan(400);
 }
 
 function updateScanAvailability() {
   const hasCase = $("caseNumber").value.trim().length > 0;
   const hasOperator = $("operator").value.trim().length > 0;
-  const available = devices.some((device) => device.scan_supported && deviceStates.get(device.path) !== "scanning");
-  $("scanAllButton").disabled = !available || !hasCase || !hasOperator;
   for (const button of document.querySelectorAll("[data-scan-device]")) {
     const device = devices.find((item) => item.path === button.dataset.scanDevice);
     button.disabled = !device?.scan_supported || deviceStates.get(device.path) === "scanning" || !hasCase || !hasOperator;
@@ -187,7 +187,7 @@ function buildKeyboard() {
     else if (key === "NEXT") {
       if (activeInput === $("caseNumber")) openKeyboard($("operator"));
       else if (activeInput === $("operator") && !$("decisionEvidenceWrap").hidden) openKeyboard($("decisionEvidence"));
-      else { $("screenKeyboard").hidden = true; $("scanAllButton").focus(); }
+      else { $("screenKeyboard").hidden = true; document.querySelector("[data-scan-device]")?.focus(); }
       updateScanAvailability();
       return;
     } else activeInput.value += key === "SPACE" ? " " : key;
@@ -253,13 +253,25 @@ async function runScan(devicePath, standalone = true) {
   }
 }
 
-async function runAllScans() {
-  const paths = devices.filter((device) => device.scan_supported && deviceStates.get(device.path) !== "scanning").map((device) => device.path);
+async function runReadyScans() {
+  const paths = devices.filter((device) => device.scan_supported && deviceStates.get(device.path) === "ready").map((device) => device.path);
   if (!paths.length) return;
   batchTotal = paths.length;
   batchDone = 0;
   await Promise.allSettled(paths.map((path) => runScan(path, false)));
   await refresh(false);
+}
+
+function maybeAutoScan() {
+  if (!$("autoScanToggle").checked) return;
+  if (!$("caseNumber").value.trim() || !$("operator").value.trim()) return;
+  const ready = devices.some((device) => device.scan_supported && deviceStates.get(device.path) === "ready");
+  if (ready) runReadyScans();
+}
+
+function scheduleAutoScan(delay = 700) {
+  clearTimeout(autoStartTimer);
+  autoStartTimer = setTimeout(maybeAutoScan, delay);
 }
 
 async function saveDecision() {
@@ -319,7 +331,7 @@ async function openMedia(mediaId) {
 }
 
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
-$("scanAllButton").addEventListener("click", runAllScans);
+$("autoScanToggle").addEventListener("change", () => scheduleAutoScan(100));
 $("deviceList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);
@@ -354,6 +366,7 @@ for (const input of document.querySelectorAll(".case-input")) {
   });
   input.addEventListener("input", updateScanAvailability);
   input.addEventListener("input", updateDecisionAvailability);
+  input.addEventListener("input", () => scheduleAutoScan());
 }
 buildKeyboard();
 renderResults(demoSummary, demoHits);

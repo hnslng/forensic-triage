@@ -36,6 +36,7 @@ def test_media_discovery_supports_multiple_usb_and_marks_optical_pending() -> No
         {"path": "/dev/sdc", "type": "disk", "tran": "usb", "size": 200, "model": "Two", "mountpoints": [None]},
         {"path": "/dev/sdd", "type": "disk", "tran": "usb", "size": 300, "model": "Mounted", "mountpoints": ["/media/x"]},
         {"path": "/dev/sr0", "type": "rom", "tran": "usb", "size": 0, "model": "DVD", "mountpoints": [None]},
+        {"path": "/dev/sr1", "type": "rom", "tran": "sata", "size": 4194304, "model": "System DVD", "mountpoints": [None]},
         {"path": "/dev/nvme0n1", "type": "disk", "tran": "nvme", "size": 999},
     ])
 
