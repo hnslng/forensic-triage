@@ -80,7 +80,7 @@
           <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
         </div>
 
-        <div class="data-grid">
+        <div class="analysis-grid">
           <article class="panel categories-panel">
             <div class="panel-title"><span>03</span> DATEITYPEN</div>
             <div id="categories" class="bar-list"></div>
@@ -89,21 +89,20 @@
             <div class="panel-title"><span>04</span> STICHWÖRTER</div>
             <div id="keywords" class="keyword-list"></div>
           </article>
+          <article class="panel files-panel">
+            <div class="panel-title"><span>05</span> GRÖSSTE DATEIEN</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>PFAD</th><th>GRÖSSE</th></tr></thead>
+                <tbody id="largestFiles"></tbody>
+              </table>
+            </div>
+          </article>
         </div>
 
-        <article class="panel files-panel">
-          <div class="panel-title"><span>05</span> GRÖSSTE DATEIEN</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>#</th><th>PFAD</th><th>GRÖSSE</th></tr></thead>
-              <tbody id="largestFiles"></tbody>
-            </table>
-          </div>
-        </article>
-
         <div id="documentationGrid" class="documentation-grid" hidden>
-          <article class="panel archive-panel">
-            <div class="panel-title"><span>06</span> DIGITALE FALLAKTE</div>
+          <details class="panel archive-panel disclosure">
+            <summary class="panel-title"><span>06</span> DIGITALE FALLAKTE <small>ABLAGE &amp; PRÜFSUMMEN</small></summary>
             <div class="archive-state"><i></i><div><strong>LOKAL GESPEICHERT</strong><small>NICHT IN GITHUB · PRÜFSUMME ERSTELLT</small></div></div>
             <dl class="archive-list">
               <div><dt>FALLAKTE</dt><dd id="archiveCasePath">—</dd></div>
@@ -113,7 +112,7 @@
               <div><dt>EREIGNISPROTOKOLL</dt><dd id="archiveAudit">audit.log</dd></div>
               <div><dt>PRÜFSUMMEN</dt><dd><span id="archiveManifestCount">0</span> DATEIEN ERFASST</dd></div>
             </dl>
-          </article>
+          </details>
 
           <article class="panel decision-panel">
             <div class="panel-title"><span>07</span> ENTSCHEIDUNG DOKUMENTIEREN</div>
@@ -146,18 +145,18 @@
           </article>
         </div>
 
-        <article id="casePanel" class="panel case-panel" hidden>
-          <div class="panel-title"><span>08</span> MEDIENREGISTER // <b id="casePanelNumber">—</b></div>
+        <details id="casePanel" class="panel case-panel disclosure" hidden>
+          <summary class="panel-title"><span>08</span> MEDIENREGISTER // <b id="casePanelNumber">—</b><small>ALLE GESICHTETEN DATENTRÄGER</small></summary>
           <div class="table-wrap">
             <table>
               <thead><tr><th>SICHTUNG</th><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
               <tbody id="caseMedia"></tbody>
             </table>
           </div>
-        </article>
+        </details>
 
-        <article id="inventoryPanel" class="panel inventory-panel" hidden>
-          <div class="panel-title"><span>09</span> VOLLSTÄNDIGES DATEIVERZEICHNIS</div>
+        <details id="inventoryPanel" class="panel inventory-panel disclosure" hidden>
+          <summary class="panel-title"><span>09</span> DATEIVERZEICHNIS <small>OPTIONAL DATEINAMEN &amp; PFADE DURCHSUCHEN</small></summary>
           <div class="inventory-tools">
             <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
             <button id="inventoryLoad" type="button">VERZEICHNIS LADEN</button>
@@ -169,7 +168,7 @@
               <tbody id="inventoryFiles"></tbody>
             </table>
           </div>
-        </article>
+        </details>
 
         <footer>
           <span>ERGEBNIS: NUR GROBSICHTUNG — KEINE FACHLICHE BEWERTUNG</span>
