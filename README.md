@@ -73,3 +73,5 @@ ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
 Then open `http://127.0.0.1:8787` on the Mac. The server refuses to start a scan unless exactly one unmounted whole USB disk is available. The existing scanner performs the final identity, mount-state, transport, and read-only checks.
 
 The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.
+
+Every dashboard scan is stored in a durable local case archive with a searchable SQLite index, complete `files.csv` inventory, device and partition metadata, keyword hits, scan log, media register, human-readable case report, append-only decision events, and a SHA-256 manifest. See `docs/case-archive.md`. `casefiles/` is excluded from Git and must never be pushed to the source repository.

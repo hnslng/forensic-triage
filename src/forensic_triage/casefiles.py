@@ -1,0 +1,403 @@
+"""Durable local case archive and append-only decision audit."""
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import json
+import sqlite3
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+
+DECISIONS = {"open", "secure", "not_selected", "review"}
+REASONS = {
+    "no_indicators",
+    "known_media",
+    "empty",
+    "duplicate",
+    "out_of_scope",
+    "technical",
+    "other",
+}
+DECISION_LABELS = {
+    "open": "Entscheidung offen",
+    "secure": "Zur Sicherung ausgewählt",
+    "not_selected": "Nicht zur Sicherung ausgewählt",
+    "review": "Weitere Prüfung",
+}
+REASON_LABELS = {
+    "no_indicators": "Keine fallbezogenen Indikatoren",
+    "known_media": "Bekanntes Installations-/Systemmedium",
+    "empty": "Leer / keine zugänglichen Dateien",
+    "duplicate": "Duplikat eines anderen Mediums",
+    "out_of_scope": "Außerhalb des Untersuchungsumfangs",
+    "technical": "Technische Grobsichtung nicht möglich",
+    "other": "Sonstige Begründung",
+}
+
+
+def utc_now() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def safe_component(value: str) -> str:
+    safe = "".join(char if char.isalnum() or char in "-_." else "-" for char in value.strip())
+    safe = safe.strip("-.")
+    if not safe:
+        raise ValueError("Kennung darf nicht leer sein.")
+    return safe[:80]
+
+
+class CaseStore:
+    """SQLite index plus human-readable, independently verifiable case files."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.db_path = root / "case-index.sqlite3"
+        self._initialize()
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.db_path, timeout=30)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
+
+    def _initialize(self) -> None:
+        with self._connect() as connection:
+            connection.execute("PRAGMA journal_mode = WAL")
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS cases (
+                    id INTEGER PRIMARY KEY,
+                    case_number TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS media (
+                    id INTEGER PRIMARY KEY,
+                    case_id INTEGER NOT NULL REFERENCES cases(id),
+                    evidence_number TEXT NOT NULL,
+                    scan_id TEXT NOT NULL,
+                    result_path TEXT NOT NULL,
+                    scanned_at TEXT NOT NULL,
+                    device_path TEXT NOT NULL,
+                    vendor TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    serial TEXT NOT NULL,
+                    size INTEGER NOT NULL,
+                    file_count INTEGER NOT NULL,
+                    directory_count INTEGER NOT NULL,
+                    keyword_matches INTEGER NOT NULL,
+                    duration_seconds REAL NOT NULL,
+                    decision TEXT NOT NULL DEFAULT 'open',
+                    reason_code TEXT,
+                    reason_note TEXT,
+                    decision_operator TEXT,
+                    decided_at TEXT,
+                    UNIQUE(case_id, evidence_number, scan_id)
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS audit_events (
+                    id INTEGER PRIMARY KEY,
+                    case_id INTEGER NOT NULL REFERENCES cases(id),
+                    media_id INTEGER REFERENCES media(id),
+                    occurred_at TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    operator TEXT,
+                    details_json TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute("CREATE INDEX IF NOT EXISTS idx_media_case_scanned ON media(case_id, scanned_at)")
+            connection.execute("CREATE INDEX IF NOT EXISTS idx_audit_case_time ON audit_events(case_id, occurred_at)")
+            connection.execute("PRAGMA optimize")
+
+    def scan_root(self, case_number: str, evidence_number: str) -> Path:
+        return self.case_path(case_number) / "media" / safe_component(evidence_number) / "scans"
+
+    def case_path(self, case_number: str) -> Path:
+        return self.root / safe_component(case_number)
+
+    def record_scan(
+        self,
+        case_number: str,
+        evidence_number: str,
+        operator: str,
+        device: dict[str, Any],
+        result_dir: Path,
+    ) -> dict[str, Any]:
+        summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
+        now = utc_now()
+        case_number = safe_component(case_number)
+        evidence_number = safe_component(evidence_number)
+        relative_result = result_dir.resolve().relative_to(self.root.resolve()).as_posix()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO cases(case_number, created_at, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(case_number) DO UPDATE SET updated_at=excluded.updated_at",
+                (case_number, now, now),
+            )
+            case_id = int(connection.execute("SELECT id FROM cases WHERE case_number=?", (case_number,)).fetchone()["id"])
+            cursor = connection.execute(
+                """
+                INSERT INTO media(
+                    case_id, evidence_number, scan_id, result_path, scanned_at,
+                    device_path, vendor, model, serial, size, file_count,
+                    directory_count, keyword_matches, duration_seconds
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    case_id, evidence_number, result_dir.name, relative_result, now,
+                    str(device.get("path", "")), str(device.get("vendor", "")),
+                    str(device.get("model", "")), str(device.get("serial", "")),
+                    int(device.get("size", 0) or 0), int(summary.get("file_count", 0)),
+                    int(summary.get("directory_count", 0)), int(summary.get("keyword_matches", 0)),
+                    float(summary.get("duration_seconds", 0)),
+                ),
+            )
+            media_id = int(cursor.lastrowid)
+            connection.execute(
+                "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
+                "VALUES (?, ?, ?, 'scan_completed', ?, ?)",
+                (case_id, media_id, now, operator or None, json.dumps({"scan_id": result_dir.name}, ensure_ascii=False)),
+            )
+        self.refresh_exports(case_number)
+        result = self.media_detail(media_id)
+        if result is None:
+            raise RuntimeError("Medienakte konnte nicht geladen werden.")
+        return result
+
+    def record_decision(
+        self,
+        media_id: int,
+        decision: str,
+        reason_code: str | None,
+        reason_note: str,
+        operator: str,
+    ) -> dict[str, Any]:
+        if decision not in DECISIONS - {"open"}:
+            raise ValueError("Unbekannter Entscheidungsstatus.")
+        if decision == "not_selected" and reason_code not in REASONS:
+            raise ValueError("Für eine Nichtauswahl ist eine Begründung erforderlich.")
+        if reason_code and reason_code not in REASONS:
+            raise ValueError("Unbekannte Begründung.")
+        now = utc_now()
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT media.id, media.case_id, cases.case_number FROM media "
+                "JOIN cases ON cases.id=media.case_id WHERE media.id=?",
+                (media_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError("Medienakte nicht gefunden.")
+            connection.execute(
+                "UPDATE media SET decision=?, reason_code=?, reason_note=?, decision_operator=?, decided_at=? WHERE id=?",
+                (decision, reason_code, reason_note.strip()[:1000] or None, operator.strip()[:120] or None, now, media_id),
+            )
+            connection.execute("UPDATE cases SET updated_at=? WHERE id=?", (now, int(row["case_id"])))
+            connection.execute(
+                "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
+                "VALUES (?, ?, ?, 'decision_recorded', ?, ?)",
+                (
+                    int(row["case_id"]), media_id, now, operator.strip()[:120] or None,
+                    json.dumps({"decision": decision, "reason_code": reason_code, "reason_note": reason_note.strip()[:1000]}, ensure_ascii=False),
+                ),
+            )
+            case_number = str(row["case_number"])
+        self.refresh_exports(case_number)
+        result = self.media_detail(media_id)
+        if result is None:
+            raise RuntimeError("Medienakte konnte nicht geladen werden.")
+        return result
+
+    def media_detail(self, media_id: int) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT media.*, cases.case_number FROM media JOIN cases ON cases.id=media.case_id WHERE media.id=?",
+                (media_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        result_dir = self.root / str(row["result_path"])
+        summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
+        hits_data = json.loads((result_dir / "hits.json").read_text(encoding="utf-8"))
+        return {
+            "media": self._media_dict(row),
+            "summary": summary,
+            "hits": {word: int(value.get("count", 0)) for word, value in hits_data.get("by_keyword", {}).items()},
+            "archive": self._archive_info(str(row["case_number"]), result_dir),
+        }
+
+    def latest_media(self) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute("SELECT id FROM media ORDER BY id DESC LIMIT 1").fetchone()
+        return self.media_detail(int(row["id"])) if row else None
+
+    def file_inventory(self, media_id: int, query: str = "", limit: int = 250) -> dict[str, Any]:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT result_path FROM media WHERE id=?",
+                (media_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError("Medienakte nicht gefunden.")
+        inventory_path = self.root / str(row["result_path"]) / "files.csv"
+        needle = query.casefold().strip()
+        matches: list[dict[str, Any]] = []
+        total = 0
+        with inventory_path.open(encoding="utf-8", newline="") as handle:
+            for item in csv.DictReader(handle):
+                if needle and needle not in str(item.get("path", "")).casefold():
+                    continue
+                total += 1
+                if len(matches) < max(1, min(limit, 500)):
+                    matches.append({
+                        "path": item.get("path", ""),
+                        "size": int(item.get("size", 0) or 0),
+                        "extension": item.get("extension", ""),
+                        "category": item.get("category", "Unbekannt"),
+                        "mtime": item.get("mtime", ""),
+                    })
+        return {"total": total, "shown": len(matches), "files": matches}
+
+    def list_cases(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT cases.case_number, cases.created_at, cases.updated_at,
+                       COUNT(media.id) AS media_count,
+                       SUM(CASE WHEN media.decision='secure' THEN 1 ELSE 0 END) AS secure_count,
+                       SUM(CASE WHEN media.decision='not_selected' THEN 1 ELSE 0 END) AS not_selected_count,
+                       SUM(CASE WHEN media.decision IN ('open','review') THEN 1 ELSE 0 END) AS open_count
+                FROM cases LEFT JOIN media ON media.case_id=cases.id
+                GROUP BY cases.id ORDER BY cases.updated_at DESC
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def case_detail(self, case_number: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            case = connection.execute("SELECT * FROM cases WHERE case_number=?", (safe_component(case_number),)).fetchone()
+            if case is None:
+                return None
+            rows = connection.execute(
+                "SELECT media.*, cases.case_number FROM media JOIN cases ON cases.id=media.case_id "
+                "WHERE media.case_id=? ORDER BY media.id DESC",
+                (int(case["id"]),),
+            ).fetchall()
+        return {"case": dict(case), "media": [self._media_dict(row) for row in rows], "archive": self._archive_info(str(case["case_number"]))}
+
+    def _media_dict(self, row: sqlite3.Row) -> dict[str, Any]:
+        keys = {
+            "id", "case_number", "evidence_number", "scan_id", "scanned_at", "device_path",
+            "vendor", "model", "serial", "size", "file_count", "directory_count",
+            "keyword_matches", "duration_seconds", "decision", "reason_code", "reason_note",
+            "decision_operator", "decided_at",
+        }
+        return {key: row[key] for key in keys if key in row.keys()}
+
+    def refresh_exports(self, case_number: str) -> None:
+        case_number = safe_component(case_number)
+        case_dir = self.case_path(case_number)
+        case_dir.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            case = connection.execute("SELECT * FROM cases WHERE case_number=?", (case_number,)).fetchone()
+            media = connection.execute(
+                "SELECT media.*, cases.case_number FROM media JOIN cases ON cases.id=media.case_id "
+                "WHERE media.case_id=? ORDER BY media.id",
+                (int(case["id"]),),
+            ).fetchall()
+            audit = connection.execute(
+                "SELECT occurred_at, event_type, media_id, operator, details_json FROM audit_events "
+                "WHERE case_id=? ORDER BY id",
+                (int(case["id"]),),
+            ).fetchall()
+        (case_dir / "case.json").write_text(
+            json.dumps({"case_number": case_number, "created_at": case["created_at"], "updated_at": case["updated_at"], "media_count": len(media)}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        fields = [
+            "id", "evidence_number", "scan_id", "scanned_at", "vendor", "model", "serial", "size",
+            "file_count", "directory_count", "keyword_matches", "duration_seconds", "decision",
+            "reason_code", "reason_note", "decision_operator", "decided_at",
+        ]
+        with (case_dir / "media-register.csv").open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for row in media:
+                writer.writerow({field: row[field] for field in fields})
+        with (case_dir / "audit.log").open("w", encoding="utf-8") as handle:
+            for event in audit:
+                handle.write(json.dumps({**dict(event), "details": json.loads(event["details_json"])}, ensure_ascii=False) + "\n")
+        report_lines = [
+            "TRIAGE//BOX FALLPROTOKOLL",
+            "=" * 72,
+            f"Fallnummer: {case_number}",
+            f"Erstellt: {case['created_at']}",
+            f"Zuletzt aktualisiert: {case['updated_at']}",
+            f"Erfasste Medien: {len(media)}",
+            "",
+        ]
+        for row in media:
+            report_lines.extend(
+                [
+                    f"BEWEISMITTEL / ASSERVAT: {row['evidence_number']}",
+                    f"Medium: {str(row['vendor']).strip()} {str(row['model']).strip()}",
+                    f"Seriennummer: {row['serial'] or 'nicht gemeldet'}",
+                    f"Größe (Byte): {row['size']}",
+                    f"Scan: {row['scanned_at']} · {row['duration_seconds']} s",
+                    f"Dateien / Ordner / Treffer: {row['file_count']} / {row['directory_count']} / {row['keyword_matches']}",
+                    f"Entscheidung: {DECISION_LABELS.get(str(row['decision']), str(row['decision']))}",
+                    f"Begründung: {REASON_LABELS.get(str(row['reason_code']), str(row['reason_code'] or '—'))}",
+                    f"Notiz: {row['reason_note'] or '—'}",
+                    f"Bearbeiter / Zeitpunkt: {row['decision_operator'] or '—'} / {row['decided_at'] or '—'}",
+                    "-" * 72,
+                ]
+            )
+        report_lines.extend(
+            [
+                "HINWEIS",
+                "Dieses Protokoll dokumentiert eine Metadaten-Grobsichtung und keine",
+                "abschließende forensische Inhaltsanalyse oder fachliche Relevanzentscheidung.",
+            ]
+        )
+        (case_dir / "case-report.txt").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
+        for row in media:
+            media_dir = case_dir / "media" / safe_component(str(row["evidence_number"])) / "records"
+            media_dir.mkdir(parents=True, exist_ok=True)
+            (media_dir / f"{safe_component(str(row['scan_id']))}.json").write_text(
+                json.dumps(self._media_dict(row), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        self._write_manifest(case_dir)
+
+    def _write_manifest(self, case_dir: Path) -> None:
+        lines = []
+        for path in sorted(item for item in case_dir.rglob("*") if item.is_file() and item.name != "manifest.sha256"):
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            lines.append(f"{digest}  {path.relative_to(case_dir).as_posix()}")
+        (case_dir / "manifest.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def _archive_info(self, case_number: str, result_dir: Path | None = None) -> dict[str, Any]:
+        case_dir = self.case_path(case_number)
+        manifest = case_dir / "manifest.sha256"
+        return {
+            "case_path": str(case_dir),
+            "result_path": str(result_dir) if result_dir else None,
+            "database": str(self.db_path),
+            "media_register": str(case_dir / "media-register.csv"),
+            "case_report": str(case_dir / "case-report.txt"),
+            "audit_log": str(case_dir / "audit.log"),
+            "manifest": str(manifest),
+            "manifest_entries": len(manifest.read_text(encoding="utf-8").splitlines()) if manifest.is_file() else 0,
+        }
