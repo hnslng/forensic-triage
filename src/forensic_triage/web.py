@@ -294,6 +294,20 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
+    def do_DELETE(self) -> None:  # noqa: N802
+        route = urlsplit(self.path).path
+        case_match = re.fullmatch(r"/api/cases/([^/]+)", route)
+        if not case_match:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        try:
+            result = self.server.case_store.archive_case(case_match.group(1))
+            self._json(HTTPStatus.OK, result)
+        except KeyError as exc:
+            self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
     def _read_payload(self) -> dict[str, Any]:
         length = min(int(self.headers.get("Content-Length", "0")), 8192)
         payload = json.loads(self.rfile.read(length) or b"{}")

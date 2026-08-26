@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import shutil
 import sqlite3
 import threading
 from datetime import UTC, datetime
@@ -496,6 +497,38 @@ class CaseStore:
                 """
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def archive_case(self, case_number: str) -> dict[str, Any]:
+        """Remove a case from active records while retaining a recoverable local copy."""
+        safe_case = safe_component(case_number)
+        with self._export_lock:
+            with self._connect() as connection:
+                case = connection.execute("SELECT id FROM cases WHERE case_number=?", (safe_case,)).fetchone()
+            if case is None:
+                raise KeyError("Fallakte nicht gefunden.")
+            case_dir = self.case_path(safe_case)
+            archived_path: Path | None = None
+            if case_dir.exists():
+                trash_dir = self.root / ".trash"
+                trash_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+                archived_path = trash_dir / f"{stamp}-{safe_case}"
+                sequence = 1
+                while archived_path.exists():
+                    archived_path = trash_dir / f"{stamp}-{safe_case}-{sequence}"
+                    sequence += 1
+                shutil.move(str(case_dir), str(archived_path))
+            try:
+                with self._connect() as connection:
+                    case_id = int(case["id"])
+                    connection.execute("DELETE FROM audit_events WHERE case_id=?", (case_id,))
+                    connection.execute("DELETE FROM media WHERE case_id=?", (case_id,))
+                    connection.execute("DELETE FROM cases WHERE id=?", (case_id,))
+            except Exception:
+                if archived_path is not None and archived_path.exists():
+                    shutil.move(str(archived_path), str(case_dir))
+                raise
+        return {"case_number": safe_case, "archived": True, "recoverable": archived_path is not None}
 
     def case_detail(self, case_number: str) -> dict[str, Any] | None:
         with self._connect() as connection:

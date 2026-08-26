@@ -86,6 +86,20 @@ def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
     assert store.directory_inventory(media_id, "partition_001", limit=1, offset=1)["entries"][0]["name"] == "photo.jpg"
 
 
+def test_archive_case_removes_active_record_and_keeps_recoverable_copy(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-DELETE", "SICHT-001")
+    store.record_scan("FALL-DELETE", "SICHT-001", "HL", {"path": "/dev/sdb"}, result_dir)
+
+    result = store.archive_case("FALL-DELETE")
+
+    assert result == {"case_number": "FALL-DELETE", "archived": True, "recoverable": True}
+    assert store.case_detail("FALL-DELETE") is None
+    archived = list((store.root / ".trash").glob("*-FALL-DELETE"))
+    assert len(archived) == 1
+    assert (archived[0] / "case-report.txt").is_file()
+
+
 def test_evidence_number_is_assigned_only_when_secured(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     assert store.next_sighting_number("FALL-1") == "SICHT-001"

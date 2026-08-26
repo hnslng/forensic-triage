@@ -15,7 +15,10 @@
           <p class="eyebrow">FORENSIC FIELD UTILITY / LOCAL ONLY</p>
           <h1><button id="homeLogo" class="brand-home" type="button" aria-label="Zum Hauptdashboard">TRIAGE<span>//</span>BOX</button></h1>
         </div>
-        <div class="system-state"><i></i><span id="systemState">SYSTEM BEREIT</span></div>
+        <div class="header-controls">
+          <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN</span></label>
+          <div class="system-state"><i></i><span id="systemState">SYSTEM BEREIT</span></div>
+        </div>
       </header>
 
       <section class="rulebar" aria-label="Systemstatus">
@@ -40,15 +43,9 @@
               <select id="caseHistory"><option value="">— Fall auswählen —</option></select>
             </label>
             <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ FALLDATEN ALS ZIP</a>
+            <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
           </div>
           <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
-          <div class="action-row">
-            <label class="auto-toggle" for="autoScanToggle">
-              <input id="autoScanToggle" type="checkbox" checked />
-              <span>AUTO-SCAN EIN</span><small>STARTET, SOBALD AUFTRAG + MEDIUM BEREIT SIND</small>
-            </label>
-            <button id="keyboardButton" class="keyboard-button" type="button">⌨ BILDSCHIRMTASTATUR</button>
-          </div>
           <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
           </div>
         </details>
@@ -67,11 +64,6 @@
             <div id="offlineMediaCards" class="media-cards offline-cards"></div>
           </details>
         </article>
-      </section>
-
-      <section id="screenKeyboard" class="panel screen-keyboard" hidden aria-label="Bildschirmtastatur">
-        <div class="keyboard-head"><span>EINGABE // <b id="keyboardTarget">FALLNUMMER</b></span><button id="keyboardClose" type="button">SCHLIESSEN ×</button></div>
-        <div id="keyboardKeys" class="keyboard-keys"></div>
       </section>
 
       <section id="progressPanel" class="panel progress-panel" hidden>
@@ -146,7 +138,7 @@
           </details>
           <article class="panel decision-panel">
             <div class="panel-title"><span>07</span> WAS PASSIERT MIT DIESEM DATENTRÄGER?</div>
-            <p class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
+            <p id="decisionHelp" class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
               <div class="decision-buttons">
@@ -159,7 +151,7 @@
               <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
                 <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
               </label>
-              <label for="decisionReason">BEGRÜNDUNG
+              <label id="decisionReasonWrap" for="decisionReason">BEGRÜNDUNG
                 <select id="decisionReason">
                   <option value="">— auswählen —</option>
                   <option value="no_indicators">Keine fallbezogenen Indikatoren</option>
@@ -171,7 +163,7 @@
                   <option value="other">Sonstige Begründung</option>
                 </select>
               </label>
-              <label for="decisionNote">ERGÄNZENDE NOTIZ
+              <label id="decisionNoteWrap" for="decisionNote">ERGÄNZENDE NOTIZ
                 <textarea id="decisionNote" rows="2" maxlength="1000" placeholder="Kurze, sachliche Begründung …"></textarea>
               </label>
               <button id="saveDecision" class="save-decision" type="button" disabled>ENTSCHEIDUNG PROTOKOLLIEREN</button>

@@ -8,7 +8,6 @@ let autoStartTimer = null;
 let caseLoadTimer = null;
 let caseLookupPending = false;
 let currentCaseMedia = [];
-let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
 let inventoryTreeMediaId = null;
@@ -68,13 +67,21 @@ function renderDecision(media) {
   currentDecision = media.decision === "open" ? null : media.decision;
   $("decisionState").textContent = decisionLabels[media.decision] || decisionLabels.open;
   $("decisionEvidence").value = media.evidence_number || "";
-  $("decisionEvidenceWrap").hidden = currentDecision !== "secure";
+  updateDecisionFields();
   $("decisionReason").value = media.reason_code || "";
   $("decisionNote").value = media.reason_note || "";
   for (const button of document.querySelectorAll("[data-decision]")) {
     button.classList.toggle("active", button.dataset.decision === currentDecision);
   }
   updateDecisionAvailability();
+}
+
+function updateDecisionFields() {
+  const secure = currentDecision === "secure";
+  $("decisionEvidenceWrap").hidden = !secure;
+  $("decisionReasonWrap").hidden = secure;
+  $("decisionNoteWrap").hidden = secure;
+  $("decisionHelp").hidden = secure;
 }
 
 function renderRecord(record) {
@@ -107,6 +114,7 @@ async function loadCase(caseNumber) {
     currentCaseMedia = [];
     renderMediaCards([]);
     $("casePanel").hidden = true;
+    $("caseDelete").disabled = true;
     $("caseDownload").classList.add("disabled");
     $("caseDownload").setAttribute("aria-disabled", "true");
     $("caseDownload").href = "#";
@@ -119,6 +127,7 @@ async function loadCase(caseNumber) {
       currentCaseMedia = [];
       renderMediaCards([]);
       $("casePanel").hidden = true;
+      $("caseDelete").disabled = true;
       $("caseDownload").classList.add("disabled");
       $("caseDownload").setAttribute("aria-disabled", "true");
       $("caseDownload").href = "#";
@@ -129,6 +138,7 @@ async function loadCase(caseNumber) {
     renderMediaCards(currentCaseMedia);
     renderDevices(devices);
     $("casePanel").hidden = false;
+    $("caseDelete").disabled = false;
     $("casePanelNumber").textContent = data.case.case_number;
     $("caseDownload").classList.remove("disabled");
     $("caseDownload").setAttribute("aria-disabled", "false");
@@ -243,44 +253,6 @@ function updateDecisionAvailability() {
   $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || !$("operator").value.trim();
 }
 
-function openKeyboard(input) {
-  activeInput = input || activeInput || $("caseNumber");
-  $("keyboardTarget").textContent = activeInput === $("caseNumber") ? "FALLNUMMER" : activeInput === $("decisionEvidence") ? "BEWEISMITTEL" : "BEARBEITER";
-  $("screenKeyboard").hidden = false;
-}
-
-function buildKeyboard() {
-  const rows = [
-    "1234567890".split(""),
-    "QWERTZUIOP".split(""),
-    "ASDFGHJKL".split(""),
-    "YXCVBNM-_.".split(""),
-    ["BACKSPACE", "CLEAR", "NEXT"],
-  ];
-  const labels = { BACKSPACE: "⌫ LÖSCHEN", CLEAR: "LEEREN", NEXT: "WEITER ↵" };
-  $("keyboardKeys").innerHTML = rows.map((row) => `<div class="keyboard-row" style="--key-count:${row.length}">${row.map((key) => `<button type="button" class="${labels[key] ? "wide" : ""}" data-key="${key}">${labels[key] || key}</button>`).join("")}</div>`).join("");
-  $("keyboardKeys").addEventListener("click", (event) => {
-    const key = event.target.closest("button")?.dataset.key;
-    if (!key || !activeInput) return;
-    if (key === "BACKSPACE") activeInput.value = activeInput.value.slice(0, -1);
-    else if (key === "CLEAR") activeInput.value = "";
-    else if (key === "NEXT") {
-      if (activeInput === $("caseNumber")) openKeyboard($("operator"));
-      else if (activeInput === $("operator") && !$("decisionEvidenceWrap").hidden) openKeyboard($("decisionEvidence"));
-      else { $("screenKeyboard").hidden = true; document.querySelector("[data-scan-device]")?.focus(); }
-      updateScanAvailability();
-      updateOrderSummary();
-      scheduleAutoScan();
-      return;
-    } else activeInput.value += key === "SPACE" ? " " : key;
-    activeInput.value = activeInput.value.toUpperCase().slice(0, 36);
-    updateScanAvailability();
-    updateOrderSummary();
-    if (activeInput === $("caseNumber")) scheduleCaseLoad();
-    scheduleAutoScan();
-  });
-}
-
 function renderCaseHistory(cases) {
   const signature = JSON.stringify((cases || []).map((item) => [item.case_number, item.media_count]));
   if (signature === caseHistorySignature) return;
@@ -325,7 +297,6 @@ async function runScan(devicePath, standalone = true) {
   runningPaths.add(devicePath);
   deviceStates.set(devicePath, "scanning");
   renderDevices(devices);
-  $("screenKeyboard").hidden = true;
   updateProgress();
   try {
     const response = await fetch("/api/scans", {
@@ -385,8 +356,8 @@ async function saveDecision() {
       body: JSON.stringify({
         decision: currentDecision,
         evidence_number: currentDecision === "secure" ? $("decisionEvidence").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80) : null,
-        reason_code: $("decisionReason").value || null,
-        reason_note: $("decisionNote").value,
+        reason_code: currentDecision === "secure" ? null : ($("decisionReason").value || null),
+        reason_note: currentDecision === "secure" ? "" : $("decisionNote").value,
         operator: $("operator").value.trim().toUpperCase(),
       }),
     });
@@ -458,6 +429,34 @@ async function loadInventory() {
   }
 }
 
+async function deleteCurrentCase() {
+  const caseNumber = $("caseNumber").value.trim().toUpperCase();
+  if (!caseNumber || $("caseDelete").disabled) return;
+  if (!window.confirm(`Fall ${caseNumber} aus dem aktiven System entfernen? Die lokale Sicherung bleibt wiederherstellbar.`)) return;
+  $("caseDelete").disabled = true;
+  try {
+    const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`, { method: "DELETE" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Fall konnte nicht gelöscht werden");
+    $("caseNumber").value = "";
+    $("caseHistory").value = "";
+    currentCaseMedia = [];
+    currentMediaId = null;
+    caseHistorySignature = "";
+    renderMediaCards([]);
+    $("casePanel").hidden = true;
+    $("caseDownload").classList.add("disabled");
+    $("caseDownload").setAttribute("aria-disabled", "true");
+    $("caseDownload").href = "#";
+    updateOrderSummary();
+    $("systemState").textContent = "FALL ENTFERNT";
+    await refresh(false);
+  } catch (error) {
+    $("systemState").textContent = `FEHLER: ${error.message}`;
+    $("caseDelete").disabled = false;
+  }
+}
+
 async function openMedia(mediaId) {
   try {
     const response = await fetch(`/api/media/${mediaId}`);
@@ -510,6 +509,7 @@ $("caseHistory").addEventListener("change", () => {
   $("caseNumber").value = $("caseHistory").value;
   $("caseNumber").dispatchEvent(new Event("input", { bubbles: true }));
 });
+$("caseDelete").addEventListener("click", deleteCurrentCase);
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);
@@ -540,28 +540,20 @@ $("decisionEvidence").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {
     currentDecision = button.dataset.decision;
-    $("decisionEvidenceWrap").hidden = currentDecision !== "secure";
     if (currentDecision !== "secure") $("decisionEvidence").value = "";
+    updateDecisionFields();
     for (const peer of document.querySelectorAll("[data-decision]")) peer.classList.toggle("active", peer === button);
     $("decisionState").textContent = decisionLabels[currentDecision];
     updateDecisionAvailability();
   });
 }
-$("keyboardButton").addEventListener("click", () => openKeyboard(activeInput));
-$("keyboardClose").addEventListener("click", () => { $("screenKeyboard").hidden = true; });
 for (const input of document.querySelectorAll(".case-input")) {
-  input.addEventListener("focus", () => {
-    activeInput = input;
-    $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : input === $("decisionEvidence") ? "BEWEISMITTEL" : "BEARBEITER";
-    if (window.matchMedia("(pointer: coarse)").matches) openKeyboard(input);
-  });
   input.addEventListener("input", updateScanAvailability);
   input.addEventListener("input", updateDecisionAvailability);
   input.addEventListener("input", () => scheduleAutoScan());
   input.addEventListener("input", updateOrderSummary);
   if (input === $("caseNumber")) input.addEventListener("input", scheduleCaseLoad);
 }
-buildKeyboard();
 updateOrderSummary();
 refresh();
 setInterval(() => refresh(false), 2500);
