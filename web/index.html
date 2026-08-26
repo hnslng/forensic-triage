@@ -22,7 +22,7 @@
 
       <section class="rulebar" aria-label="Systemstatus">
         <span class="mode-badge" title="Der geprüfte Grobsichtungsmodus liest ausschließlich Metadaten.">FAST/RO · NUR LESEN</span>
-        <span class="system-state locked" id="systemStatus"><i></i><span id="systemState">KEIN FALL AKTIV</span></span>
+        <span class="system-state locked" id="systemStatus"><span id="systemState">KEIN FALL AKTIV</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <span id="clock">UTC --:--:--</span>
       </section>
@@ -32,31 +32,38 @@
         <details id="auftragPanel" class="panel action-panel disclosure" open>
           <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
           <div class="action-body">
-            <section class="case-entry">
-              <div class="subhead"><span>FALL VORBEREITEN</span><small>ERST STARTEN, DANN SCANNEN</small></div>
-              <div class="field-grid">
-                <label for="caseNumber">FALLNUMMER
-                  <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
-                </label>
-                <label for="operator">BEARBEITER / KÜRZEL
-                  <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
-                </label>
+            <section class="case-select">
+              <div class="subhead"><span>FALL</span><small>NEU ODER BESTEHEND</small></div>
+              <label class="case-field" for="caseNumber">FALLNUMMER
+                <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
+              </label>
+              <details id="casePicker" class="case-picker disclosure" open>
+                <summary><span>BESTEHENDEN FALL WÄHLEN</span><small id="caseListCount">0 FALLAKTEN</small></summary>
+                <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
+              </details>
+              <div class="case-actions">
+                <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">FALLDATEN LADEN</a>
+                <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
               </div>
+            </section>
+            <section class="case-session">
+              <div class="subhead"><span>BEARBEITUNG</span><small>SITZUNG</small></div>
+              <label class="case-field" for="operator">BEARBEITER / KÜRZEL
+                <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
+              </label>
               <div class="case-session-actions">
                 <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
                 <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
               </div>
               <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
             </section>
-            <section class="case-browser">
-              <details id="casePicker" class="case-picker disclosure" open>
-                <summary><span>BESTEHENDEN FALL WÄHLEN</span><small id="caseListCount">0 FALLAKTEN</small></summary>
-                <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
-              </details>
-              <div class="case-actions">
-                <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ ALS ZIP</a>
-                <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
-              </div>
+            <section class="case-settings">
+              <div class="subhead"><span>PROFIL</span><small>EINSTELLUNGEN</small></div>
+              <label class="case-field" for="profileName">SICHTUNGSPROFIL
+                <input id="profileName" value="STANDARD" disabled />
+              </label>
+              <div class="profile-summary"><span>STICHWÖRTER</span><strong id="keywordSelectionCount">—</strong></div>
+              <button id="openKeywordSettings" class="keyword-settings" type="button">STICHWÖRTER AUSWÄHLEN</button>
             </section>
           </div>
         </details>
@@ -221,6 +228,15 @@
           <button class="confirm-delete" type="submit">ENDGÜLTIG AUS AKTIVER LISTE ENTFERNEN</button>
         </div>
       </form>
+    </dialog>
+    <dialog id="keywordModal" class="evidence-modal keyword-modal">
+      <div class="modal-head"><div><span>03</span> STICHWÖRTER AUSWÄHLEN</div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="keyword-modal-body">
+        <p>Die Auswahl gilt für neue Scans dieser Sitzung und wird im Scan-Nachweis mitprotokolliert.</p>
+        <div class="keyword-bulk-actions"><button id="selectAllKeywords" type="button">ALLE</button><button id="clearAllKeywords" type="button">KEINE</button></div>
+        <div id="keywordOptions" class="keyword-options"></div>
+        <button id="saveKeywordSettings" class="save-keywords" type="button">AUSWAHL ÜBERNEHMEN</button>
+      </div>
     </dialog>
     <script src="/app.js" defer></script>
   </body>

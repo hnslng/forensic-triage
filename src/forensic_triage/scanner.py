@@ -31,6 +31,7 @@ def scan(
     results_root: Path,
     expected_path: Path | None = None,
     mode: str = "fast",
+    keywords: list[str] | None = None,
 ) -> Path:
     started = time.monotonic()
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
@@ -90,8 +91,13 @@ def scan(
                 scan_logger.warning("partition %s skipped: %s", slot, exc.stderr.strip())
 
         profile = load_profile(profile_path)
-        hits = build_hits(all_files, profile["keywords"])
-        hits["profile"] = {"version": profile["version"], "sha256": profile["sha256"]}
+        selected_keywords = profile["keywords"] if keywords is None else keywords
+        hits = build_hits(all_files, selected_keywords)
+        hits["profile"] = {
+            "version": profile["version"],
+            "sha256": profile["sha256"],
+            "selected_keywords": selected_keywords,
+        }
         summary = summarize(all_files, all_directories)
         summary.update(
             {

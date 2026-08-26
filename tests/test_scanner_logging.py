@@ -1,3 +1,4 @@
+import json
 import logging
 
 from forensic_triage import scanner
@@ -13,7 +14,12 @@ def test_scan_does_not_replace_root_logging(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(scanner, "parse_mmls", lambda _output: [])
     monkeypatch.setattr(scanner, "load_profile", lambda _path: {"keywords": [], "version": "1", "sha256": "x"})
     try:
-        scanner.scan(tmp_path / "device", tmp_path / "profile", "BM-1", tmp_path / "results")
+        result = scanner.scan(
+            tmp_path / "device", tmp_path / "profile", "BM-1", tmp_path / "results",
+            keywords=["rechnung"],
+        )
         assert root_handler in root_logger.handlers
+        hits = json.loads((result / "hits.json").read_text(encoding="utf-8"))
+        assert hits["profile"]["selected_keywords"] == ["rechnung"]
     finally:
         root_logger.removeHandler(root_handler)

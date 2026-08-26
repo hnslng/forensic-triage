@@ -13,6 +13,9 @@ let caseHistorySignature = "";
 let knownCases = [];
 let activeCaseNumber = null;
 let activeOperator = "";
+let profileKeywords = [];
+let selectedKeywords = new Set();
+let profileReady = false;
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -27,6 +30,37 @@ function setSystemState(text, state = activeCaseNumber ? "ready" : "locked") {
   $("systemState").textContent = text;
   $("systemStatus").classList.remove("locked", "error", "busy");
   if (state !== "ready") $("systemStatus").classList.add(state);
+}
+
+function updateKeywordSummary() {
+  $("keywordSelectionCount").textContent = `${selectedKeywords.size} / ${profileKeywords.length} AKTIV`;
+}
+
+function renderKeywordOptions() {
+  $("keywordOptions").innerHTML = profileKeywords.map((keyword) => `<label class="keyword-option">
+    <input type="checkbox" value="${escapeHtml(keyword)}" ${selectedKeywords.has(keyword) ? "checked" : ""} />
+    <span>${escapeHtml(keyword.toUpperCase())}</span>
+  </label>`).join("");
+}
+
+async function loadProfile() {
+  try {
+    const response = await fetch("/api/profile");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Profil nicht verfügbar");
+    profileKeywords = data.keywords || [];
+    selectedKeywords = new Set(profileKeywords);
+    profileReady = true;
+    $("profileName").value = `${data.name || "STANDARD"} · V${data.version || "—"}`;
+    updateKeywordSummary();
+    updateCaseSessionUi();
+  } catch (error) {
+    $("profileName").value = "PROFIL NICHT VERFÜGBAR";
+    $("keywordSelectionCount").textContent = "FEHLER";
+    $("openKeywordSettings").disabled = true;
+    profileReady = false;
+    updateCaseSessionUi("SCAN-PROFIL NICHT VERFÜGBAR");
+  }
 }
 
 function renderResults(summary, hits = {}) {
@@ -208,7 +242,7 @@ function updateOrderSummary() {
 function updateCaseSessionUi(message = "") {
   const draftCase = $("caseNumber").value.trim().toUpperCase();
   const draftOperator = $("operator").value.trim().toUpperCase();
-  const ready = Boolean(draftCase && draftOperator && !runningPaths.size);
+  const ready = Boolean(draftCase && draftOperator && profileReady && !runningPaths.size);
   const sameSession = activeCaseNumber === draftCase && activeOperator === draftOperator;
   $("caseStart").disabled = !ready || sameSession;
   $("caseStart").textContent = activeCaseNumber && !sameSession ? "↻ ANDEREN FALL STARTEN" : "▶ FALL STARTEN";
@@ -363,7 +397,12 @@ async function runScan(devicePath, standalone = true) {
     const response = await fetch("/api/scans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: activeCaseNumber, operator: activeOperator, device_path: devicePath }),
+      body: JSON.stringify({
+        case_number: activeCaseNumber,
+        operator: activeOperator,
+        device_path: devicePath,
+        keywords: [...selectedKeywords],
+      }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
@@ -622,6 +661,7 @@ async function openMedia(mediaId) {
 function showDashboard() {
   if ($("evidenceModal").open) $("evidenceModal").close();
   if ($("deleteModal").open) $("deleteModal").close();
+  if ($("keywordModal").open) $("keywordModal").close();
   $("results").hidden = true;
   $("dashboardView").hidden = false;
   currentMediaId = null;
@@ -655,6 +695,25 @@ $("openEvidenceModal").addEventListener("click", () => $("evidenceModal").showMo
 $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close());
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
+});
+$("openKeywordSettings").addEventListener("click", () => {
+  renderKeywordOptions();
+  $("keywordModal").showModal();
+});
+$("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());
+$("keywordModal").addEventListener("click", (event) => {
+  if (event.target === $("keywordModal")) $("keywordModal").close();
+});
+$("selectAllKeywords").addEventListener("click", () => {
+  for (const checkbox of $("keywordOptions").querySelectorAll("input")) checkbox.checked = true;
+});
+$("clearAllKeywords").addEventListener("click", () => {
+  for (const checkbox of $("keywordOptions").querySelectorAll("input")) checkbox.checked = false;
+});
+$("saveKeywordSettings").addEventListener("click", () => {
+  selectedKeywords = new Set([...$("keywordOptions").querySelectorAll("input:checked")].map((input) => input.value));
+  updateKeywordSummary();
+  $("keywordModal").close();
 });
 $("caseList").addEventListener("click", (event) => {
   const item = event.target.closest("button[data-case-number]");
@@ -723,5 +782,6 @@ for (const input of [$("caseNumber"), $("operator")]) {
   });
 }
 updateCaseSessionUi();
+loadProfile();
 refresh();
 setInterval(() => refresh(false), 2500);

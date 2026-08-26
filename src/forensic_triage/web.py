@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from .casefiles import CaseStore
+from .keywords import load_profile
 from .scanner import scan
 
 
@@ -240,6 +241,17 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/cases":
             self._json(HTTPStatus.OK, {"cases": self.server.case_store.list_cases()})
             return
+        if route == "/api/profile":
+            try:
+                profile = load_profile(self.server.profile_path)
+                self._json(HTTPStatus.OK, {
+                    "name": self.server.profile_path.stem.upper(),
+                    "version": profile["version"],
+                    "keywords": profile["keywords"],
+                })
+            except (OSError, ValueError) as exc:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profil nicht verfügbar: {exc}"})
+            return
         export_match = re.fullmatch(r"/api/cases/([^/]+)/export\.zip", route)
         if export_match:
             try:
@@ -421,6 +433,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             case_number = str(payload.get("case_number", "")).strip()
             operator = str(payload.get("operator", "")).strip()
             device_path = str(payload.get("device_path", "")).strip()
+            requested_keywords = payload.get("keywords")
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
@@ -433,6 +446,23 @@ class TriageHandler(BaseHTTPRequestHandler):
         if not OPERATOR_PATTERN.fullmatch(operator):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Bearbeiterkürzel."})
             return
+        try:
+            configured_keywords = load_profile(self.server.profile_path)["keywords"]
+        except (OSError, ValueError) as exc:
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profil nicht verfügbar: {exc}"})
+            return
+        if requested_keywords is None:
+            selected_keywords = configured_keywords
+        elif (
+            not isinstance(requested_keywords, list)
+            or not all(isinstance(item, str) for item in requested_keywords)
+            or len(requested_keywords) != len(set(requested_keywords))
+            or any(item not in configured_keywords for item in requested_keywords)
+        ):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Stichwortauswahl."})
+            return
+        else:
+            selected_keywords = requested_keywords
         try:
             devices = discover_media_devices()
         except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
@@ -459,6 +489,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 sighting_number,
                 self.server.case_store.scan_root(case_number, sighting_number),
                 mode="fast",
+                keywords=selected_keywords,
             )
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,
