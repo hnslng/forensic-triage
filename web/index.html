@@ -30,23 +30,26 @@
         <details id="auftragPanel" class="panel action-panel disclosure" open>
           <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
           <div class="action-body">
-          <div class="field-grid">
-            <label for="caseNumber">FALLNUMMER
-              <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
-            </label>
-            <label for="operator">BEARBEITER / KÜRZEL
-              <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
-            </label>
-          </div>
-          <div class="case-history-row">
-            <label for="caseHistory">VORHANDENEN FALL ÖFFNEN
-              <select id="caseHistory"><option value="">— Fall auswählen —</option></select>
-            </label>
-            <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ FALLDATEN ALS ZIP</a>
-            <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
-          </div>
-          <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
-          <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
+            <section class="case-entry">
+              <div class="subhead"><span>NEU / AKTUELL</span><small>AUFTRAGSDATEN</small></div>
+              <div class="field-grid">
+                <label for="caseNumber">FALLNUMMER
+                  <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
+                </label>
+                <label for="operator">BEARBEITER / KÜRZEL
+                  <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
+                </label>
+              </div>
+              <p class="sighting-note">SICHTUNGSNUMMER AUTOMATISCH · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
+            </section>
+            <section class="case-browser">
+              <div class="subhead"><span>FALLLISTE</span><small id="caseListCount">0 AKTIVE FÄLLE</small></div>
+              <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
+              <div class="case-actions">
+                <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ ALS ZIP</a>
+                <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
+              </div>
+            </section>
           </div>
         </details>
 
@@ -137,7 +140,7 @@
             </div>
           </details>
           <article class="panel decision-panel">
-            <div class="panel-title"><span>07</span> WAS PASSIERT MIT DIESEM DATENTRÄGER?</div>
+            <div class="panel-title"><span>07</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>
             <p id="decisionHelp" class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
@@ -197,6 +200,19 @@
           <div><dt>EREIGNISSE</dt><dd id="archiveAudit">audit.log</dd></div>
         </dl>
       </details>
+    </dialog>
+    <dialog id="deleteModal" class="delete-modal">
+      <form id="deleteForm" method="dialog">
+        <div class="modal-head"><div><span>!</span> FALL LÖSCHEN</div><button id="cancelDelete" type="button">ABBRECHEN ×</button></div>
+        <div class="delete-body">
+          <p>Fall <b id="deleteCaseNumber">—</b> wird aus der aktiven Fallliste entfernt. Eine interne Sicherung bleibt wiederherstellbar.</p>
+          <label for="deletePassword">PASSWORT
+            <input id="deletePassword" type="password" inputmode="numeric" autocomplete="off" placeholder="PASSWORT EINGEBEN" />
+          </label>
+          <p id="deleteMessage" class="delete-message"></p>
+          <button class="confirm-delete" type="submit">ENDGÜLTIG AUS AKTIVER LISTE ENTFERNEN</button>
+        </div>
+      </form>
     </dialog>
     <script src="/app.js" defer></script>
   </body>

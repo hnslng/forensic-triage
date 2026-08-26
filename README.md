@@ -72,10 +72,12 @@ It binds to `127.0.0.1:8787` by default. Keep it private and reach it from the M
 ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
 ```
 
-Then open `http://127.0.0.1:8787` on the Mac. Every unmounted whole USB disk receives its own scan action; `ALLE MEDIEN SCANNEN` runs the eligible devices concurrently. The scanner still performs the final identity, mount-state, transport, and read-only checks for every device.
+Then open `http://127.0.0.1:8787` on the Mac. With Auto-Scan enabled, every newly detected, unmounted whole USB disk is inventoried independently; multiple eligible devices can run concurrently. The scanner still performs the final identity, mount-state, transport, and read-only checks for every device. Completed online media offer a safe-eject action; media with an open decision remain conspicuous in the collapsed offline history after removal.
 
 On the future Raspberry Pi the same interface can be used either on its small touch display or from a laptop over a direct Ethernet cable. The intended field setup gives the Pi a dedicated address such as `10.77.0.1` and binds the web service only to that direct-link interface; the laptop then opens `http://10.77.0.1:8787` (or `http://triagebox.local:8787`). This network configuration is deliberately deferred until it can be tested on the real Pi, so the current VM remains bound to localhost and reachable through the SSH tunnel.
 
 The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.
 
 Every dashboard scan receives an automatic neutral sighting number and is stored in a durable local case archive with a searchable SQLite index, complete `files.csv` inventory, device and partition metadata, keyword hits, scan log, media register, human-readable case report, append-only decision events, and a SHA-256 manifest. An official evidence number is required only when the operator selects the medium for securing. See `docs/case-archive.md`. `casefiles/` is excluded from Git and must never be pushed to the source repository.
+
+Removing a case from the active list requires the local dashboard password. The prototype default is `123`; set `FORENSIC_TRIAGE_DELETE_PASSWORD` in the service environment before field use to replace it. Removal archives the case locally instead of destroying its files.

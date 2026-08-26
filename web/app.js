@@ -159,14 +159,14 @@ function renderMediaCards(media) {
   const renderCard = (medium, connected) => {
     const title = medium.evidence_number || "NUR GESICHTET";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
-    return `<button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
+    return `<div class="media-card-shell${connected ? " online" : " offline"}"><button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
       <span class="media-card-top"><b>${escapeHtml(title)}</b>${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
       <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
-    </button>`;
+    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}">⏏ SICHER AUSWERFEN</button>` : ""}</div>`;
   };
   const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
   const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
@@ -254,14 +254,14 @@ function updateDecisionAvailability() {
 }
 
 function renderCaseHistory(cases) {
-  const signature = JSON.stringify((cases || []).map((item) => [item.case_number, item.media_count]));
+  const selected = $("caseNumber").value.trim().toUpperCase();
+  const signature = JSON.stringify({ selected, cases: (cases || []).map((item) => [item.case_number, item.media_count, item.open_count]) });
   if (signature === caseHistorySignature) return;
   caseHistorySignature = signature;
-  const selected = $("caseHistory").value;
-  $("caseHistory").innerHTML = '<option value="">— Fall auswählen —</option>' + (cases || []).map((item) =>
-    `<option value="${escapeHtml(item.case_number)}">${escapeHtml(item.case_number)} · ${Number(item.media_count)} MEDIEN</option>`
-  ).join("");
-  if ([...$("caseHistory").options].some((option) => option.value === selected)) $("caseHistory").value = selected;
+  $("caseListCount").textContent = `${(cases || []).length} AKTIVE ${(cases || []).length === 1 ? "FALLAKTE" : "FALLAKTEN"}`;
+  $("caseList").innerHTML = (cases || []).map((item) => `<button type="button" class="case-list-item${item.case_number === selected ? " active" : ""}" data-case-number="${escapeHtml(item.case_number)}">
+    <strong>${escapeHtml(item.case_number)}</strong><span>${Number(item.media_count)} MEDIEN</span><span class="open-count">${Number(item.open_count)} OFFEN</span>
+  </button>`).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
 
 async function refresh(loadLatest = false) {
@@ -398,6 +398,14 @@ async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offse
     if (data.has_more) target.insertAdjacentHTML("beforeend", `<button class="tree-more" type="button" data-tree-prefix="${escapeHtml(prefix)}" data-tree-offset="${Number(data.next_offset)}">WEITERE EINTRÄGE LADEN</button>`);
     inventoryTreeMediaId = currentMediaId;
     $("inventoryCount").textContent = `${data.total} EINTRÄGE AUF DIESER EBENE`;
+    if (prefix === "" && offset === 0 && data.entries?.length === 1 && data.entries[0].kind === "directory") {
+      const folder = target.querySelector(":scope > .tree-folder");
+      if (folder) {
+        folder.open = true;
+        folder.dataset.loaded = "true";
+        await loadInventoryTree(data.entries[0].path, folder.querySelector(".tree-children"));
+      }
+    }
   } catch (error) {
     target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
   }
@@ -432,14 +440,17 @@ async function loadInventory() {
 async function deleteCurrentCase() {
   const caseNumber = $("caseNumber").value.trim().toUpperCase();
   if (!caseNumber || $("caseDelete").disabled) return;
-  if (!window.confirm(`Fall ${caseNumber} aus dem aktiven System entfernen? Die lokale Sicherung bleibt wiederherstellbar.`)) return;
-  $("caseDelete").disabled = true;
+  const password = $("deletePassword").value;
+  $("deleteMessage").textContent = "FALL WIRD ENTFERNT …";
   try {
-    const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`, { method: "DELETE" });
+    const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gelöscht werden");
     $("caseNumber").value = "";
-    $("caseHistory").value = "";
     currentCaseMedia = [];
     currentMediaId = null;
     caseHistorySignature = "";
@@ -450,10 +461,28 @@ async function deleteCurrentCase() {
     $("caseDownload").href = "#";
     updateOrderSummary();
     $("systemState").textContent = "FALL ENTFERNT";
+    $("deleteModal").close();
+    $("deletePassword").value = "";
+    await refresh(false);
+  } catch (error) {
+    $("deleteMessage").textContent = `FEHLER: ${error.message}`;
+  }
+}
+
+async function ejectDevice(devicePath) {
+  $("systemState").textContent = "DATENTRÄGER WIRD AUSGEWORFEN …";
+  try {
+    const response = await fetch("/api/devices/eject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_path: devicePath }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Auswerfen fehlgeschlagen");
+    $("systemState").textContent = "DATENTRÄGER KANN ABGEZOGEN WERDEN";
     await refresh(false);
   } catch (error) {
     $("systemState").textContent = `FEHLER: ${error.message}`;
-    $("caseDelete").disabled = false;
   }
 }
 
@@ -474,6 +503,7 @@ async function openMedia(mediaId) {
 
 function showDashboard() {
   if ($("evidenceModal").open) $("evidenceModal").close();
+  if ($("deleteModal").open) $("deleteModal").close();
   $("results").hidden = true;
   $("dashboardView").hidden = false;
   currentMediaId = null;
@@ -491,6 +521,8 @@ $("deviceList").addEventListener("click", (event) => {
   if (button) runScan(button.dataset.scanDevice);
 });
 $("mediaCards").addEventListener("click", (event) => {
+  const eject = event.target.closest("button[data-eject-device]");
+  if (eject) { ejectDevice(eject.dataset.ejectDevice); return; }
   const card = event.target.closest("button[data-media-id]");
   if (card) openMedia(Number(card.dataset.mediaId));
 });
@@ -504,12 +536,21 @@ $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
 });
-$("caseHistory").addEventListener("change", () => {
-  if (!$("caseHistory").value) return;
-  $("caseNumber").value = $("caseHistory").value;
+$("caseList").addEventListener("click", (event) => {
+  const item = event.target.closest("button[data-case-number]");
+  if (!item) return;
+  $("caseNumber").value = item.dataset.caseNumber;
   $("caseNumber").dispatchEvent(new Event("input", { bubbles: true }));
 });
-$("caseDelete").addEventListener("click", deleteCurrentCase);
+$("caseDelete").addEventListener("click", () => {
+  $("deleteCaseNumber").textContent = $("caseNumber").value.trim().toUpperCase();
+  $("deletePassword").value = "";
+  $("deleteMessage").textContent = "";
+  $("deleteModal").showModal();
+  $("deletePassword").focus();
+});
+$("cancelDelete").addEventListener("click", () => $("deleteModal").close());
+$("deleteForm").addEventListener("submit", (event) => { event.preventDefault(); deleteCurrentCase(); });
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);

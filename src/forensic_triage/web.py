@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import io
 import json
 import logging
+import os
 import re
 import subprocess
 import threading
@@ -26,6 +28,7 @@ EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
 ACTIVE_DEVICES_LOCK = threading.Lock()
 ACTIVE_DEVICES: set[str] = set()
+DELETE_PASSWORD = os.environ.get("FORENSIC_TRIAGE_DELETE_PASSWORD", "123")
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -288,6 +291,9 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/scans":
             self._post_scan()
             return
+        if route == "/api/devices/eject":
+            self._post_eject()
+            return
         decision_match = re.fullmatch(r"/api/media/(\d+)/decision", route)
         if decision_match:
             self._post_decision(int(decision_match.group(1)))
@@ -301,11 +307,38 @@ class TriageHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         try:
+            payload = self._read_payload()
+            password = str(payload.get("password", ""))
+            if not hmac.compare_digest(password, DELETE_PASSWORD):
+                self._json(HTTPStatus.FORBIDDEN, {"error": "Passwort ist nicht korrekt."})
+                return
             result = self.server.case_store.archive_case(case_match.group(1))
             self._json(HTTPStatus.OK, result)
         except KeyError as exc:
             self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
         except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
+    def _post_eject(self) -> None:
+        try:
+            payload = self._read_payload()
+            path = str(payload.get("device_path", ""))
+            device = next((item for item in discover_media_devices() if item.get("path") == path), None)
+            if device is None:
+                self._json(HTTPStatus.NOT_FOUND, {"error": "Datenträger ist nicht mehr online."})
+                return
+            if path in active_device_paths():
+                self._json(HTTPStatus.CONFLICT, {"error": "Scan läuft noch; Datenträger nicht abziehen."})
+                return
+            if not device.get("scan_supported"):
+                self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist noch eingebunden oder nicht auswerfbar."})
+                return
+            subprocess.run(["sync"], check=True)
+            subprocess.run(["/usr/bin/eject", path], check=True, text=True, capture_output=True)
+            self._json(HTTPStatus.OK, {"device_path": path, "ejected": True})
+        except (OSError, subprocess.SubprocessError) as exc:
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Auswerfen fehlgeschlagen: {exc}"})
+        except (json.JSONDecodeError, ValueError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def _read_payload(self) -> dict[str, Any]:
