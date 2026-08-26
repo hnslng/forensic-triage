@@ -29,13 +29,11 @@
             <label for="caseNumber">FALLNUMMER
               <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
             </label>
-            <label for="evidenceNumber">BEWEISMITTEL / ASSERVAT
-              <input id="evidenceNumber" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
-            </label>
             <label for="operator">BEARBEITER / KÜRZEL
               <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
             </label>
           </div>
+          <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
           <div class="action-row">
             <button id="scanButton" type="button"><span>▶</span> GROBSICHTUNG STARTEN</button>
             <button id="keyboardButton" class="keyboard-button" type="button">⌨ BILDSCHIRMTASTATUR</button>
@@ -133,6 +131,9 @@
               <button type="button" data-decision="not_selected">NICHT AUSGEWÄHLT</button>
               <button type="button" data-decision="review">WEITERE PRÜFUNG</button>
             </div>
+            <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
+              <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
+            </label>
             <label for="decisionReason">BEGRÜNDUNG
               <select id="decisionReason">
                 <option value="">— auswählen —</option>
@@ -157,7 +158,7 @@
           <div class="panel-title"><span>08</span> MEDIENREGISTER // <b id="casePanelNumber">—</b></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
+              <thead><tr><th>SICHTUNG</th><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
               <tbody id="caseMedia"></tbody>
             </table>
           </div>

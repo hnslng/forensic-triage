@@ -27,7 +27,7 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => 
 }[char]));
 
 function renderResults(summary, hits = demoHits) {
-  $("resultEvidence").textContent = (summary.evidence || "OHNE NUMMER").replace("__", " / ");
+  $("resultEvidence").textContent = summary.evidence || "SICHTUNG";
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
   $("fileCount").textContent = Number(summary.file_count || 0).toLocaleString("de-AT");
   $("directoryCount").textContent = Number(summary.directory_count || 0).toLocaleString("de-AT");
@@ -70,6 +70,8 @@ function renderDecision(media) {
   currentMediaId = media.id;
   currentDecision = media.decision === "open" ? null : media.decision;
   $("decisionState").textContent = decisionLabels[media.decision] || decisionLabels.open;
+  $("decisionEvidence").value = media.evidence_number || "";
+  $("decisionEvidenceWrap").hidden = currentDecision !== "secure";
   $("decisionReason").value = media.reason_code || "";
   $("decisionNote").value = media.reason_note || "";
   for (const button of document.querySelectorAll("[data-decision]")) {
@@ -101,7 +103,7 @@ async function loadCase(caseNumber) {
     $("casePanel").hidden = false;
     $("casePanelNumber").textContent = data.case.case_number;
     $("caseMedia").innerHTML = data.media.map((medium) => `
-      <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.evidence_number)}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
+      <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
     `).join("");
   } catch (error) {
     $("decisionMessage").textContent = error.message;
@@ -124,20 +126,20 @@ function renderDevice(device) {
 
 function updateScanAvailability() {
   const hasCase = $("caseNumber").value.trim().length > 0;
-  const hasEvidence = $("evidenceNumber").value.trim().length > 0;
   const hasOperator = $("operator").value.trim().length > 0;
-  $("scanButton").disabled = !devicePresent || !hasCase || !hasEvidence || !hasOperator;
+  $("scanButton").disabled = !devicePresent || !hasCase || !hasOperator;
 }
 
 function updateDecisionAvailability() {
   const reasonRequired = currentDecision === "not_selected";
   const hasReason = $("decisionReason").value.length > 0;
-  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || !$("operator").value.trim();
+  const hasEvidence = $("decisionEvidence").value.trim().length > 0;
+  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || !$("operator").value.trim();
 }
 
 function openKeyboard(input) {
   activeInput = input || activeInput || $("caseNumber");
-  $("keyboardTarget").textContent = activeInput === $("caseNumber") ? "FALLNUMMER" : activeInput === $("evidenceNumber") ? "BEWEISMITTEL" : "BEARBEITER";
+  $("keyboardTarget").textContent = activeInput === $("caseNumber") ? "FALLNUMMER" : activeInput === $("decisionEvidence") ? "BEWEISMITTEL" : "BEARBEITER";
   $("screenKeyboard").hidden = false;
 }
 
@@ -151,8 +153,8 @@ function buildKeyboard() {
     if (key === "BACKSPACE") activeInput.value = activeInput.value.slice(0, -1);
     else if (key === "CLEAR") activeInput.value = "";
     else if (key === "NEXT") {
-      if (activeInput === $("caseNumber")) openKeyboard($("evidenceNumber"));
-      else if (activeInput === $("evidenceNumber")) openKeyboard($("operator"));
+      if (activeInput === $("caseNumber")) openKeyboard($("operator"));
+      else if (activeInput === $("operator") && !$("decisionEvidenceWrap").hidden) openKeyboard($("decisionEvidence"));
       else { $("screenKeyboard").hidden = true; $("scanButton").focus(); }
       updateScanAvailability();
       return;
@@ -176,13 +178,10 @@ async function refresh() {
 
 async function runScan() {
   const caseNumber = $("caseNumber").value.trim().toUpperCase();
-  const evidenceNumber = $("evidenceNumber").value.trim().toUpperCase();
   const operator = $("operator").value.trim().toUpperCase();
   if (!caseNumber) { $("caseNumber").focus(); return; }
-  if (!evidenceNumber) { $("evidenceNumber").focus(); return; }
   if (!operator) { $("operator").focus(); return; }
   const normalizedCase = caseNumber.replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
-  const normalizedEvidence = evidenceNumber.replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
   $("scanButton").disabled = true;
   $("progressPanel").hidden = false;
   $("screenKeyboard").hidden = true;
@@ -202,7 +201,7 @@ async function runScan() {
     const response = await fetch("/api/scans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: normalizedCase, evidence_number: normalizedEvidence, operator }),
+      body: JSON.stringify({ case_number: normalizedCase, operator }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
@@ -231,6 +230,7 @@ async function saveDecision() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         decision: currentDecision,
+        evidence_number: currentDecision === "secure" ? $("decisionEvidence").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80) : null,
         reason_code: $("decisionReason").value || null,
         reason_note: $("decisionNote").value,
         operator: $("operator").value.trim().toUpperCase(),
@@ -287,9 +287,12 @@ $("caseMedia").addEventListener("click", (event) => {
   if (row) openMedia(Number(row.dataset.mediaId));
 });
 $("decisionReason").addEventListener("change", updateDecisionAvailability);
+$("decisionEvidence").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {
     currentDecision = button.dataset.decision;
+    $("decisionEvidenceWrap").hidden = currentDecision !== "secure";
+    if (currentDecision !== "secure") $("decisionEvidence").value = "";
     for (const peer of document.querySelectorAll("[data-decision]")) peer.classList.toggle("active", peer === button);
     $("decisionState").textContent = decisionLabels[currentDecision];
     updateDecisionAvailability();
@@ -300,7 +303,7 @@ $("keyboardClose").addEventListener("click", () => { $("screenKeyboard").hidden 
 for (const input of document.querySelectorAll(".case-input")) {
   input.addEventListener("focus", () => {
     activeInput = input;
-    $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : input === $("evidenceNumber") ? "BEWEISMITTEL" : "BEARBEITER";
+    $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : input === $("decisionEvidence") ? "BEWEISMITTEL" : "BEARBEITER";
     if (window.matchMedia("(pointer: coarse)").matches) openKeyboard(input);
   });
   input.addEventListener("input", updateScanAvailability);

@@ -40,10 +40,11 @@ h1 span { color: var(--acid); }
 .plug { color: var(--line); border: 2px solid var(--line); padding: 7px; }
 .device-empty small { max-width: 320px; }
 .action-panel { padding-bottom: 13px; }
-.field-grid { display: grid; grid-template-columns: 1fr 1fr .58fr; gap: 10px; margin: 18px 16px 14px; }
+.field-grid { display: grid; grid-template-columns: 1fr .45fr; gap: 10px; margin: 18px 16px 8px; }
 .action-panel label { display: block; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .action-panel input { width: 100%; margin-top: 7px; border: 1px solid var(--line); background: #090b08; color: var(--ink); padding: 14px 13px; outline: none; text-transform: uppercase; font-size: 15px; }
 .action-panel input:focus { border-color: var(--acid); box-shadow: 0 0 0 2px rgba(201,242,82,.12); }
+.sighting-note { margin: 0 16px 14px; color: var(--acid); font-size: 8px; letter-spacing: .05em; }
 .action-row { display: flex; align-items: stretch; gap: 11px; margin: 0 16px; }
 #scanButton { width: min(380px, 64%); border: 0; padding: 16px 12px; color: #111; background: var(--acid); font-weight: 950; cursor: pointer; box-shadow: 4px 4px 0 #657929; }
 #scanButton:hover { transform: translate(1px,1px); box-shadow: 3px 3px 0 #657929; }
@@ -100,7 +101,9 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .decision-buttons button { min-height: 42px; border: 1px solid var(--line); background: #090b08; color: var(--ink); cursor: pointer; font-size: 9px; font-weight: 900; }
 .decision-buttons button:hover, .decision-buttons button.active { border-color: var(--acid); color: var(--acid); background: #1a2113; }
 .decision-panel label { display: block; margin: 9px 14px; color: var(--muted); font-size: 9px; }
+.decision-panel label b { color: var(--acid); }
 .decision-panel select, .decision-panel textarea { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--line); background: #090b08; color: var(--ink); padding: 10px; outline: none; resize: vertical; }
+.decision-panel input { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--line); background: #090b08; color: var(--ink); padding: 11px; outline: none; text-transform: uppercase; }
 .decision-panel select:focus, .decision-panel textarea:focus { border-color: var(--acid); }
 .save-decision { width: calc(100% - 28px); margin: 4px 14px 0; padding: 12px; background: var(--acid); color: #111; border: 0; font-weight: 950; cursor: pointer; }
 .save-decision:disabled { filter: grayscale(1); cursor: not-allowed; }

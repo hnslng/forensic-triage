@@ -220,15 +220,14 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_payload()
             case_number = str(payload.get("case_number", "")).strip()
-            evidence_number = str(payload.get("evidence_number", "")).strip()
             operator = str(payload.get("operator", "")).strip()
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
-        if not EVIDENCE_PATTERN.fullmatch(case_number) or not EVIDENCE_PATTERN.fullmatch(evidence_number):
+        if not EVIDENCE_PATTERN.fullmatch(case_number):
             self._json(
                 HTTPStatus.BAD_REQUEST,
-                {"error": "Fall- und Beweismittelnummer: 1–80 Zeichen; erlaubt sind Buchstaben, Ziffern, Punkt, Minus und Unterstrich."},
+                {"error": "Fallnummer: 1–80 Zeichen; erlaubt sind Buchstaben, Ziffern, Punkt, Minus und Unterstrich."},
             )
             return
         if not OPERATOR_PATTERN.fullmatch(operator):
@@ -243,15 +242,16 @@ class TriageHandler(BaseHTTPRequestHandler):
                 message = "Kein geeigneter USB-Datenträger erkannt." if not devices else "Mehrere USB-Datenträger erkannt; bitte nur das Untersuchungsmedium anschließen."
                 self._json(HTTPStatus.CONFLICT, {"error": message})
                 return
+            sighting_number = self.server.case_store.next_sighting_number(case_number)
             result_dir = scan(
                 Path(devices[0]["path"]),
                 self.server.profile_path,
-                evidence_number,
-                self.server.case_store.scan_root(case_number, evidence_number),
+                sighting_number,
+                self.server.case_store.scan_root(case_number, sighting_number),
                 mode="fast",
             )
             record = self.server.case_store.record_scan(
-                case_number, evidence_number, operator, devices[0], result_dir,
+                case_number, sighting_number, operator, devices[0], result_dir,
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.CREATED, record)
@@ -270,6 +270,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 str(payload["reason_code"]) if payload.get("reason_code") else None,
                 str(payload.get("reason_note", "")),
                 str(payload.get("operator", "")),
+                str(payload.get("evidence_number", "")) or None,
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.OK, record)

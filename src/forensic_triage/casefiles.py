@@ -66,6 +66,7 @@ class CaseStore:
         return connection
 
     def _initialize(self) -> None:
+        migrated_cases: list[str] = []
         with self._connect() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
             connection.execute(
@@ -84,6 +85,7 @@ class CaseStore:
                     id INTEGER PRIMARY KEY,
                     case_id INTEGER NOT NULL REFERENCES cases(id),
                     evidence_number TEXT NOT NULL,
+                    sighting_number TEXT NOT NULL,
                     scan_id TEXT NOT NULL,
                     result_path TEXT NOT NULL,
                     scanned_at TEXT NOT NULL,
@@ -105,6 +107,27 @@ class CaseStore:
                 )
                 """
             )
+            columns = {row["name"] for row in connection.execute("PRAGMA table_info(media)")}
+            if "sighting_number" not in columns:
+                connection.execute("ALTER TABLE media ADD COLUMN sighting_number TEXT")
+                case_ids = [int(row["case_id"]) for row in connection.execute("SELECT DISTINCT case_id FROM media")]
+                for case_id in case_ids:
+                    migrated_cases.append(
+                        str(connection.execute("SELECT case_number FROM cases WHERE id=?", (case_id,)).fetchone()["case_number"])
+                    )
+                    rows = connection.execute(
+                        "SELECT id, decision, evidence_number FROM media WHERE case_id=? ORDER BY id",
+                        (case_id,),
+                    ).fetchall()
+                    for sequence, row in enumerate(rows, start=1):
+                        connection.execute(
+                            "UPDATE media SET sighting_number=?, evidence_number=? WHERE id=?",
+                            (
+                                f"SICHT-{sequence:03d}",
+                                row["evidence_number"] if row["decision"] == "secure" else "",
+                                int(row["id"]),
+                            ),
+                        )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS audit_events (
@@ -119,11 +142,27 @@ class CaseStore:
                 """
             )
             connection.execute("CREATE INDEX IF NOT EXISTS idx_media_case_scanned ON media(case_id, scanned_at)")
+            connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_case_sighting ON media(case_id, sighting_number)")
+            connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_media_case_evidence ON media(case_id, evidence_number) "
+                "WHERE evidence_number != ''"
+            )
             connection.execute("CREATE INDEX IF NOT EXISTS idx_audit_case_time ON audit_events(case_id, occurred_at)")
             connection.execute("PRAGMA optimize")
+        for case_number in migrated_cases:
+            self.refresh_exports(case_number)
 
-    def scan_root(self, case_number: str, evidence_number: str) -> Path:
-        return self.case_path(case_number) / "media" / safe_component(evidence_number) / "scans"
+    def next_sighting_number(self, case_number: str) -> str:
+        case_number = safe_component(case_number)
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count FROM media JOIN cases ON cases.id=media.case_id WHERE cases.case_number=?",
+                (case_number,),
+            ).fetchone()
+        return f"SICHT-{int(row['count']) + 1:03d}"
+
+    def scan_root(self, case_number: str, sighting_number: str) -> Path:
+        return self.case_path(case_number) / "media" / safe_component(sighting_number) / "scans"
 
     def case_path(self, case_number: str) -> Path:
         return self.root / safe_component(case_number)
@@ -131,7 +170,7 @@ class CaseStore:
     def record_scan(
         self,
         case_number: str,
-        evidence_number: str,
+        sighting_number: str,
         operator: str,
         device: dict[str, Any],
         result_dir: Path,
@@ -139,7 +178,7 @@ class CaseStore:
         summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
         now = utc_now()
         case_number = safe_component(case_number)
-        evidence_number = safe_component(evidence_number)
+        sighting_number = safe_component(sighting_number)
         relative_result = result_dir.resolve().relative_to(self.root.resolve()).as_posix()
         with self._connect() as connection:
             connection.execute(
@@ -151,13 +190,13 @@ class CaseStore:
             cursor = connection.execute(
                 """
                 INSERT INTO media(
-                    case_id, evidence_number, scan_id, result_path, scanned_at,
+                    case_id, evidence_number, sighting_number, scan_id, result_path, scanned_at,
                     device_path, vendor, model, serial, size, file_count,
                     directory_count, keyword_matches, duration_seconds
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    case_id, evidence_number, result_dir.name, relative_result, now,
+                    case_id, sighting_number, result_dir.name, relative_result, now,
                     str(device.get("path", "")), str(device.get("vendor", "")),
                     str(device.get("model", "")), str(device.get("serial", "")),
                     int(device.get("size", 0) or 0), int(summary.get("file_count", 0)),
@@ -169,7 +208,10 @@ class CaseStore:
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
                 "VALUES (?, ?, ?, 'scan_completed', ?, ?)",
-                (case_id, media_id, now, operator or None, json.dumps({"scan_id": result_dir.name}, ensure_ascii=False)),
+                (
+                    case_id, media_id, now, operator or None,
+                    json.dumps({"scan_id": result_dir.name, "sighting_number": sighting_number}, ensure_ascii=False),
+                ),
             )
         self.refresh_exports(case_number)
         result = self.media_detail(media_id)
@@ -184,6 +226,7 @@ class CaseStore:
         reason_code: str | None,
         reason_note: str,
         operator: str,
+        evidence_number: str | None = None,
     ) -> dict[str, Any]:
         if decision not in DECISIONS - {"open"}:
             raise ValueError("Unbekannter Entscheidungsstatus.")
@@ -191,6 +234,11 @@ class CaseStore:
             raise ValueError("Für eine Nichtauswahl ist eine Begründung erforderlich.")
         if reason_code and reason_code not in REASONS:
             raise ValueError("Unbekannte Begründung.")
+        official_evidence = safe_component(evidence_number or "") if evidence_number else ""
+        if decision == "secure" and not official_evidence:
+            raise ValueError("Für die Sicherung ist eine Beweismittelnummer erforderlich.")
+        if decision != "secure":
+            official_evidence = ""
         now = utc_now()
         with self._connect() as connection:
             row = connection.execute(
@@ -200,17 +248,28 @@ class CaseStore:
             ).fetchone()
             if row is None:
                 raise KeyError("Medienakte nicht gefunden.")
-            connection.execute(
-                "UPDATE media SET decision=?, reason_code=?, reason_note=?, decision_operator=?, decided_at=? WHERE id=?",
-                (decision, reason_code, reason_note.strip()[:1000] or None, operator.strip()[:120] or None, now, media_id),
-            )
+            try:
+                connection.execute(
+                    "UPDATE media SET decision=?, evidence_number=?, reason_code=?, reason_note=?, decision_operator=?, decided_at=? WHERE id=?",
+                    (decision, official_evidence, reason_code, reason_note.strip()[:1000] or None, operator.strip()[:120] or None, now, media_id),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ValueError("Diese Beweismittelnummer ist in diesem Fall bereits vergeben.") from exc
             connection.execute("UPDATE cases SET updated_at=? WHERE id=?", (now, int(row["case_id"])))
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
                 "VALUES (?, ?, ?, 'decision_recorded', ?, ?)",
                 (
                     int(row["case_id"]), media_id, now, operator.strip()[:120] or None,
-                    json.dumps({"decision": decision, "reason_code": reason_code, "reason_note": reason_note.strip()[:1000]}, ensure_ascii=False),
+                    json.dumps(
+                        {
+                            "decision": decision,
+                            "evidence_number": official_evidence or None,
+                            "reason_code": reason_code,
+                            "reason_note": reason_note.strip()[:1000],
+                        },
+                        ensure_ascii=False,
+                    ),
                 ),
             )
             case_number = str(row["case_number"])
@@ -299,7 +358,7 @@ class CaseStore:
 
     def _media_dict(self, row: sqlite3.Row) -> dict[str, Any]:
         keys = {
-            "id", "case_number", "evidence_number", "scan_id", "scanned_at", "device_path",
+            "id", "case_number", "sighting_number", "evidence_number", "scan_id", "scanned_at", "device_path",
             "vendor", "model", "serial", "size", "file_count", "directory_count",
             "keyword_matches", "duration_seconds", "decision", "reason_code", "reason_note",
             "decision_operator", "decided_at",
@@ -327,7 +386,7 @@ class CaseStore:
             encoding="utf-8",
         )
         fields = [
-            "id", "evidence_number", "scan_id", "scanned_at", "vendor", "model", "serial", "size",
+            "id", "sighting_number", "evidence_number", "scan_id", "scanned_at", "vendor", "model", "serial", "size",
             "file_count", "directory_count", "keyword_matches", "duration_seconds", "decision",
             "reason_code", "reason_note", "decision_operator", "decided_at",
         ]
@@ -351,7 +410,8 @@ class CaseStore:
         for row in media:
             report_lines.extend(
                 [
-                    f"BEWEISMITTEL / ASSERVAT: {row['evidence_number']}",
+                    f"SICHTUNGSMEDIUM: {row['sighting_number']}",
+                    f"BEWEISMITTEL / ASSERVAT: {row['evidence_number'] or 'nicht vergeben'}",
                     f"Medium: {str(row['vendor']).strip()} {str(row['model']).strip()}",
                     f"Seriennummer: {row['serial'] or 'nicht gemeldet'}",
                     f"Größe (Byte): {row['size']}",
@@ -373,7 +433,7 @@ class CaseStore:
         )
         (case_dir / "case-report.txt").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
         for row in media:
-            media_dir = case_dir / "media" / safe_component(str(row["evidence_number"])) / "records"
+            media_dir = case_dir / "media" / safe_component(str(row["sighting_number"])) / "records"
             media_dir.mkdir(parents=True, exist_ok=True)
             (media_dir / f"{safe_component(str(row['scan_id']))}.json").write_text(
                 json.dumps(self._media_dict(row), ensure_ascii=False, indent=2) + "\n",
