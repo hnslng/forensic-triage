@@ -74,6 +74,8 @@ ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
 
 Then open `http://127.0.0.1:8787` on the Mac. With Auto-Scan enabled, every newly detected, unmounted whole USB disk is inventoried independently; multiple eligible devices can run concurrently. The scanner still performs the final identity, mount-state, transport, and read-only checks for every device. Completed online media offer a safe-eject action; media with an open decision remain conspicuous in the collapsed offline history after removal.
 
+The operator interface deliberately starts with **no active case**, including after every page or service restart. Enter a case number and operator initials—or choose an existing case—then press `FALL STARTEN`. Merely typing or selecting a case never enables scanning. The prominent header remains the authoritative indication of the active case; changing the draft fields does not switch the assignment until `FALL STARTEN` is pressed again. `FALL BEENDEN` immediately returns the interface to the scan-locked state.
+
 On the future Raspberry Pi the same interface can be used either on its small touch display or from a laptop over a direct Ethernet cable. The intended field setup gives the Pi a dedicated address such as `10.77.0.1` and binds the web service only to that direct-link interface; the laptop then opens `http://10.77.0.1:8787` (or `http://triagebox.local:8787`). This network configuration is deliberately deferred until it can be tested on the real Pi, so the current VM remains bound to localhost and reachable through the SSH tunnel.
 
 The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.

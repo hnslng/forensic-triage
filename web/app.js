@@ -5,13 +5,14 @@ const runningPaths = new Set();
 let batchTotal = 0;
 let batchDone = 0;
 let autoStartTimer = null;
-let caseLoadTimer = null;
-let caseLookupPending = false;
 let currentCaseMedia = [];
 let currentMediaId = null;
 let currentDecision = null;
 let inventoryTreeMediaId = null;
 let caseHistorySignature = "";
+let knownCases = [];
+let activeCaseNumber = null;
+let activeOperator = "";
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -179,31 +180,66 @@ function renderMediaCards(media) {
 
 function updateDashboardState() {
   const online = devices.length;
+  if (!activeCaseNumber) {
+    $("deviceCount").textContent = `${online} ONLINE · WARTET AUF FALL`;
+    $("deviceEmptyTitle").textContent = "KEIN FALL AKTIV";
+    $("deviceEmptyCopy").textContent = "Fallnummer und Kürzel eingeben, dann „Fall starten“. Erst danach ist Auto-Scan freigeschaltet.";
+    $("deviceEmpty").hidden = false;
+    return;
+  }
   const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial)).length;
   $("deviceCount").textContent = `${online} ONLINE · ${offline} OFFLINE`;
+  $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM AUFTRAG";
+  $("deviceEmptyCopy").textContent = "USB-Medium einstecken. Auto-Scan übernimmt die geschützte Grobsichtung.";
   $("deviceEmpty").hidden = online > 0;
 }
 
 function updateOrderSummary() {
-  const caseNumber = $("caseNumber").value.trim().toUpperCase();
-  const auto = $("autoScanToggle").checked ? "AUTO EIN" : "AUTO AUS";
-  $("auftragSummary").textContent = caseNumber ? `${caseNumber} · ${auto}` : `NEU ERFASSEN · ${auto}`;
+  $("auftragSummary").textContent = activeCaseNumber ? `AKTIV: ${activeCaseNumber}` : "KEIN FALL AKTIV · SCAN GESPERRT";
+  $("autoScanToggle").nextElementSibling.textContent = $("autoScanToggle").checked ? "AUTO-SCAN EIN" : "AUTO-SCAN AUS";
 }
 
-function scheduleCaseLoad() {
-  clearTimeout(caseLoadTimer);
-  caseLookupPending = true;
-  clearTimeout(autoStartTimer);
-  caseLoadTimer = setTimeout(async () => {
-    await loadCase($("caseNumber").value.trim().toUpperCase());
-    caseLookupPending = false;
-    scheduleAutoScan(50);
-  }, 450);
+function updateCaseSessionUi(message = "") {
+  const draftCase = $("caseNumber").value.trim().toUpperCase();
+  const draftOperator = $("operator").value.trim().toUpperCase();
+  const ready = Boolean(draftCase && draftOperator && !runningPaths.size);
+  const sameSession = activeCaseNumber === draftCase && activeOperator === draftOperator;
+  $("caseStart").disabled = !ready || sameSession;
+  $("caseStart").textContent = activeCaseNumber && !sameSession ? "↻ ANDEREN FALL STARTEN" : "▶ FALL STARTEN";
+  $("caseStop").disabled = !activeCaseNumber || runningPaths.size > 0;
+  $("activeCaseDisplay").classList.toggle("locked", !activeCaseNumber);
+  $("systemStatus").classList.toggle("locked", !activeCaseNumber);
+  $("activeCaseNumber").textContent = activeCaseNumber || "KEIN FALL";
+  $("activeCaseOperator").textContent = activeCaseNumber ? `BEARBEITER: ${activeOperator}` : "SCAN GESPERRT";
+  if (message) {
+    $("caseStartMessage").textContent = message;
+  } else if (!draftCase || !draftOperator) {
+    $("caseStartMessage").textContent = "FALLNUMMER UND KÜRZEL EINGEBEN";
+  } else if (sameSession) {
+    $("caseStartMessage").textContent = "DIESER FALL IST AKTIV";
+  } else if (activeCaseNumber) {
+    $("caseStartMessage").textContent = `${activeCaseNumber} BLEIBT AKTIV, BIS DER WECHSEL BESTÄTIGT WIRD`;
+  } else {
+    $("caseStartMessage").textContent = "BEREIT — FALL MUSS AUSDRÜCKLICH GESTARTET WERDEN";
+  }
+  $("caseStartMessage").className = `case-start-message${ready && !sameSession ? " warning" : activeCaseNumber ? " ready" : ""}`;
+  updateOrderSummary();
+  updateScanAvailability();
+  updateDecisionAvailability();
 }
 
 const stateLabels = {
   ready: "BEREIT", scanning: "SCAN LÄUFT", complete: "FERTIG", error: "PRÜFEN", unavailable: "NICHT BEREIT",
 };
+
+function resetDeviceStatesForCase() {
+  for (const device of devices) {
+    const recorded = activeCaseNumber && device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial);
+    if (runningPaths.has(device.path)) deviceStates.set(device.path, "scanning");
+    else if (recorded) deviceStates.set(device.path, "complete");
+    else deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
+  }
+}
 
 function renderDevices(items, activePaths = []) {
   devices = items || [];
@@ -217,7 +253,7 @@ function renderDevices(items, activePaths = []) {
   const visibleDevices = devices.filter((device) => !(
     device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial)
   ));
-  $("deviceList").innerHTML = visibleDevices.map((device) => {
+  $("deviceList").innerHTML = activeCaseNumber ? visibleDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
@@ -230,7 +266,11 @@ function renderDevices(items, activePaths = []) {
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
-  }).join("");
+  }).join("") : "";
+  if (!activeCaseNumber) {
+    $("mediaCards").innerHTML = "";
+    $("offlineMediaPanel").hidden = true;
+  }
   renderMediaCards(currentCaseMedia);
   updateDashboardState();
   updateScanAvailability();
@@ -238,11 +278,9 @@ function renderDevices(items, activePaths = []) {
 }
 
 function updateScanAvailability() {
-  const hasCase = $("caseNumber").value.trim().length > 0;
-  const hasOperator = $("operator").value.trim().length > 0;
   for (const button of document.querySelectorAll("[data-scan-device]")) {
     const device = devices.find((item) => item.path === button.dataset.scanDevice);
-    button.disabled = !device?.scan_supported || deviceStates.get(device.path) === "scanning" || !hasCase || !hasOperator;
+    button.disabled = !device?.scan_supported || deviceStates.get(device.path) === "scanning" || !activeCaseNumber || !activeOperator;
   }
 }
 
@@ -250,16 +288,17 @@ function updateDecisionAvailability() {
   const reasonRequired = currentDecision === "not_selected";
   const hasReason = $("decisionReason").value.length > 0;
   const hasEvidence = $("decisionEvidence").value.trim().length > 0;
-  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || !$("operator").value.trim();
+  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || !activeOperator;
 }
 
 function renderCaseHistory(cases) {
+  knownCases = cases || [];
   const selected = $("caseNumber").value.trim().toUpperCase();
-  const signature = JSON.stringify({ selected, cases: (cases || []).map((item) => [item.case_number, item.media_count, item.open_count]) });
+  const signature = JSON.stringify({ selected, activeCaseNumber, cases: knownCases.map((item) => [item.case_number, item.media_count, item.open_count]) });
   if (signature === caseHistorySignature) return;
   caseHistorySignature = signature;
-  $("caseListCount").textContent = `${(cases || []).length} AKTIVE ${(cases || []).length === 1 ? "FALLAKTE" : "FALLAKTEN"}`;
-  $("caseList").innerHTML = (cases || []).map((item) => `<button type="button" class="case-list-item${item.case_number === selected ? " active" : ""}" data-case-number="${escapeHtml(item.case_number)}">
+  $("caseListCount").textContent = `${knownCases.length} ${knownCases.length === 1 ? "FALLAKTE" : "FALLAKTEN"}`;
+  $("caseList").innerHTML = knownCases.map((item) => `<button type="button" class="case-list-item${item.case_number === activeCaseNumber ? " active" : item.case_number === selected ? " selected" : ""}" data-case-number="${escapeHtml(item.case_number)}">
     <strong>${escapeHtml(item.case_number)}</strong><span>${Number(item.media_count)} MEDIEN</span><span class="open-count">${Number(item.open_count)} OFFEN</span>
   </button>`).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
@@ -288,11 +327,11 @@ function updateProgress() {
 }
 
 async function runScan(devicePath, standalone = true) {
-  const caseNumber = $("caseNumber").value.trim().toUpperCase();
-  const operator = $("operator").value.trim().toUpperCase();
-  if (!caseNumber) { $("caseNumber").focus(); return; }
-  if (!operator) { $("operator").focus(); return; }
-  const normalizedCase = caseNumber.replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
+  if (!activeCaseNumber || !activeOperator) {
+    $("systemState").textContent = "ZUERST FALL STARTEN";
+    $("auftragPanel").open = true;
+    return;
+  }
   if (standalone) { batchTotal = 1; batchDone = 0; }
   runningPaths.add(devicePath);
   deviceStates.set(devicePath, "scanning");
@@ -302,7 +341,7 @@ async function runScan(devicePath, standalone = true) {
     const response = await fetch("/api/scans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: normalizedCase, operator, device_path: devicePath }),
+      body: JSON.stringify({ case_number: activeCaseNumber, operator: activeOperator, device_path: devicePath }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
@@ -334,8 +373,7 @@ async function runReadyScans() {
 
 function maybeAutoScan() {
   if (!$("autoScanToggle").checked) return;
-  if (caseLookupPending) return;
-  if (!$("caseNumber").value.trim() || !$("operator").value.trim()) return;
+  if (!activeCaseNumber || !activeOperator) return;
   const ready = devices.some((device) => device.scan_supported && deviceStates.get(device.path) === "ready");
   if (ready) runReadyScans();
 }
@@ -358,7 +396,7 @@ async function saveDecision() {
         evidence_number: currentDecision === "secure" ? $("decisionEvidence").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80) : null,
         reason_code: currentDecision === "secure" ? null : ($("decisionReason").value || null),
         reason_note: currentDecision === "secure" ? "" : $("decisionNote").value,
-        operator: $("operator").value.trim().toUpperCase(),
+        operator: activeOperator,
       }),
     });
     const data = await response.json();
@@ -437,8 +475,75 @@ async function loadInventory() {
   }
 }
 
+async function startCaseSession() {
+  const caseNumber = $("caseNumber").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
+  const operator = $("operator").value.trim().toUpperCase();
+  if (!caseNumber) { $("caseNumber").focus(); return; }
+  if (!operator) { $("operator").focus(); return; }
+  if (runningPaths.size) {
+    updateCaseSessionUi("FALLWECHSEL WÄHREND EINES SCANS GESPERRT");
+    return;
+  }
+  $("caseStart").disabled = true;
+  $("caseStartMessage").textContent = "FALL WIRD GESTARTET …";
+  try {
+    const response = await fetch("/api/cases/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ case_number: caseNumber, operator }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Fall konnte nicht gestartet werden");
+    activeCaseNumber = data.case.case_number;
+    activeOperator = operator;
+    $("caseNumber").value = activeCaseNumber;
+    currentMediaId = null;
+    currentCaseMedia = [];
+    caseHistorySignature = "";
+    await loadCase(activeCaseNumber);
+    resetDeviceStatesForCase();
+    renderDevices(devices);
+    updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · SCANS FREIGEGEBEN`);
+    $("systemState").textContent = "SYSTEM BEREIT";
+    $("auftragPanel").open = false;
+    await refresh(false);
+    scheduleAutoScan(150);
+  } catch (error) {
+    $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
+    $("caseStartMessage").className = "case-start-message warning";
+    updateCaseSessionUi($("caseStartMessage").textContent);
+  }
+}
+
+function stopCaseSession() {
+  if (runningPaths.size) return;
+  clearTimeout(autoStartTimer);
+  activeCaseNumber = null;
+  activeOperator = "";
+  currentCaseMedia = [];
+  currentMediaId = null;
+  currentDecision = null;
+  inventoryTreeMediaId = null;
+  $("caseNumber").value = "";
+  $("operator").value = "";
+  $("casePanel").hidden = true;
+  $("results").hidden = true;
+  $("dashboardView").hidden = false;
+  $("caseDownload").classList.add("disabled");
+  $("caseDownload").setAttribute("aria-disabled", "true");
+  $("caseDownload").href = "#";
+  $("caseDelete").disabled = true;
+  caseHistorySignature = "";
+  resetDeviceStatesForCase();
+  renderDevices(devices);
+  renderCaseHistory(knownCases);
+  updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
+  $("systemState").textContent = "KEIN FALL AKTIV";
+  $("auftragPanel").open = true;
+}
+
 async function deleteCurrentCase() {
-  const caseNumber = $("caseNumber").value.trim().toUpperCase();
+  const caseNumber = activeCaseNumber;
   if (!caseNumber || $("caseDelete").disabled) return;
   const password = $("deletePassword").value;
   $("deleteMessage").textContent = "FALL WIRD ENTFERNT …";
@@ -450,19 +555,10 @@ async function deleteCurrentCase() {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gelöscht werden");
-    $("caseNumber").value = "";
-    currentCaseMedia = [];
-    currentMediaId = null;
-    caseHistorySignature = "";
-    renderMediaCards([]);
-    $("casePanel").hidden = true;
-    $("caseDownload").classList.add("disabled");
-    $("caseDownload").setAttribute("aria-disabled", "true");
-    $("caseDownload").href = "#";
-    updateOrderSummary();
-    $("systemState").textContent = "FALL ENTFERNT";
     $("deleteModal").close();
     $("deletePassword").value = "";
+    stopCaseSession();
+    $("systemState").textContent = "FALL ENTFERNT · KEIN FALL AKTIV";
     await refresh(false);
   } catch (error) {
     $("deleteMessage").textContent = `FEHLER: ${error.message}`;
@@ -514,6 +610,7 @@ function showDashboard() {
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
 $("autoScanToggle").addEventListener("change", () => {
   updateOrderSummary();
+  if (!activeCaseNumber) $("systemState").textContent = "KEIN FALL AKTIV";
   scheduleAutoScan(100);
 });
 $("deviceList").addEventListener("click", (event) => {
@@ -540,10 +637,15 @@ $("caseList").addEventListener("click", (event) => {
   const item = event.target.closest("button[data-case-number]");
   if (!item) return;
   $("caseNumber").value = item.dataset.caseNumber;
-  $("caseNumber").dispatchEvent(new Event("input", { bubbles: true }));
+  caseHistorySignature = "";
+  renderCaseHistory(knownCases);
+  updateCaseSessionUi();
+  $("casePicker").open = false;
 });
+$("caseStart").addEventListener("click", startCaseSession);
+$("caseStop").addEventListener("click", stopCaseSession);
 $("caseDelete").addEventListener("click", () => {
-  $("deleteCaseNumber").textContent = $("caseNumber").value.trim().toUpperCase();
+  $("deleteCaseNumber").textContent = activeCaseNumber || "—";
   $("deletePassword").value = "";
   $("deleteMessage").textContent = "";
   $("deleteModal").showModal();
@@ -588,13 +690,15 @@ for (const button of document.querySelectorAll("[data-decision]")) {
     updateDecisionAvailability();
   });
 }
-for (const input of document.querySelectorAll(".case-input")) {
-  input.addEventListener("input", updateScanAvailability);
-  input.addEventListener("input", updateDecisionAvailability);
-  input.addEventListener("input", () => scheduleAutoScan());
-  input.addEventListener("input", updateOrderSummary);
-  if (input === $("caseNumber")) input.addEventListener("input", scheduleCaseLoad);
+for (const input of [$("caseNumber"), $("operator")]) {
+  input.addEventListener("input", () => {
+    if (input === $("caseNumber")) {
+      caseHistorySignature = "";
+      renderCaseHistory(knownCases);
+    }
+    updateCaseSessionUi();
+  });
 }
-updateOrderSummary();
+updateCaseSessionUi();
 refresh();
 setInterval(() => refresh(false), 2500);

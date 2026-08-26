@@ -50,6 +50,19 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
     }
 
 
+def test_case_is_created_only_by_explicit_start(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+
+    started = store.start_case("FALL-NEU", "HL")
+
+    assert started["case"]["case_number"] == "FALL-NEU"
+    assert started["media"] == []
+    assert store.list_cases()[0]["media_count"] == 0
+    assert '"event_type": "case_started"' in (
+        store.case_path("FALL-NEU") / "audit.log"
+    ).read_text(encoding="utf-8")
+
+
 def test_non_selection_requires_reason(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     result_dir = make_result(store, "FALL-1", "SICHT-001")

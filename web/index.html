@@ -11,18 +11,21 @@
     <div class="scanlines" aria-hidden="true"></div>
     <main class="shell">
       <header class="masthead">
-        <div>
-          <p class="eyebrow">FORENSIC FIELD UTILITY / LOCAL ONLY</p>
+        <div class="brand-block">
           <h1><button id="homeLogo" class="brand-home" type="button" aria-label="Zum Hauptdashboard">TRIAGE<span>//</span>BOX</button></h1>
         </div>
-        <div class="header-controls">
-          <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN</span></label>
-          <div class="system-state"><i></i><span id="systemState">SYSTEM BEREIT</span></div>
+        <div id="activeCaseDisplay" class="active-case-display locked">
+          <small>AKTIVER FALL</small>
+          <strong id="activeCaseNumber">KEIN FALL</strong>
+          <span id="activeCaseOperator">SCAN GESPERRT</span>
         </div>
       </header>
 
       <section class="rulebar" aria-label="Systemstatus">
-        <span>NODE: FORENSIC-TRIAGE</span><span>MODE: FAST/RO</span><span id="clock">UTC --:--:--</span>
+        <span title="Der schnelle, schreibgeschützte Grobsichtungsmodus ist fest eingestellt.">MODE: FAST/RO</span>
+        <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
+        <span class="system-state locked" id="systemStatus"><i></i><span id="systemState">KEIN FALL AKTIV</span></span>
+        <span id="clock">UTC --:--:--</span>
       </section>
 
       <section id="dashboardView">
@@ -31,7 +34,7 @@
           <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
           <div class="action-body">
             <section class="case-entry">
-              <div class="subhead"><span>NEU / AKTUELL</span><small>AUFTRAGSDATEN</small></div>
+              <div class="subhead"><span>FALL VORBEREITEN</span><small>ERST STARTEN, DANN SCANNEN</small></div>
               <div class="field-grid">
                 <label for="caseNumber">FALLNUMMER
                   <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
@@ -40,15 +43,23 @@
                   <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
                 </label>
               </div>
+              <div class="case-session-actions">
+                <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
+                <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
+              </div>
+              <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
               <p class="sighting-note">SICHTUNGSNUMMER AUTOMATISCH · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
             </section>
             <section class="case-browser">
-              <div class="subhead"><span>FALLLISTE</span><small id="caseListCount">0 AKTIVE FÄLLE</small></div>
-              <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
+              <details id="casePicker" class="case-picker disclosure">
+                <summary><span>BESTEHENDEN FALL WÄHLEN</span><small id="caseListCount">0 FALLAKTEN</small></summary>
+                <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
+              </details>
               <div class="case-actions">
                 <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">↓ ALS ZIP</a>
                 <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
               </div>
+              <p class="case-browser-note">AUSWAHL ALLEIN ÄNDERT DEN AKTIVEN FALL NICHT.</p>
             </section>
           </div>
         </details>
@@ -57,8 +68,8 @@
           <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><b id="deviceCount">0 MEDIEN</b></div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
-            <strong>NOCH KEIN MEDIUM IN DIESEM AUFTRAG</strong>
-            <small>Fallnummer erfassen und USB-Medium einstecken. Auto-Scan übernimmt den Rest.</small>
+            <strong id="deviceEmptyTitle">KEIN FALL AKTIV</strong>
+            <small id="deviceEmptyCopy">Fallnummer und Kürzel eingeben, dann „Fall starten“. Erst danach ist Auto-Scan freigeschaltet.</small>
           </div>
           <div id="deviceList" class="device-list"></div>
           <div id="mediaCards" class="media-cards"></div>

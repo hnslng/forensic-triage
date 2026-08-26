@@ -176,6 +176,28 @@ class CaseStore:
             ).fetchone()
         return f"SICHT-{int(row['next_sighting_sequence']) if row else 1:03d}"
 
+    def start_case(self, case_number: str, operator: str) -> dict[str, Any]:
+        """Create or reopen a case and record the explicit operator session start."""
+        case_number = safe_component(case_number)
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                "INSERT INTO cases(case_number, created_at, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(case_number) DO UPDATE SET updated_at=excluded.updated_at",
+                (case_number, now, now),
+            )
+            row = connection.execute(
+                "SELECT id FROM cases WHERE case_number=?", (case_number,),
+            ).fetchone()
+            connection.execute(
+                "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
+                "VALUES (?, NULL, ?, 'case_started', ?, ?)",
+                (int(row["id"]), now, operator.strip()[:120] or None, "{}"),
+            )
+        self.refresh_exports(case_number)
+        return self.case_detail(case_number) or {}
+
     def allocate_sighting_number(
         self,
         case_number: str,

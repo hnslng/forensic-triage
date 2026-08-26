@@ -288,6 +288,9 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if route == "/api/cases/start":
+            self._post_case_start()
+            return
         if route == "/api/scans":
             self._post_scan()
             return
@@ -299,6 +302,29 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._post_decision(int(decision_match.group(1)))
             return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def _post_case_start(self) -> None:
+        try:
+            payload = self._read_payload()
+            case_number = str(payload.get("case_number", "")).strip()
+            operator = str(payload.get("operator", "")).strip()
+        except (ValueError, json.JSONDecodeError):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
+            return
+        if not EVIDENCE_PATTERN.fullmatch(case_number):
+            self._json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "Fallnummer: 1–80 Zeichen; erlaubt sind Buchstaben, Ziffern, Punkt, Minus und Unterstrich."},
+            )
+            return
+        if not operator or not OPERATOR_PATTERN.fullmatch(operator):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Bearbeiterkürzel ist erforderlich."})
+            return
+        try:
+            result = self.server.case_store.start_case(case_number, operator)
+            self._json(HTTPStatus.OK, result)
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def do_DELETE(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
