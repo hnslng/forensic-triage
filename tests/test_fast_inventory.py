@@ -23,4 +23,3 @@ def test_inventory_tree_collects_metadata_without_contents(tmp_path):
     assert files[0]["size"] == 4
     assert files[0]["original_extension"] == "PDF"
     assert files[0]["category"] == "Dokumente"
-
