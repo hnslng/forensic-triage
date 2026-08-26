@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10130f" />
+    <title>TRIAGE//BOX — Grobsichtung</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="scanlines" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">FORENSIC FIELD UTILITY / LOCAL ONLY</p>
+          <h1>TRIAGE<span>//</span>BOX</h1>
+        </div>
+        <div class="system-state"><i></i><span id="systemState">SYSTEM BEREIT</span></div>
+      </header>
+
+      <section class="rulebar" aria-label="Systemstatus">
+        <span>NODE: FORENSIC-TRIAGE</span><span>MODE: FAST/RO</span><span id="clock">UTC --:--:--</span>
+      </section>
+
+      <section class="control-grid">
+        <article class="panel device-panel">
+          <div class="panel-title"><span>01</span> DATENTRÄGER</div>
+          <div id="deviceEmpty" class="device-empty" hidden>
+            <div class="plug">USB</div>
+            <strong>KEIN DATENTRÄGER ERKANNT</strong>
+            <small>USB-Medium einstecken, Erkennung läuft automatisch.</small>
+          </div>
+          <div id="deviceInfo" class="device-info">
+            <div class="drive-mark">▰</div>
+            <div>
+              <strong id="deviceModel">SanDisk Ultra Fit</strong>
+              <span id="deviceMeta">/dev/sdb · 114,6 GB · USB</span>
+              <code id="deviceSerial">SERIAL 010104382F...</code>
+            </div>
+            <div class="ro-badge"><b>RO</b><span>SCHREIBSCHUTZ<br />WIRD BEIM START GEPRÜFT</span></div>
+          </div>
+        </article>
+
+        <article class="panel action-panel">
+          <div class="panel-title"><span>02</span> AUFTRAG</div>
+          <label for="evidence">FALL- / ASSERVATENNUMMER</label>
+          <input id="evidence" value="BM-FAST-001" autocomplete="off" spellcheck="false" />
+          <button id="scanButton" type="button"><span>▶</span> GROBSICHTUNG STARTEN</button>
+          <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
+        </article>
+      </section>
+
+      <section id="progressPanel" class="panel progress-panel" hidden>
+        <div class="panel-title"><span>RUN</span> SCAN LÄUFT</div>
+        <div class="progress-copy"><strong id="progressLabel">Schreibschutz wird geprüft …</strong><span id="progressValue">08%</span></div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+        <code id="progressLog">$ blockdev --setro /dev/sdb</code>
+      </section>
+
+      <section id="results" class="results">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">LETZTE AUSWERTUNG</p>
+            <h2 id="resultEvidence">BM-FAST-001</h2>
+          </div>
+          <div class="result-stamp">SCAN ABGESCHLOSSEN <b id="resultDuration">0,732 s</b></div>
+        </div>
+
+        <div class="metrics">
+          <article><span>DATEIEN</span><strong id="fileCount">960</strong><small>ERFASST</small></article>
+          <article><span>ORDNER</span><strong id="directoryCount">18</strong><small>ERFASST</small></article>
+          <article class="hot"><span>STICHWORTTREFFER</span><strong id="keywordMatches">60</strong><small>IN NAMEN / PFADEN</small></article>
+          <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
+        </div>
+
+        <div class="data-grid">
+          <article class="panel categories-panel">
+            <div class="panel-title"><span>03</span> DATEITYPEN</div>
+            <div id="categories" class="bar-list"></div>
+          </article>
+          <article class="panel keywords-panel">
+            <div class="panel-title"><span>04</span> STICHWÖRTER</div>
+            <div id="keywords" class="keyword-list"></div>
+          </article>
+        </div>
+
+        <article class="panel files-panel">
+          <div class="panel-title"><span>05</span> GRÖSSTE DATEIEN</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>PFAD</th><th>GRÖSSE</th></tr></thead>
+              <tbody id="largestFiles"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <footer>
+          <span>ERGEBNIS: NUR GROBSICHTUNG — KEINE FACHLICHE BEWERTUNG</span>
+          <button id="refreshButton" type="button">↻ STATUS AKTUALISIEREN</button>
+        </footer>
+      </section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

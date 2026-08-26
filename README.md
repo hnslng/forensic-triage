@@ -54,4 +54,20 @@ Each scan produces `device.json`, `partitions.json`, `files.csv`, `summary.json`
 - Extension classification, keyword matching, statistics, fast inventory, and TSK parsers covered by 13 unit tests on macOS and Linux.
 - Synthetic 960-file fixture generator implemented.
 - Physical SanDisk exFAT scans passed the expected manifest with no mismatches. The final fast scan took 0.732 seconds; see `docs/validation-2026-08-26.md`.
-- Dashboard is now eligible as the next phase because the CLI scanner matches the fixture manifest.
+- A local operator dashboard is available. It detects one unmounted USB disk, starts the guarded fast scan, and renders categories, keyword hits, largest files, and scan metadata.
+
+## Operator dashboard
+
+Run the interface inside the VM from the repository checkout:
+
+```bash
+sudo forensic-triage-web
+```
+
+It binds to `127.0.0.1:8787` by default. Keep it private and reach it from the Mac through an SSH tunnel:
+
+```bash
+ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
+```
+
+Then open `http://127.0.0.1:8787` on the Mac. The server refuses to start a scan unless exactly one unmounted whole USB disk is available. The existing scanner performs the final identity, mount-state, transport, and read-only checks.
