@@ -23,8 +23,25 @@
       </section>
 
       <section class="control-grid">
+        <article class="panel action-panel">
+          <div class="panel-title"><span>01</span> AUFTRAG ERFASSEN</div>
+          <div class="field-grid">
+            <label for="caseNumber">FALLNUMMER
+              <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
+            </label>
+            <label for="evidenceNumber">BEWEISMITTEL / ASSERVAT
+              <input id="evidenceNumber" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
+          <div class="action-row">
+            <button id="scanButton" type="button"><span>▶</span> GROBSICHTUNG STARTEN</button>
+            <button id="keyboardButton" class="keyboard-button" type="button">⌨ BILDSCHIRMTASTATUR</button>
+          </div>
+          <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
+        </article>
+
         <article class="panel device-panel">
-          <div class="panel-title"><span>01</span> DATENTRÄGER</div>
+          <div class="panel-title"><span>02</span> DATENTRÄGER PRÜFEN</div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
             <strong>KEIN DATENTRÄGER ERKANNT</strong>
@@ -40,14 +57,11 @@
             <div class="ro-badge"><b>RO</b><span>SCHREIBSCHUTZ<br />WIRD BEIM START GEPRÜFT</span></div>
           </div>
         </article>
+      </section>
 
-        <article class="panel action-panel">
-          <div class="panel-title"><span>02</span> AUFTRAG</div>
-          <label for="evidence">FALL- / ASSERVATENNUMMER</label>
-          <input id="evidence" value="BM-FAST-001" autocomplete="off" spellcheck="false" />
-          <button id="scanButton" type="button"><span>▶</span> GROBSICHTUNG STARTEN</button>
-          <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
-        </article>
+      <section id="screenKeyboard" class="panel screen-keyboard" hidden aria-label="Bildschirmtastatur">
+        <div class="keyboard-head"><span>EINGABE // <b id="keyboardTarget">FALLNUMMER</b></span><button id="keyboardClose" type="button">SCHLIESSEN ×</button></div>
+        <div id="keyboardKeys" class="keyboard-keys"></div>
       </section>
 
       <section id="progressPanel" class="panel progress-panel" hidden>

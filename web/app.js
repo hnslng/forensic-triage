@@ -12,6 +12,8 @@ const demoSummary = {
 };
 const demoHits = { rechnung: 20, buchhaltung: 10, fibu: 5, datev: 3, kassabuch: 4, kunden: 15, steuerberater: 3 };
 const $ = (id) => document.getElementById(id);
+let devicePresent = false;
+let activeInput = null;
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -20,7 +22,7 @@ const formatBytes = (bytes) => {
 };
 
 function renderResults(summary, hits = demoHits) {
-  $("resultEvidence").textContent = summary.evidence || "OHNE NUMMER";
+  $("resultEvidence").textContent = (summary.evidence || "OHNE NUMMER").replace("__", " / ");
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
   $("fileCount").textContent = Number(summary.file_count || 0).toLocaleString("de-AT");
   $("directoryCount").textContent = Number(summary.directory_count || 0).toLocaleString("de-AT");
@@ -42,13 +44,48 @@ function renderResults(summary, hits = demoHits) {
 
 function renderDevice(device) {
   const present = Boolean(device && device.path);
+  devicePresent = present;
   $("deviceInfo").hidden = !present;
   $("deviceEmpty").hidden = present;
-  $("scanButton").disabled = !present;
+  updateScanAvailability();
   if (!present) return;
   $("deviceModel").textContent = [device.vendor, device.model].filter(Boolean).join(" ") || "USB-Datenträger";
   $("deviceMeta").textContent = `${device.path} · ${formatBytes(device.size)} · USB`;
-  $("deviceSerial").textContent = `SERIAL ${device.serial || "NICHT GEMELDET"}`;
+  const serial = device.serial || "NICHT GEMELDET";
+  $("deviceSerial").textContent = `SERIAL ${serial.length > 26 ? `${serial.slice(0, 26)}…` : serial}`;
+  $("deviceSerial").title = serial;
+}
+
+function updateScanAvailability() {
+  const hasCase = $("caseNumber").value.trim().length > 0;
+  const hasEvidence = $("evidenceNumber").value.trim().length > 0;
+  $("scanButton").disabled = !devicePresent || !hasCase || !hasEvidence;
+}
+
+function openKeyboard(input) {
+  activeInput = input || activeInput || $("caseNumber");
+  $("keyboardTarget").textContent = activeInput === $("caseNumber") ? "FALLNUMMER" : "BEWEISMITTEL";
+  $("screenKeyboard").hidden = false;
+}
+
+function buildKeyboard() {
+  const keys = "1234567890QWERTZUIOPASDFGHJKLYXCVBNM-_/ .".split("");
+  $("keyboardKeys").innerHTML = keys.map((key) => `<button type="button" data-key="${key === " " ? "SPACE" : key}">${key === " " ? "LEER" : key}</button>`).join("") +
+    '<button type="button" class="wide" data-key="BACKSPACE">⌫ LÖSCHEN</button><button type="button" class="wide" data-key="CLEAR">LEEREN</button><button type="button" class="wide" data-key="NEXT">WEITER ↵</button>';
+  $("keyboardKeys").addEventListener("click", (event) => {
+    const key = event.target.closest("button")?.dataset.key;
+    if (!key || !activeInput) return;
+    if (key === "BACKSPACE") activeInput.value = activeInput.value.slice(0, -1);
+    else if (key === "CLEAR") activeInput.value = "";
+    else if (key === "NEXT") {
+      if (activeInput === $("caseNumber")) openKeyboard($("evidenceNumber"));
+      else { $("screenKeyboard").hidden = true; $("scanButton").focus(); }
+      updateScanAvailability();
+      return;
+    } else activeInput.value += key === "SPACE" ? " " : key;
+    activeInput.value = activeInput.value.toUpperCase().slice(0, 36);
+    updateScanAvailability();
+  });
 }
 
 async function refresh() {
@@ -64,12 +101,19 @@ async function refresh() {
 }
 
 async function runScan() {
-  const evidence = $("evidence").value.trim();
-  if (!evidence) { $("evidence").focus(); return; }
+  const caseNumber = $("caseNumber").value.trim().toUpperCase();
+  const evidenceNumber = $("evidenceNumber").value.trim().toUpperCase();
+  if (!caseNumber) { $("caseNumber").focus(); return; }
+  if (!evidenceNumber) { $("evidenceNumber").focus(); return; }
+  const evidence = `${caseNumber}__${evidenceNumber}`.replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
   $("scanButton").disabled = true;
   $("progressPanel").hidden = false;
+  $("screenKeyboard").hidden = true;
   $("results").hidden = true;
   let progress = 8;
+  $("progressValue").textContent = "08%";
+  $("progressBar").style.width = "8%";
+  $("progressLabel").textContent = "Schreibschutz wird geprüft …";
   const timer = setInterval(() => {
     progress = Math.min(progress + Math.ceil(Math.random() * 9), 88);
     $("progressValue").textContent = `${progress}%`;
@@ -92,12 +136,19 @@ async function runScan() {
     $("progressValue").textContent = "!";
     $("systemState").textContent = "PRÜFUNG NÖTIG";
   } finally {
-    $("scanButton").disabled = false;
+    updateScanAvailability();
   }
 }
 
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
 $("scanButton").addEventListener("click", runScan);
 $("refreshButton").addEventListener("click", refresh);
+$("keyboardButton").addEventListener("click", () => openKeyboard(activeInput));
+$("keyboardClose").addEventListener("click", () => { $("screenKeyboard").hidden = true; });
+for (const input of document.querySelectorAll(".case-input")) {
+  input.addEventListener("focus", () => { activeInput = input; $("keyboardTarget").textContent = input === $("caseNumber") ? "FALLNUMMER" : "BEWEISMITTEL"; });
+  input.addEventListener("input", updateScanAvailability);
+}
+buildKeyboard();
 renderResults(demoSummary, demoHits);
 refresh();
