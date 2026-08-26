@@ -27,3 +27,18 @@ The result bundle is retained locally under the Git-ignored `results/2026-08-26T
 The first run included approximately 149,000 deleted entries recoverable from prior use of the quick-formatted exFAT medium. This was outside the version 1 definition of the currently present inventory. The scanner was changed to request undeleted entries with `fls -u` and to defensively exclude deleted, TSK-virtual, orphan, volume-label, and exFAT bookkeeping entries. Reprocessing the captured raw output and the final end-to-end scan both matched the expected manifest exactly.
 
 On this 114.6 GiB exFAT medium, recursive `fls` inventory reads approximately the full volume regardless of the small live file count. Capacity and device throughput therefore dominate scan duration.
+
+## Fast-mode validation
+
+The same physical medium was subsequently scanned using the default fast mode. The whole block device was already read-only, the partition was temporarily mounted with `ro,nosuid,nodev,noexec`, mount options were programmatically verified, and cleanup unmounted it before returning.
+
+- validation: passed, zero mismatches
+- files: 960
+- directories: 18
+- logical file bytes: 553,421,052
+- keyword matches: 60
+- scanner-reported duration: 0.732 seconds
+- read-only state after scan: `1`
+- mountpoint after scan: none
+
+The fast result bundle is retained locally under the Git-ignored `results/2026-08-26T122801Z_BM-FAST-001/` directory. TSK mode remains available with `--mode tsk` for a mount-free deep inventory.

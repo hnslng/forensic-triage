@@ -1,10 +1,12 @@
 # Forensic Triage Box
 
-Metadata-only inventory of removable media using The Sleuth Kit. Version 0.1 is a CLI prototype; it does not inspect file contents and does not make relevance or seizure decisions.
+Fast metadata-only inventory of removable media with a read-only mount path and an optional mount-free The Sleuth Kit path. Version 0.1 does not inspect file contents and does not make relevance or seizure decisions.
 
 ## Safety boundary
 
-The scanner accepts only a whole block device reported by `lsblk` as USB. It refuses `/dev/sda`, refuses mounted targets or child partitions, sets the whole device read-only with `blockdev --setro`, and verifies `blockdev --getro == 1` before invoking `mmls`, `fsstat`, or `fls`.
+The scanner accepts only a whole block device reported by `lsblk` as USB. It refuses `/dev/sda`, refuses mounted targets or child partitions, sets the whole device read-only with `blockdev --setro`, and verifies `blockdev --getro == 1` before analysis.
+
+The default `fast` mode uses `mmls` and `fsstat`, then temporarily mounts each supported partition with `ro,nosuid,nodev,noexec` while the block device itself remains kernel read-only. It reads directory metadata only and immediately unmounts. `--mode tsk` performs the slower mount-free `fls` walk.
 
 Software read-only is suitable for this prototype but is not a substitute for a validated hardware write blocker in evidentiary use. Run only against media whose identity and authorization have been established independently.
 
@@ -36,18 +38,20 @@ sudo forensic-triage scan /dev/sdX \
   --expected tests/fixtures/expected.json
 ```
 
+The default mode is `fast`. For the mount-free TSK inventory, add `--mode tsk`.
+
 Never assume a device name. Immediately before a scan, identify the target with:
 
 ```bash
 lsblk -o NAME,TRAN,SIZE,MODEL,SERIAL,RO,MOUNTPOINTS
 ```
 
-Each scan produces `device.json`, `partitions.json`, `files.csv`, `summary.json`, `hits.json`, `scan.log`, and raw `mmls`/`fsstat`/`fls` output under a timestamped result directory. When `--expected` is supplied, `validation.json` records every mismatch and the command fails until the scan matches the fixture.
+Each scan produces `device.json`, `partitions.json`, `files.csv`, `summary.json`, `hits.json`, `scan.log`, and raw tool output under a timestamped result directory. When `--expected` is supplied, `validation.json` records every mismatch and the command fails until the scan matches the fixture.
 
 ## Current status
 
 - Local package and CLI orchestration implemented and deployed to the Debian 13 VM.
-- Extension classification, keyword matching, statistics, and TSK parsers covered by 11 unit tests on macOS and Linux.
+- Extension classification, keyword matching, statistics, fast inventory, and TSK parsers covered by 13 unit tests on macOS and Linux.
 - Synthetic 960-file fixture generator implemented.
-- Physical SanDisk exFAT scan passed the expected manifest with no mismatches; see `docs/validation-2026-08-26.md`.
+- Physical SanDisk exFAT scans passed the expected manifest with no mismatches. The final fast scan took 0.732 seconds; see `docs/validation-2026-08-26.md`.
 - Dashboard is now eligible as the next phase because the CLI scanner matches the fixture manifest.

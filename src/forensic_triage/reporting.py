@@ -14,7 +14,7 @@ def write_json(path: Path, data: Any) -> None:
 
 def write_files_csv(path: Path, files: list[dict[str, Any]]) -> None:
     fields = [
-        "partition_slot", "path", "metadata_address", "tsk_type", "size", "original_extension",
+        "partition_slot", "path", "metadata_address", "tsk_type", "source", "size", "original_extension",
         "extension", "category",
         "uid", "gid", "atime", "mtime", "ctime", "crtime",
     ]

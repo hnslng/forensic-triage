@@ -11,6 +11,7 @@ from typing import Any
 
 from .device import enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
+from .fast_inventory import partition_path_for_start, readonly_mount_inventory
 from .keywords import build_hits, load_profile
 from .partitions import parse_mmls
 from .reporting import write_files_csv, write_json
@@ -29,6 +30,7 @@ def scan(
     evidence: str,
     results_root: Path,
     expected_path: Path | None = None,
+    mode: str = "fast",
 ) -> Path:
     started = time.monotonic()
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
@@ -49,6 +51,7 @@ def scan(
     enforce_read_only(device)
     device_info["read_only_verified"] = True
     device_info["evidence"] = evidence
+    device_info["scan_mode"] = mode
     write_json(result_dir / "device.json", device_info)
 
     mmls_output = _command(["mmls", str(device)])
@@ -66,9 +69,19 @@ def scan(
             fsstat_output = _command(["fsstat", "-o", offset, str(device)])
             (raw_dir / f"fsstat_{slot}.txt").write_text(fsstat_output, encoding="utf-8")
             partition["filesystem"] = filesystem_type(fsstat_output)
-            fls_output = _command(["fls", "-r", "-p", "-u", "-m", "/", "-o", offset, str(device)])
-            (raw_dir / f"fls_{slot}.txt").write_text(fls_output, encoding="utf-8")
-            files, directories = parse_fls(fls_output, slot)
+            if mode == "tsk":
+                fls_output = _command(["fls", "-r", "-p", "-u", "-m", "/", "-o", offset, str(device)])
+                (raw_dir / f"fls_{slot}.txt").write_text(fls_output, encoding="utf-8")
+                files, directories = parse_fls(fls_output, slot)
+                partition["inventory_method"] = "tsk_fls"
+            elif mode == "fast":
+                partition_device = partition_path_for_start(device, partition["start_sector"])
+                files, directories, mount_info = readonly_mount_inventory(partition_device, slot)
+                write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
+                partition["partition_device"] = str(partition_device)
+                partition["inventory_method"] = "kernel_readonly_mount"
+            else:
+                raise ValueError(f"unsupported scan mode: {mode}")
             all_files.extend(files)
             all_directories.extend(directories)
             partition["scan_status"] = "ok"
@@ -86,6 +99,7 @@ def scan(
             "evidence": evidence,
             "scan_started_utc": timestamp,
             "duration_seconds": round(time.monotonic() - started, 3),
+            "scan_mode": mode,
             "keyword_matches": hits["total_matches"],
         }
     )

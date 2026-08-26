@@ -17,13 +17,17 @@ def parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--evidence", required=True)
     scan_parser.add_argument("--results", type=Path, default=Path("results"))
     scan_parser.add_argument("--expected", type=Path, help="fixture manifest to validate against")
+    scan_parser.add_argument(
+        "--mode", choices=("fast", "tsk"), default="fast",
+        help="fast read-only mount inventory (default) or mount-free TSK directory walk",
+    )
     return root
 
 
 def main() -> None:
     args = parser().parse_args()
     if args.command == "scan":
-        result = scan(args.device, args.profile, args.evidence, args.results, args.expected)
+        result = scan(args.device, args.profile, args.evidence, args.results, args.expected, args.mode)
         print(result)
 
 
