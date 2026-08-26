@@ -22,6 +22,7 @@
         <span>NODE: FORENSIC-TRIAGE</span><span>MODE: FAST/RO</span><span id="clock">UTC --:--:--</span>
       </section>
 
+      <section id="dashboardView">
       <section class="control-grid">
         <details id="auftragPanel" class="panel action-panel disclosure" open>
           <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
@@ -70,7 +71,22 @@
         <code id="progressLog">$ blockdev --setro /dev/sdb</code>
       </section>
 
+      <details id="casePanel" class="panel case-panel disclosure" hidden>
+        <summary class="panel-title"><span>03</span> TABELLARISCHES FALLPROTOKOLL // <b id="casePanelNumber">—</b><small>ALTERNATIVE ANSICHT DER SICHTUNGSKACHELN</small></summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>SICHTUNG</th><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
+            <tbody id="caseMedia"></tbody>
+          </table>
+        </div>
+      </details>
+      </section>
+
       <section id="results" class="results" hidden>
+        <nav class="detail-nav" aria-label="Detailnavigation">
+          <button id="backDashboard" type="button">← ZURÜCK ZUM HAUPTDASHBOARD</button>
+          <span id="detailConnectionState">STATUS DES DATENTRÄGERS</span>
+        </nav>
         <div class="result-head">
           <div>
             <p class="eyebrow">LETZTE AUSWERTUNG</p>
@@ -108,20 +124,29 @@
 
         <div id="documentationGrid" class="documentation-grid" hidden>
           <details class="panel archive-panel disclosure">
-            <summary class="panel-title"><span>06</span> DIGITALE FALLAKTE <small>ABLAGE &amp; PRÜFSUMMEN</small></summary>
-            <div class="archive-state"><i></i><div><strong>LOKAL GESPEICHERT</strong><small>NICHT IN GITHUB · PRÜFSUMME ERSTELLT</small></div></div>
-            <dl class="archive-list">
-              <div><dt>FALLAKTE</dt><dd id="archiveCasePath">—</dd></div>
-              <div><dt>DATEIVERZEICHNIS</dt><dd id="archiveInventory">files.csv</dd></div>
-              <div><dt>MEDIENREGISTER</dt><dd id="archiveRegister">media-register.csv</dd></div>
-              <div><dt>FALLBERICHT</dt><dd id="archiveReport">case-report.txt</dd></div>
-              <div><dt>EREIGNISPROTOKOLL</dt><dd id="archiveAudit">audit.log</dd></div>
-              <div><dt>PRÜFSUMMEN</dt><dd><span id="archiveManifestCount">0</span> DATEIEN ERFASST</dd></div>
-            </dl>
+            <summary class="panel-title"><span>06</span> DOKUMENTATION &amp; NACHWEIS <small>WIRD AUTOMATISCH ERSTELLT</small></summary>
+            <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
+            <div class="archive-proof-grid">
+              <div><b>DATEILISTE</b><span>Vollständiges Inhaltsverzeichnis gespeichert</span></div>
+              <div><b>FALLPROTOKOLL</b><span>Medium und Entscheidung nachvollziehbar</span></div>
+              <div><b>EREIGNISSE</b><span>Scan und Bearbeitung mit Zeitstempel</span></div>
+              <div><b>MANIPULATIONSKONTROLLE</b><span><strong id="archiveManifestCount">0</strong> Dateien mit SHA-256 erfasst</span></div>
+            </div>
+            <details class="technical-paths">
+              <summary>TECHNISCHE ABLAGEPFADE ANZEIGEN</summary>
+              <dl class="archive-list">
+                <div><dt>FALLORDNER</dt><dd id="archiveCasePath">—</dd></div>
+                <div><dt>DATEILISTE</dt><dd id="archiveInventory">files.csv</dd></div>
+                <div><dt>FALLPROTOKOLL</dt><dd id="archiveRegister">media-register.csv</dd></div>
+                <div><dt>BERICHT</dt><dd id="archiveReport">case-report.txt</dd></div>
+                <div><dt>EREIGNISSE</dt><dd id="archiveAudit">audit.log</dd></div>
+              </dl>
+            </details>
           </details>
 
           <article class="panel decision-panel">
-            <div class="panel-title"><span>07</span> ENTSCHEIDUNG DOKUMENTIEREN</div>
+            <div class="panel-title"><span>07</span> WAS PASSIERT MIT DIESEM DATENTRÄGER?</div>
+            <p class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
               <div class="decision-buttons">
@@ -155,18 +180,8 @@
           </article>
         </div>
 
-        <details id="casePanel" class="panel case-panel disclosure" hidden>
-          <summary class="panel-title"><span>08</span> MEDIENREGISTER // <b id="casePanelNumber">—</b><small>ALLE GESICHTETEN DATENTRÄGER</small></summary>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>SICHTUNG</th><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
-              <tbody id="caseMedia"></tbody>
-            </table>
-          </div>
-        </details>
-
         <details id="inventoryPanel" class="panel inventory-panel disclosure" hidden>
-          <summary class="panel-title"><span>09</span> DATEIVERZEICHNIS <small>OPTIONAL DATEINAMEN &amp; PFADE DURCHSUCHEN</small></summary>
+          <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>OPTIONAL DATEINAMEN &amp; PFADE DURCHSUCHEN</small></summary>
           <div class="inventory-tools">
             <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
             <button id="inventoryLoad" type="button">VERZEICHNIS LADEN</button>

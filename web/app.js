@@ -6,6 +6,7 @@ let batchTotal = 0;
 let batchDone = 0;
 let autoStartTimer = null;
 let caseLoadTimer = null;
+let caseLookupPending = false;
 let currentCaseMedia = [];
 let activeInput = null;
 let currentMediaId = null;
@@ -77,6 +78,9 @@ function renderDecision(media) {
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   if (record.media) {
+    const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
+    $("detailConnectionState").textContent = connected ? "● DATENTRÄGER EINGESTECKT" : "○ DATENTRÄGER NICHT EINGESTECKT";
+    $("detailConnectionState").className = connected ? "connected" : "disconnected";
     renderArchive(record.archive);
     renderDecision(record.media);
     loadCase(record.media.case_number);
@@ -126,11 +130,13 @@ function renderMediaCards(media) {
   $("mediaCards").innerHTML = media.map((medium) => {
     const title = medium.evidence_number || "NUR GESICHTET";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
-    return `<button class="media-card${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
+    const connected = devices.some((device) => device.serial && device.serial === medium.serial);
+    return `<button class="media-card complete${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
       <span class="media-card-top"><b>${escapeHtml(title)}</b>${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
+      <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● EINGESTECKT" : "○ NICHT EINGESTECKT"}</span>
       <em>DETAILS ÖFFNEN →</em>
     </button>`;
   }).join("");
@@ -152,10 +158,13 @@ function updateOrderSummary() {
 
 function scheduleCaseLoad() {
   clearTimeout(caseLoadTimer);
-  caseLoadTimer = setTimeout(
-    () => loadCase($("caseNumber").value.trim().toUpperCase()),
-    450,
-  );
+  caseLookupPending = true;
+  clearTimeout(autoStartTimer);
+  caseLoadTimer = setTimeout(async () => {
+    await loadCase($("caseNumber").value.trim().toUpperCase());
+    caseLookupPending = false;
+    scheduleAutoScan(50);
+  }, 450);
 }
 
 const stateLabels = {
@@ -171,19 +180,24 @@ function renderDevices(items, activePaths = []) {
     if (active.has(device.path)) deviceStates.set(device.path, "scanning");
     else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
-  $("deviceList").innerHTML = devices.map((device) => {
+  const visibleDevices = devices.filter((device) => !(
+    device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial)
+  ));
+  $("deviceList").innerHTML = visibleDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
     const type = device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = !device.scan_supported || state === "scanning";
     return `<article class="device-card" data-state="${state}">
-      <i class="device-led" title="${stateLabels[state]}"></i>
+      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● EINGESTECKT</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
-      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "RO-PRÜFUNG BEIM START")}</small></div>
+      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "SCHREIBSCHUTZPRÜFUNG BEIM START")}</small></div>
+      <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
   }).join("");
+  renderMediaCards(currentCaseMedia);
   updateDashboardState();
   updateScanAvailability();
   scheduleAutoScan(400);
@@ -256,7 +270,7 @@ async function refresh(loadLatest = false) {
 }
 
 function updateProgress() {
-  $("progressPanel").hidden = batchTotal === 0;
+  $("progressPanel").hidden = true;
   const percent = batchTotal ? Math.round((batchDone / batchTotal) * 100) : 0;
   $("progressValue").textContent = `${percent}%`;
   $("progressBar").style.width = `${Math.max(runningPaths.size ? 8 : 0, percent)}%`;
@@ -313,6 +327,7 @@ async function runReadyScans() {
 
 function maybeAutoScan() {
   if (!$("autoScanToggle").checked) return;
+  if (caseLookupPending) return;
   if (!$("caseNumber").value.trim() || !$("operator").value.trim()) return;
   const ready = devices.some((device) => device.scan_supported && deviceStates.get(device.path) === "ready");
   if (ready) runReadyScans();
@@ -374,10 +389,20 @@ async function openMedia(mediaId) {
     if (!response.ok) throw new Error(data.error || "Medienakte nicht verfügbar");
     renderRecord(data);
     renderMediaCards(currentCaseMedia);
+    $("dashboardView").hidden = true;
+    $("results").hidden = false;
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     $("decisionMessage").textContent = `FEHLER: ${error.message}`;
   }
+}
+
+function showDashboard() {
+  $("results").hidden = true;
+  $("dashboardView").hidden = false;
+  currentMediaId = null;
+  renderMediaCards(currentCaseMedia);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
@@ -393,6 +418,7 @@ $("mediaCards").addEventListener("click", (event) => {
   const card = event.target.closest("button[data-media-id]");
   if (card) openMedia(Number(card.dataset.mediaId));
 });
+$("backDashboard").addEventListener("click", showDashboard);
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);
