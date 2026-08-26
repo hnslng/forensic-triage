@@ -44,7 +44,12 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for node in nodes:
         device_type = str(node.get("type", ""))
         transport = str(node.get("tran", ""))
-        is_usb = device_type == "disk" and transport == "usb" and node.get("path") != "/dev/sda"
+        is_usb = (
+            device_type == "disk"
+            and transport == "usb"
+            and node.get("path") != "/dev/sda"
+            and int(node.get("size") or 0) > 0
+        )
         # The field unit uses external USB optical drives. Ignore internal or
         # VM system discs (for example Proxmox cloud-init media on SATA).
         is_optical = device_type == "rom" and transport == "usb"

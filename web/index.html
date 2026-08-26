@@ -22,9 +22,9 @@
       </header>
 
       <section class="rulebar" aria-label="Systemstatus">
-        <span title="Der schnelle, schreibgeschützte Grobsichtungsmodus ist fest eingestellt.">MODE: FAST/RO</span>
-        <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
+        <span class="mode-badge" title="Der geprüfte Grobsichtungsmodus liest ausschließlich Metadaten.">FAST/RO · NUR LESEN</span>
         <span class="system-state locked" id="systemStatus"><i></i><span id="systemState">KEIN FALL AKTIV</span></span>
+        <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <span id="clock">UTC --:--:--</span>
       </section>
 
@@ -65,7 +65,7 @@
         </details>
 
         <article class="panel device-panel">
-          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><b id="deviceCount">0 MEDIEN</b></div>
+          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren">↻</button><b id="deviceCount">0 MEDIEN</b></div></div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
             <strong id="deviceEmptyTitle">KEIN FALL AKTIV</strong>

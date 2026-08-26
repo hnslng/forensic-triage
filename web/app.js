@@ -23,6 +23,12 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => 
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
 }[char]));
 
+function setSystemState(text, state = activeCaseNumber ? "ready" : "locked") {
+  $("systemState").textContent = text;
+  $("systemStatus").classList.remove("locked", "error", "busy");
+  if (state !== "ready") $("systemStatus").classList.add(state);
+}
+
 function renderResults(summary, hits = {}) {
   $("resultEvidence").textContent = summary.evidence || "SICHTUNG";
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
@@ -208,7 +214,6 @@ function updateCaseSessionUi(message = "") {
   $("caseStart").textContent = activeCaseNumber && !sameSession ? "↻ ANDEREN FALL STARTEN" : "▶ FALL STARTEN";
   $("caseStop").disabled = !activeCaseNumber || runningPaths.size > 0;
   $("activeCaseDisplay").classList.toggle("locked", !activeCaseNumber);
-  $("systemStatus").classList.toggle("locked", !activeCaseNumber);
   $("activeCaseNumber").textContent = activeCaseNumber || "KEIN FALL";
   $("activeCaseOperator").textContent = activeCaseNumber ? `BEARBEITER: ${activeOperator}` : "SCAN GESPERRT";
   if (message) {
@@ -262,7 +267,7 @@ function renderDevices(items, activePaths = []) {
     return `<article class="device-card" data-state="${state}">
       <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● ONLINE</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
-      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "SCHREIBSCHUTZPRÜFUNG BEIM START")}</small></div>
+      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "")}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
@@ -303,7 +308,11 @@ function renderCaseHistory(cases) {
   </button>`).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
 
-async function refresh(loadLatest = false) {
+async function refresh(loadLatest = false, manual = false) {
+  if (manual) {
+    $("deviceRefresh").disabled = true;
+    setSystemState("DATENTRÄGER WERDEN AKTUALISIERT", "busy");
+  }
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
@@ -311,8 +320,11 @@ async function refresh(loadLatest = false) {
     renderDevices(data.devices || [], data.active_devices || []);
     renderCaseHistory(data.cases || []);
     if (loadLatest && data.latest) renderRecord(data.latest);
+    if (manual) setSystemState(activeCaseNumber ? "DATENTRÄGER AKTUELL" : "KEIN FALL AKTIV");
   } catch (_) {
-    $("systemState").textContent = "VERBINDUNG PRÜFEN";
+    setSystemState("VERBINDUNG PRÜFEN", "error");
+  } finally {
+    if (manual) $("deviceRefresh").disabled = false;
   }
 }
 
@@ -328,7 +340,7 @@ function updateProgress() {
 
 async function runScan(devicePath, standalone = true) {
   if (!activeCaseNumber || !activeOperator) {
-    $("systemState").textContent = "ZUERST FALL STARTEN";
+    setSystemState("ZUERST FALL STARTEN", "locked");
     $("auftragPanel").open = true;
     return;
   }
@@ -352,7 +364,7 @@ async function runScan(devicePath, standalone = true) {
   } catch (error) {
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
     deviceStates.set(devicePath, "error");
-    $("systemState").textContent = "PRÜFUNG NÖTIG";
+    setSystemState("SCAN FEHLGESCHLAGEN", "error");
   } finally {
     runningPaths.delete(devicePath);
     batchDone += 1;
@@ -504,7 +516,7 @@ async function startCaseSession() {
     resetDeviceStatesForCase();
     renderDevices(devices);
     updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · SCANS FREIGEGEBEN`);
-    $("systemState").textContent = "SYSTEM BEREIT";
+    setSystemState("SYSTEM BEREIT", "ready");
     $("auftragPanel").open = false;
     await refresh(false);
     scheduleAutoScan(150);
@@ -538,7 +550,7 @@ function stopCaseSession() {
   renderDevices(devices);
   renderCaseHistory(knownCases);
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
-  $("systemState").textContent = "KEIN FALL AKTIV";
+  setSystemState("KEIN FALL AKTIV", "locked");
   $("auftragPanel").open = true;
 }
 
@@ -558,7 +570,7 @@ async function deleteCurrentCase() {
     $("deleteModal").close();
     $("deletePassword").value = "";
     stopCaseSession();
-    $("systemState").textContent = "FALL ENTFERNT · KEIN FALL AKTIV";
+    setSystemState("FALL ENTFERNT · KEIN FALL AKTIV", "locked");
     await refresh(false);
   } catch (error) {
     $("deleteMessage").textContent = `FEHLER: ${error.message}`;
@@ -566,7 +578,7 @@ async function deleteCurrentCase() {
 }
 
 async function ejectDevice(devicePath) {
-  $("systemState").textContent = "DATENTRÄGER WIRD AUSGEWORFEN …";
+  setSystemState("DATENTRÄGER WIRD AUSGEWORFEN …", "busy");
   try {
     const response = await fetch("/api/devices/eject", {
       method: "POST",
@@ -575,10 +587,10 @@ async function ejectDevice(devicePath) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Auswerfen fehlgeschlagen");
-    $("systemState").textContent = "DATENTRÄGER KANN ABGEZOGEN WERDEN";
+    setSystemState("DATENTRÄGER KANN ABGEZOGEN WERDEN", "ready");
     await refresh(false);
   } catch (error) {
-    $("systemState").textContent = `FEHLER: ${error.message}`;
+    setSystemState(`FEHLER: ${error.message}`, "error");
   }
 }
 
@@ -610,9 +622,10 @@ function showDashboard() {
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
 $("autoScanToggle").addEventListener("change", () => {
   updateOrderSummary();
-  if (!activeCaseNumber) $("systemState").textContent = "KEIN FALL AKTIV";
+  if (!activeCaseNumber) setSystemState("KEIN FALL AKTIV", "locked");
   scheduleAutoScan(100);
 });
+$("deviceRefresh").addEventListener("click", () => refresh(false, true));
 $("deviceList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);

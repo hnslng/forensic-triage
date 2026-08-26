@@ -16,8 +16,8 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--ground); }
 button, input, select, textarea { font: inherit; }
 .scanlines { position: fixed; inset: 0; pointer-events: none; z-index: 10; opacity: .07; background: repeating-linear-gradient(0deg, transparent 0 3px, #000 3px 4px); }
-.shell { width: min(1480px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
-.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; border-top: 10px solid var(--ink); padding: 14px 0 12px; }
+.shell { width: min(1480px, calc(100% - 32px)); margin: 0 auto; padding: 10px 0 64px; }
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 6px 0 10px; }
 .brand-block { min-width: 0; }
 .mini-auto { display: flex; align-items: center; gap: 7px; color: var(--muted); cursor: pointer; font-size: 9px; font-weight: 900; }
 .mini-auto input { width: 14px; height: 14px; margin: 0; accent-color: var(--acid); }
@@ -37,11 +37,15 @@ h1 span { color: var(--acid); }
 .system-state { display: flex; gap: 9px; align-items: center; font-size: 13px; font-weight: 800; padding-bottom: 3px; }
 .system-state i { display: inline-block; width: 9px; height: 9px; background: var(--acid); box-shadow: 0 0 14px var(--acid); border-radius: 50%; }
 .system-state.locked i { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
-.rulebar { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 22px; padding: 9px 13px; background: var(--ink); color: #111; font-size: 11px; font-weight: 900; }
+.rulebar { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 22px; padding: 9px 13px; background: var(--ink); color: #111; font-size: 11px; font-weight: 900; }
+.mode-badge { letter-spacing: .04em; }
 .rulebar .mini-auto { color: #252a20; font-size: 10px; }
 .rulebar .mini-auto:has(input:checked) { color: #111; }
 .rulebar .system-state { justify-self: end; padding: 0; font-size: 10px; }
 .rulebar .system-state i { width: 7px; height: 7px; box-shadow: none; }
+.system-state.error { color: #8b160e; }
+.system-state.error i { background: var(--danger); box-shadow: none; }
+.system-state.busy i { background: var(--amber); box-shadow: none; }
 .control-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; align-items: start; }
 .panel { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(255,255,255,.025), transparent 55%), var(--panel); box-shadow: 4px 4px 0 #050605; }
 .panel-title { border-bottom: 1px solid var(--line); padding: 10px 12px; color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .1em; }
@@ -53,6 +57,10 @@ h1 span { color: var(--acid); }
 .subhead span { color: var(--acid); font-weight: 900; }
 .device-title { display: flex; justify-content: space-between; }
 .device-title b { color: var(--ink); font-size: 11px; }
+.device-title-actions { display: flex; align-items: center; gap: 9px; }
+.device-title-actions button { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font-size: 17px; font-weight: 900; line-height: 1; }
+.device-title-actions button:hover { border-color: var(--acid); }
+.device-title-actions button:disabled { color: var(--muted); cursor: wait; }
 .device-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; padding: 12px; }
 .device-list:empty { display: none; }
 .device-card { min-width: 0; min-height: 165px; display: flex; flex-direction: column; align-items: stretch; padding: 13px; border: 1px solid var(--amber); background: #0b0e0a; box-shadow: 3px 3px 0 #070807; }
@@ -73,6 +81,7 @@ h1 span { color: var(--acid); }
 .device-state b, .device-state small { display: block; }
 .device-state b { color: var(--acid); font-size: 10px; }
 .device-state small { color: var(--muted); font-size: 8px; line-height: 1.35; margin-top: 4px; }
+.device-state small:empty { display: none; }
 .device-card[data-state="error"] .device-state b { color: var(--danger); }
 .device-card[data-state="unavailable"] .device-state b { color: var(--muted); }
 .device-progress { height: 13px; margin-top: 10px; padding: 2px; overflow: hidden; border: 1px solid var(--line); }
