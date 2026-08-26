@@ -1,16 +1,3 @@
-const demoSummary = {
-  evidence: "BM-FAST-001", duration_seconds: 0.732, file_count: 960, directory_count: 18,
-  total_file_bytes: 553421052, keyword_matches: 60,
-  categories_by_count: { Bilder: 600, Audio: 180, Dokumente: 100, Tabellen: 35, Archive: 18, Video: 10, Datenbanken: 5, "E-Mail": 5, Unbekannt: 7 },
-  largest_files: [
-    { path: "TRIAGE_TESTDATA/Video/video_0001.mp4", size: 209715200 },
-    { path: "TRIAGE_TESTDATA/Video/video_0002.mp4", size: 157286400 },
-    { path: "TRIAGE_TESTDATA/Video/video_0003.mp4", size: 104857600 },
-    { path: "TRIAGE_TESTDATA/Video/video_0004.mp4", size: 52428800 },
-    { path: "TRIAGE_TESTDATA/Video/video_0005.mp4", size: 26214400 },
-  ],
-};
-const demoHits = { rechnung: 20, buchhaltung: 10, fibu: 5, datev: 3, kassabuch: 4, kunden: 15, steuerberater: 3 };
 const $ = (id) => document.getElementById(id);
 let devices = [];
 const deviceStates = new Map();
@@ -18,6 +5,8 @@ const runningPaths = new Set();
 let batchTotal = 0;
 let batchDone = 0;
 let autoStartTimer = null;
+let caseLoadTimer = null;
+let currentCaseMedia = [];
 let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
@@ -31,7 +20,7 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => 
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
 }[char]));
 
-function renderResults(summary, hits = demoHits) {
+function renderResults(summary, hits = {}) {
   $("resultEvidence").textContent = summary.evidence || "SICHTUNG";
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
   $("fileCount").textContent = Number(summary.file_count || 0).toLocaleString("de-AT");
@@ -100,11 +89,25 @@ function statusTag(decision) {
 }
 
 async function loadCase(caseNumber) {
-  if (!caseNumber) return;
+  if (!caseNumber) {
+    currentCaseMedia = [];
+    renderMediaCards([]);
+    $("casePanel").hidden = true;
+    return;
+  }
   try {
     const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`);
     const data = await response.json();
+    if (response.status === 404) {
+      currentCaseMedia = [];
+      renderMediaCards([]);
+      $("casePanel").hidden = true;
+      return;
+    }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
+    currentCaseMedia = data.media || [];
+    renderMediaCards(currentCaseMedia);
+    renderDevices(devices);
     $("casePanel").hidden = false;
     $("casePanelNumber").textContent = data.case.case_number;
     $("caseMedia").innerHTML = data.media.map((medium) => `
@@ -113,6 +116,46 @@ async function loadCase(caseNumber) {
   } catch (error) {
     $("decisionMessage").textContent = error.message;
   }
+}
+
+function renderMediaCards(media) {
+  for (const device of devices) {
+    const alreadyRecorded = device.serial && media.some((medium) => medium.serial === device.serial);
+    if (alreadyRecorded && deviceStates.get(device.path) === "ready") deviceStates.set(device.path, "complete");
+  }
+  $("mediaCards").innerHTML = media.map((medium) => {
+    const title = medium.evidence_number || "NUR GESICHTET";
+    const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
+    return `<button class="media-card${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
+      <span class="media-card-top"><b>${escapeHtml(title)}</b>${statusTag(medium.decision)}</span>
+      <strong>${escapeHtml(medium.sighting_number)}</strong>
+      <small>${escapeHtml(model)}</small>
+      <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
+      <em>DETAILS ÖFFNEN →</em>
+    </button>`;
+  }).join("");
+  updateDashboardState();
+}
+
+function updateDashboardState() {
+  const total = currentCaseMedia.length;
+  const connected = devices.length;
+  $("deviceCount").textContent = `${total} GESICHTET · ${connected} VERBUNDEN`;
+  $("deviceEmpty").hidden = total > 0 || connected > 0;
+}
+
+function updateOrderSummary() {
+  const caseNumber = $("caseNumber").value.trim().toUpperCase();
+  const auto = $("autoScanToggle").checked ? "AUTO EIN" : "AUTO AUS";
+  $("auftragSummary").textContent = caseNumber ? `${caseNumber} · ${auto}` : `NEU ERFASSEN · ${auto}`;
+}
+
+function scheduleCaseLoad() {
+  clearTimeout(caseLoadTimer);
+  caseLoadTimer = setTimeout(
+    () => loadCase($("caseNumber").value.trim().toUpperCase()),
+    450,
+  );
 }
 
 const stateLabels = {
@@ -128,8 +171,6 @@ function renderDevices(items, activePaths = []) {
     if (active.has(device.path)) deviceStates.set(device.path, "scanning");
     else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
-  $("deviceEmpty").hidden = devices.length > 0;
-  $("deviceCount").textContent = `${devices.length} ${devices.length === 1 ? "MEDIUM" : "MEDIEN"}`;
   $("deviceList").innerHTML = devices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
@@ -143,6 +184,7 @@ function renderDevices(items, activePaths = []) {
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
   }).join("");
+  updateDashboardState();
   updateScanAvailability();
   scheduleAutoScan(400);
 }
@@ -189,14 +231,19 @@ function buildKeyboard() {
       else if (activeInput === $("operator") && !$("decisionEvidenceWrap").hidden) openKeyboard($("decisionEvidence"));
       else { $("screenKeyboard").hidden = true; document.querySelector("[data-scan-device]")?.focus(); }
       updateScanAvailability();
+      updateOrderSummary();
+      scheduleAutoScan();
       return;
     } else activeInput.value += key === "SPACE" ? " " : key;
     activeInput.value = activeInput.value.toUpperCase().slice(0, 36);
     updateScanAvailability();
+    updateOrderSummary();
+    if (activeInput === $("caseNumber")) scheduleCaseLoad();
+    scheduleAutoScan();
   });
 }
 
-async function refresh(loadLatest = true) {
+async function refresh(loadLatest = false) {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
@@ -239,7 +286,9 @@ async function runScan(devicePath, standalone = true) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
     deviceStates.set(devicePath, "complete");
-    renderRecord(data);
+    await loadCase(data.media.case_number);
+    $("auftragPanel").open = false;
+    $("results").hidden = true;
   } catch (error) {
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
     deviceStates.set(devicePath, "error");
@@ -324,6 +373,7 @@ async function openMedia(mediaId) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Medienakte nicht verfügbar");
     renderRecord(data);
+    renderMediaCards(currentCaseMedia);
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     $("decisionMessage").textContent = `FEHLER: ${error.message}`;
@@ -331,10 +381,17 @@ async function openMedia(mediaId) {
 }
 
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
-$("autoScanToggle").addEventListener("change", () => scheduleAutoScan(100));
+$("autoScanToggle").addEventListener("change", () => {
+  updateOrderSummary();
+  scheduleAutoScan(100);
+});
 $("deviceList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);
+});
+$("mediaCards").addEventListener("click", (event) => {
+  const card = event.target.closest("button[data-media-id]");
+  if (card) openMedia(Number(card.dataset.mediaId));
 });
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
@@ -367,8 +424,10 @@ for (const input of document.querySelectorAll(".case-input")) {
   input.addEventListener("input", updateScanAvailability);
   input.addEventListener("input", updateDecisionAvailability);
   input.addEventListener("input", () => scheduleAutoScan());
+  input.addEventListener("input", updateOrderSummary);
+  if (input === $("caseNumber")) input.addEventListener("input", scheduleCaseLoad);
 }
 buildKeyboard();
-renderResults(demoSummary, demoHits);
+updateOrderSummary();
 refresh();
 setInterval(() => refresh(false), 2500);
