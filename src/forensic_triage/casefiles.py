@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import sqlite3
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,7 @@ class CaseStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "case-index.sqlite3"
+        self._export_lock = threading.RLock()
         self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
@@ -75,10 +77,16 @@ class CaseStore:
                     id INTEGER PRIMARY KEY,
                     case_number TEXT NOT NULL UNIQUE,
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    next_sighting_sequence INTEGER NOT NULL DEFAULT 1
                 )
                 """
             )
+            case_columns = {row["name"] for row in connection.execute("PRAGMA table_info(cases)")}
+            if "next_sighting_sequence" not in case_columns:
+                connection.execute(
+                    "ALTER TABLE cases ADD COLUMN next_sighting_sequence INTEGER NOT NULL DEFAULT 1"
+                )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS media (
@@ -128,6 +136,11 @@ class CaseStore:
                                 int(row["id"]),
                             ),
                         )
+            if "next_sighting_sequence" not in case_columns:
+                connection.execute(
+                    "UPDATE cases SET next_sighting_sequence=("
+                    "SELECT COUNT(*) + 1 FROM media WHERE media.case_id=cases.id)"
+                )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS audit_events (
@@ -153,13 +166,95 @@ class CaseStore:
             self.refresh_exports(case_number)
 
     def next_sighting_number(self, case_number: str) -> str:
+        """Preview the next number; allocation must use allocate_sighting_number()."""
         case_number = safe_component(case_number)
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT COUNT(*) AS count FROM media JOIN cases ON cases.id=media.case_id WHERE cases.case_number=?",
+                "SELECT next_sighting_sequence FROM cases WHERE case_number=?",
                 (case_number,),
             ).fetchone()
-        return f"SICHT-{int(row['count']) + 1:03d}"
+        return f"SICHT-{int(row['next_sighting_sequence']) if row else 1:03d}"
+
+    def allocate_sighting_number(
+        self,
+        case_number: str,
+        operator: str,
+        device_path: str,
+    ) -> str:
+        """Atomically reserve one sighting number for concurrent media scans."""
+        case_number = safe_component(case_number)
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                "INSERT INTO cases(case_number, created_at, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(case_number) DO UPDATE SET updated_at=excluded.updated_at",
+                (case_number, now, now),
+            )
+            row = connection.execute(
+                "SELECT id, next_sighting_sequence FROM cases WHERE case_number=?",
+                (case_number,),
+            ).fetchone()
+            case_id = int(row["id"])
+            sequence = int(row["next_sighting_sequence"])
+            sighting_number = f"SICHT-{sequence:03d}"
+            connection.execute(
+                "UPDATE cases SET next_sighting_sequence=? WHERE id=?",
+                (sequence + 1, case_id),
+            )
+            connection.execute(
+                "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
+                "VALUES (?, NULL, ?, 'sighting_reserved', ?, ?)",
+                (
+                    case_id,
+                    now,
+                    operator.strip()[:120] or None,
+                    json.dumps(
+                        {"sighting_number": sighting_number, "device_path": device_path},
+                        ensure_ascii=False,
+                    ),
+                ),
+            )
+        return sighting_number
+
+    def record_scan_failure(
+        self,
+        case_number: str,
+        sighting_number: str,
+        operator: str,
+        device_path: str,
+        error: str,
+    ) -> None:
+        """Keep failed attempts visible in the append-only case audit."""
+        case_number = safe_component(case_number)
+        now = utc_now()
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT id FROM cases WHERE case_number=?", (case_number,)
+            ).fetchone()
+            if row is None:
+                return
+            connection.execute(
+                "UPDATE cases SET updated_at=? WHERE id=?", (now, int(row["id"]))
+            )
+            connection.execute(
+                "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
+                "VALUES (?, NULL, ?, 'scan_failed', ?, ?)",
+                (
+                    int(row["id"]),
+                    now,
+                    operator.strip()[:120] or None,
+                    json.dumps(
+                        {
+                            "sighting_number": sighting_number,
+                            "device_path": device_path,
+                            "error": error[:1000],
+                        },
+                        ensure_ascii=False,
+                    ),
+                ),
+            )
+        self.refresh_exports(case_number)
 
     def scan_root(self, case_number: str, sighting_number: str) -> Path:
         return self.case_path(case_number) / "media" / safe_component(sighting_number) / "scans"
@@ -187,6 +282,12 @@ class CaseStore:
                 (case_number, now, now),
             )
             case_id = int(connection.execute("SELECT id FROM cases WHERE case_number=?", (case_number,)).fetchone()["id"])
+            if sighting_number.startswith("SICHT-") and sighting_number[6:].isdigit():
+                next_sequence = int(sighting_number[6:]) + 1
+                connection.execute(
+                    "UPDATE cases SET next_sighting_sequence=MAX(next_sighting_sequence, ?) WHERE id=?",
+                    (next_sequence, case_id),
+                )
             cursor = connection.execute(
                 """
                 INSERT INTO media(
@@ -366,6 +467,10 @@ class CaseStore:
         return {key: row[key] for key in keys if key in row.keys()}
 
     def refresh_exports(self, case_number: str) -> None:
+        with self._export_lock:
+            self._refresh_exports(case_number)
+
+    def _refresh_exports(self, case_number: str) -> None:
         case_number = safe_component(case_number)
         case_dir = self.case_path(case_number)
         case_dir.mkdir(parents=True, exist_ok=True)

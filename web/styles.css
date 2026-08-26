@@ -24,18 +24,31 @@ h1 span { color: var(--acid); }
 .system-state { display: flex; gap: 9px; align-items: center; font-size: 12px; font-weight: 800; padding-bottom: 3px; }
 .system-state i, .safety-line i { display: inline-block; width: 9px; height: 9px; background: var(--acid); box-shadow: 0 0 14px var(--acid); border-radius: 50%; }
 .rulebar { display: flex; justify-content: space-between; gap: 20px; padding: 9px 12px; background: var(--ink); color: #111; font-size: 11px; font-weight: 900; }
-.control-grid, .data-grid { display: grid; grid-template-columns: 1.12fr .88fr; gap: 14px; margin-top: 14px; }
+.control-grid, .data-grid { display: grid; grid-template-columns: .82fr 1.18fr; gap: 14px; margin-top: 14px; }
 .panel { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(255,255,255,.025), transparent 55%), var(--panel); box-shadow: 6px 6px 0 #050605; }
 .panel-title { border-bottom: 1px solid var(--line); padding: 9px 12px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 .panel-title span { color: var(--acid); margin-right: 8px; }
-.device-info { min-height: 156px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 15px; padding: 20px; }
-.drive-mark { display: grid; place-items: center; width: 58px; height: 58px; border: 2px solid var(--acid); color: var(--acid); font-size: 30px; }
-.device-info strong { display: block; font-size: 17px; margin-bottom: 7px; }
-.device-info span, .device-info code { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; }
-.device-info code { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ro-badge { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px; display: flex; align-items: center; gap: 10px; }
-.ro-badge b { color: #111; background: var(--acid); padding: 8px; font-size: 18px; }
-.ro-badge span { font-size: 9px; line-height: 1.4; }
+.device-title { display: flex; justify-content: space-between; }
+.device-title b { color: var(--ink); font-size: 9px; }
+.device-list { display: grid; gap: 1px; background: var(--line); }
+.device-card { min-height: 83px; display: grid; grid-template-columns: 14px minmax(0,1fr) 112px 106px; align-items: center; gap: 11px; padding: 12px; background: var(--panel); }
+.device-led { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+.device-card[data-state="scanning"] .device-led { background: #ffe45b; box-shadow: 0 0 12px #ffe45b; animation: pulse .7s infinite alternate; }
+.device-card[data-state="complete"] .device-led { background: var(--acid); box-shadow: 0 0 12px var(--acid); }
+.device-card[data-state="error"] .device-led { background: var(--danger); box-shadow: 0 0 12px var(--danger); }
+.device-card[data-state="unavailable"] .device-led { background: var(--muted); box-shadow: none; }
+@keyframes pulse { to { opacity: .25; } }
+.device-copy { min-width: 0; }
+.device-copy strong, .device-copy span, .device-copy code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.device-copy strong { font-size: 13px; margin-bottom: 4px; }
+.device-copy span, .device-copy code { color: var(--muted); font-size: 9px; margin-top: 3px; }
+.device-state b, .device-state small { display: block; }
+.device-state b { color: var(--acid); font-size: 9px; }
+.device-state small { color: var(--muted); font-size: 7px; line-height: 1.35; margin-top: 4px; }
+.device-card[data-state="error"] .device-state b { color: var(--danger); }
+.device-card[data-state="unavailable"] .device-state b { color: var(--muted); }
+.device-card button { min-height: 38px; border: 1px solid var(--acid); color: var(--acid); background: transparent; cursor: pointer; font-size: 9px; font-weight: 900; }
+.device-card button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .device-empty { min-height: 178px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; color: var(--muted); text-align: center; }
 .plug { color: var(--line); border: 2px solid var(--line); padding: 7px; }
 .device-empty small { max-width: 320px; }
@@ -46,9 +59,9 @@ h1 span { color: var(--acid); }
 .action-panel input:focus { border-color: var(--acid); box-shadow: 0 0 0 2px rgba(201,242,82,.12); }
 .sighting-note { margin: 0 16px 14px; color: var(--acid); font-size: 8px; letter-spacing: .05em; }
 .action-row { display: flex; align-items: stretch; gap: 11px; margin: 0 16px; }
-#scanButton { width: min(380px, 64%); border: 0; padding: 16px 12px; color: #111; background: var(--acid); font-weight: 950; cursor: pointer; box-shadow: 4px 4px 0 #657929; }
-#scanButton:hover { transform: translate(1px,1px); box-shadow: 3px 3px 0 #657929; }
-#scanButton:disabled { filter: grayscale(1); cursor: wait; }
+#scanAllButton { width: min(380px, 64%); border: 0; padding: 16px 12px; color: #111; background: var(--acid); font-weight: 950; cursor: pointer; box-shadow: 4px 4px 0 #657929; }
+#scanAllButton:hover { transform: translate(1px,1px); box-shadow: 3px 3px 0 #657929; }
+#scanAllButton:disabled { filter: grayscale(1); cursor: not-allowed; }
 .keyboard-button { flex: 1; border: 1px solid var(--line); color: var(--ink); background: #090b08; cursor: pointer; padding: 10px; font-size: 10px; font-weight: 800; }
 .keyboard-button:hover { border-color: var(--acid); color: var(--acid); }
 .safety-line { margin: 14px 16px 0; color: var(--muted); font-size: 9px; text-align: center; }
@@ -57,10 +70,11 @@ h1 span { color: var(--acid); }
 .keyboard-head { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; margin-bottom: 10px; }
 .keyboard-head b { color: var(--acid); }
 .keyboard-head button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font: inherit; }
-.keyboard-keys { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; }
+.keyboard-keys { display: flex; flex-direction: column; gap: 6px; }
+.keyboard-row { display: grid; grid-template-columns: repeat(var(--key-count), minmax(0, 1fr)); gap: 6px; }
 .keyboard-keys button { min-height: 43px; border: 1px solid var(--line); background: #090b08; color: var(--ink); cursor: pointer; font-weight: 900; }
 .keyboard-keys button:hover, .keyboard-keys button:active { border-color: var(--acid); color: var(--acid); background: #1a2113; }
-.keyboard-keys .wide { grid-column: span 2; color: var(--amber); }
+.keyboard-keys .wide { color: var(--amber); }
 .progress-panel { margin-top: 14px; padding-bottom: 16px; }
 .progress-copy { display: flex; justify-content: space-between; padding: 16px 16px 8px; font-size: 12px; }
 .progress-track { margin: 0 16px; height: 18px; border: 1px solid var(--line); padding: 3px; }
@@ -143,9 +157,9 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .documentation-grid { grid-template-columns: 1fr; }
   .action-panel { order: 1; }
   .device-panel { order: 2; }
-  .device-info { grid-template-columns: auto 1fr; padding: 16px; min-height: 130px; }
-  .ro-badge { grid-column: 1 / -1; padding: 10px 0 0; }
-  .keyboard-keys { grid-template-columns: repeat(10, 1fr); }
+  .device-card { grid-template-columns: 14px minmax(0,1fr) 100px 94px; }
+  .screen-keyboard { position: fixed; z-index: 20; left: 9px; right: 9px; bottom: 9px; margin: 0; box-shadow: 0 -12px 40px #000; }
+  .keyboard-keys button { min-height: 38px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .result-head { align-items: start; }
 }
@@ -159,9 +173,11 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .result-stamp { display: inline-block; margin-top: 12px; }
   .field-grid { grid-template-columns: 1fr; }
   .action-row { flex-direction: column; }
-  #scanButton { width: 100%; min-height: 58px; }
+  #scanAllButton { width: 100%; min-height: 58px; }
   .keyboard-button { min-height: 44px; }
-  .keyboard-keys { grid-template-columns: repeat(6, 1fr); }
+  .device-card { grid-template-columns: 12px minmax(0,1fr); }
+  .device-state { grid-column: 2; }
+  .device-card button { grid-column: 1 / -1; }
   .bar-row { grid-template-columns: 82px 1fr 42px; }
   .decision-buttons { grid-template-columns: 1fr; }
   .inventory-tools { grid-template-columns: 1fr; }

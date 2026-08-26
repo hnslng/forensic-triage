@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -70,6 +71,21 @@ def test_evidence_number_is_assigned_only_when_secured(tmp_path) -> None:
     decided = store.record_decision(media_id, "secure", None, "", "HL", "BM-007")
     assert decided["media"]["evidence_number"] == "BM-007"
     assert store.next_sighting_number("FALL-1") == "SICHT-002"
+
+
+def test_sighting_numbers_are_reserved_atomically(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        numbers = list(pool.map(
+            lambda index: store.allocate_sighting_number("FALL-PARALLEL", "HL", f"/dev/sd{index}"),
+            range(6),
+        ))
+
+    assert sorted(numbers) == [f"SICHT-{index:03d}" for index in range(1, 7)]
+    assert store.next_sighting_number("FALL-PARALLEL") == "SICHT-007"
+    store.refresh_exports("FALL-PARALLEL")
+    audit = (store.case_path("FALL-PARALLEL") / "audit.log").read_text(encoding="utf-8")
+    assert audit.count('"event_type": "sighting_reserved"') == 6
 
 
 def test_safe_component_refuses_path_escape() -> None:

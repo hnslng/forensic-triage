@@ -54,7 +54,9 @@ Each scan produces `device.json`, `partitions.json`, `files.csv`, `summary.json`
 - Extension classification, keyword matching, statistics, fast inventory, and TSK parsers covered by 13 unit tests on macOS and Linux.
 - Synthetic 960-file fixture generator implemented.
 - Physical SanDisk exFAT scans passed the expected manifest with no mismatches. The final fast scan took 0.732 seconds; see `docs/validation-2026-08-26.md`.
-- A local operator dashboard is available. It detects one unmounted USB disk, starts the guarded fast scan, and renders categories, keyword hits, largest files, and scan metadata.
+- A local operator dashboard detects multiple removable media, starts independent guarded USB scans in parallel, and renders categories, keyword hits, largest files, and scan metadata.
+- Each medium has a compact status light model (`ready`, `scanning`, `complete`, `error`) that can later drive physical LEDs without coupling GPIO code to the scanner.
+- Optical drives are detected and shown, but CD/DVD scanning intentionally remains disabled until it is validated with the actual drive.
 
 ## Operator dashboard
 
@@ -70,7 +72,9 @@ It binds to `127.0.0.1:8787` by default. Keep it private and reach it from the M
 ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
 ```
 
-Then open `http://127.0.0.1:8787` on the Mac. The server refuses to start a scan unless exactly one unmounted whole USB disk is available. The existing scanner performs the final identity, mount-state, transport, and read-only checks.
+Then open `http://127.0.0.1:8787` on the Mac. Every unmounted whole USB disk receives its own scan action; `ALLE MEDIEN SCANNEN` runs the eligible devices concurrently. The scanner still performs the final identity, mount-state, transport, and read-only checks for every device.
+
+On the future Raspberry Pi the same interface can be used either on its small touch display or from a laptop over a direct Ethernet cable. The intended field setup gives the Pi a dedicated address such as `10.77.0.1` and binds the web service only to that direct-link interface; the laptop then opens `http://10.77.0.1:8787` (or `http://triagebox.local:8787`). This network configuration is deliberately deferred until it can be tested on the real Pi, so the current VM remains bound to localhost and reachable through the SSH tunnel.
 
 The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.
 

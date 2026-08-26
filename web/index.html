@@ -35,28 +35,20 @@
           </div>
           <p class="sighting-note">SICHTUNGSNUMMER WIRD AUTOMATISCH VERGEBEN · BEWEISMITTELNUMMER ERST BEI SICHERUNG</p>
           <div class="action-row">
-            <button id="scanButton" type="button"><span>▶</span> GROBSICHTUNG STARTEN</button>
+            <button id="scanAllButton" type="button"><span>▶</span> ALLE MEDIEN SCANNEN</button>
             <button id="keyboardButton" class="keyboard-button" type="button">⌨ BILDSCHIRMTASTATUR</button>
           </div>
           <p class="safety-line"><i></i> Nur Metadaten · keine Inhaltsanalyse · lokal</p>
         </article>
 
         <article class="panel device-panel">
-          <div class="panel-title"><span>02</span> DATENTRÄGER PRÜFEN</div>
+          <div class="panel-title device-title"><div><span>02</span> DATENTRÄGER PRÜFEN</div><b id="deviceCount">0 MEDIEN</b></div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
             <strong>KEIN DATENTRÄGER ERKANNT</strong>
             <small>USB-Medium einstecken, Erkennung läuft automatisch.</small>
           </div>
-          <div id="deviceInfo" class="device-info">
-            <div class="drive-mark">▰</div>
-            <div>
-              <strong id="deviceModel">SanDisk Ultra Fit</strong>
-              <span id="deviceMeta">/dev/sdb · 114,6 GB · USB</span>
-              <code id="deviceSerial">SERIAL 010104382F...</code>
-            </div>
-            <div class="ro-badge"><b>RO</b><span>SCHREIBSCHUTZ<br />WIRD BEIM START GEPRÜFT</span></div>
-          </div>
+          <div id="deviceList" class="device-list"></div>
         </article>
       </section>
 

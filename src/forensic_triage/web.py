@@ -22,7 +22,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WEB_ROOT = PROJECT_ROOT / "web"
 EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
-SCAN_LOCK = threading.Lock()
+ACTIVE_DEVICES_LOCK = threading.Lock()
+ACTIVE_DEVICES: set[str] = set()
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -32,8 +33,39 @@ def _mountpoints(node: dict[str, Any]) -> list[str]:
     return points
 
 
-def discover_usb_devices() -> list[dict[str, Any]]:
-    """Return unmounted whole USB disks that the scanner can safely inspect."""
+def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert lsblk nodes into operator-facing removable media records."""
+    devices: list[dict[str, Any]] = []
+    for node in nodes:
+        device_type = str(node.get("type", ""))
+        transport = str(node.get("tran", ""))
+        is_usb = device_type == "disk" and transport == "usb" and node.get("path") != "/dev/sda"
+        is_optical = device_type == "rom"
+        if not (is_usb or is_optical):
+            continue
+        mounted = bool(_mountpoints(node))
+        supported = is_usb and not mounted
+        reason = ""
+        if is_optical:
+            reason = "CD/DVD erkannt · Scan folgt nach Hardwaretest"
+        elif mounted:
+            reason = "Medium ist bereits eingehängt"
+        devices.append({
+            "path": node.get("path"),
+            "size": node.get("size", 0),
+            "vendor": (node.get("vendor") or "").strip(),
+            "model": (node.get("model") or "").strip(),
+            "serial": (node.get("serial") or "").strip(),
+            "read_only": bool(node.get("ro")),
+            "media_type": "optical" if is_optical else "usb",
+            "scan_supported": supported,
+            "unavailable_reason": reason,
+        })
+    return devices
+
+
+def discover_media_devices() -> list[dict[str, Any]]:
+    """Return USB media and visible optical drives without touching their contents."""
     completed = subprocess.run(
         [
             "lsblk", "--json", "--bytes", "--output",
@@ -43,22 +75,25 @@ def discover_usb_devices() -> list[dict[str, Any]]:
         text=True,
         capture_output=True,
     )
-    nodes = json.loads(completed.stdout).get("blockdevices", [])
-    return [
-        {
-            "path": node.get("path"),
-            "size": node.get("size", 0),
-            "vendor": (node.get("vendor") or "").strip(),
-            "model": (node.get("model") or "").strip(),
-            "serial": (node.get("serial") or "").strip(),
-            "read_only": bool(node.get("ro")),
-        }
-        for node in nodes
-        if node.get("type") == "disk"
-        and node.get("tran") == "usb"
-        and node.get("path") != "/dev/sda"
-        and not _mountpoints(node)
-    ]
+    return parse_media_devices(json.loads(completed.stdout).get("blockdevices", []))
+
+
+def active_device_paths() -> list[str]:
+    with ACTIVE_DEVICES_LOCK:
+        return sorted(ACTIVE_DEVICES)
+
+
+def claim_device(path: str) -> bool:
+    with ACTIVE_DEVICES_LOCK:
+        if path in ACTIVE_DEVICES:
+            return False
+        ACTIVE_DEVICES.add(path)
+        return True
+
+
+def release_device(path: str) -> None:
+    with ACTIVE_DEVICES_LOCK:
+        ACTIVE_DEVICES.discard(path)
 
 
 def latest_result(results_root: Path) -> dict[str, Any] | None:
@@ -138,13 +173,14 @@ class TriageHandler(BaseHTTPRequestHandler):
         route = urlsplit(self.path).path
         if route == "/api/status":
             try:
-                devices = discover_usb_devices()
+                devices = discover_media_devices()
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
                 self._json(HTTPStatus.OK, {
                     "devices": devices,
                     "latest": latest,
                     "cases": self.server.case_store.list_cases(),
-                    "scan_running": SCAN_LOCK.locked(),
+                    "active_devices": active_device_paths(),
+                    "scan_running": bool(active_device_paths()),
                 })
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Systemstatus nicht verfügbar: {exc}"})
@@ -221,6 +257,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             payload = self._read_payload()
             case_number = str(payload.get("case_number", "")).strip()
             operator = str(payload.get("operator", "")).strip()
+            device_path = str(payload.get("device_path", "")).strip()
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
@@ -233,33 +270,47 @@ class TriageHandler(BaseHTTPRequestHandler):
         if not OPERATOR_PATTERN.fullmatch(operator):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Bearbeiterkürzel."})
             return
-        if not SCAN_LOCK.acquire(blocking=False):
-            self._json(HTTPStatus.CONFLICT, {"error": "Eine Grobsichtung läuft bereits."})
-            return
         try:
-            devices = discover_usb_devices()
-            if len(devices) != 1:
-                message = "Kein geeigneter USB-Datenträger erkannt." if not devices else "Mehrere USB-Datenträger erkannt; bitte nur das Untersuchungsmedium anschließen."
-                self._json(HTTPStatus.CONFLICT, {"error": message})
-                return
-            sighting_number = self.server.case_store.next_sighting_number(case_number)
+            devices = discover_media_devices()
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträgerstatus nicht verfügbar: {exc}"})
+            return
+        device = next(
+            (item for item in devices if item.get("path") == device_path and item.get("scan_supported")),
+            None,
+        )
+        if device is None:
+            self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist nicht mehr verfügbar oder nicht scanbereit."})
+            return
+        if not claim_device(device_path):
+            self._json(HTTPStatus.CONFLICT, {"error": "Dieser Datenträger wird bereits gesichtet."})
+            return
+        sighting_number = ""
+        try:
+            sighting_number = self.server.case_store.allocate_sighting_number(
+                case_number, operator, device_path,
+            )
             result_dir = scan(
-                Path(devices[0]["path"]),
+                Path(device_path),
                 self.server.profile_path,
                 sighting_number,
                 self.server.case_store.scan_root(case_number, sighting_number),
                 mode="fast",
             )
             record = self.server.case_store.record_scan(
-                case_number, sighting_number, operator, devices[0], result_dir,
+                case_number, sighting_number, operator, device, result_dir,
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.CREATED, record)
         except Exception as exc:  # Scanner errors must reach the operator cleanly.
             logging.exception("scan request failed")
+            if sighting_number:
+                self.server.case_store.record_scan_failure(
+                    case_number, sighting_number, operator, device_path, str(exc),
+                )
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
         finally:
-            SCAN_LOCK.release()
+            release_device(device_path)
 
     def _post_decision(self, media_id: int) -> None:
         try:

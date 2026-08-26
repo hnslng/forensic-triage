@@ -12,7 +12,11 @@ const demoSummary = {
 };
 const demoHits = { rechnung: 20, buchhaltung: 10, fibu: 5, datev: 3, kassabuch: 4, kunden: 15, steuerberater: 3 };
 const $ = (id) => document.getElementById(id);
-let devicePresent = false;
+let devices = [];
+const deviceStates = new Map();
+const runningPaths = new Set();
+let batchTotal = 0;
+let batchDone = 0;
 let activeInput = null;
 let currentMediaId = null;
 let currentDecision = null;
@@ -110,24 +114,46 @@ async function loadCase(caseNumber) {
   }
 }
 
-function renderDevice(device) {
-  const present = Boolean(device && device.path);
-  devicePresent = present;
-  $("deviceInfo").hidden = !present;
-  $("deviceEmpty").hidden = present;
+const stateLabels = {
+  ready: "BEREIT", scanning: "SCAN LÄUFT", complete: "FERTIG", error: "PRÜFEN", unavailable: "NICHT BEREIT",
+};
+
+function renderDevices(items, activePaths = []) {
+  devices = items || [];
+  const active = new Set(activePaths);
+  const presentPaths = new Set(devices.map((device) => device.path));
+  for (const path of deviceStates.keys()) if (!presentPaths.has(path)) deviceStates.delete(path);
+  for (const device of devices) {
+    if (active.has(device.path)) deviceStates.set(device.path, "scanning");
+    else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
+  }
+  $("deviceEmpty").hidden = devices.length > 0;
+  $("deviceCount").textContent = `${devices.length} ${devices.length === 1 ? "MEDIUM" : "MEDIEN"}`;
+  $("deviceList").innerHTML = devices.map((device) => {
+    const state = deviceStates.get(device.path) || "ready";
+    const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
+    const serial = device.serial || "NICHT GEMELDET";
+    const type = device.media_type === "optical" ? "CD/DVD" : "USB";
+    const disabled = !device.scan_supported || state === "scanning";
+    return `<article class="device-card" data-state="${state}">
+      <i class="device-led" title="${stateLabels[state]}"></i>
+      <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
+      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "RO-PRÜFUNG BEIM START")}</small></div>
+      <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
+    </article>`;
+  }).join("");
   updateScanAvailability();
-  if (!present) return;
-  $("deviceModel").textContent = [device.vendor, device.model].filter(Boolean).join(" ") || "USB-Datenträger";
-  $("deviceMeta").textContent = `${device.path} · ${formatBytes(device.size)} · USB`;
-  const serial = device.serial || "NICHT GEMELDET";
-  $("deviceSerial").textContent = `SERIAL ${serial.length > 26 ? `${serial.slice(0, 26)}…` : serial}`;
-  $("deviceSerial").title = serial;
 }
 
 function updateScanAvailability() {
   const hasCase = $("caseNumber").value.trim().length > 0;
   const hasOperator = $("operator").value.trim().length > 0;
-  $("scanButton").disabled = !devicePresent || !hasCase || !hasOperator;
+  const available = devices.some((device) => device.scan_supported && deviceStates.get(device.path) !== "scanning");
+  $("scanAllButton").disabled = !available || !hasCase || !hasOperator;
+  for (const button of document.querySelectorAll("[data-scan-device]")) {
+    const device = devices.find((item) => item.path === button.dataset.scanDevice);
+    button.disabled = !device?.scan_supported || deviceStates.get(device.path) === "scanning" || !hasCase || !hasOperator;
+  }
 }
 
 function updateDecisionAvailability() {
@@ -144,9 +170,15 @@ function openKeyboard(input) {
 }
 
 function buildKeyboard() {
-  const keys = "1234567890QWERTZUIOPASDFGHJKLYXCVBNM-_/ .".split("");
-  $("keyboardKeys").innerHTML = keys.map((key) => `<button type="button" data-key="${key === " " ? "SPACE" : key}">${key === " " ? "LEER" : key}</button>`).join("") +
-    '<button type="button" class="wide" data-key="BACKSPACE">⌫ LÖSCHEN</button><button type="button" class="wide" data-key="CLEAR">LEEREN</button><button type="button" class="wide" data-key="NEXT">WEITER ↵</button>';
+  const rows = [
+    "1234567890".split(""),
+    "QWERTZUIOP".split(""),
+    "ASDFGHJKL".split(""),
+    "YXCVBNM-_.".split(""),
+    ["BACKSPACE", "CLEAR", "NEXT"],
+  ];
+  const labels = { BACKSPACE: "⌫ LÖSCHEN", CLEAR: "LEEREN", NEXT: "WEITER ↵" };
+  $("keyboardKeys").innerHTML = rows.map((row) => `<div class="keyboard-row" style="--key-count:${row.length}">${row.map((key) => `<button type="button" class="${labels[key] ? "wide" : ""}" data-key="${key}">${labels[key] || key}</button>`).join("")}</div>`).join("");
   $("keyboardKeys").addEventListener("click", (event) => {
     const key = event.target.closest("button")?.dataset.key;
     if (!key || !activeInput) return;
@@ -155,7 +187,7 @@ function buildKeyboard() {
     else if (key === "NEXT") {
       if (activeInput === $("caseNumber")) openKeyboard($("operator"));
       else if (activeInput === $("operator") && !$("decisionEvidenceWrap").hidden) openKeyboard($("decisionEvidence"));
-      else { $("screenKeyboard").hidden = true; $("scanButton").focus(); }
+      else { $("screenKeyboard").hidden = true; $("scanAllButton").focus(); }
       updateScanAvailability();
       return;
     } else activeInput.value += key === "SPACE" ? " " : key;
@@ -164,60 +196,70 @@ function buildKeyboard() {
   });
 }
 
-async function refresh() {
+async function refresh(loadLatest = true) {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
-    renderDevice(data.devices?.[0]);
-    if (data.latest) renderRecord(data.latest);
+    renderDevices(data.devices || [], data.active_devices || []);
+    if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
-    renderResults(demoSummary, demoHits);
+    $("systemState").textContent = "VERBINDUNG PRÜFEN";
   }
 }
 
-async function runScan() {
+function updateProgress() {
+  $("progressPanel").hidden = batchTotal === 0;
+  const percent = batchTotal ? Math.round((batchDone / batchTotal) * 100) : 0;
+  $("progressValue").textContent = `${percent}%`;
+  $("progressBar").style.width = `${Math.max(runningPaths.size ? 8 : 0, percent)}%`;
+  if (runningPaths.size) $("progressLabel").textContent = `${runningPaths.size} Grobsichtung${runningPaths.size === 1 ? "" : "en"} parallel …`;
+  else if (batchDone === batchTotal) $("progressLabel").textContent = "Sichtungslauf abgeschlossen";
+  $("progressLog").textContent = runningPaths.size ? `$ RO-Prüfung + Inventarisierung: ${[...runningPaths].join(" · ")}` : "$ Protokolle und Prüfsummen aktualisiert";
+}
+
+async function runScan(devicePath, standalone = true) {
   const caseNumber = $("caseNumber").value.trim().toUpperCase();
   const operator = $("operator").value.trim().toUpperCase();
   if (!caseNumber) { $("caseNumber").focus(); return; }
   if (!operator) { $("operator").focus(); return; }
   const normalizedCase = caseNumber.replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
-  $("scanButton").disabled = true;
-  $("progressPanel").hidden = false;
+  if (standalone) { batchTotal = 1; batchDone = 0; }
+  runningPaths.add(devicePath);
+  deviceStates.set(devicePath, "scanning");
+  renderDevices(devices);
   $("screenKeyboard").hidden = true;
-  $("results").hidden = true;
-  let progress = 8;
-  $("progressValue").textContent = "08%";
-  $("progressBar").style.width = "8%";
-  $("progressLabel").textContent = "Schreibschutz wird geprüft …";
-  const timer = setInterval(() => {
-    progress = Math.min(progress + Math.ceil(Math.random() * 9), 88);
-    $("progressValue").textContent = `${progress}%`;
-    $("progressBar").style.width = `${progress}%`;
-    if (progress > 35) $("progressLabel").textContent = "Dateisystem wird inventarisiert …";
-    if (progress > 70) $("progressLabel").textContent = "Auswertung wird erstellt …";
-  }, 260);
+  updateProgress();
   try {
     const response = await fetch("/api/scans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: normalizedCase, operator }),
+      body: JSON.stringify({ case_number: normalizedCase, operator, device_path: devicePath }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
-    clearInterval(timer);
-    $("progressValue").textContent = "100%";
-    $("progressBar").style.width = "100%";
-    $("progressLabel").textContent = "Scan abgeschlossen";
+    deviceStates.set(devicePath, "complete");
     renderRecord(data);
   } catch (error) {
-    clearInterval(timer);
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
-    $("progressValue").textContent = "!";
+    deviceStates.set(devicePath, "error");
     $("systemState").textContent = "PRÜFUNG NÖTIG";
   } finally {
+    runningPaths.delete(devicePath);
+    batchDone += 1;
+    renderDevices(devices);
+    updateProgress();
     updateScanAvailability();
   }
+}
+
+async function runAllScans() {
+  const paths = devices.filter((device) => device.scan_supported && deviceStates.get(device.path) !== "scanning").map((device) => device.path);
+  if (!paths.length) return;
+  batchTotal = paths.length;
+  batchDone = 0;
+  await Promise.allSettled(paths.map((path) => runScan(path, false)));
+  await refresh(false);
 }
 
 async function saveDecision() {
@@ -277,7 +319,11 @@ async function openMedia(mediaId) {
 }
 
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
-$("scanButton").addEventListener("click", runScan);
+$("scanAllButton").addEventListener("click", runAllScans);
+$("deviceList").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-scan-device]");
+  if (button) runScan(button.dataset.scanDevice);
+});
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", loadInventory);
@@ -312,3 +358,4 @@ for (const input of document.querySelectorAll(".case-input")) {
 buildKeyboard();
 renderResults(demoSummary, demoHits);
 refresh();
+setInterval(() => refresh(false), 2500);
