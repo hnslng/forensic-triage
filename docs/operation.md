@@ -41,6 +41,8 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 5. Fortschritt und Abschlussstatus je Kachel beobachten.
 6. Detailansicht öffnen und Kategorien, Stichworttreffer, Größen sowie Verzeichnisbaum prüfen.
 
+Dateikategorien und Stichwortzeilen sind anklickbar. Die passende Dateiliste öffnet sich darunter automatisch. Bei Stichworttreffern zeigt „Treffer in“, ob der Begriff aus dem Dateinamen oder einem Ordnerpfad stammt. „Weitere Dateien laden“ ergänzt große Trefferlisten; „Alle Dateien“ führt zum vollständigen Verzeichnisbaum zurück.
+
 „Online“ bedeutet, dass das Medium gegenwärtig erkannt wird. Nach Entfernen bleibt ein bereits protokolliertes Medium als „Offline“ in der Fallhistorie sichtbar. Ein offener Entscheidungsstatus muss weiterhin erkennbar bleiben.
 
 ## 5. Entscheidung dokumentieren

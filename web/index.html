@@ -108,15 +108,17 @@
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
               <button id="inventoryLoad" type="button">ANZEIGEN</button>
+              <button id="inventoryReset" type="button">ALLE DATEIEN</button>
               <span id="inventoryCount">—</span>
             </div>
             <div id="inventoryTree" class="inventory-tree"></div>
             <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
               <table>
-                <thead><tr><th>PFAD</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
+                <thead><tr><th>PFAD</th><th>TREFFER IN</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
                 <tbody id="inventoryFiles"></tbody>
               </table>
             </div>
+            <button id="inventoryMore" class="inventory-more" type="button" hidden>WEITERE DATEIEN LADEN</button>
           </details>
           <article class="panel decision-panel">
             <div class="panel-title"><span>09</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>

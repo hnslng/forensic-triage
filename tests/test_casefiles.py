@@ -51,6 +51,9 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
     assert inventory == {
         "total": 1,
         "shown": 1,
+        "offset": 0,
+        "next_offset": 1,
+        "has_more": False,
         "files": [{"path": "a", "size": 1, "extension": "", "category": "Unbekannt", "mtime": ""}],
     }
 
@@ -87,6 +90,11 @@ def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
         "partition_001/photo.jpg,5,.jpg,Bilder\n",
         encoding="utf-8",
     )
+    (result_dir / "hits.json").write_text(json.dumps({
+        "by_keyword": {"docs": {"count": 2, "paths": [
+            "partition_001/docs/report.pdf", "partition_001/docs/note.txt",
+        ]}},
+    }), encoding="utf-8")
     media_id = store.record_scan(
         "FALL-TREE", "SICHT-001", "HL", {"path": "/dev/sdb"}, result_dir,
     )["media"]["id"]
@@ -99,6 +107,14 @@ def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
     partition = store.directory_inventory(media_id, "partition_001")
     assert [entry["name"] for entry in partition["entries"]] == ["docs", "photo.jpg"]
     assert partition["entries"][0]["file_count"] == 2
+    assert store.file_inventory(media_id, category="Bilder")["files"][0]["path"] == "partition_001/photo.jpg"
+    keyword_files = store.file_inventory(media_id, keyword="docs")["files"]
+    assert len(keyword_files) == 2
+    assert {item["match_source"] for item in keyword_files} == {"ORDNERPFAD"}
+    paged_files = store.file_inventory(media_id, category="Dokumente", limit=1, offset=1)
+    assert paged_files["shown"] == 1
+    assert paged_files["offset"] == 1
+    assert paged_files["has_more"] is False
     paged = store.directory_inventory(media_id, "partition_001", limit=1)
     assert paged["has_more"] is True
     assert store.directory_inventory(media_id, "partition_001", limit=1, offset=1)["entries"][0]["name"] == "photo.jpg"

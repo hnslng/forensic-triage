@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .pdf_report import build_case_pdf
+from .keywords import match_keywords
 
 
 DECISIONS = {"open", "secure", "not_selected", "review"}
@@ -428,7 +429,15 @@ class CaseStore:
             row = connection.execute("SELECT id FROM media ORDER BY id DESC LIMIT 1").fetchone()
         return self.media_detail(int(row["id"])) if row else None
 
-    def file_inventory(self, media_id: int, query: str = "", limit: int = 250) -> dict[str, Any]:
+    def file_inventory(
+        self,
+        media_id: int,
+        query: str = "",
+        limit: int = 250,
+        category: str = "",
+        keyword: str = "",
+        offset: int = 0,
+    ) -> dict[str, Any]:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT result_path FROM media WHERE id=?",
@@ -438,22 +447,57 @@ class CaseStore:
             raise KeyError("Medienakte nicht gefunden.")
         inventory_path = self.root / str(row["result_path"]) / "files.csv"
         needle = query.casefold().strip()
+        selected_category = category.casefold().strip()
+        selected_keyword = keyword.strip()
+        keyword_paths: set[str] | None = None
+        if selected_keyword:
+            hits_path = inventory_path.with_name("hits.json")
+            hits_data = json.loads(hits_path.read_text(encoding="utf-8"))
+            keyword_details = hits_data.get("by_keyword", {}).get(selected_keyword, {})
+            keyword_paths = {str(path) for path in keyword_details.get("paths", [])}
         matches: list[dict[str, Any]] = []
         total = 0
+        start = max(0, offset)
+        capped = max(1, min(limit, 500))
         with inventory_path.open(encoding="utf-8", newline="") as handle:
             for item in csv.DictReader(handle):
-                if needle and needle not in str(item.get("path", "")).casefold():
+                path = str(item.get("path", ""))
+                if needle and needle not in path.casefold():
+                    continue
+                if selected_category and str(item.get("category", "Unbekannt")).casefold() != selected_category:
+                    continue
+                if keyword_paths is not None and path not in keyword_paths:
                     continue
                 total += 1
-                if len(matches) < max(1, min(limit, 500)):
-                    matches.append({
-                        "path": item.get("path", ""),
+                if total <= start:
+                    continue
+                if len(matches) < capped:
+                    record = {
+                        "path": path,
                         "size": int(item.get("size", 0) or 0),
                         "extension": item.get("extension", ""),
                         "category": item.get("category", "Unbekannt"),
                         "mtime": item.get("mtime", ""),
-                    })
-        return {"total": total, "shown": len(matches), "files": matches}
+                    }
+                    if selected_keyword:
+                        normalized = path.replace("\\", "/")
+                        parent, separator, filename = normalized.rpartition("/")
+                        if match_keywords(filename if separator else normalized, [selected_keyword]):
+                            record["match_source"] = "DATEINAME"
+                        elif parent and match_keywords(parent, [selected_keyword]):
+                            record["match_source"] = "ORDNERPFAD"
+                        else:
+                            record["match_source"] = "PFAD"
+                    matches.append(record)
+        next_offset = start + len(matches)
+        return {
+            "total": total,
+            "shown": len(matches),
+            "offset": start,
+            "next_offset": next_offset,
+            "has_more": next_offset < total,
+            "files": matches,
+        }
 
     def directory_inventory(self, media_id: int, prefix: str = "", limit: int = 300, offset: int = 0) -> dict[str, Any]:
         """Return one directory level for the lazy web explorer."""

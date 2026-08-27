@@ -315,6 +315,9 @@ class TriageHandler(BaseHTTPRequestHandler):
                     int(inventory_match.group(1)),
                     str(query.get("q", [""])[0]),
                     int(query.get("limit", ["250"])[0]),
+                    str(query.get("category", [""])[0]),
+                    str(query.get("keyword", [""])[0]),
+                    int(query.get("offset", ["0"])[0]),
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:

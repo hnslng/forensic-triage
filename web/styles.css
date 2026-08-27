@@ -229,10 +229,14 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list, .keyword-list { padding: 14px 15px; }
 .bar-row { display: grid; grid-template-columns: 112px 1fr 45px; align-items: center; gap: 10px; margin: 9px 0; font-size: 12px; }
+.bar-row.result-filter { width: 100%; padding: 2px 1px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
+.bar-row.result-filter:hover, .bar-row.result-filter.active { color: var(--acid); background: rgba(201, 242, 82, .05); }
 .bar-track { height: 11px; background: #252b21; }
 .bar-fill { height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { text-align: right; font-weight: 800; }
 .keyword-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--line); padding: 9px 1px; font-size: 12px; }
+.keyword-row.result-filter { width: 100%; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
+.keyword-row.result-filter:hover, .keyword-row.result-filter.active { color: var(--acid); background: rgba(201, 242, 82, .05); }
 .keyword-row:last-child { border-bottom: 0; }
 .keyword-row b { color: var(--amber); font-size: 19px; }
 .files-panel th, .files-panel td { padding: 11px 12px; }
@@ -292,13 +296,15 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .status-secure { border-color: var(--acid); color: var(--acid); }
 .status-not_selected { border-color: var(--muted); color: var(--muted); }
 .status-review, .status-open { border-color: var(--amber); color: var(--amber); }
-.inventory-tools { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; padding: 12px; align-items: center; }
+.inventory-tools { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; padding: 12px; align-items: center; }
 .inventory-tools input { min-width: 0; border: 1px solid var(--line); background: #090b08; color: var(--ink); padding: 11px; outline: none; }
 .inventory-tools input:focus { border-color: var(--acid); }
 .inventory-tools button { border: 1px solid var(--acid); background: transparent; color: var(--acid); padding: 11px; cursor: pointer; font-weight: 900; }
 .inventory-tools span { color: var(--muted); font-size: 9px; min-width: 92px; text-align: right; }
 .inventory-table { max-height: 440px; overflow: auto; }
 .inventory-table thead { position: sticky; top: 0; background: var(--panel); }
+.inventory-more { display: block; width: calc(100% - 24px); margin: 8px 12px 12px; padding: 10px; border: 1px solid var(--acid); background: transparent; color: var(--acid); cursor: pointer; font-weight: 900; }
+.inventory-more[hidden] { display: none; }
 .inventory-tree { max-height: 520px; overflow: auto; padding: 8px 12px 14px; }
 .tree-folder { border-left: 1px solid var(--line); margin-left: 8px; }
 .tree-folder > summary, .tree-file { min-height: 40px; display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px dashed var(--line); list-style: none; }
