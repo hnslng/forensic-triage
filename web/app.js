@@ -44,6 +44,19 @@ function openAuftrag() {
   if (!$("auftragModal").open) $("auftragModal").showModal();
 }
 
+const nestedAuftragDialogs = ["keywordModal", "caseArchiveModal", "deleteModal"];
+
+function syncAuftragBackdrop() {
+  const nestedOpen = nestedAuftragDialogs.some((id) => $(id).open);
+  $("auftragModal").classList.toggle("nested-open", $("auftragModal").open && nestedOpen);
+}
+
+function openNestedAuftragDialog(id) {
+  const dialog = $(id);
+  if (!dialog.open) dialog.showModal();
+  syncAuftragBackdrop();
+}
+
 function updateKeywordSummary() {
   const uniqueKeywords = (values) => {
     const seen = new Set();
@@ -295,7 +308,12 @@ function updateOrderSummary() {
 function updateCaseSessionUi(message = "") {
   const draftCase = $("caseNumber").value.trim().toUpperCase();
   const draftOperator = $("operator").value.trim().toUpperCase();
-  const ready = Boolean(draftCase && draftOperator && profileReady && !runningPaths.size);
+  const openRequirements = [];
+  if (!draftCase) openRequirements.push("FALLNUMMER FEHLT");
+  if (!draftOperator) openRequirements.push("BEARBEITERKÜRZEL FEHLT");
+  if (!profileReady) openRequirements.push("SUCHPROFIL FEHLT");
+  if (runningPaths.size) openRequirements.push("SCAN LÄUFT");
+  const ready = openRequirements.length === 0;
   const sameSession = activeCaseNumber === draftCase && activeOperator === draftOperator;
   $("caseStart").disabled = !ready || sameSession;
   $("caseStart").textContent = activeCaseNumber && !sameSession ? "↻ ANDEREN FALL STARTEN" : "▶ FALL STARTEN";
@@ -305,8 +323,8 @@ function updateCaseSessionUi(message = "") {
   $("activeCaseOperator").textContent = activeCaseNumber ? `| ${activeOperator}` : "";
   if (message) {
     $("caseStartMessage").textContent = message;
-  } else if (!draftCase || !draftOperator) {
-    $("caseStartMessage").textContent = "FALLNUMMER UND KÜRZEL EINGEBEN";
+  } else if (openRequirements.length) {
+    $("caseStartMessage").textContent = `OFFEN: ${openRequirements.join(" · ")}`;
   } else if (sameSession) {
     $("caseStartMessage").textContent = "DIESER FALL IST AKTIV";
   } else if (activeCaseNumber) {
@@ -314,7 +332,7 @@ function updateCaseSessionUi(message = "") {
   } else {
     $("caseStartMessage").textContent = "BEREIT — FALL MUSS AUSDRÜCKLICH GESTARTET WERDEN";
   }
-  $("caseStartMessage").className = `case-start-message${ready && !sameSession ? " warning" : activeCaseNumber ? " ready" : ""}`;
+  $("caseStartMessage").className = `case-start-message${openRequirements.length || (ready && !sameSession) ? " warning" : activeCaseNumber ? " ready" : ""}`;
   updateOrderSummary();
   updateScanAvailability();
   updateDecisionAvailability();
@@ -417,7 +435,7 @@ async function refreshMediaDevices() {
     if (!response.ok) throw new Error(data.error || "Datenträger konnten nicht aktualisiert werden");
     renderDevices(data.devices || [], data.active_devices || []);
     const restored = Number(data.reactivated?.length || 0);
-    setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "KEIN FALL AKTIV"));
+    setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "GESPERRT"));
   } catch (error) {
     setSystemState(`FEHLER: ${error.message}`, "error");
   } finally {
@@ -437,7 +455,7 @@ function updateProgress() {
 
 async function runScan(devicePath, standalone = true) {
   if (!activeCaseNumber || !activeOperator) {
-    setSystemState("ZUERST FALL STARTEN", "locked");
+    setSystemState("GESPERRT", "locked");
     openAuftrag();
     return;
   }
@@ -618,7 +636,7 @@ async function startCaseSession() {
     resetDeviceStatesForCase();
     renderDevices(devices);
     updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · SCANS FREIGEGEBEN`);
-    setSystemState("SYSTEM BEREIT", "ready");
+    setSystemState("BEREIT", "ready");
     $("auftragModal").close();
     await refresh(false);
     scheduleAutoScan(150);
@@ -652,7 +670,7 @@ function stopCaseSession() {
   renderDevices(devices);
   renderCaseHistory(knownCases);
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
-  setSystemState("KEIN FALL AKTIV", "locked");
+  setSystemState("GESPERRT", "locked");
   openAuftrag();
 }
 
@@ -672,7 +690,7 @@ async function deleteCurrentCase() {
     $("deleteModal").close();
     $("deletePassword").value = "";
     stopCaseSession();
-    setSystemState("FALL ENTFERNT · KEIN FALL AKTIV", "locked");
+    setSystemState("GESPERRT", "locked");
     await refresh(false);
   } catch (error) {
     $("deleteMessage").textContent = `FEHLER: ${error.message}`;
@@ -736,7 +754,7 @@ function openProfileEditor(profileId = null) {
   $("keywordMessage").textContent = "";
   $("saveKeywordSettings").hidden = createNew;
   renderKeywordOptions();
-  $("keywordModal").showModal();
+  openNestedAuftragDialog("keywordModal");
   if (createNew) $("keywordProfileName").focus();
 }
 
@@ -790,7 +808,7 @@ async function saveProfileEditor() {
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
 $("autoScanToggle").addEventListener("change", () => {
   updateOrderSummary();
-  if (!activeCaseNumber) setSystemState("KEIN FALL AKTIV", "locked");
+  if (!activeCaseNumber) setSystemState("GESPERRT", "locked");
   scheduleAutoScan(100);
 });
 $("deviceRefresh").addEventListener("click", refreshMediaDevices);
@@ -812,7 +830,7 @@ $("homeLogo").addEventListener("click", showDashboard);
 $("openAuftragModal").addEventListener("click", openAuftrag);
 $("closeAuftragModal").addEventListener("click", () => $("auftragModal").close());
 $("auftragModal").addEventListener("click", (event) => { if (event.target === $("auftragModal")) $("auftragModal").close(); });
-$("openCaseArchive").addEventListener("click", () => $("caseArchiveModal").showModal());
+$("openCaseArchive").addEventListener("click", () => openNestedAuftragDialog("caseArchiveModal"));
 $("closeCaseArchive").addEventListener("click", () => $("caseArchiveModal").close());
 $("caseArchiveModal").addEventListener("click", (event) => { if (event.target === $("caseArchiveModal")) $("caseArchiveModal").close(); });
 $("openEvidenceModal").addEventListener("click", () => $("evidenceModal").showModal());
@@ -887,10 +905,12 @@ $("caseDelete").addEventListener("click", () => {
   $("deleteCaseNumber").textContent = activeCaseNumber || "—";
   $("deletePassword").value = "";
   $("deleteMessage").textContent = "";
-  $("deleteModal").showModal();
+  openNestedAuftragDialog("deleteModal");
   $("deletePassword").focus();
 });
 $("cancelDelete").addEventListener("click", () => $("deleteModal").close());
+for (const id of nestedAuftragDialogs) $(id).addEventListener("close", syncAuftragBackdrop);
+$("auftragModal").addEventListener("close", () => $("auftragModal").classList.remove("nested-open"));
 $("deleteForm").addEventListener("submit", (event) => { event.preventDefault(); deleteCurrentCase(); });
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);

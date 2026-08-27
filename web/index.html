@@ -15,14 +15,13 @@
           <h1><button id="homeLogo" class="brand-home" type="button" aria-label="Zum Hauptdashboard">TRIAGE<span>//</span>BOX</button></h1>
         </div>
         <div id="activeCaseDisplay" class="active-case-display locked">
-          <small>AKTIVER FALL</small>
           <strong><span id="activeCaseNumber">KEIN FALL</span><em id="activeCaseOperator"></em></strong>
         </div>
       </header>
 
       <section class="rulebar" aria-label="Systemstatus">
         <span class="mode-badge" title="Der geprüfte Grobsichtungsmodus liest ausschließlich Metadaten.">FAST/RO · NUR LESEN</span>
-        <span class="system-state locked" id="systemStatus"><span id="systemState">KEIN FALL AKTIV</span></span>
+        <span class="system-state locked" id="systemStatus"><span id="systemState">GESPERRT</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <span id="clock">UTC --:--:--</span>
       </section>
@@ -35,7 +34,7 @@
       </section>
       <section class="control-grid">
         <article class="panel device-panel">
-          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren">↻</button><b id="deviceCount">0 MEDIEN</b></div></div>
+          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren">↻ AKTUALISIEREN</button><b id="deviceCount">0 MEDIEN</b></div></div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
             <strong id="deviceEmptyTitle">KEIN FALL AKTIV</strong>
@@ -51,14 +50,14 @@
       </section>
 
       <section id="progressPanel" class="panel progress-panel" hidden>
-        <div class="panel-title"><span>RUN</span> SCAN LÄUFT</div>
+        <div class="panel-title"><span>03</span> SCAN LÄUFT</div>
         <div class="progress-copy"><strong id="progressLabel">Schreibschutz wird geprüft …</strong><span id="progressValue">08%</span></div>
         <div class="progress-track"><div id="progressBar"></div></div>
         <code id="progressLog">$ blockdev --setro /dev/sdb</code>
       </section>
 
       <details id="casePanel" class="panel case-panel disclosure" hidden>
-        <summary class="panel-title"><span>03</span> TABELLARISCHES FALLPROTOKOLL // <b id="casePanelNumber">—</b><small>ALTERNATIVE ANSICHT DER SICHTUNGSKACHELN</small></summary>
+        <summary class="panel-title"><span>04</span> TABELLARISCHES FALLPROTOKOLL // <b id="casePanelNumber">—</b><small>ALTERNATIVE ANSICHT DER SICHTUNGSKACHELN</small></summary>
         <div class="table-wrap">
           <table>
             <thead><tr><th>SICHTUNG</th><th>BM / ASSERVAT</th><th>MEDIUM</th><th>DATEIEN</th><th>TREFFER</th><th>ENTSCHEIDUNG</th></tr></thead>
@@ -85,15 +84,15 @@
 
         <div class="analysis-grid">
           <article class="panel categories-panel">
-            <div class="panel-title"><span>03</span> DATEITYPEN</div>
+            <div class="panel-title"><span>05</span> DATEITYPEN</div>
             <div id="categories" class="bar-list"></div>
           </article>
           <article class="panel keywords-panel">
-            <div class="panel-title"><span>04</span> STICHWORTTREFFER</div>
+            <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
             <div id="keywords" class="keyword-list"></div>
           </article>
           <article class="panel files-panel">
-            <div class="panel-title"><span>05</span> GRÖSSTE DATEIEN</div>
+            <div class="panel-title"><span>07</span> GRÖSSTE DATEIEN</div>
             <div class="table-wrap">
               <table>
                 <thead><tr><th>#</th><th>PFAD</th><th>GRÖSSE</th></tr></thead>
@@ -105,7 +104,7 @@
 
         <div id="documentationGrid" class="detail-workspace" hidden>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
-            <summary class="panel-title"><span>06</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
+            <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
               <button id="inventoryLoad" type="button">ANZEIGEN</button>
@@ -120,7 +119,7 @@
             </div>
           </details>
           <article class="panel decision-panel">
-            <div class="panel-title"><span>07</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>
+            <div class="panel-title"><span>09</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>
             <p id="decisionHelp" class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
@@ -180,11 +179,6 @@
           <label class="case-field" for="operator">BEARBEITER / KÜRZEL
             <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
           </label>
-          <div class="case-session-actions">
-            <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
-            <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
-          </div>
-          <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
         </section>
         <section class="case-settings">
           <div class="subhead"><span>3 · SUCHPROFILE</span><small>MEHRFACHAUSWAHL</small></div>
@@ -192,6 +186,13 @@
           <div class="profile-summary"><span>KOMBINIERT</span><strong id="keywordSelectionCount">—</strong></div>
           <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
         </section>
+        <div class="case-session-footer">
+          <p id="caseStartMessage" class="case-start-message">VORAUSSETZUNGEN WERDEN GEPRÜFT</p>
+          <div class="case-session-actions">
+            <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
+            <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
+          </div>
+        </div>
       </div>
     </dialog>
     <dialog id="caseArchiveModal" class="case-archive-modal">
@@ -233,7 +234,7 @@
       </form>
     </dialog>
     <dialog id="keywordModal" class="evidence-modal keyword-modal">
-      <div class="modal-head"><div><span>03</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><span>CFG</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
       <div class="keyword-modal-body">
         <p>Profile bündeln Suchbegriffe für einen Einsatz. Die aktive Auswahl wird bei jedem neuen Scan im Nachweis mitprotokolliert.</p>
         <label class="profile-name-field" for="keywordProfileName">PROFILNAME
@@ -247,7 +248,7 @@
         <div id="keywordOptions" class="keyword-options"></div>
         <p id="keywordMessage" class="keyword-message"></p>
         <div class="keyword-save-actions">
-          <button id="saveKeywordSettings" class="apply-keywords" type="button">NUR AUSWAHL ÜBERNEHMEN</button>
+          <button id="saveKeywordSettings" class="apply-keywords" type="button">NUR FÜR DIESEN SCAN ÜBERNEHMEN</button>
           <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
         </div>
       </div>
