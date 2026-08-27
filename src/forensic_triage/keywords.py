@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -95,8 +96,19 @@ def save_profile(directory: Path, profile_id: str | None, name: str, keywords: l
 
 
 def match_keywords(path: str, keywords: list[str]) -> list[str]:
-    folded = path.casefold()
-    return [keyword for keyword in keywords if keyword.casefold() in folded]
+    def forms(value: str) -> tuple[str, str]:
+        folded = unicodedata.normalize("NFKC", value).casefold()
+        german = folded.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+        compact = "".join(character for character in german if character.isalnum())
+        return german, compact
+
+    folded_path, compact_path = forms(path)
+    matches: list[str] = []
+    for keyword in keywords:
+        folded_keyword, compact_keyword = forms(keyword)
+        if folded_keyword in folded_path or (compact_keyword and compact_keyword in compact_path):
+            matches.append(keyword)
+    return matches
 
 
 def build_hits(files: list[dict[str, Any]], keywords: list[str]) -> dict[str, Any]:

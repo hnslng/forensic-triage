@@ -468,7 +468,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             operator = str(payload.get("operator", "")).strip()
             device_path = str(payload.get("device_path", "")).strip()
             requested_keywords = payload.get("keywords")
-            profile_id = str(payload.get("profile", self.server.profile_path.stem)).strip()
+            requested_profiles = payload.get("profiles")
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
@@ -481,12 +481,32 @@ class TriageHandler(BaseHTTPRequestHandler):
         if not OPERATOR_PATTERN.fullmatch(operator):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Bearbeiterkürzel."})
             return
-        if not PROFILE_ID_PATTERN.fullmatch(profile_id):
-            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Sichtungsprofil."})
+        if requested_profiles is None:
+            profile_ids = [self.server.profile_path.stem]
+        elif (
+            not isinstance(requested_profiles, list)
+            or not requested_profiles
+            or len(requested_profiles) > 20
+            or not all(isinstance(item, str) and PROFILE_ID_PATTERN.fullmatch(item) for item in requested_profiles)
+            or len(requested_profiles) != len(set(requested_profiles))
+        ):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Sichtungsprofile."})
             return
-        selected_profile_path = self.server.profile_path.parent / f"{profile_id}.yaml"
+        else:
+            profile_ids = sorted(requested_profiles)
         try:
-            configured_keywords = load_profile(selected_profile_path)["keywords"]
+            loaded_profiles = [
+                load_profile(self.server.profile_path.parent / f"{profile_id}.yaml")
+                for profile_id in profile_ids
+            ]
+            configured_keywords = []
+            seen_keywords: set[str] = set()
+            for profile in loaded_profiles:
+                for keyword in profile["keywords"]:
+                    key = keyword.casefold()
+                    if key not in seen_keywords:
+                        configured_keywords.append(keyword)
+                        seen_keywords.add(key)
         except (OSError, ValueError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profil nicht verfügbar: {exc}"})
             return
@@ -524,11 +544,15 @@ class TriageHandler(BaseHTTPRequestHandler):
             )
             result_dir = scan(
                 Path(device_path),
-                selected_profile_path,
+                self.server.profile_path.parent / f"{profile_ids[0]}.yaml",
                 sighting_number,
                 self.server.case_store.scan_root(case_number, sighting_number),
                 mode="fast",
                 keywords=selected_keywords,
+                profile_sources=[{
+                    "id": profile["id"], "name": profile["name"],
+                    "version": profile["version"], "sha256": profile["sha256"],
+                } for profile in loaded_profiles],
             )
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,

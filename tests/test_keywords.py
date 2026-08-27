@@ -5,6 +5,11 @@ def test_keyword_matching_uses_full_path_and_casefold():
     assert match_keywords("Buchhaltung/RECHNUNG_01.pdf", ["rechnung", "fibu"]) == ["rechnung"]
 
 
+def test_keyword_matching_accepts_embedded_terms_umlaut_variants_and_separators():
+    path = "Archiv/alte_UEBERWEISUNG_2026/seed_phrase.txt"
+    assert match_keywords(path, ["Überweisung", "seed phrase", "wallet.dat"]) == ["Überweisung", "seed phrase"]
+
+
 def test_hits_count_each_file_once_per_keyword():
     files = [{"path": "FIBU/fibu_export.csv"}, {"path": "neutral/FIBU.txt"}]
     hits = build_hits(files, ["fibu"])

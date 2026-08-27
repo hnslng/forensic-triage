@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import subprocess
 import time
@@ -32,6 +34,7 @@ def scan(
     expected_path: Path | None = None,
     mode: str = "fast",
     keywords: list[str] | None = None,
+    profile_sources: list[dict[str, str]] | None = None,
 ) -> Path:
     started = time.monotonic()
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
@@ -93,9 +96,18 @@ def scan(
         profile = load_profile(profile_path)
         selected_keywords = profile["keywords"] if keywords is None else keywords
         hits = build_hits(all_files, selected_keywords)
+        sources = profile_sources or [{
+            "id": str(profile.get("id", profile_path.stem)),
+            "name": str(profile.get("name", profile_path.stem.upper())),
+            "version": profile["version"], "sha256": profile["sha256"],
+        }]
+        combined_hash = hashlib.sha256(
+            json.dumps(sources, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest()
         hits["profile"] = {
-            "version": profile["version"],
-            "sha256": profile["sha256"],
+            "version": sources[0]["version"] if len(sources) == 1 else "combined",
+            "sha256": sources[0]["sha256"] if len(sources) == 1 else combined_hash,
+            "sources": sources,
             "selected_keywords": selected_keywords,
         }
         summary = summarize(all_files, all_directories)

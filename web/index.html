@@ -28,49 +28,12 @@
       </section>
 
       <section id="dashboardView">
+      <section class="case-dock" aria-label="Auftragsstatus">
+        <div class="case-dock-primary"><span>01 · AUFTRAG</span><strong id="dockCaseNumber">KEIN FALL AKTIV</strong><small id="dockOperator">SCANS GESPERRT</small></div>
+        <div class="case-dock-profiles"><span>SUCHPROFILE</span><strong id="dockProfiles">ALLGEMEIN / WIRTSCHAFT</strong><small id="dockKeywordCount">10 STICHWÖRTER</small></div>
+        <button id="openAuftragModal" type="button">AUFTRAG ÖFFNEN</button>
+      </section>
       <section class="control-grid">
-        <details id="auftragPanel" class="panel action-panel disclosure" open>
-          <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
-          <div class="action-body">
-            <section class="case-select">
-              <div class="subhead"><span>1 · FALL</span><small>NEU ODER BESTEHEND</small></div>
-              <label class="case-field" for="caseNumber">FALLNUMMER
-                <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
-              </label>
-              <details id="casePicker" class="case-picker disclosure" open>
-                <summary><span>BESTEHENDEN FALL WÄHLEN</span><small id="caseListCount">0 FALLAKTEN</small></summary>
-                <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
-              </details>
-              <div class="case-actions">
-                <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">FALLDATEN LADEN</a>
-                <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
-              </div>
-            </section>
-            <section class="case-session">
-              <div class="subhead"><span>2 · SITZUNG</span><small>VERANTWORTLICH STARTEN</small></div>
-              <label class="case-field" for="operator">BEARBEITER / KÜRZEL
-                <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
-              </label>
-              <div class="case-session-actions">
-                <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
-                <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
-              </div>
-              <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
-            </section>
-            <section class="case-settings">
-              <div class="subhead"><span>3 · PROFIL</span><small>SUCHFOKUS</small></div>
-              <label class="case-field" for="profileName">SICHTUNGSPROFIL
-                <select id="profileName" aria-label="Sichtungsprofil wählen"></select>
-              </label>
-              <div class="profile-summary"><span>STICHWÖRTER</span><strong id="keywordSelectionCount">—</strong></div>
-              <div class="profile-actions">
-                <button id="openKeywordSettings" class="keyword-settings" type="button">PROFIL BEARBEITEN</button>
-                <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
-              </div>
-            </section>
-          </div>
-        </details>
-
         <article class="panel device-panel">
           <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren">↻</button><b id="deviceCount">0 MEDIEN</b></div></div>
           <div id="deviceEmpty" class="device-empty" hidden>
@@ -198,6 +161,44 @@
         </footer>
       </section>
     </main>
+    <dialog id="auftragModal" class="auftrag-modal">
+      <div class="modal-head"><div><span>01</span> AUFTRAG &amp; SUCHFOKUS</div><button id="closeAuftragModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="action-body">
+        <section class="case-select">
+          <div class="subhead"><span>1 · FALL</span><small>NEU ODER ARCHIV</small></div>
+          <label class="case-field" for="caseNumber">FALLNUMMER
+            <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
+          </label>
+          <button id="openCaseArchive" class="case-archive-open" type="button">▤ FALLARCHIV ÖFFNEN <small id="caseListCount">0 FALLAKTEN</small></button>
+          <div class="case-actions">
+            <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">FALLDATEN LADEN</a>
+            <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
+          </div>
+        </section>
+        <section class="case-session">
+          <div class="subhead"><span>2 · SITZUNG</span><small>VERANTWORTLICH</small></div>
+          <label class="case-field" for="operator">BEARBEITER / KÜRZEL
+            <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="case-session-actions">
+            <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
+            <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
+          </div>
+          <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
+        </section>
+        <section class="case-settings">
+          <div class="subhead"><span>3 · SUCHPROFILE</span><small>MEHRFACHAUSWAHL</small></div>
+          <div id="profileList" class="profile-list"></div>
+          <div class="profile-summary"><span>KOMBINIERT</span><strong id="keywordSelectionCount">—</strong></div>
+          <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+        </section>
+      </div>
+    </dialog>
+    <dialog id="caseArchiveModal" class="case-archive-modal">
+      <div class="modal-head"><div><span>▤</span> FALLARCHIV</div><button id="closeCaseArchive" type="button">SCHLIESSEN ×</button></div>
+      <p>Fall auswählen. Er wird erst mit „Fall starten“ zur aktiven Sitzung.</p>
+      <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
+    </dialog>
     <dialog id="evidenceModal" class="evidence-modal">
       <div class="modal-head"><div><span>◆</span> DOKUMENTATION &amp; NACHWEIS</div><button id="closeEvidenceModal" type="button">SCHLIESSEN ×</button></div>
       <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
