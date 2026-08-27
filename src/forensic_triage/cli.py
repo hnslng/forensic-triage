@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from . import __version__
 from .scanner import scan
 
 
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(prog="forensic-triage")
+    root.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = root.add_subparsers(dest="command", required=True)
     scan_parser = commands.add_parser("scan", help="inventory a whole removable block device")
     scan_parser.add_argument("device", type=Path)

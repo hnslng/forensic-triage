@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from . import __version__
 from .casefiles import CaseStore
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .scanner import scan
@@ -598,6 +599,7 @@ def serve(host: str, port: int, web_root: Path, results_root: Path, profile_path
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="forensic-triage-web")
+    result.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     result.add_argument("--host", default="127.0.0.1")
     result.add_argument("--port", type=int, default=8787)
     result.add_argument("--web-root", type=Path, default=DEFAULT_WEB_ROOT)

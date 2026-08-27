@@ -1,19 +1,44 @@
-# Forensic safety
+# Forensische Sicherheitsgrenzen / Forensic safety
 
-Before analysis, the operator must establish authorization and identify the physical medium by transport, capacity, model, and serial number. Device names such as `/dev/sdb` are ephemeral and must never be assumed.
+## Vor jeder Analyse
 
-The implemented sequence is:
+Die bedienende Person muss Berechtigung und physische Identität des Datenträgers anhand von Transport, Kapazität, Modell und Seriennummer feststellen. Gerätenamen wie `/dev/sdb` sind flüchtig und dürfen niemals ungeprüft angenommen werden.
 
-1. Resolve the supplied `/dev` path.
-2. Require a whole disk with USB transport.
-3. Refuse the explicit `/dev/sda` system-disk sentinel.
-4. Recursively reject any mountpoint on the device or its partitions.
-5. Set the whole disk read-only.
-6. Verify kernel read-only state equals `1`.
-7. Run `mmls` and `fsstat`.
-8. In fast mode, mount only with `ro,nosuid,nodev,noexec`, verify the mount is `ro`, collect metadata, and unmount in a `finally` cleanup path.
-9. In TSK mode, use mount-free `fls -u` instead.
+## Implementierte Schutzfolge
 
-Linux documents that a filesystem mounted `ro` may still perform filesystem-specific writes in some circumstances. The scanner therefore sets and verifies the block device itself read-only before mounting. The current software guard is still defense in depth, not a forensic write blocker. Production use requires a validated hardware write blocker, documented device handling, tool validation, synchronized time, and an organizational chain-of-custody procedure.
+1. Übergebenen `/dev`-Pfad auflösen.
+2. Ganzes Blockgerät mit USB-Transport verlangen.
+3. Den expliziten Systemdatenträger-Sentinel `/dev/sda` ablehnen.
+4. Mountpoints auf Gerät und Partitionen rekursiv ablehnen.
+5. Gesamtes Blockgerät mit `blockdev --setro` schreibschützen.
+6. Read-only-Zustand mit `blockdev --getro == 1` verifizieren.
+7. Partitionen und Dateisysteme mit `mmls` und `fsstat` erfassen.
+8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im garantierten Cleanup wieder unmounten.
+9. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden.
 
-No credential, private key, genuine case data, or result directory belongs in Git.
+## Bedeutung des Software-Schreibschutzes
+
+Linux weist darauf hin, dass ein nur mit `ro` gemountetes Dateisystem je nach Implementierung dennoch Sonderverhalten zeigen kann. Deshalb setzt TRIAGE//BOX zusätzlich das gesamte Blockgerät schreibgeschützt und überprüft diesen Zustand.
+
+Trotzdem ist der aktuelle Schutz nur „defense in depth“. Für echte Beweismittel sind ein validierter Hardware-Schreibblocker, dokumentierte Handhabung, synchronisierte Zeit, organisatorische Chain of Custody und eine formale Werkzeugvalidierung erforderlich.
+
+## Was der Scanner nicht tut
+
+- keine Dateiinhalte öffnen oder darstellen
+- keine Makros, Programme oder Skripte vom Medium ausführen
+- kein Imaging, Recovery oder Carving
+- keine Passwörter brechen oder Verschlüsselung umgehen
+- keine automatische Relevanz- oder Sicherstellungsentscheidung treffen
+- keine CD/DVD scannen, solange der reale Laufwerkspfad nicht validiert ist
+
+## Metadaten und Fehlinterpretationen
+
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
+
+## Schutz der Fallunterlagen
+
+Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichnisse gehören in Git. `casefiles/`, `results/`, Exporte und interne Papierkörbe müssen lokal geschützt werden. Das Standard-Löschpasswort ist vor Feldbetrieb zwingend zu ersetzen.
+
+## English summary
+
+The scanner validates a whole unmounted USB disk, sets and verifies the block device as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha does not inspect signatures or contents.

@@ -1,93 +1,153 @@
-# Forensic Triage Box
+# TRIAGE//BOX
 
-Fast metadata-only inventory of removable media with a read-only mount path and an optional mount-free The Sleuth Kit path. Version 0.1 does not inspect file contents and does not make relevance or seizure decisions.
+**Version 0.2.0-alpha · private Entwicklungsfassung · Deutsch / English**
 
-## Safety boundary
+TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern vor Ort. Es inventarisiert mehrere geeignete USB-Datenträger parallel, ordnet Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
 
-The scanner accepts only a whole block device reported by `lsblk` as USB. It refuses `/dev/sda`, refuses mounted targets or child partitions, sets the whole device read-only with `blockdev --setro`, and verifies `blockdev --getro == 1` before analysis.
+Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
-The default `fast` mode uses `mmls` and `fsstat`, then temporarily mounts each supported partition with `ro,nosuid,nodev,noexec` while the block device itself remains kernel read-only. It reads directory metadata only and immediately unmounts. `--mode tsk` performs the slower mount-free `fls` walk.
+> **English summary:** TRIAGE//BOX is a private alpha prototype for fast, read-only field triage of removable media. It inventories active files and metadata, searches names and paths, and creates a local audit trail. It does not image, carve, recover deleted data, inspect file contents, or make seizure decisions. See [English summary](#english-summary).
 
-Software read-only is suitable for this prototype but is not a substitute for a validated hardware write blocker in evidentiary use. Run only against media whose identity and authorization have been established independently.
+## Aktueller Funktionsumfang
 
-## Development
+- lokales, klickbares Dashboard im Terminal-/CRT-Stil
+- bewusster Fallstart mit Fallnummer und Bearbeiterkürzel
+- kein aktiver Fall nach Neustart; Scans bleiben bis zur Freigabe gesperrt
+- parallele Grobsichtung mehrerer ungemounteter USB-Datenträger
+- schneller Standardmodus mit kurzzeitigem, verifiziert schreibgeschütztem Mount
+- langsamer, mountfreier TSK-Modus für technische Vergleichstests
+- vollständiges Metadaten-Inhaltsverzeichnis als `files.csv`
+- Kategorien nach Dateiendung, Größenstatistik und größte Dateien
+- kombinierbare und lokal bearbeitbare Stichwortprofile
+- Stichwortsuche ohne Beachtung der Groß-/Kleinschreibung in Namen und Pfaden
+- neutrale Sichtungsnummern `SICHT-###`; Beweismittelnummer erst bei „Sichern“
+- Entscheidungen „Sichern“, „Nicht ausgewählt“ und „Weitere Prüfung“
+- lokale Fallakte mit Audit-Log, Medienregister, Bericht und SHA-256-Manifest
+- ZIP-Export der Falldaten
+- direktes Öffnen und passwortgeschütztes Entfernen einzelner Fälle im Fallarchiv
+- sicherer Software-Auswurf und erneute Geräteerkennung
+
+## Wichtige Grenzen
+
+Version 0.2.0-alpha liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+
+Das bedeutet insbesondere:
+
+- Eine SQLite-Datenbank, die nur in `.jpg` umbenannt wurde, wird derzeit nicht als Datenbank erkannt.
+- Es gibt noch keine Magic-Byte-/Dateisignaturprüfung.
+- Es werden keine gelöschten Dateien wiederhergestellt und keine Daten geschnitzt („Carving“).
+- Es wird kein forensisches Image erzeugt.
+- Verschlüsselte Container werden nicht geöffnet oder inhaltlich bewertet.
+- CD/DVD-Laufwerke werden angezeigt, aber noch nicht gescannt.
+- Das System trifft keine rechtliche oder fachliche Sicherstellungsentscheidung.
+
+Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
+
+## Schnellstart für Entwicklung
+
+Voraussetzungen: Python 3.11 oder neuer. Die vollständige Debian-/VM-/Pi-Anleitung steht in [docs/installation.md](docs/installation.md).
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e '.[test]'
 pytest
+forensic-triage --version
 ```
 
-Create a synthetic fixture on an already mounted, empty test volume:
+Lokales Dashboard auf dem Scanner starten:
 
 ```bash
-python scripts/create_test_media.py --target /path/to/TRIAGE_TEST-volume
+sudo .venv/bin/forensic-triage-web
 ```
 
-The generator refuses to overwrite an existing `TRIAGE_TESTDATA` directory. Its expected manifest is written to `tests/fixtures/expected.json`, outside the test medium.
+Standardmäßig lauscht der Dienst ausschließlich auf `127.0.0.1:8787`.
 
-## Scan
+## Bedienablauf
 
-The scan must run as root because Linux requires elevated privileges to change block-device read-only state:
+1. Dashboard öffnen. Nach jedem Neustart ist **kein Fall aktiv**.
+2. „Auftrag öffnen“ wählen.
+3. Neue Fallnummer eingeben oder einen vorhandenen Fall im Archiv öffnen.
+4. Bearbeiterkürzel eintragen und Suchprofile auswählen.
+5. „Fall starten“ ausdrücklich bestätigen.
+6. Autorisierte, ungemountete USB-Datenträger anschließen. Bei aktivem Auto-Scan beginnen geeignete Medien selbstständig.
+7. Ergebnis je Medium prüfen und eine Entscheidung dokumentieren.
+8. Nur bei „Sichern“ eine offizielle Beweismittel-/Asservatennummer vergeben.
+9. Datenträger sicher auswerfen beziehungsweise nach abgeschlossener Sichtung abziehen.
+10. Fall beenden und bei Bedarf die Falldaten als ZIP exportieren.
 
-```bash
-sudo forensic-triage scan /dev/sdX \
-  --profile profiles/default.yaml \
-  --evidence BM-001 \
-  --expected tests/fixtures/expected.json
-```
+Ein Fall wird direkt im Fallarchiv über „Löschen“ entfernt. Der aktive Fall ist geschützt und muss zuerst beendet werden. „Löschen“ verschiebt die lokale Fallakte in einen wiederherstellbaren internen Papierkorb; es ist keine sichere Datenvernichtung.
 
-The default mode is `fast`. For the mount-free TSK inventory, add `--mode tsk`.
+Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
-Never assume a device name. Immediately before a scan, identify the target with:
+## Verbindung vom Mac zur VM
 
-```bash
-lsblk -o NAME,TRAN,SIZE,MODEL,SERIAL,RO,MOUNTPOINTS
-```
-
-Each scan produces `device.json`, `partitions.json`, `files.csv`, `summary.json`, `hits.json`, `scan.log`, and raw tool output under a timestamped result directory. When `--expected` is supplied, `validation.json` records every mismatch and the command fails until the scan matches the fixture.
-
-## Current status
-
-- Local package and CLI orchestration implemented and deployed to the Debian 13 VM.
-- Extension classification, keyword matching, statistics, fast inventory, and TSK parsers covered by 13 unit tests on macOS and Linux.
-- Synthetic 960-file fixture generator implemented.
-- Physical SanDisk exFAT scans passed the expected manifest with no mismatches. The final fast scan took 0.732 seconds; see `docs/validation-2026-08-26.md`.
-- A local operator dashboard detects multiple removable media, starts independent guarded USB scans in parallel, and renders categories, keyword hits, largest files, and scan metadata.
-- Each medium has a compact status light model (`ready`, `scanning`, `complete`, `error`) that can later drive physical LEDs without coupling GPIO code to the scanner.
-- Optical drives are detected and shown, but CD/DVD scanning intentionally remains disabled until it is validated with the actual drive.
-
-## Operator dashboard
-
-Run the interface inside the VM from the repository checkout:
-
-```bash
-sudo forensic-triage-web
-```
-
-It binds to `127.0.0.1:8787` by default. Keep it private and reach it from the Mac through an SSH tunnel:
+Die VM-Oberfläche bleibt privat und wird über einen SSH-Tunnel erreicht:
 
 ```bash
 ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
 ```
 
-Then open `http://127.0.0.1:8787` on the Mac. With Auto-Scan enabled, every newly detected, unmounted whole USB disk is inventoried independently; multiple eligible devices can run concurrently. The scanner still performs the final identity, mount-state, transport, size, and read-only checks for every device. Completed online media offer a safe-eject action; media with an open decision remain conspicuous in the offline history after removal. An ejected zero-byte device shell is treated as offline. The media-dashboard refresh button safely reactivates such a software-ejected USB medium and re-reads the hardware state without changing case data, so a physical unplug/replug is normally unnecessary. With an active case and Auto-Scan enabled, the reactivated ready medium can then start automatically.
+Danach im Browser öffnen: `http://127.0.0.1:8787/`
 
-The operator interface deliberately starts with **no active case**, including after every page or service restart. Enter a case number and operator initials—or choose an existing case—then press `FALL STARTEN`. Merely typing or selecting a case never enables scanning. The prominent header remains the authoritative indication of the active case; changing the draft fields does not switch the assignment until `FALL STARTEN` is pressed again. `FALL BEENDEN` immediately returns the interface to the scan-locked state.
+Auf dem eingerichteten Mac übernimmt `TRIAGE-BOX starten.command` diesen Ablauf. Host und Schlüsselpfad sind in der Datei als `TRIAGE_HOST` und `TRIAGE_KEY` konfiguriert. Der Tunnel kann nach Neustart oder Netzwerkwechsel beendet sein; der Starter darf gefahrlos erneut ausgeführt werden.
 
-The three-column order panel separates case selection, the accountable operator session, and the scan profile. Starting or reopening a case records the operator initials in the append-only audit; sighting reservations and decisions also carry the responsible operator. The profile panel exposes the configured keyword list and allows a per-session subset for new scans. Every scan stores the exact selected keyword list together with the source profile version and SHA-256 hash in `hits.json`.
+## CLI-Scan für technische Tests
 
-Profiles can be combined, created, and edited directly in the local dashboard. Their selected keywords are de-duplicated into one fast scan. `default` covers general economic terms; `krypto` provides a lightweight path/name search for common wallet traces such as `wallet.dat`, Electrum wallet folders, Ethereum `UTC--` keystores, MetaMask-related extension storage, Ledger, Trezor, and Monero `.keys` files. This is deliberately not a content or secret-key analysis.
+Nicht anhand eines vermuteten Gerätenamens arbeiten. Ziel unmittelbar vorher prüfen:
 
-Keyword matching is case-insensitive, finds terms embedded inside longer file names, treats common separators as equivalent (`seed phrase`, `seed_phrase`, `seed-phrase`), and normalizes German umlaut spellings (`Überweisung`/`Ueberweisung`).
+```bash
+lsblk -o NAME,TRAN,SIZE,MODEL,SERIAL,RO,MOUNTPOINTS
+```
 
-On the configured Mac, double-click `TRIAGE-BOX starten.command`. It reuses an existing secure SSH tunnel or opens a new one to the VM, verifies the local web endpoint, and opens the dashboard. The tunnel is not guaranteed to survive a Mac restart, VM restart, or network change; running the launcher again is safe.
+Beispiel:
 
-On the future Raspberry Pi the same interface can be used either on its small touch display or from a laptop over a direct Ethernet cable. The intended field setup gives the Pi a dedicated address such as `10.77.0.1` and binds the web service only to that direct-link interface; the laptop then opens `http://10.77.0.1:8787` (or `http://triagebox.local:8787`). This network configuration is deliberately deferred until it can be tested on the real Pi, so the current VM remains bound to localhost and reachable through the SSH tunnel.
+```bash
+sudo .venv/bin/forensic-triage scan /dev/sdX \
+  --profile profiles/default.yaml \
+  --evidence TEST-001
+```
 
-The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.
+Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf kann `--mode tsk` ergänzt werden. `--expected tests/fixtures/expected.json` vergleicht einen autorisierten Testdatenträger mit dem synthetischen Sollbestand.
 
-Every dashboard scan receives an automatic neutral sighting number and is stored in a durable local case archive with a searchable SQLite index, complete `files.csv` inventory, device and partition metadata, keyword hits, scan log, media register, human-readable case report, append-only decision events, and a SHA-256 manifest. An official evidence number is required only when the operator selects the medium for securing. See `docs/case-archive.md`. `casefiles/` is excluded from Git and must never be pushed to the source repository.
+## Dokumentation
 
-Removing a case from the active list requires the local dashboard password. The prototype default is `123`; set `FORENSIC_TRIAGE_DELETE_PASSWORD` in the service environment before field use to replace it. Removal archives the case locally instead of destroying its files.
+- [Dokumentationsübersicht](docs/README.md)
+- [Installation und Aktualisierung](docs/installation.md)
+- [Bedienung und Fallworkflow](docs/operation.md)
+- [Forensische Sicherheitsgrenzen](docs/forensic-safety.md)
+- [Architektur](docs/architecture.md)
+- [Lokale Fallakte und Protokollierung](docs/case-archive.md)
+- [Testplan](docs/test-plan.md)
+- [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
+- [Roadmap und offene Aufgaben](docs/roadmap.md)
+- [Änderungshistorie](CHANGELOG.md)
+
+## Datenschutz und Git
+
+Das Repository enthält ausschließlich Quellcode, Profile, Tests und Dokumentation. Folgendes darf niemals eingecheckt werden:
+
+- echte Fall- oder Beweismitteldaten
+- Verzeichnisse `casefiles/` und `results/`
+- Passwörter, Tokens, private SSH-Schlüssel oder `.env`-Dateien
+- Exporte aus echten Einsätzen
+
+Vor realem Betrieb müssen das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen und das voreingestellte Löschpasswort `123` ersetzt werden.
+
+## Projektstatus
+
+- Paketversion: `0.2.0a1` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha`
+- automatisierte Tests: 29
+- validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
+- noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
+
+Siehe [docs/roadmap.md](docs/roadmap.md) für die priorisierten nächsten Schritte.
+
+## English summary
+
+TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, requires an explicit case and operator session, can scan eligible USB disks in parallel, and stores metadata inventories, keyword hits, decisions, and integrity manifests in a local case archive.
+
+The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
+
+Version 0.2.0-alpha searches file and directory names, not file contents. It does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); the current limitations and roadmap are in [docs/roadmap.md](docs/roadmap.md).
