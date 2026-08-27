@@ -82,7 +82,9 @@ Alle Werte und Sicherheitsregeln stehen in [configuration.md](configuration.md).
 
 Bei `127.0.0.1` ist die Oberfläche nur auf dem Scanner selbst erreichbar. Das ist für lokale Anzeige oder einen abgesicherten SSH-Tunnel geeignet.
 
-Für den späteren direkten Pi-Laptop-Betrieb werden eine feste private Ethernet-Adresse und Firewallregeln eingerichtet. Erst danach wird `FORENSIC_TRIAGE_WEB_HOST` beispielsweise auf `10.77.0.1` gesetzt. Die konkrete Pi-Netzwerkkonfiguration bleibt bis zum Hardwaretest offen.
+Für den Raspberry Pi 3B+ ist ein privater, passwortgeschützter WLAN-Hotspot `TRIAGEBOX` als Hauptzugang vorgesehen. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend `http://triagebox.local/`. Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die robuste Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
+
+Hostname, mDNS/Avahi, Standardport 80, feste Rückfalladressen und Firewall werden erst auf der realen Hardware eingerichtet und gemeinsam validiert. Die Konfiguration darf die Oberfläche nicht versehentlich in anderen WLANs oder im Internet freigeben.
 
 ## 5. Aktualisieren
 

@@ -43,7 +43,7 @@ FORENSIC_TRIAGE_DELETE_PASSWORD=EIN-LANGES-LOKALES-PASSWORT
 
 ## Port und Netzwerk
 
-`127.0.0.1` ist die sichere Voreinstellung für Entwicklung oder Zugriff über SSH. Soll der spätere Raspberry Pi direkt per Ethernet erreichbar sein, darf die Adresse erst nach festgelegter privater IP und Firewall angepasst werden, zum Beispiel auf `10.77.0.1`. `0.0.0.0` würde auf allen Netzwerkschnittstellen lauschen und soll nicht unüberlegt verwendet werden.
+`127.0.0.1` ist die sichere Voreinstellung für Entwicklung oder Zugriff über SSH. Der Raspberry Pi 3B+ soll später primär einen privaten WLAN-Hotspot `TRIAGEBOX` bereitstellen; Ethernet bleibt die Rückfallebene. Eine andere Bindeadresse darf erst nach festgelegten privaten IP-Adressen und Firewallregeln aktiviert werden. `0.0.0.0` würde auf allen Netzwerkschnittstellen lauschen und soll nicht unüberlegt verwendet werden.
 
 Nach einem Portwechsel muss auch die aufrufende Adresse angepasst werden. Bei Port `8877` wäre das beispielsweise `http://127.0.0.1:8877/`.
 

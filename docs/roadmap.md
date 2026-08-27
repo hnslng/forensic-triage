@@ -18,10 +18,12 @@ Stand: Version 0.2.0-alpha.2. Prioritäten richten sich nach forensischer Sicher
 - [ ] Zielmodell, RAM, Speicher und Gehäuse festlegen.
 - [ ] Raspberry Pi OS/Debian installieren und vollständige Installationsanleitung praktisch nachspielen.
 - [ ] Aktiven, ausreichend versorgten USB-Hub für mehrere Datenträger validieren.
-- [ ] Direkte Ethernet-Verbindung zum Laptop mit fester privater Adresse und Firewall einrichten.
-- [ ] Pi-Hostname `triagebox` festlegen und mDNS/Avahi einrichten, damit die Oberfläche über `triagebox.local` erreichbar ist.
-- [ ] Feste private Pi-IP als dokumentierte Rückfallebene beibehalten, falls mDNS auf einem Laptop nicht funktioniert.
-- [ ] Portlose Adresse `http://triagebox.local/` über den Standardport 80 oder eine leichtgewichtige lokale Weiterleitung umsetzen und ausschließlich auf die direkte Ethernet-Schnittstelle begrenzen.
+- [ ] Raspberry Pi 3B+ als privaten, passwortgeschützten WLAN-Hotspot `TRIAGEBOX` einrichten; keine USB-Netzwerkverbindung vorsehen.
+- [ ] Pi-Hostname `triagebox` festlegen und mDNS/Avahi einrichten, damit die Oberfläche im privaten Hotspot über `triagebox.local` erreichbar ist.
+- [ ] Portlose Adresse `http://triagebox.local/` über den Standardport 80 oder eine leichtgewichtige lokale Weiterleitung umsetzen und auf die vorgesehenen privaten Schnittstellen begrenzen.
+- [ ] Direkte Ethernet-Verbindung mit fester privater Adresse als robuste Rückfallebene einrichten.
+- [ ] Feste private Pi-IP für WLAN und Ethernet dokumentieren, falls mDNS auf einem Laptop nicht funktioniert.
+- [ ] Hotspot-Verschlüsselung, starkes WLAN-Passwort, Firewall und Verhalten ohne Internetverbindung prüfen.
 - [ ] Touch-/Kleinbildschirm mit der echten Auflösung und Bedienung testen.
 - [ ] Kontrolliertes Herunterfahren und Verhalten bei Stromverlust lösen.
 - [ ] Status-LED-Konzept (`ready`, `scanning`, `complete`, `error`) entwickeln und GPIO getrennt vom Scanner anbinden.
