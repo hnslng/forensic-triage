@@ -171,7 +171,6 @@
           <button id="openCaseArchive" class="case-archive-open" type="button">▤ FALLARCHIV ÖFFNEN <small id="caseListCount">0 FALLAKTEN</small></button>
           <div class="case-actions">
             <a id="caseDownload" class="case-download disabled" href="#" download aria-disabled="true">FALLDATEN LADEN</a>
-            <button id="caseDelete" class="case-delete" type="button" disabled>FALL LÖSCHEN</button>
           </div>
         </section>
         <section class="case-session">
@@ -197,7 +196,7 @@
     </dialog>
     <dialog id="caseArchiveModal" class="case-archive-modal">
       <div class="modal-head"><div><span>▤</span> FALLARCHIV</div><button id="closeCaseArchive" type="button">SCHLIESSEN ×</button></div>
-      <p>Fall auswählen. Er wird erst mit „Fall starten“ zur aktiven Sitzung.</p>
+      <p>Fall direkt öffnen oder aus dem Archiv entfernen. Der aktive Fall ist gegen Löschen geschützt.</p>
       <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
     </dialog>
     <dialog id="evidenceModal" class="evidence-modal">
@@ -224,12 +223,12 @@
       <form id="deleteForm" method="dialog">
         <div class="modal-head"><div><span>!</span> FALL LÖSCHEN</div><button id="cancelDelete" type="button">ABBRECHEN ×</button></div>
         <div class="delete-body">
-          <p>Fall <b id="deleteCaseNumber">—</b> wird aus der aktiven Fallliste entfernt. Eine interne Sicherung bleibt wiederherstellbar.</p>
+          <p>Fall <b id="deleteCaseNumber">—</b> wird aus dem Fallarchiv entfernt. Eine interne Sicherung bleibt wiederherstellbar.</p>
           <label for="deletePassword">PASSWORT
             <input id="deletePassword" type="password" inputmode="numeric" autocomplete="off" placeholder="PASSWORT EINGEBEN" />
           </label>
           <p id="deleteMessage" class="delete-message"></p>
-          <button class="confirm-delete" type="submit">ENDGÜLTIG AUS AKTIVER LISTE ENTFERNEN</button>
+          <button class="confirm-delete" type="submit">DIESEN FALL AUS DEM ARCHIV ENTFERNEN</button>
         </div>
       </form>
     </dialog>

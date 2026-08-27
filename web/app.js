@@ -12,6 +12,7 @@ let inventoryTreeMediaId = null;
 let caseHistorySignature = "";
 let knownCases = [];
 let activeCaseNumber = null;
+let deleteTargetCaseNumber = null;
 let activeOperator = "";
 let profileKeywords = [];
 let selectedKeywords = new Set();
@@ -49,6 +50,7 @@ const nestedAuftragDialogs = ["keywordModal", "caseArchiveModal", "deleteModal"]
 function syncAuftragBackdrop() {
   const nestedOpen = nestedAuftragDialogs.some((id) => $(id).open);
   $("auftragModal").classList.toggle("nested-open", $("auftragModal").open && nestedOpen);
+  $("caseArchiveModal").classList.toggle("nested-open", $("caseArchiveModal").open && $("deleteModal").open);
 }
 
 function openNestedAuftragDialog(id) {
@@ -219,7 +221,6 @@ async function loadCase(caseNumber) {
     currentCaseMedia = [];
     renderMediaCards([]);
     $("casePanel").hidden = true;
-    $("caseDelete").disabled = true;
     $("caseDownload").classList.add("disabled");
     $("caseDownload").setAttribute("aria-disabled", "true");
     $("caseDownload").href = "#";
@@ -232,7 +233,6 @@ async function loadCase(caseNumber) {
       currentCaseMedia = [];
       renderMediaCards([]);
       $("casePanel").hidden = true;
-      $("caseDelete").disabled = true;
       $("caseDownload").classList.add("disabled");
       $("caseDownload").setAttribute("aria-disabled", "true");
       $("caseDownload").href = "#";
@@ -243,7 +243,6 @@ async function loadCase(caseNumber) {
     renderMediaCards(currentCaseMedia);
     renderDevices(devices);
     $("casePanel").hidden = false;
-    $("caseDelete").disabled = false;
     $("casePanelNumber").textContent = data.case.case_number;
     $("caseDownload").classList.remove("disabled");
     $("caseDownload").setAttribute("aria-disabled", "false");
@@ -408,9 +407,16 @@ function renderCaseHistory(cases) {
   if (signature === caseHistorySignature) return;
   caseHistorySignature = signature;
   $("caseListCount").textContent = `${knownCases.length} ${knownCases.length === 1 ? "FALLAKTE" : "FALLAKTEN"}`;
-  $("caseList").innerHTML = knownCases.map((item) => `<button type="button" class="case-list-item${item.case_number === activeCaseNumber ? " active" : item.case_number === selected ? " selected" : ""}" data-case-number="${escapeHtml(item.case_number)}">
-    <strong>${escapeHtml(item.case_number)}</strong><span>${Number(item.media_count)} MEDIEN</span><span class="open-count">${Number(item.open_count)} OFFEN</span>
-  </button>`).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
+  $("caseList").innerHTML = knownCases.map((item) => {
+    const isActive = item.case_number === activeCaseNumber;
+    return `<div class="case-list-item${isActive ? " active" : item.case_number === selected ? " selected" : ""}">
+      <div class="case-list-copy">
+        <strong>${escapeHtml(item.case_number)}</strong><span>${Number(item.media_count)} MEDIEN</span><span class="open-count">${Number(item.open_count)} OFFEN</span>
+      </div>
+      <button type="button" class="case-list-open" data-case-number="${escapeHtml(item.case_number)}">ÖFFNEN</button>
+      <button type="button" class="case-list-delete" data-delete-case="${escapeHtml(item.case_number)}"${isActive ? " disabled title=\"Aktiven Fall zuerst beenden\"" : ""}>LÖSCHEN</button>
+    </div>`;
+  }).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
 
 async function refresh(loadLatest = false) {
@@ -664,7 +670,6 @@ function stopCaseSession() {
   $("caseDownload").classList.add("disabled");
   $("caseDownload").setAttribute("aria-disabled", "true");
   $("caseDownload").href = "#";
-  $("caseDelete").disabled = true;
   caseHistorySignature = "";
   resetDeviceStatesForCase();
   renderDevices(devices);
@@ -675,8 +680,8 @@ function stopCaseSession() {
 }
 
 async function deleteCurrentCase() {
-  const caseNumber = activeCaseNumber;
-  if (!caseNumber || $("caseDelete").disabled) return;
+  const caseNumber = deleteTargetCaseNumber;
+  if (!caseNumber || caseNumber === activeCaseNumber) return;
   const password = $("deletePassword").value;
   $("deleteMessage").textContent = "FALL WIRD ENTFERNT …";
   try {
@@ -689,9 +694,11 @@ async function deleteCurrentCase() {
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gelöscht werden");
     $("deleteModal").close();
     $("deletePassword").value = "";
-    stopCaseSession();
-    setSystemState("GESPERRT", "locked");
+    if ($("caseNumber").value.trim().toUpperCase() === caseNumber) $("caseNumber").value = "";
+    deleteTargetCaseNumber = null;
+    caseHistorySignature = "";
     await refresh(false);
+    updateCaseSessionUi(`FALL ${caseNumber} AUS DEM ARCHIV ENTFERNT`);
   } catch (error) {
     $("deleteMessage").textContent = `FEHLER: ${error.message}`;
   }
@@ -891,6 +898,18 @@ $("profileList").addEventListener("click", (event) => {
   openProfileEditor(edit.dataset.editProfile);
 });
 $("caseList").addEventListener("click", (event) => {
+  const remove = event.target.closest("button[data-delete-case]");
+  if (remove) {
+    const caseNumber = remove.dataset.deleteCase;
+    if (!caseNumber || caseNumber === activeCaseNumber) return;
+    deleteTargetCaseNumber = caseNumber;
+    $("deleteCaseNumber").textContent = caseNumber;
+    $("deletePassword").value = "";
+    $("deleteMessage").textContent = "";
+    openNestedAuftragDialog("deleteModal");
+    $("deletePassword").focus();
+    return;
+  }
   const item = event.target.closest("button[data-case-number]");
   if (!item) return;
   $("caseNumber").value = item.dataset.caseNumber;
@@ -901,16 +920,12 @@ $("caseList").addEventListener("click", (event) => {
 });
 $("caseStart").addEventListener("click", startCaseSession);
 $("caseStop").addEventListener("click", stopCaseSession);
-$("caseDelete").addEventListener("click", () => {
-  $("deleteCaseNumber").textContent = activeCaseNumber || "—";
-  $("deletePassword").value = "";
-  $("deleteMessage").textContent = "";
-  openNestedAuftragDialog("deleteModal");
-  $("deletePassword").focus();
-});
 $("cancelDelete").addEventListener("click", () => $("deleteModal").close());
 for (const id of nestedAuftragDialogs) $(id).addEventListener("close", syncAuftragBackdrop);
-$("auftragModal").addEventListener("close", () => $("auftragModal").classList.remove("nested-open"));
+$("auftragModal").addEventListener("close", () => {
+  $("auftragModal").classList.remove("nested-open");
+  $("caseArchiveModal").classList.remove("nested-open");
+});
 $("deleteForm").addEventListener("submit", (event) => { event.preventDefault(); deleteCurrentCase(); });
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
