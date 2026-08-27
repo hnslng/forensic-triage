@@ -2,6 +2,18 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.3] – 2026-08-27
+
+### Hinzugefügt
+
+- kompakter PDF-Grobsichtungsbericht im A4-Querformat mit einer Zeile je Datenträger
+- separater PDF-Download im Dashboard; der vollständige ZIP-Export enthält den Bericht ebenfalls
+- technische Grobinhaltsangabe aus Dateikategorien sowie Entscheidung und dokumentierte Begründung
+
+### Validiert
+
+- PDF-Erzeugung und Aufnahme in das SHA-256-Manifest werden automatisiert geprüft
+
 ## [0.2.0-alpha.2] – 2026-08-27
 
 ### Hinzugefügt

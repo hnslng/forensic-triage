@@ -55,7 +55,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 - aktiver Fall kann nicht gelöscht werden
 - falsches Löschpasswort verändert keine Fallakte
 - korrektes Entfernen lässt Archiv geöffnet und verschiebt Unterlagen nach `.trash`
-- ZIP-Export und Manifestprüfung
+- PDF-Bericht, ZIP-Export und Manifestprüfung
 - Tastaturfokus und kleiner Bildschirm
 
 ## Noch erforderliche Hardwaretests
@@ -71,7 +71,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.2` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.3` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 ## English summary
 

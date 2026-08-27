@@ -125,8 +125,8 @@ Vor realem Betrieb müssen das Fallarchiv auf verschlüsseltem, zugriffsgeschüt
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a2` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.2`
+- Paketversion: `0.2.0a3` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.3`
 - automatisierte Tests: 30
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
@@ -139,4 +139,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.2 searches file and directory names, not file contents. It does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md).
+Version 0.2.0-alpha.3 searches file and directory names, not file contents. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md).

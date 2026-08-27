@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.2. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.3. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -44,7 +44,8 @@ Stand: Version 0.2.0-alpha.2. Prioritäten richten sich nach forensischer Sicher
 - [ ] Aufbewahrungs- und Löschfristen für Fallakten definieren.
 - [ ] Rollen-/Berechtigungskonzept prüfen; das aktuelle Bearbeiterkürzel ist keine Anmeldung.
 - [ ] Passwortverwaltung statt eines einzelnen lokalen Löschkennworts bewerten.
-- [ ] PDF-Fallbericht nur bei klarer fachlicher Anforderung ergänzen.
+- [x] Kompakten PDF-Fallbericht im Querformat mit einer Zeile je Datenträger ergänzen.
+- [ ] PDF-Berichtsaufbau und Formulierungen fachlich abnehmen.
 - [ ] Prüfen, ob digitale Signaturen zusätzlich zum SHA-256-Manifest erforderlich sind.
 - [ ] Deutsche UI-Texte abschließend redigieren und englische Vollübersetzung nur bei tatsächlichem Bedarf ergänzen.
 

@@ -35,6 +35,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `src/forensic_triage/filesystem.py` | Verarbeitung des mountfreien TSK-Laufs |
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
+| `src/forensic_triage/pdf_report.py` | kompakter druckbarer Fallbericht |
 | `profiles/*.yaml` | mitgelieferte Stichwortprofile |
 
 ## Wo wird was gespeichert?
@@ -49,7 +50,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | systemd-Journal | Start-, Dienst- und Fehlermeldungen | nein |
 | Browser/Laptop | nur Darstellung und gegebenenfalls SSH-Verbindung | keine dauerhafte Fallakte |
 
-Das ZIP wird erst beim Download im verwendeten Browser gespeichert. Sein Speicherort hängt vom Browser ab und liegt nicht automatisch im Fallarchiv.
+Der kompakte PDF-Bericht wird bei jeder Änderung der Fallakte aktualisiert und dort mitgeführt. PDF und ZIP werden beim Download zusätzlich im verwendeten Browser gespeichert; dieser Speicherort hängt vom Browser ab.
 
 ## Was ist die Konfiguration?
 

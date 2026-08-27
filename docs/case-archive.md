@@ -12,6 +12,7 @@ casefiles/
 ├── .trash/
 └── FALL-2026-001/
     ├── case.json
+    ├── case-report.pdf
     ├── case-report.txt
     ├── media-register.csv
     ├── audit.log
@@ -35,6 +36,7 @@ casefiles/
 
 - `files.csv`: vollständiges Verzeichnis der beobachteten aktiven Dateien mit Pfad, Endung, Kategorie, Größe und Dateisystem-Zeitstempeln; keine Dateiinhalte
 - `media-register.csv`: Übersicht aller Sichtungen und Entscheidungen im Fall
+- `case-report.pdf`: kompakter, druckbarer Querformat-Bericht mit einer Zeile je Datenträger
 - `case-report.txt`: menschenlesbare Fallzusammenfassung
 - `audit.log`: chronologische Ereignisse aus dem lokalen Index
 - `manifest.sha256`: Prüfsummen der lesbaren Exporte und aufbewahrten Scanartefakte
@@ -52,7 +54,9 @@ Das Manifest kann Änderungen erkennbar machen, ist aber keine digitale Signatur
 
 ## Export
 
-Der ZIP-Export enthält die Fallakte einschließlich Metadateninventaren und Nachweisen. Er enthält keine Kopie der Nutzdateien des gesichteten Mediums. Ein Export aus einem realen Fall ist trotzdem eine schützenswerte Fallunterlage und darf nicht in Git gespeichert werden.
+Der PDF-Bericht kann separat geladen und einer Akte beigelegt werden. Er nennt Sichtungsnummer, Datenträger, Seriennummer, technischen Grobinhalt, Entscheidung und gegebenenfalls die dokumentierte Begründung. Der Grobinhalt wird ausschließlich aus Dateiendungskategorien gebildet; Begriffe wie „Urlaubsfotos“ werden nicht automatisch behauptet, weil keine Dateiinhalte ausgewertet werden.
+
+Der ZIP-Export enthält zusätzlich die vollständige Fallakte einschließlich PDF, Metadateninventaren und Nachweisen. Er enthält keine Kopie der Nutzdateien des gesichteten Mediums. Ein Export aus einem realen Fall ist trotzdem eine schützenswerte Fallunterlage und darf nicht in Git gespeichert werden.
 
 ## Entfernen und Wiederherstellung
 
@@ -66,8 +70,8 @@ Technisch wird der Fall aus dem aktiven SQLite-Index entfernt und sein Ordner na
 - Wiederherstellungsablauf aus `.trash` dokumentieren und validieren
 - Aufbewahrungs- und Löschfristen definieren
 - digitale Signaturen bewerten
-- gegebenenfalls PDF-Bericht ergänzen
+- Layout und Formulierungen des PDF-Berichts fachlich abnehmen
 
 ## English summary
 
-Case data is stored locally under the Git-ignored `casefiles/` directory. Each medium receives a neutral sighting number; an official evidence number is required only for “Secure”. Human-readable exports and a SHA-256 manifest accompany the SQLite index. Removing a case moves its files to an internal recoverable trash directory and is not secure deletion. Real deployment requires encrypted storage, access control, retention rules, and a tested recovery procedure.
+Case data is stored locally under the Git-ignored `casefiles/` directory. Each medium receives a neutral sighting number; an official evidence number is required only for “Secure”. A compact PDF report, open-format exports, and a SHA-256 manifest accompany the SQLite index. Removing a case moves its files to an internal recoverable trash directory and is not secure deletion. Real deployment requires encrypted storage, access control, retention rules, and a tested recovery procedure.

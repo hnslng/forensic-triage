@@ -13,6 +13,8 @@ def make_result(store: CaseStore, case: str, sighting: str):
     (result / "summary.json").write_text(json.dumps({
         "evidence": sighting, "file_count": 12, "directory_count": 3,
         "keyword_matches": 2, "duration_seconds": 0.5,
+        "total_file_bytes": 4096,
+        "categories_by_count": {"Dokumente": 8, "Bilder": 4},
     }), encoding="utf-8")
     (result / "hits.json").write_text(json.dumps({
         "by_keyword": {"rechnung": {"count": 2, "paths": ["a", "b"]}},
@@ -40,8 +42,11 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
     case = store.case_path("FALL-2026-1")
     assert (case / "media-register.csv").is_file()
     assert "Nicht zur Sicherung ausgewählt" in (case / "case-report.txt").read_text(encoding="utf-8")
+    assert (case / "case-report.pdf").read_bytes().startswith(b"%PDF")
     assert "decision_recorded" in (case / "audit.log").read_text(encoding="utf-8")
-    assert len((case / "manifest.sha256").read_text(encoding="utf-8").splitlines()) >= 7
+    manifest = (case / "manifest.sha256").read_text(encoding="utf-8")
+    assert "case-report.pdf" in manifest
+    assert len(manifest.splitlines()) >= 8
     inventory = store.file_inventory(media_id, "a")
     assert inventory == {
         "total": 1,
@@ -111,6 +116,7 @@ def test_archive_case_removes_active_record_and_keeps_recoverable_copy(tmp_path)
     archived = list((store.root / ".trash").glob("*-FALL-DELETE"))
     assert len(archived) == 1
     assert (archived[0] / "case-report.txt").is_file()
+    assert (archived[0] / "case-report.pdf").is_file()
 
 
 def test_evidence_number_is_assigned_only_when_secured(tmp_path) -> None:

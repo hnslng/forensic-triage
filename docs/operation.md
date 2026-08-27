@@ -57,7 +57,7 @@ TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann d
 
 ## 7. Fall exportieren
 
-„Falldaten laden“ erzeugt einen ZIP-Export der lokalen Fallakte. Der Export enthält Metadaten und Dokumentation, keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
+„PDF-Bericht“ lädt eine kurze, druckbare Fallübersicht im A4-Querformat. Pro Datenträger enthält sie eine Zeile mit Seriennummer, technischen Dateikategorien, Entscheidung und gegebenenfalls der Begründung für „Nicht ausgewählt“. „Falldaten ZIP“ erzeugt zusätzlich den vollständigen Export der lokalen Fallakte. Beide Exporte enthalten keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
 
 ## 8. Fall entfernen
 

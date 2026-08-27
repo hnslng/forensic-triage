@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .pdf_report import build_case_pdf
+
 
 DECISIONS = {"open", "secure", "not_selected", "review"}
 REASONS = {
@@ -651,6 +653,13 @@ class CaseStore:
                 json.dumps(self._media_dict(row), ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
+        build_case_pdf(
+            case_dir / "case-report.pdf",
+            dict(case),
+            [dict(row) for row in media],
+            [dict(event) for event in audit],
+            self.root,
+        )
         self._write_manifest(case_dir)
 
     def _write_manifest(self, case_dir: Path) -> None:
@@ -669,6 +678,7 @@ class CaseStore:
             "database": str(self.db_path),
             "media_register": str(case_dir / "media-register.csv"),
             "case_report": str(case_dir / "case-report.txt"),
+            "pdf_report": str(case_dir / "case-report.pdf"),
             "audit_log": str(case_dir / "audit.log"),
             "manifest": str(manifest),
             "manifest_entries": len(manifest.read_text(encoding="utf-8").splitlines()) if manifest.is_file() else 0,

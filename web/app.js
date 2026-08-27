@@ -156,6 +156,7 @@ function renderArchive(archive) {
   $("archiveCasePath").textContent = archive.case_path || "—";
   $("archiveInventory").textContent = archive.result_path ? `${archive.result_path}/files.csv` : "files.csv";
   $("archiveRegister").textContent = archive.media_register || "media-register.csv";
+  $("archivePdfReport").textContent = archive.pdf_report || "case-report.pdf";
   $("archiveReport").textContent = archive.case_report || "case-report.txt";
   $("archiveAudit").textContent = archive.audit_log || "audit.log";
   $("archiveManifestCount").textContent = Number(archive.manifest_entries || 0).toLocaleString("de-AT");
@@ -216,14 +217,24 @@ function statusTag(decision) {
   return `<span class="status-tag status-${decision}">${decisionLabels[decision] || decisionLabels.open}</span>`;
 }
 
+function setCaseDownloads(caseNumber = null) {
+  const downloads = [
+    [$("caseReportDownload"), caseNumber ? `/api/cases/${encodeURIComponent(caseNumber)}/report.pdf` : "#"],
+    [$("caseDownload"), caseNumber ? `/api/cases/${encodeURIComponent(caseNumber)}/export.zip` : "#"],
+  ];
+  for (const [link, href] of downloads) {
+    link.classList.toggle("disabled", !caseNumber);
+    link.setAttribute("aria-disabled", caseNumber ? "false" : "true");
+    link.href = href;
+  }
+}
+
 async function loadCase(caseNumber) {
   if (!caseNumber) {
     currentCaseMedia = [];
     renderMediaCards([]);
     $("casePanel").hidden = true;
-    $("caseDownload").classList.add("disabled");
-    $("caseDownload").setAttribute("aria-disabled", "true");
-    $("caseDownload").href = "#";
+    setCaseDownloads();
     return;
   }
   try {
@@ -233,9 +244,7 @@ async function loadCase(caseNumber) {
       currentCaseMedia = [];
       renderMediaCards([]);
       $("casePanel").hidden = true;
-      $("caseDownload").classList.add("disabled");
-      $("caseDownload").setAttribute("aria-disabled", "true");
-      $("caseDownload").href = "#";
+      setCaseDownloads();
       return;
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
@@ -244,9 +253,7 @@ async function loadCase(caseNumber) {
     renderDevices(devices);
     $("casePanel").hidden = false;
     $("casePanelNumber").textContent = data.case.case_number;
-    $("caseDownload").classList.remove("disabled");
-    $("caseDownload").setAttribute("aria-disabled", "false");
-    $("caseDownload").href = `/api/cases/${encodeURIComponent(data.case.case_number)}/export.zip`;
+    setCaseDownloads(data.case.case_number);
     $("caseMedia").innerHTML = data.media.map((medium) => `
       <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
     `).join("");
@@ -667,9 +674,7 @@ function stopCaseSession() {
   $("casePanel").hidden = true;
   $("results").hidden = true;
   $("dashboardView").hidden = false;
-  $("caseDownload").classList.add("disabled");
-  $("caseDownload").setAttribute("aria-disabled", "true");
-  $("caseDownload").href = "#";
+  setCaseDownloads();
   caseHistorySignature = "";
   resetDeviceStatesForCase();
   renderDevices(devices);
