@@ -11,6 +11,7 @@ results/
 casefiles/
 output/
 .DS_Store
+TRIAGE-BOX starten.command
 
 # Never commit credentials or local operator configuration.
 .env

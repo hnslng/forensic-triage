@@ -2,6 +2,22 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.4] – 2026-08-27
+
+### Sicherheit
+
+- festes Entwicklungs-Löschpasswort aus Programmcode und Konfigurationsvorlage entfernt
+- Installer erzeugt einen zufälligen lokalen Wert und migriert die alte Entwicklungsvorgabe automatisch
+- Fallentfernung bleibt bei fehlender Passwortkonfiguration serverseitig gesperrt
+- Sicherheitsrichtlinie und Prüfung des vollständigen Git-Verlaufs dokumentiert
+
+### Veröffentlichung
+
+- Repository-Dokumentation für öffentliche Lesbarkeit vorbereitet
+- persönliche Starterkonfiguration durch eine neutrale, kopierbare Vorlage ersetzt
+- konservative Nutzungsbedingungen ergänzt; eine spätere Open-Source-Lizenz bleibt eine gesonderte Entscheidung
+- automatischer GitHub-Testlauf für Pushes und Pull Requests ergänzt
+
 ## [0.2.0-alpha.3] – 2026-08-27
 
 ### Hinzugefügt

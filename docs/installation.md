@@ -31,13 +31,13 @@ sudo ./scripts/install_debian.sh --check
 
 ## 1. Quellcode bereitstellen
 
-### Empfohlen: Git-Checkout auf dem Scanner
+### Empfohlen: öffentliches Git-Checkout auf dem Scanner
 
-Der Scanner benötigt dafür einen eigenen, möglichst nur lesenden GitHub-Deploy-Key. Der Schlüssel für die SSH-Anmeldung **am** Scanner ist nicht automatisch ein GitHub-Schlüssel.
+Für das öffentliche Repository ist zum Lesen kein GitHub-Konto, Token oder Deploy-Key erforderlich.
 
 ```bash
 cd /home/triage
-git clone git@github.com:hnslng/forensic-triage.git
+git clone https://github.com/hnslng/forensic-triage.git
 cd forensic-triage
 ```
 
@@ -69,7 +69,7 @@ Die Installation legt beim ersten Lauf an:
 /etc/forensic-triage/triage.env
 ```
 
-Vor echtem Einsatz mindestens das Löschpasswort und den verschlüsselten Fallpfad prüfen:
+Der Installer erzeugt beim ersten Lauf ein zufälliges Löschpasswort in der lokalen Konfiguration. Vor echtem Einsatz mindestens dieses Passwort und den verschlüsselten Fallpfad prüfen:
 
 ```bash
 sudoedit /etc/forensic-triage/triage.env
@@ -130,4 +130,4 @@ Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische R
 
 ## English quick install
 
-Place a trusted Git checkout or release bundle on a Debian-based scanner and run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` only if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password. The Mac/VM arrangement is documented separately as temporary development infrastructure.
+Clone the public repository over HTTPS or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` with a random deletion password if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password.

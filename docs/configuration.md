@@ -27,7 +27,7 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_CASEFILES_ROOT` | `<Projekt>/casefiles` | dauerhafte lokale Fallakten |
 | `FORENSIC_TRIAGE_WEB_ROOT` | `<Projekt>/web` | statische Bedienoberfläche; normalerweise unverändert |
 | `FORENSIC_TRIAGE_PROFILE` | `<Projekt>/profiles/default.yaml` | Start-/Kompatibilitätsprofil |
-| `FORENSIC_TRIAGE_DELETE_PASSWORD` | `123` | Passwort zum Entfernen einer Fallakte |
+| `FORENSIC_TRIAGE_DELETE_PASSWORD` | zufällig erzeugt | Passwort zum Entfernen einer Fallakte |
 
 Beispiel:
 
@@ -40,6 +40,8 @@ FORENSIC_TRIAGE_WEB_ROOT=/opt/triage-box/web
 FORENSIC_TRIAGE_PROFILE=/opt/triage-box/profiles/default.yaml
 FORENSIC_TRIAGE_DELETE_PASSWORD=EIN-LANGES-LOKALES-PASSWORT
 ```
+
+Der Installer erzeugt bei der ersten Installation ein zufälliges Passwort und schreibt es ausschließlich in die root-geschützte Datei. Ein alter Entwicklungswert wird bei einem Update automatisch ersetzt. Der Wert kann mit `sudoedit` geändert werden. Bleibt die Einstellung leer oder fehlt sie bei einem manuellen Start, ist die Fallentfernung serverseitig gesperrt.
 
 ## Port und Netzwerk
 

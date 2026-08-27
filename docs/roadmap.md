@@ -1,10 +1,10 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.3. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.4. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
-- [ ] Standard-Löschpasswort `123` durch ein langes lokales Passwort ersetzen.
+- [x] Standard-Löschpasswort entfernen und bei Installation einen zufälligen lokalen Wert erzeugen.
 - [ ] Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher betreiben und Sicherungskonzept festlegen.
 - [ ] Hardware-Schreibblocker auswählen, beschaffen und mit dem Tool validieren.
 - [ ] Organisatorischen Ablauf für Berechtigung, Beweismittelidentität, Zeitquelle und Chain of Custody festlegen.
@@ -55,7 +55,8 @@ Stand: Version 0.2.0-alpha.3. Prioritäten richten sich nach forensischer Sicher
 - [ ] Integrationsprüfung des parallelen Scanners auf Linux automatisieren.
 - [ ] Abhängigkeiten und unterstützte Debian-/Python-Versionen fixieren und regelmäßig prüfen.
 - [ ] Release-Checkliste erstellen.
-- [ ] Vor `v1.0.0` Lizenz-/Nutzungsbedingungen und Verantwortlichkeiten festlegen.
+- [x] Vorläufige restriktive Nutzungsbedingungen und Verantwortlichkeiten dokumentieren.
+- [ ] Vor `v1.0.0` entscheiden, ob und unter welcher Open-Source-Lizenz das Projekt freigegeben wird.
 - [ ] Sicherheitsreview und formale Werkzeugvalidierung durchführen.
 
 ## Bewusst nicht im aktuellen Umfang

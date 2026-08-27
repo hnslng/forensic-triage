@@ -1,12 +1,15 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.2 · private Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.4 · öffentliche Alpha-Entwicklungsfassung · Deutsch / English**
+
+> [!CAUTION]
+> **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
 
 TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern vor Ort. Es inventarisiert mehrere geeignete USB-Datenträger parallel, ordnet Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
 
 Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
-> **English summary:** TRIAGE//BOX is a private alpha prototype for fast, read-only field triage of removable media. It inventories active files and metadata, searches names and paths, and creates a local audit trail. It does not image, carve, recover deleted data, inspect file contents, or make seizure decisions. See [English summary](#english-summary).
+> **English summary:** TRIAGE//BOX is a public alpha prototype for fast, read-only field triage of removable media. It is not approved for operational evidence handling. It inventories active files and metadata, searches names and paths, and creates a local audit trail. It does not image, carve, recover deleted data, inspect file contents, or make seizure decisions. See [English summary](#english-summary).
 
 ## Aktueller Funktionsumfang
 
@@ -29,7 +32,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.2 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.4 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -45,7 +48,14 @@ Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich
 
 ## Installation auf dem Scanner
 
-Sobald der Quellcode auf einem Debian-basierten Scanner liegt:
+Das öffentliche Repository kann ohne GitHub-Anmeldung gelesen werden:
+
+```bash
+git clone https://github.com/hnslng/forensic-triage.git
+cd forensic-triage
+```
+
+Anschließend auf einem Debian-basierten Scanner:
 
 ```bash
 sudo ./scripts/install_debian.sh
@@ -53,7 +63,7 @@ sudo ./scripts/install_debian.sh
 
 Das wiederholbar ausführbare Skript installiert Systempakete, Python-Umgebung, Tests, Konfiguration und systemd-Dienst. Es überschreibt bei Aktualisierungen weder lokale Konfiguration noch Fallakten. Einzelheiten: [Installation und Aktualisierung](docs/installation.md).
 
-Lokale Einstellungen wie Host, Port, Speicherpfade und Löschpasswort stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Siehe [Konfiguration](docs/configuration.md).
+Lokale Einstellungen wie Host, Port, Speicherpfade und Löschpasswort stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Bei der ersten Installation wird ein zufälliges Löschpasswort erzeugt; im Quellcode gibt es kein Standardpasswort. Siehe [Konfiguration](docs/configuration.md).
 
 ## Bedienablauf
 
@@ -109,7 +119,9 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Testplan](docs/test-plan.md)
 - [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
 - [Roadmap und offene Aufgaben](docs/roadmap.md)
-- [Temporäre Mac-/VM-Entwicklungsumgebung](docs/development-setup.md)
+- [Generische Entwicklungsumgebung](docs/development-setup.md)
+- [Sicherheitsrichtlinie](SECURITY.md)
+- [Nutzungsbedingungen](LICENSE.md)
 - [Änderungshistorie](CHANGELOG.md)
 
 ## Datenschutz und Git
@@ -121,12 +133,12 @@ Das Repository enthält ausschließlich Quellcode, Profile, Tests und Dokumentat
 - Passwörter, Tokens, private SSH-Schlüssel oder `.env`-Dateien
 - Exporte aus echten Einsätzen
 
-Vor realem Betrieb müssen das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen und das voreingestellte Löschpasswort `123` ersetzt werden.
+Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen. Das zufällig erzeugte lokale Löschpasswort muss geschützt verwahrt und bei Bedarf über die root-geschützte Konfiguration geändert werden.
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a3` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.3`
+- Paketversion: `0.2.0a4` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.4`
 - automatisierte Tests: 30
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
@@ -139,4 +151,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.3 searches file and directory names, not file contents. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md).
+Version 0.2.0-alpha.4 searches file and directory names, not file contents. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Public visibility does not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

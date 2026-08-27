@@ -30,7 +30,7 @@ EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
 ACTIVE_DEVICES_LOCK = threading.Lock()
 ACTIVE_DEVICES: set[str] = set()
-DELETE_PASSWORD = os.environ.get("FORENSIC_TRIAGE_DELETE_PASSWORD", "123")
+DELETE_PASSWORD = os.environ.get("FORENSIC_TRIAGE_DELETE_PASSWORD", "").strip()
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -433,6 +433,12 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_payload()
             password = str(payload.get("password", ""))
+            if not DELETE_PASSWORD:
+                self._json(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    {"error": "Fallentfernung ist ohne konfiguriertes Löschpasswort gesperrt."},
+                )
+                return
             if not hmac.compare_digest(password, DELETE_PASSWORD):
                 self._json(HTTPStatus.FORBIDDEN, {"error": "Passwort ist nicht korrekt."})
                 return

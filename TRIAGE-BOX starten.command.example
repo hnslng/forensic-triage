@@ -2,8 +2,10 @@
 
 set -u
 
+# Copy this file to "TRIAGE-BOX starten.command" and adjust only the local values.
+# The personalized file is ignored by Git.
 TRIAGE_URL="http://127.0.0.1:8787/"
-TRIAGE_HOST="triage@10.0.1.105"
+TRIAGE_HOST="triage@triagebox.local"
 TRIAGE_KEY="${HOME}/.ssh/forensic_triage_agent"
 
 if ! curl -fsS --max-time 2 "$TRIAGE_URL/api/status" >/dev/null 2>&1; then
@@ -21,7 +23,7 @@ if curl -fsS --max-time 5 "$TRIAGE_URL/api/status" >/dev/null 2>&1; then
   open "$TRIAGE_URL"
   echo "TRIAGE//BOX ist verbunden und wurde im Browser geöffnet."
 else
-  echo "Verbindung fehlgeschlagen. Bitte prüfen: VM eingeschaltet, Netzwerk verbunden."
+  echo "Verbindung fehlgeschlagen. Bitte Scanner und Netzwerk prüfen."
   read -r "?Zum Schließen Eingabetaste drücken …"
   exit 1
 fi
