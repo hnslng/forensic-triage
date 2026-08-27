@@ -69,4 +69,4 @@ Explizite Kommandozeilenargumente wie `--port` überschreiben die Werte aus der 
 
 ## English summary
 
-Local settings are stored in the root-only `/etc/forensic-triage/triage.env` file and are preserved on reinstall. It controls host, port, result and case roots, default profile, and the deletion password. Keep localhost for SSH-based access, store real case data on encrypted storage, and never commit the configuration file.
+Local settings are stored in the root-only `/etc/forensic-triage/triage.env` file and are preserved on reinstall. It controls host, port, result and case roots, and the default profile. Keep localhost for SSH-based access, store real case data on encrypted storage, and never commit the configuration file.

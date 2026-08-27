@@ -2,6 +2,16 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.6] – 2026-08-28
+
+### Geändert
+
+- Dateitypen und Stichworttreffer öffnen die dazugehörige Metadaten-Dateiliste
+- aktiver Ergebnisfilter wird kompakt und ohne zusätzliche Kastenoptik markiert
+- doppeldeutige Rücksprungschaltflächen durch einen kontextbezogenen Befehl „Filter aufheben“ ersetzt
+- freie Dateinamen-/Pfadsuche und Ergebnisfilter in Bedienung und Dokumentation klar getrennt
+- Trefferquelle wird als Dateiname, Ordnerpfad oder Pfad ausgewiesen
+
 ## [0.2.0-alpha.5] – 2026-08-27
 
 ### Geändert

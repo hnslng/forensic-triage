@@ -71,7 +71,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.5` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.6` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 ## English summary
 

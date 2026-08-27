@@ -140,10 +140,10 @@ function renderResults(summary, hits = {}) {
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   $("categories").innerHTML = categories.map(([name, count]) => `
-    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span>${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span><span class="bar-value">${Number(count)}</span></button>
+    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span>${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span><span class="bar-value">${Number(count)}</span></button>
   `).join("");
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
-    <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
+    <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
   `).join("");
   $("largestFiles").innerHTML = (summary.largest_files || []).map((file, index) => `
     <tr><td>${String(index + 1).padStart(2, "0")}</td><td>${escapeHtml(file.path)}</td><td>${formatBytes(file.size)}</td></tr>
@@ -201,6 +201,7 @@ function renderRecord(record) {
       inventoryListState = null;
       $("inventoryTree").innerHTML = "";
       $("inventorySearchResults").hidden = true;
+      $("inventoryFilterBar").hidden = true;
       $("inventoryMore").hidden = true;
       $("inventorySearch").value = "";
       $("inventoryCount").textContent = "—";
@@ -598,19 +599,28 @@ async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offse
 }
 
 function clearInventoryFilterState() {
-  for (const button of document.querySelectorAll(".result-filter.active")) button.classList.remove("active");
+  for (const button of document.querySelectorAll(".result-filter")) {
+    button.classList.remove("active");
+    button.setAttribute("aria-pressed", "false");
+  }
+}
+
+async function resetInventoryView() {
+  clearInventoryFilterState();
+  inventoryListState = null;
+  $("inventorySearch").value = "";
+  $("inventoryFilterBar").hidden = true;
+  $("inventoryMore").hidden = true;
+  $("inventorySearchResults").hidden = true;
+  $("inventoryTree").hidden = false;
+  await loadInventoryTree();
 }
 
 async function loadInventory({ category = "", keyword = "", search = null, offset = 0 } = {}) {
   if (!currentMediaId) return;
   const searchText = search === null ? $("inventorySearch").value.trim() : search;
   if (!searchText && !category && !keyword) {
-    clearInventoryFilterState();
-    inventoryListState = null;
-    $("inventoryMore").hidden = true;
-    $("inventorySearchResults").hidden = true;
-    $("inventoryTree").hidden = false;
-    await loadInventoryTree();
+    $("inventorySearch").focus();
     return;
   }
   if (searchText && !category && !keyword) clearInventoryFilterState();
@@ -624,14 +634,16 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     const response = await fetch(`/api/media/${currentMediaId}/files?${parameters}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Verzeichnis nicht verfügbar");
-    const filterLabel = category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : "SUCHE";
+    const filterLabel = category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`;
     const visible = Number(data.offset || 0) + Number(data.shown || 0);
-    $("inventoryCount").textContent = `${filterLabel.toUpperCase()} · ${visible} / ${data.total}`;
+    $("inventoryCount").textContent = `${visible} / ${data.total} DATEIEN`;
+    $("inventoryFilterLabel").textContent = filterLabel.toUpperCase();
+    $("inventoryFilterBar").hidden = false;
     $("inventoryTree").hidden = true;
     $("inventorySearchResults").hidden = false;
     const rows = data.files.map((file) => `
       <tr><td>${escapeHtml(file.path)}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${formatBytes(file.size)}</td></tr>
-    `).join("");
+    `).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
     inventoryListState = { category, keyword, search: searchText, nextOffset: Number(data.next_offset || visible) };
@@ -965,11 +977,8 @@ $("auftragModal").addEventListener("close", () => {
 $("deleteForm").addEventListener("submit", (event) => { event.preventDefault(); deleteCurrentCase(); });
 $("refreshButton").addEventListener("click", refresh);
 $("saveDecision").addEventListener("click", saveDecision);
-$("inventoryLoad").addEventListener("click", loadInventory);
-$("inventoryReset").addEventListener("click", () => {
-  $("inventorySearch").value = "";
-  loadInventory();
-});
+$("inventoryLoad").addEventListener("click", () => loadInventory());
+$("inventoryReset").addEventListener("click", resetInventoryView);
 $("inventoryMore").addEventListener("click", () => {
   if (inventoryListState) loadInventory({ ...inventoryListState, offset: inventoryListState.nextOffset });
 });
@@ -977,8 +986,13 @@ $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === 
 $("categories").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-category]");
   if (!button) return;
+  if (button.classList.contains("active")) {
+    resetInventoryView();
+    return;
+  }
   clearInventoryFilterState();
   button.classList.add("active");
+  button.setAttribute("aria-pressed", "true");
   $("inventorySearch").value = "";
   $("inventoryPanel").open = true;
   loadInventory({ category: button.dataset.inventoryCategory });
@@ -987,8 +1001,13 @@ $("categories").addEventListener("click", (event) => {
 $("keywords").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-keyword]");
   if (!button) return;
+  if (button.classList.contains("active")) {
+    resetInventoryView();
+    return;
+  }
   clearInventoryFilterState();
   button.classList.add("active");
+  button.setAttribute("aria-pressed", "true");
   $("inventorySearch").value = "";
   $("inventoryPanel").open = true;
   loadInventory({ keyword: button.dataset.inventoryKeyword });

@@ -19,7 +19,7 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 9. Das Dashboard zeigt das Ergebnis. Es öffnet keine Nutzdatei vom Datenträger.
 10. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
-In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Große Treffermengen werden seitenweise nachgeladen.
+In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Der aktive Filter steht in einer eigenen schmalen Statusleiste; „Filter aufheben“ stellt den vollständigen Verzeichnisbaum wieder her. Die freie Namens- und Pfadsuche bleibt eine davon getrennte Funktion. Große Treffermengen werden seitenweise nachgeladen.
 
 Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Scannerlauf erhalten. Ein Datenträger bekommt dabei automatisch eine neutrale Nummer wie `SICHT-001`.
 

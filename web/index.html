@@ -107,11 +107,14 @@
             <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
-              <button id="inventoryLoad" type="button">ANZEIGEN</button>
-              <button id="inventoryReset" type="button">ALLE DATEIEN</button>
+              <button id="inventoryLoad" type="button">SUCHEN</button>
               <span id="inventoryCount">—</span>
             </div>
             <div id="inventoryTree" class="inventory-tree"></div>
+            <div id="inventoryFilterBar" class="inventory-filter-bar" hidden>
+              <strong id="inventoryFilterLabel">FILTER</strong>
+              <button id="inventoryReset" type="button">× FILTER AUFHEBEN</button>
+            </div>
             <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
               <table>
                 <thead><tr><th>PFAD</th><th>TREFFER IN</th><th>KATEGORIE</th><th>ENDUNG</th><th>GRÖSSE</th></tr></thead>
