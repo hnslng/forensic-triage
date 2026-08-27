@@ -1,4 +1,4 @@
-# Prüfung vor öffentlicher Bereitstellung
+# Vorbereitung für eine mögliche spätere öffentliche Bereitstellung
 
 Stand: 27. August 2026
 
@@ -19,4 +19,4 @@ Persönliche Starterdateien werden künftig von Git ignoriert. Das Repository en
 
 ## Veröffentlichungshinweis
 
-Öffentliche Sichtbarkeit ist keine fachliche, technische oder rechtliche Einsatzfreigabe. Die Nutzungsrechte richten sich nach `LICENSE.md`; Sicherheitsmeldungen nach `SECURITY.md`.
+Das Repository bleibt vorerst privat. Falls es später öffentlich gestellt wird, ist die Sichtbarkeit keine fachliche, technische oder rechtliche Einsatzfreigabe. Die Nutzungsrechte richten sich nach `LICENSE.md`; Sicherheitsmeldungen nach `SECURITY.md`.

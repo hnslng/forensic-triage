@@ -31,13 +31,13 @@ sudo ./scripts/install_debian.sh --check
 
 ## 1. Quellcode bereitstellen
 
-### Empfohlen: öffentliches Git-Checkout auf dem Scanner
+### Empfohlen: privates Git-Checkout auf dem Scanner
 
-Für das öffentliche Repository ist zum Lesen kein GitHub-Konto, Token oder Deploy-Key erforderlich.
+Der Scanner erhält dafür einen eigenen, möglichst nur lesenden GitHub-Deploy-Key. Persönliche Tokens oder private Schlüssel anderer Rechner gehören nicht auf den Pi.
 
 ```bash
 cd /home/triage
-git clone https://github.com/hnslng/forensic-triage.git
+git clone git@github.com:hnslng/forensic-triage.git
 cd forensic-triage
 ```
 
@@ -130,4 +130,4 @@ Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische R
 
 ## English quick install
 
-Clone the public repository over HTTPS or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` with a random deletion password if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password.
+Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` with a random deletion password if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password.

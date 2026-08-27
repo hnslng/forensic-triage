@@ -18,7 +18,7 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 - [Testplan](test-plan.md)
 - [Validierung vom 26. August 2026](validation-2026-08-26.md)
 - [Generische Entwicklungsumgebung](development-setup.md)
-- [Prüfung vor öffentlicher Bereitstellung](publication-review-2026-08-27.md)
+- [Vorbereitung einer möglichen öffentlichen Bereitstellung](publication-review-2026-08-27.md)
 - [Sicherheitsrichtlinie](../SECURITY.md)
 - [Nutzungsbedingungen](../LICENSE.md)
 - [Änderungshistorie](../CHANGELOG.md)
@@ -27,8 +27,8 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.4 lautet die Python-Version gemäß PEP 440 `0.2.0a4`; der Git-Tag lautet `v0.2.0-alpha.4`.
 
-Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den öffentlichen Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
+Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 
 ## English
 
-The documentation is maintained primarily in German. Start with the bilingual project [README](../README.md). Package and Git release identifiers are documented above. These documents describe a public alpha prototype and do not replace organizational procedures or formal forensic validation.
+The documentation is maintained primarily in German. Start with the bilingual project [README](../README.md). Package and Git release identifiers are documented above. These documents describe a private alpha prototype and do not replace organizational procedures or formal forensic validation.

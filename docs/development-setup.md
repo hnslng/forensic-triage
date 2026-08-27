@@ -1,11 +1,11 @@
 # Generische Entwicklungsumgebung / Generic development setup
 
-Dieses Dokument beschreibt ein neutrales Beispiel für die Entwicklung mit einem Verwaltungsrechner und einem getrennten Debian-Testsystem. Lokale Adressen, Benutzernamen und Schlüsselpfade gehören nicht in Git.
+Dieses Dokument beschreibt ein neutrales Beispiel für die Entwicklung mit einem Verwaltungsrechner und einem getrennten Debian-Testsystem. Lokale Adressen, Benutzernamen und Schlüsselpfade gehören nicht in eine mögliche spätere Veröffentlichung.
 
 ## Beispielaufbau
 
 - Quellcode und Git-Checkout: Verwaltungsrechner
-- öffentliches GitHub-Repository: `hnslng/forensic-triage`
+- privates GitHub-Repository: `hnslng/forensic-triage`
 - Testsystem: getrennte Debian-VM oder Raspberry Pi
 - Webdienst in der VM: `127.0.0.1:8787`
 - Zugriff vom Mac: SSH-Tunnel auf `http://127.0.0.1:8787/`
@@ -39,4 +39,4 @@ Danach den Installer auf der VM erneut ausführen. Vorhandene Konfiguration und 
 
 ## English summary
 
-A workstation and Debian VM can be used as temporary development infrastructure. Local hostnames, addresses, usernames, and key paths must remain outside the public repository. A Pi deployment should use its own validated network and installation procedure.
+A workstation and Debian VM can be used as temporary development infrastructure. Local hostnames, addresses, usernames, and key paths must remain outside any later public release. A Pi deployment should use its own validated network and installation procedure.
