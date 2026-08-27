@@ -5,9 +5,11 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 ## Einstieg
 
 1. [Installation und Aktualisierung](installation.md)
-2. [Bedienung und Fallworkflow](operation.md)
-3. [Forensische Sicherheitsgrenzen](forensic-safety.md)
-4. [Roadmap und offene Aufgaben](roadmap.md)
+2. [So funktioniert TRIAGE//BOX](how-it-works.md)
+3. [Konfiguration](configuration.md)
+4. [Bedienung und Fallworkflow](operation.md)
+5. [Forensische Sicherheitsgrenzen](forensic-safety.md)
+6. [Roadmap und offene Aufgaben](roadmap.md)
 
 ## Technische Unterlagen
 
@@ -15,11 +17,12 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 - [Lokale Fallakte und Protokollierung](case-archive.md)
 - [Testplan](test-plan.md)
 - [Validierung vom 26. August 2026](validation-2026-08-26.md)
+- [Temporäre Entwicklungsumgebung](development-setup.md)
 - [Änderungshistorie](../CHANGELOG.md)
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha lautet die Python-Version gemäß PEP 440 `0.2.0a1`; der Git-Tag lautet `v0.2.0-alpha`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.2 lautet die Python-Version gemäß PEP 440 `0.2.0a2`; der Git-Tag lautet `v0.2.0-alpha.2`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

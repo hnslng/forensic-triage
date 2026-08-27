@@ -33,7 +33,7 @@ Trotzdem ist der aktuelle Schutz nur „defense in depth“. Für echte Beweismi
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.2 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
 
 ## Schutz der Fallunterlagen
 
@@ -41,4 +41,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk, sets and verifies the block device as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha does not inspect signatures or contents.
+The scanner validates a whole unmounted USB disk, sets and verifies the block device as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.2 does not inspect signatures or contents.

@@ -2,6 +2,28 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.2] – 2026-08-27
+
+### Hinzugefügt
+
+- wiederholbar ausführbares Debian-/Pi-Installationsskript mit Prüfmodus
+- lokale, von Git getrennte Konfiguration unter `/etc/forensic-triage/triage.env`
+- konfigurierbare Webadresse, Port-, Ergebnis-, Fallakten- und Profilpfade
+- verständliche Funktions- und Speicherortübersicht ohne erforderliche Programmierkenntnisse
+- eigener Konfigurationsleitfaden
+
+### Geändert
+
+- Mac-/VM-Angaben aus der eigentlichen Produktinstallation entfernt und als temporäre Entwicklungsumgebung ausgelagert
+- systemd-Dienst wird installationspfadabhängig aus einer Vorlage erzeugt
+- Installation führt Paketinstallation, Python-Setup, Tests, Konfiguration und Dienstaktivierung in einem Ablauf aus
+- vorhandene lokale Konfiguration und Fallakten bleiben bei erneuter Installation unangetastet
+
+### Validiert
+
+- 30 automatisierte Tests erfolgreich
+- Konfigurationswerte aus der lokalen Umgebung werden korrekt als Dienstvorgaben übernommen
+
 ## [0.2.0-alpha] – 2026-08-27
 
 ### Hinzugefügt

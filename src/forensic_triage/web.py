@@ -600,12 +600,24 @@ def serve(host: str, port: int, web_root: Path, results_root: Path, profile_path
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="forensic-triage-web")
     result.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    result.add_argument("--host", default="127.0.0.1")
-    result.add_argument("--port", type=int, default=8787)
-    result.add_argument("--web-root", type=Path, default=DEFAULT_WEB_ROOT)
-    result.add_argument("--results", type=Path, default=PROJECT_ROOT / "results")
-    result.add_argument("--casefiles", type=Path, default=PROJECT_ROOT / "casefiles")
-    result.add_argument("--profile", type=Path, default=PROJECT_ROOT / "profiles/default.yaml")
+    result.add_argument("--host", default=os.environ.get("FORENSIC_TRIAGE_WEB_HOST", "127.0.0.1"))
+    result.add_argument("--port", type=int, default=os.environ.get("FORENSIC_TRIAGE_WEB_PORT", "8787"))
+    result.add_argument(
+        "--web-root", type=Path,
+        default=Path(os.environ.get("FORENSIC_TRIAGE_WEB_ROOT", DEFAULT_WEB_ROOT)),
+    )
+    result.add_argument(
+        "--results", type=Path,
+        default=Path(os.environ.get("FORENSIC_TRIAGE_RESULTS_ROOT", PROJECT_ROOT / "results")),
+    )
+    result.add_argument(
+        "--casefiles", type=Path,
+        default=Path(os.environ.get("FORENSIC_TRIAGE_CASEFILES_ROOT", PROJECT_ROOT / "casefiles")),
+    )
+    result.add_argument(
+        "--profile", type=Path,
+        default=Path(os.environ.get("FORENSIC_TRIAGE_PROFILE", PROJECT_ROOT / "profiles/default.yaml")),
+    )
     return result
 
 

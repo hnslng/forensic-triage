@@ -1,37 +1,39 @@
 # Installation und Aktualisierung / Installation and upgrade
 
-Diese Anleitung beschreibt die aktuelle Debian-VM. Sie ist zugleich die Grundlage für eine spätere Raspberry-Pi-Installation, die erst auf der realen Hardware validiert wird.
+Das Ziel ist eine wiederholbare Installation auf einem Debian-basierten Scanner. Die aktuelle Debian-VM ist die Referenz; der Raspberry Pi wird erst auf der realen Hardware freigegeben.
 
-## 1. Voraussetzungen
+## Kurzfassung
 
-Empfohlen:
-
-- Debian 13 oder Raspberry Pi OS auf Debian-Basis
-- Python 3.11 oder neuer
-- The Sleuth Kit (`mmls`, `fsstat`, `fls`)
-- `lsblk`, `blockdev`, `findmnt`, `mount`, `umount`, `udevadm` und `eject`
-- lokaler Benutzer `triage`
-- SSH-Zugang mit Schlüssel
-- verschlüsselter, zugriffsgeschützter Speicher für reale Fallakten
-
-Pakete installieren:
+Sobald der Quellcode auf dem Scanner liegt:
 
 ```bash
-sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip sleuthkit util-linux udev eject
+cd /pfad/zu/forensic-triage
+sudo ./scripts/install_debian.sh
 ```
 
-`exfatprogs` ist nur erforderlich, wenn autorisierte Testmedien mit exFAT erzeugt oder geprüft werden sollen:
+Das Skript:
+
+1. prüft Debian und den Projektordner,
+2. installiert die benötigten Systempakete,
+3. erstellt beziehungsweise aktualisiert `.venv`,
+4. installiert TRIAGE//BOX,
+5. führt alle automatisierten Tests aus,
+6. legt die lokale Konfiguration nur beim ersten Lauf an,
+7. installiert und startet den systemd-Dienst.
+
+Es ist idempotent: Eine erneute Ausführung aktualisiert Programm und Dienst, überschreibt aber weder `/etc/forensic-triage/triage.env` noch `casefiles/` oder `results/`.
+
+Nur Voraussetzungen prüfen, ohne etwas zu installieren:
 
 ```bash
-sudo apt install -y exfatprogs
+sudo ./scripts/install_debian.sh --check
 ```
 
-## 2. Quellcode bereitstellen
+## 1. Quellcode bereitstellen
 
-### Variante A: eigener Git-Checkout auf dem Scanner
+### Empfohlen: Git-Checkout auf dem Scanner
 
-Der öffentliche Git-Schlüssel des Scanner-Systems muss dafür als berechtigter, möglichst nur lesender Deploy-Key im privaten GitHub-Repository hinterlegt sein. Der SSH-Schlüssel für die Anmeldung **am** Scanner ist nicht automatisch ein GitHub-Schlüssel. Niemals einen privaten Schlüssel oder persönlichen Zugriffstoken in das Repository kopieren.
+Der Scanner benötigt dafür einen eigenen, möglichst nur lesenden GitHub-Deploy-Key. Der Schlüssel für die SSH-Anmeldung **am** Scanner ist nicht automatisch ein GitHub-Schlüssel.
 
 ```bash
 cd /home/triage
@@ -39,141 +41,91 @@ git clone git@github.com:hnslng/forensic-triage.git
 cd forensic-triage
 ```
 
-Für einen bereits vorhandenen Checkout:
+Keine privaten Schlüssel oder Zugriffstokens im Projektordner speichern.
+
+### Alternative: freigegebenes Releasepaket übertragen
+
+Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Die derzeitige Mac-/VM-Testvariante ist getrennt in [development-setup.md](development-setup.md) dokumentiert.
+
+## 2. Installation ausführen
+
+```bash
+cd /home/triage/forensic-triage
+sudo ./scripts/install_debian.sh
+```
+
+Danach prüfen:
+
+```bash
+systemctl is-active forensic-triage-web.service
+/home/triage/forensic-triage/.venv/bin/forensic-triage-web --version
+```
+
+## 3. Konfiguration anpassen
+
+Die Installation legt beim ersten Lauf an:
+
+```text
+/etc/forensic-triage/triage.env
+```
+
+Vor echtem Einsatz mindestens das Löschpasswort und den verschlüsselten Fallpfad prüfen:
+
+```bash
+sudoedit /etc/forensic-triage/triage.env
+sudo systemctl restart forensic-triage-web.service
+```
+
+Alle Werte und Sicherheitsregeln stehen in [configuration.md](configuration.md). Die Standardadresse ist `127.0.0.1`, der Standardport `8787`.
+
+## 4. Oberfläche erreichen
+
+Bei `127.0.0.1` ist die Oberfläche nur auf dem Scanner selbst erreichbar. Das ist für lokale Anzeige oder einen abgesicherten SSH-Tunnel geeignet.
+
+Für den späteren direkten Pi-Laptop-Betrieb werden eine feste private Ethernet-Adresse und Firewallregeln eingerichtet. Erst danach wird `FORENSIC_TRIAGE_WEB_HOST` beispielsweise auf `10.77.0.1` gesetzt. Die konkrete Pi-Netzwerkkonfiguration bleibt bis zum Hardwaretest offen.
+
+## 5. Aktualisieren
+
+Nur ohne laufenden Scan und nach beendetem Fall:
 
 ```bash
 cd /home/triage/forensic-triage
 git pull --ff-only origin main
+sudo ./scripts/install_debian.sh
 ```
 
-### Variante B: Bereitstellung vom Verwaltungs-Mac
+Bei einer Installation aus einem Releasepaket zuerst den neuen freigegebenen Code übertragen und anschließend dasselbe Installationsskript erneut ausführen.
 
-Die aktuelle Referenz-VM verwendet diese Variante und enthält deshalb bewusst keinen `.git`-Ordner. Im lokalen Git-Checkout auf dem Mac ausführen:
+Vor größeren Aktualisierungen ist eine verschlüsselte Sicherung der Fallakten vorzusehen. Das Installationsskript verschiebt keine bestehenden Speicherpfade und löscht keine Fallakten.
+
+## 6. Manuelle Diagnose
 
 ```bash
-git archive --format=tar HEAD | ssh \
-  -i "$HOME/.ssh/forensic_triage_agent" \
-  triage@10.0.1.105 \
-  'mkdir -p /home/triage/forensic-triage && tar -xf - -C /home/triage/forensic-triage'
+sudo systemctl status forensic-triage-web.service --no-pager
+sudo journalctl -u forensic-triage-web.service -n 100 --no-pager
+sudo ./scripts/install_debian.sh --check
 ```
 
-`git archive` überträgt nur versionierte Projektdateien. Die lokalen Verzeichnisse `.venv/`, `casefiles/` und `results/` werden dadurch weder übertragen noch gelöscht. Fallakten dürfen niemals mit einer pauschalen Lösch-/Synchronisationsoption überschrieben werden.
-
-## 3. Python-Umgebung installieren
-
-```bash
-cd /home/triage/forensic-triage
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e .
-```
-
-Für Entwicklung und Tests:
-
-```bash
-.venv/bin/python -m pip install -e '.[test]'
-.venv/bin/python -m pytest
-```
-
-Version prüfen:
+Versionen:
 
 ```bash
 .venv/bin/forensic-triage --version
 .venv/bin/forensic-triage-web --version
 ```
 
-Für diesen Stand müssen beide Befehle `0.2.0a1` ausgeben.
+## 7. Raspberry Pi – vor Freigabe prüfen
 
-## 4. Webdienst installieren
+- Betriebssystem und Paketverfügbarkeit
+- aktiver USB-Hub und ausreichende Stromversorgung
+- mehrere USB-Geräte gleichzeitig
+- reales CD/DVD-Laufwerk
+- direkter Ethernet-Zugriff und Firewall
+- Touch-/Kleinbildschirm
+- kontrolliertes Herunterfahren und Stromverlust
+- Temperatur und Dauerlast
 
-Die mitgelieferte Service-Datei erwartet den Checkout unter `/home/triage/forensic-triage` und startet den Scanner als `root`, weil Blockgeräte-Schreibschutz und Read-only-Mounts erhöhte Rechte erfordern.
-
-```bash
-sudo cp deploy/forensic-triage-web.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now forensic-triage-web.service
-sudo systemctl status forensic-triage-web.service --no-pager
-```
-
-Der Dienst lauscht standardmäßig nur auf `127.0.0.1:8787`. Das ist für die VM beabsichtigt.
-
-## 5. Löschpasswort ändern
-
-Das Entwicklungskennwort `123` darf nicht im Einsatz bleiben. Lokale Service-Konfiguration anlegen:
-
-```bash
-sudo systemctl edit forensic-triage-web.service
-```
-
-Eintragen:
-
-```ini
-[Service]
-Environment="FORENSIC_TRIAGE_DELETE_PASSWORD=HIER-EIN-LANGES-LOKALES-PASSWORT-EINTRAGEN"
-```
-
-Anschließend:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart forensic-triage-web.service
-```
-
-Die lokale Override-Datei und das Passwort dürfen nicht in Git gespeichert werden.
-
-## 6. Verbindung vom Mac
-
-Manuell:
-
-```bash
-ssh -N -L 8787:127.0.0.1:8787 \
-  -i "$HOME/.ssh/forensic_triage_agent" \
-  triage@10.0.1.105
-```
-
-Danach `http://127.0.0.1:8787/` öffnen. Alternativ kann auf dem eingerichteten Mac `TRIAGE-BOX starten.command` doppelt angeklickt werden. Bei geänderter VM-Adresse müssen dort `TRIAGE_HOST` und gegebenenfalls `TRIAGE_KEY` angepasst werden.
-
-## 7. Aktualisierung
-
-Nur bei beendetem Fall und ohne laufenden Scan aktualisieren:
-
-Bei Variante A auf dem Scanner:
-
-```bash
-cd /home/triage/forensic-triage
-git pull --ff-only origin main
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m pytest
-sudo systemctl restart forensic-triage-web.service
-sudo systemctl is-active forensic-triage-web.service
-```
-
-Bei Variante B zuerst den oben beschriebenen `git archive`-Transfer vom Mac wiederholen und danach auf dem Scanner ausführen:
-
-```bash
-cd /home/triage/forensic-triage
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m pytest
-sudo systemctl restart forensic-triage-web.service
-sudo systemctl is-active forensic-triage-web.service
-```
-
-Die Verzeichnisse `casefiles/` und `results/` nicht löschen, überschreiben oder in Git aufnehmen. Vor größeren Aktualisierungen ist eine lokale, verschlüsselte Sicherung der Fallakten vorzusehen.
-
-## 8. Raspberry Pi
-
-Die Software ist grundsätzlich ARM-kompatibel, wurde aber noch nicht auf dem vorgesehenen Raspberry Pi validiert. Vor Feldbetrieb sind mindestens zu prüfen:
-
-- Betriebssystem und Paketnamen
-- Stromversorgung mehrerer USB-Geräte beziehungsweise aktiver Hub
-- Verhalten von USB-, CD- und DVD-Geräten
-- Touch-/Kleinbildschirmdarstellung
-- direkte Ethernet-Verbindung zum Laptop
-- fester Link-Local-/Privat-IP-Bereich und Firewall
-- Temperatur, Laufzeit und kontrolliertes Herunterfahren
-
-Bis diese Prüfungen abgeschlossen und dokumentiert sind, ist die Debian-VM die maßgebliche Referenzumgebung.
+Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische Referenz und nicht das spätere Einsatzgerät.
 
 ## English quick install
 
-Install Debian packages (`git`, Python, `sleuthkit`, `util-linux`, `udev`, `eject`), clone the private repository to `/home/triage/forensic-triage`, create `.venv`, install with `pip install -e .`, install the provided systemd unit, and replace the default deletion password through a local systemd override. Keep the service bound to localhost and access it through SSH. Do not deploy the Raspberry Pi build before hardware validation.
+Place a trusted Git checkout or release bundle on a Debian-based scanner and run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` only if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password. The Mac/VM arrangement is documented separately as temporary development infrastructure.

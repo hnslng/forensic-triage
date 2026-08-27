@@ -6,9 +6,9 @@ TRIAGE//BOX unterstützt die Grobsichtung. Es entscheidet nicht, ob ein Medium r
 
 ## 1. System starten
 
-1. Scanner-VM beziehungsweise später den Raspberry Pi starten.
+1. Scanner-System starten.
 2. Webdienststatus prüfen.
-3. Vom Laptop über den SSH-Tunnel verbinden.
+3. Lokalen Bildschirm oder freigegebene Netzwerkverbindung verwenden.
 4. Dashboard öffnen.
 
 Nach jedem Seiten- oder Dienstneustart ist **kein Fall aktiv**. Der Systemstatus zeigt „Gesperrt“ und es darf kein Scan beginnen.
@@ -75,7 +75,7 @@ Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bl
 
 ## Störungen
 
-- **Oberfläche nicht erreichbar:** VM/Pi, Netzwerk, SSH-Tunnel und Webdienst prüfen; den Mac-Starter erneut ausführen.
+- **Oberfläche nicht erreichbar:** Scanner, Netzwerkverbindung, konfigurierte Adresse/Port und Webdienst prüfen.
 - **Medium nicht erkannt:** „Aktualisieren“ wählen, Kabel/Hub/Stromversorgung prüfen und Geräteinformationen kontrollieren.
 - **Scan bleibt gesperrt:** Fallnummer, Bearbeiterkürzel und Suchprofil in der Statusmeldung prüfen.
 - **Medium ist gemountet:** Nicht scannen; Mount außerhalb des Tools kontrolliert lösen und Gerät erneut identifizieren.

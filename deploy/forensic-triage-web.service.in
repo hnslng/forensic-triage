@@ -1,0 +1,15 @@
+[Unit]
+Description=TRIAGE//BOX local operator dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=@PROJECT_ROOT@
+EnvironmentFile=-/etc/forensic-triage/triage.env
+ExecStart=@PROJECT_ROOT@/.venv/bin/forensic-triage-web
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

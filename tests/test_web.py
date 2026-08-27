@@ -1,6 +1,7 @@
 import json
+from pathlib import Path
 
-from forensic_triage.web import EVIDENCE_PATTERN, ejected_usb_paths, latest_result, parse_media_devices
+from forensic_triage.web import EVIDENCE_PATTERN, ejected_usb_paths, latest_result, parse_media_devices, parser
 
 
 def test_evidence_number_is_strict() -> None:
@@ -57,3 +58,21 @@ def test_only_valid_zero_byte_usb_disks_are_reactivated() -> None:
     ]
 
     assert ejected_usb_paths(nodes) == ["/dev/sdb"]
+
+
+def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv("FORENSIC_TRIAGE_WEB_HOST", "10.77.0.1")
+    monkeypatch.setenv("FORENSIC_TRIAGE_WEB_PORT", "8877")
+    monkeypatch.setenv("FORENSIC_TRIAGE_RESULTS_ROOT", "/srv/triage/results")
+    monkeypatch.setenv("FORENSIC_TRIAGE_CASEFILES_ROOT", "/srv/triage/cases")
+    monkeypatch.setenv("FORENSIC_TRIAGE_WEB_ROOT", "/opt/triage/web")
+    monkeypatch.setenv("FORENSIC_TRIAGE_PROFILE", "/etc/forensic-triage/default.yaml")
+
+    args = parser().parse_args([])
+
+    assert args.host == "10.77.0.1"
+    assert args.port == 8877
+    assert args.results == Path("/srv/triage/results")
+    assert args.casefiles == Path("/srv/triage/cases")
+    assert args.web_root == Path("/opt/triage/web")
+    assert args.profile == Path("/etc/forensic-triage/default.yaml")

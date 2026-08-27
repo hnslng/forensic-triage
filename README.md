@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha · private Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.2 · private Entwicklungsfassung · Deutsch / English**
 
 TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern vor Ort. Es inventarisiert mehrere geeignete USB-Datenträger parallel, ordnet Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
 
@@ -29,7 +29,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.2 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -43,25 +43,17 @@ Das bedeutet insbesondere:
 
 Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
 
-## Schnellstart für Entwicklung
+## Installation auf dem Scanner
 
-Voraussetzungen: Python 3.11 oder neuer. Die vollständige Debian-/VM-/Pi-Anleitung steht in [docs/installation.md](docs/installation.md).
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e '.[test]'
-pytest
-forensic-triage --version
-```
-
-Lokales Dashboard auf dem Scanner starten:
+Sobald der Quellcode auf einem Debian-basierten Scanner liegt:
 
 ```bash
-sudo .venv/bin/forensic-triage-web
+sudo ./scripts/install_debian.sh
 ```
 
-Standardmäßig lauscht der Dienst ausschließlich auf `127.0.0.1:8787`.
+Das wiederholbar ausführbare Skript installiert Systempakete, Python-Umgebung, Tests, Konfiguration und systemd-Dienst. Es überschreibt bei Aktualisierungen weder lokale Konfiguration noch Fallakten. Einzelheiten: [Installation und Aktualisierung](docs/installation.md).
+
+Lokale Einstellungen wie Host, Port, Speicherpfade und Löschpasswort stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Siehe [Konfiguration](docs/configuration.md).
 
 ## Bedienablauf
 
@@ -80,17 +72,11 @@ Ein Fall wird direkt im Fallarchiv über „Löschen“ entfernt. Der aktive Fal
 
 Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
-## Verbindung vom Mac zur VM
+## Zugriff auf die Oberfläche
 
-Die VM-Oberfläche bleibt privat und wird über einen SSH-Tunnel erreicht:
+Standardmäßig lauscht der Dienst ausschließlich auf `127.0.0.1:8787`. Zugriff erfolgt entweder auf einem lokalen Bildschirm oder über eine bewusst eingerichtete, geschützte Verbindung. Die spätere direkte Ethernet-Verbindung zwischen Pi und Laptop wird erst mit der realen Hardware konfiguriert.
 
-```bash
-ssh -L 8787:127.0.0.1:8787 triage@10.0.1.105
-```
-
-Danach im Browser öffnen: `http://127.0.0.1:8787/`
-
-Auf dem eingerichteten Mac übernimmt `TRIAGE-BOX starten.command` diesen Ablauf. Host und Schlüsselpfad sind in der Datei als `TRIAGE_HOST` und `TRIAGE_KEY` konfiguriert. Der Tunnel kann nach Neustart oder Netzwerkwechsel beendet sein; der Starter darf gefahrlos erneut ausgeführt werden.
+Der gegenwärtige Mac-/VM-Aufbau dient nur zum Entwickeln und Ausprobieren. Er ist getrennt in [Temporäre Entwicklungsumgebung](docs/development-setup.md) beschrieben und kein Bestandteil des Produkts.
 
 ## CLI-Scan für technische Tests
 
@@ -113,7 +99,9 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 ## Dokumentation
 
 - [Dokumentationsübersicht](docs/README.md)
+- [So funktioniert TRIAGE//BOX](docs/how-it-works.md)
 - [Installation und Aktualisierung](docs/installation.md)
+- [Konfiguration](docs/configuration.md)
 - [Bedienung und Fallworkflow](docs/operation.md)
 - [Forensische Sicherheitsgrenzen](docs/forensic-safety.md)
 - [Architektur](docs/architecture.md)
@@ -121,6 +109,7 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Testplan](docs/test-plan.md)
 - [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
 - [Roadmap und offene Aufgaben](docs/roadmap.md)
+- [Temporäre Mac-/VM-Entwicklungsumgebung](docs/development-setup.md)
 - [Änderungshistorie](CHANGELOG.md)
 
 ## Datenschutz und Git
@@ -136,9 +125,9 @@ Vor realem Betrieb müssen das Fallarchiv auf verschlüsseltem, zugriffsgeschüt
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a1` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha`
-- automatisierte Tests: 29
+- Paketversion: `0.2.0a2` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.2`
+- automatisierte Tests: 30
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
 
@@ -150,4 +139,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha searches file and directory names, not file contents. It does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); the current limitations and roadmap are in [docs/roadmap.md](docs/roadmap.md).
+Version 0.2.0-alpha.2 searches file and directory names, not file contents. It does not detect renamed file types by signature, recover deleted files, carve data, create forensic images, or scan optical media. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md).
