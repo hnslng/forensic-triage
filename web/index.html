@@ -33,7 +33,7 @@
           <summary class="panel-title"><span>01</span> AUFTRAG <b id="auftragSummary">NEU ERFASSEN</b></summary>
           <div class="action-body">
             <section class="case-select">
-              <div class="subhead"><span>FALL</span><small>NEU ODER BESTEHEND</small></div>
+              <div class="subhead"><span>1 · FALL</span><small>NEU ODER BESTEHEND</small></div>
               <label class="case-field" for="caseNumber">FALLNUMMER
                 <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
               </label>
@@ -47,7 +47,7 @@
               </div>
             </section>
             <section class="case-session">
-              <div class="subhead"><span>BEARBEITUNG</span><small>SITZUNG</small></div>
+              <div class="subhead"><span>2 · SITZUNG</span><small>VERANTWORTLICH STARTEN</small></div>
               <label class="case-field" for="operator">BEARBEITER / KÜRZEL
                 <input id="operator" class="case-input" placeholder="Z. B. HL" autocomplete="off" spellcheck="false" />
               </label>
@@ -58,12 +58,15 @@
               <p id="caseStartMessage" class="case-start-message">FALLNUMMER UND KÜRZEL EINGEBEN</p>
             </section>
             <section class="case-settings">
-              <div class="subhead"><span>PROFIL</span><small>EINSTELLUNGEN</small></div>
+              <div class="subhead"><span>3 · PROFIL</span><small>SUCHFOKUS</small></div>
               <label class="case-field" for="profileName">SICHTUNGSPROFIL
-                <input id="profileName" value="STANDARD" disabled />
+                <select id="profileName" aria-label="Sichtungsprofil wählen"></select>
               </label>
               <div class="profile-summary"><span>STICHWÖRTER</span><strong id="keywordSelectionCount">—</strong></div>
-              <button id="openKeywordSettings" class="keyword-settings" type="button">STICHWÖRTER AUSWÄHLEN</button>
+              <div class="profile-actions">
+                <button id="openKeywordSettings" class="keyword-settings" type="button">PROFIL BEARBEITEN</button>
+                <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+              </div>
             </section>
           </div>
         </details>
@@ -105,7 +108,6 @@
       <section id="results" class="results" hidden>
         <div class="result-head">
           <div>
-            <p class="eyebrow">LETZTE AUSWERTUNG</p>
             <div class="result-title-line"><h2 id="resultEvidence">BM-FAST-001</h2><span id="detailConnectionState">STATUS DES DATENTRÄGERS</span></div>
           </div>
           <div class="result-actions"><button id="openEvidenceModal" type="button">NACHWEIS ANZEIGEN</button><div class="result-stamp">SCAN ABGESCHLOSSEN <b id="resultDuration">0,732 s</b></div></div>
@@ -230,12 +232,23 @@
       </form>
     </dialog>
     <dialog id="keywordModal" class="evidence-modal keyword-modal">
-      <div class="modal-head"><div><span>03</span> STICHWÖRTER AUSWÄHLEN</div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><span>03</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
       <div class="keyword-modal-body">
-        <p>Die Auswahl gilt für neue Scans dieser Sitzung und wird im Scan-Nachweis mitprotokolliert.</p>
+        <p>Profile bündeln Suchbegriffe für einen Einsatz. Die aktive Auswahl wird bei jedem neuen Scan im Nachweis mitprotokolliert.</p>
+        <label class="profile-name-field" for="keywordProfileName">PROFILNAME
+          <input id="keywordProfileName" maxlength="40" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="keyword-add-row">
+          <input id="keywordNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" />
+          <button id="addKeyword" type="button">+ HINZUFÜGEN</button>
+        </div>
         <div class="keyword-bulk-actions"><button id="selectAllKeywords" type="button">ALLE</button><button id="clearAllKeywords" type="button">KEINE</button></div>
         <div id="keywordOptions" class="keyword-options"></div>
-        <button id="saveKeywordSettings" class="save-keywords" type="button">AUSWAHL ÜBERNEHMEN</button>
+        <p id="keywordMessage" class="keyword-message"></p>
+        <div class="keyword-save-actions">
+          <button id="saveKeywordSettings" class="apply-keywords" type="button">NUR AUSWAHL ÜBERNEHMEN</button>
+          <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
+        </div>
       </div>
     </dialog>
     <script src="/app.js" defer></script>

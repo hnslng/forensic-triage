@@ -16,6 +16,10 @@ let activeOperator = "";
 let profileKeywords = [];
 let selectedKeywords = new Set();
 let profileReady = false;
+let activeProfileId = "default";
+let keywordDraft = [];
+let draftSelectedKeywords = new Set();
+let profileEditorId = "default";
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -37,25 +41,49 @@ function updateKeywordSummary() {
 }
 
 function renderKeywordOptions() {
-  $("keywordOptions").innerHTML = profileKeywords.map((keyword) => `<label class="keyword-option">
-    <input type="checkbox" value="${escapeHtml(keyword)}" ${selectedKeywords.has(keyword) ? "checked" : ""} />
+  $("keywordOptions").innerHTML = keywordDraft.map((keyword) => `<label class="keyword-option">
+    <input type="checkbox" value="${escapeHtml(keyword)}" ${draftSelectedKeywords.has(keyword) ? "checked" : ""} />
     <span>${escapeHtml(keyword.toUpperCase())}</span>
+    <button class="keyword-remove" type="button" data-remove-keyword="${escapeHtml(keyword)}" aria-label="${escapeHtml(keyword)} entfernen">×</button>
   </label>`).join("");
 }
 
-async function loadProfile() {
+function applyProfile(data) {
+  activeProfileId = data.id;
+  profileKeywords = data.keywords || [];
+  selectedKeywords = new Set(profileKeywords);
+  profileReady = true;
+  $("profileName").value = activeProfileId;
+  updateKeywordSummary();
+  updateCaseSessionUi();
+}
+
+async function loadProfiles(preferredId = activeProfileId) {
   try {
-    const response = await fetch("/api/profile");
+    const response = await fetch("/api/profiles");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Profile nicht verfügbar");
+    const profiles = data.profiles || [];
+    $("profileName").innerHTML = profiles.map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name.toUpperCase())} · V${escapeHtml(profile.version)}</option>`).join("");
+    const selected = profiles.some((profile) => profile.id === preferredId) ? preferredId : (profiles[0]?.id || "default");
+    await loadProfile(selected);
+  } catch (error) {
+    $("profileName").innerHTML = '<option>PROFIL NICHT VERFÜGBAR</option>';
+    $("keywordSelectionCount").textContent = "FEHLER";
+    $("openKeywordSettings").disabled = true;
+    $("createProfile").disabled = true;
+    profileReady = false;
+    updateCaseSessionUi("SCAN-PROFIL NICHT VERFÜGBAR");
+  }
+}
+
+async function loadProfile(profileId) {
+  try {
+    const response = await fetch(`/api/profile?id=${encodeURIComponent(profileId)}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Profil nicht verfügbar");
-    profileKeywords = data.keywords || [];
-    selectedKeywords = new Set(profileKeywords);
-    profileReady = true;
-    $("profileName").value = `${data.name || "STANDARD"} · V${data.version || "—"}`;
-    updateKeywordSummary();
-    updateCaseSessionUi();
+    applyProfile(data);
   } catch (error) {
-    $("profileName").value = "PROFIL NICHT VERFÜGBAR";
     $("keywordSelectionCount").textContent = "FEHLER";
     $("openKeywordSettings").disabled = true;
     profileReady = false;
@@ -136,7 +164,7 @@ function renderRecord(record) {
       $("inventoryCount").textContent = "—";
     }
     const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
-    $("detailConnectionState").textContent = connected ? "● DATENTRÄGER ONLINE" : "○ DATENTRÄGER OFFLINE";
+    $("detailConnectionState").textContent = connected ? "● ONLINE" : "○ OFFLINE";
     $("detailConnectionState").className = connected ? "connected" : "disconnected";
     renderArchive(record.archive);
     renderDecision(record.media);
@@ -401,6 +429,7 @@ async function runScan(devicePath, standalone = true) {
         case_number: activeCaseNumber,
         operator: activeOperator,
         device_path: devicePath,
+        profile: activeProfileId,
         keywords: [...selectedKeywords],
       }),
     });
@@ -669,6 +698,70 @@ function showDashboard() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function openProfileEditor(createNew = false) {
+  profileEditorId = createNew ? null : activeProfileId;
+  keywordDraft = createNew ? [] : [...profileKeywords];
+  draftSelectedKeywords = createNew ? new Set() : new Set(selectedKeywords);
+  $("keywordProfileName").value = createNew ? "" : $("profileName").selectedOptions[0]?.textContent.replace(/ · V.*$/, "") || "";
+  $("keywordModalTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
+  $("keywordNewInput").value = "";
+  $("keywordMessage").textContent = "";
+  $("saveKeywordSettings").hidden = createNew;
+  renderKeywordOptions();
+  $("keywordModal").showModal();
+  if (createNew) $("keywordProfileName").focus();
+}
+
+function addKeywordFromInput() {
+  const input = $("keywordNewInput");
+  const keyword = input.value.trim();
+  if (!keyword) return;
+  if (keywordDraft.some((item) => item.toLocaleLowerCase("de") === keyword.toLocaleLowerCase("de"))) {
+    $("keywordMessage").textContent = "DIESES STICHWORT IST BEREITS VORHANDEN";
+    return;
+  }
+  keywordDraft.push(keyword);
+  draftSelectedKeywords.add(keyword);
+  input.value = "";
+  $("keywordMessage").textContent = "";
+  renderKeywordOptions();
+  input.focus();
+}
+
+function selectedDraftFromControls() {
+  return new Set([...$("keywordOptions").querySelectorAll("input:checked")].map((input) => input.value));
+}
+
+async function saveProfileEditor() {
+  const name = $("keywordProfileName").value.trim();
+  draftSelectedKeywords = selectedDraftFromControls();
+  $("saveProfileSettings").disabled = true;
+  $("keywordMessage").textContent = "PROFIL WIRD GESPEICHERT …";
+  try {
+    const response = await fetch("/api/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: profileEditorId, name, keywords: keywordDraft }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Profil konnte nicht gespeichert werden");
+    activeProfileId = data.profile.id;
+    profileKeywords = data.profile.keywords;
+    selectedKeywords = new Set([...draftSelectedKeywords].filter((word) => profileKeywords.includes(word)));
+    if (!selectedKeywords.size) selectedKeywords = new Set(profileKeywords);
+    await loadProfiles(activeProfileId);
+    selectedKeywords = new Set([...draftSelectedKeywords].filter((word) => profileKeywords.includes(word)));
+    if (!selectedKeywords.size) selectedKeywords = new Set(profileKeywords);
+    updateKeywordSummary();
+    $("keywordModal").close();
+    setSystemState(`PROFIL ${data.profile.name.toUpperCase()} GESPEICHERT`, "ready");
+  } catch (error) {
+    $("keywordMessage").textContent = `FEHLER: ${error.message}`;
+  } finally {
+    $("saveProfileSettings").disabled = false;
+  }
+}
+
 setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
 $("autoScanToggle").addEventListener("change", () => {
   updateOrderSummary();
@@ -696,10 +789,9 @@ $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
 });
-$("openKeywordSettings").addEventListener("click", () => {
-  renderKeywordOptions();
-  $("keywordModal").showModal();
-});
+$("openKeywordSettings").addEventListener("click", () => openProfileEditor(false));
+$("createProfile").addEventListener("click", () => openProfileEditor(true));
+$("profileName").addEventListener("change", () => loadProfile($("profileName").value));
 $("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());
 $("keywordModal").addEventListener("click", (event) => {
   if (event.target === $("keywordModal")) $("keywordModal").close();
@@ -711,10 +803,24 @@ $("clearAllKeywords").addEventListener("click", () => {
   for (const checkbox of $("keywordOptions").querySelectorAll("input")) checkbox.checked = false;
 });
 $("saveKeywordSettings").addEventListener("click", () => {
-  selectedKeywords = new Set([...$("keywordOptions").querySelectorAll("input:checked")].map((input) => input.value));
+  selectedKeywords = selectedDraftFromControls();
   updateKeywordSummary();
   $("keywordModal").close();
 });
+$("addKeyword").addEventListener("click", addKeywordFromInput);
+$("keywordNewInput").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); addKeywordFromInput(); } });
+$("keywordOptions").addEventListener("click", (event) => {
+  const remove = event.target.closest("button[data-remove-keyword]");
+  if (!remove) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const keyword = remove.dataset.removeKeyword;
+  draftSelectedKeywords = selectedDraftFromControls();
+  draftSelectedKeywords.delete(keyword);
+  keywordDraft = keywordDraft.filter((item) => item !== keyword);
+  renderKeywordOptions();
+});
+$("saveProfileSettings").addEventListener("click", saveProfileEditor);
 $("caseList").addEventListener("click", (event) => {
   const item = event.target.closest("button[data-case-number]");
   if (!item) return;
@@ -782,6 +888,6 @@ for (const input of [$("caseNumber"), $("operator")]) {
   });
 }
 updateCaseSessionUi();
-loadProfile();
+loadProfiles();
 refresh();
 setInterval(() => refresh(false), 2500);

@@ -78,6 +78,10 @@ The operator interface deliberately starts with **no active case**, including af
 
 The three-column order panel separates case selection, the accountable operator session, and the scan profile. Starting or reopening a case records the operator initials in the append-only audit; sighting reservations and decisions also carry the responsible operator. The profile panel exposes the configured keyword list and allows a per-session subset for new scans. Every scan stores the exact selected keyword list together with the source profile version and SHA-256 hash in `hits.json`.
 
+Profiles can be selected, created, and edited directly in the local dashboard. `default` covers general economic terms; `krypto` provides a lightweight path/name search for common wallet traces such as `wallet.dat`, Electrum, MetaMask, Ledger, Trezor, and keystore folders. This is deliberately not a content or secret-key analysis.
+
+On the configured Mac, double-click `TRIAGE-BOX starten.command`. It reuses an existing secure SSH tunnel or opens a new one to the VM, verifies the local web endpoint, and opens the dashboard. The tunnel is not guaranteed to survive a Mac restart, VM restart, or network change; running the launcher again is safe.
+
 On the future Raspberry Pi the same interface can be used either on its small touch display or from a laptop over a direct Ethernet cable. The intended field setup gives the Pi a dedicated address such as `10.77.0.1` and binds the web service only to that direct-link interface; the laptop then opens `http://10.77.0.1:8787` (or `http://triagebox.local:8787`). This network configuration is deliberately deferred until it can be tested on the real Pi, so the current VM remains bound to localhost and reachable through the SSH tunnel.
 
 The supplied `deploy/forensic-triage-web.service` keeps the private VM service running after boot. It intentionally listens only on VM localhost; do not expose it directly to the LAN or internet.

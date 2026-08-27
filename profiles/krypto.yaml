@@ -1,0 +1,17 @@
+name: Krypto / Wallets
+version: "1.0"
+keywords:
+  - wallet.dat
+  - bitcoin
+  - electrum
+  - ethereum
+  - keystore
+  - metamask
+  - ledger
+  - trezor
+  - mnemonic
+  - seed phrase
+  - recovery phrase
+  - monero
+  - exodus
+  - trust wallet

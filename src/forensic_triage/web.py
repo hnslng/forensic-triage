@@ -19,7 +19,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from .casefiles import CaseStore
-from .keywords import load_profile
+from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .scanner import scan
 
 
@@ -241,11 +241,21 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/cases":
             self._json(HTTPStatus.OK, {"cases": self.server.case_store.list_cases()})
             return
+        if route == "/api/profiles":
+            try:
+                self._json(HTTPStatus.OK, {"profiles": list_profiles(self.server.profile_path.parent)})
+            except (OSError, ValueError) as exc:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profile nicht verfügbar: {exc}"})
+            return
         if route == "/api/profile":
             try:
-                profile = load_profile(self.server.profile_path)
+                profile_id = str(parse_qs(urlsplit(self.path).query).get("id", [self.server.profile_path.stem])[0])
+                if not PROFILE_ID_PATTERN.fullmatch(profile_id):
+                    raise ValueError("Ungültiges Profil.")
+                profile = load_profile(self.server.profile_path.parent / f"{profile_id}.yaml")
                 self._json(HTTPStatus.OK, {
-                    "name": self.server.profile_path.stem.upper(),
+                    "id": profile["id"],
+                    "name": profile["name"],
                     "version": profile["version"],
                     "keywords": profile["keywords"],
                 })
@@ -323,6 +333,9 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if route == "/api/profiles":
+            self._post_profile()
+            return
         if route == "/api/cases/start":
             self._post_case_start()
             return
@@ -340,6 +353,27 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._post_decision(int(decision_match.group(1)))
             return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def _post_profile(self) -> None:
+        try:
+            payload = self._read_payload()
+            profile_id = payload.get("id")
+            if profile_id is not None and not isinstance(profile_id, str):
+                raise ValueError("Ungültiges Profil.")
+            name = str(payload.get("name", ""))
+            keywords = payload.get("keywords", [])
+            if not isinstance(keywords, list):
+                raise ValueError("Stichwörter müssen als Liste übergeben werden.")
+            profile = save_profile(self.server.profile_path.parent, profile_id, name, keywords)
+            self._json(HTTPStatus.CREATED, {
+                "profile": {
+                    "id": profile["id"], "name": profile["name"],
+                    "version": profile["version"], "keywords": profile["keywords"],
+                },
+                "profiles": list_profiles(self.server.profile_path.parent),
+            })
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def _post_case_start(self) -> None:
         try:
@@ -434,6 +468,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             operator = str(payload.get("operator", "")).strip()
             device_path = str(payload.get("device_path", "")).strip()
             requested_keywords = payload.get("keywords")
+            profile_id = str(payload.get("profile", self.server.profile_path.stem)).strip()
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
@@ -446,8 +481,12 @@ class TriageHandler(BaseHTTPRequestHandler):
         if not OPERATOR_PATTERN.fullmatch(operator):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Bearbeiterkürzel."})
             return
+        if not PROFILE_ID_PATTERN.fullmatch(profile_id):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Sichtungsprofil."})
+            return
+        selected_profile_path = self.server.profile_path.parent / f"{profile_id}.yaml"
         try:
-            configured_keywords = load_profile(self.server.profile_path)["keywords"]
+            configured_keywords = load_profile(selected_profile_path)["keywords"]
         except (OSError, ValueError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profil nicht verfügbar: {exc}"})
             return
@@ -485,7 +524,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             )
             result_dir = scan(
                 Path(device_path),
-                self.server.profile_path,
+                selected_profile_path,
                 sighting_number,
                 self.server.case_store.scan_root(case_number, sighting_number),
                 mode="fast",
