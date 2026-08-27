@@ -60,7 +60,7 @@ Der ZIP-Export enthält zusätzlich die vollständige Fallakte einschließlich P
 
 ## Entfernen und Wiederherstellung
 
-Ein Fall kann im Fallarchiv direkt über „Löschen“ entfernt werden, ohne ihn vorher zu öffnen. Der aktive Fall ist geschützt und muss zuerst beendet werden. Das lokale Löschpasswort ist erforderlich.
+Ein Fall kann im Fallarchiv direkt über „Löschen“ entfernt werden, ohne ihn vorher zu öffnen. Der aktive Fall ist geschützt und muss zuerst beendet werden. Der Warnungsdialog verlangt eine ausdrückliche Bestätigung für den konkret genannten Fall; ein Passwort ist nicht erforderlich.
 
 Technisch wird der Fall aus dem aktiven SQLite-Index entfernt und sein Ordner nach `casefiles/.trash/` verschoben. Die Dateien bleiben administrativ wiederherstellbar. Die Funktion ist daher ein Entfernen aus der aktiven Fallliste, keine sichere Datenvernichtung. Ein geprüfter Wiederherstellungs- und endgültiger Löschprozess ist vor Einsatzbetrieb noch festzulegen.
 

@@ -69,10 +69,6 @@ run_as_owner() {
   fi
 }
 
-generate_delete_password() {
-  "$PROJECT_ROOT/.venv/bin/python" -c 'import secrets; print(secrets.token_urlsafe(24))'
-}
-
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y git python3 python3-venv python3-pip sleuthkit util-linux udev eject
@@ -87,30 +83,12 @@ run_as_owner "$PROJECT_ROOT/.venv/bin/python" -m pytest "$PROJECT_ROOT/tests" -q
 install -d -m 0750 "$CONFIG_DIR"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   TEMP_CONFIG="$(mktemp)"
-  DELETE_PASSWORD="$(generate_delete_password)"
-  sed \
-    -e "s|@PROJECT_ROOT@|$PROJECT_ROOT|g" \
-    -e "s|@DELETE_PASSWORD@|$DELETE_PASSWORD|g" \
-    "$CONFIG_TEMPLATE" > "$TEMP_CONFIG"
+  sed "s|@PROJECT_ROOT@|$PROJECT_ROOT|g" "$CONFIG_TEMPLATE" > "$TEMP_CONFIG"
   install -o root -g root -m 0600 "$TEMP_CONFIG" "$CONFIG_FILE"
   rm -f "$TEMP_CONFIG"
-  echo "Neue Konfiguration mit zufälligem Löschpasswort angelegt: $CONFIG_FILE"
+  echo "Neue Konfiguration angelegt: $CONFIG_FILE"
 else
   echo "Vorhandene Konfiguration bleibt unverändert: $CONFIG_FILE"
-  if grep -q '^FORENSIC_TRIAGE_DELETE_PASSWORD=123$' "$CONFIG_FILE"; then
-    DELETE_PASSWORD="$(generate_delete_password)"
-    TEMP_CONFIG="$(mktemp)"
-    sed "s|^FORENSIC_TRIAGE_DELETE_PASSWORD=123$|FORENSIC_TRIAGE_DELETE_PASSWORD=$DELETE_PASSWORD|" \
-      "$CONFIG_FILE" > "$TEMP_CONFIG"
-    install -o root -g root -m 0600 "$TEMP_CONFIG" "$CONFIG_FILE"
-    rm -f "$TEMP_CONFIG"
-    echo "Unsicheres Entwicklungskennwort wurde durch ein zufälliges lokales Passwort ersetzt."
-  elif ! grep -q '^FORENSIC_TRIAGE_DELETE_PASSWORD=.' "$CONFIG_FILE"; then
-    DELETE_PASSWORD="$(generate_delete_password)"
-    printf '\nFORENSIC_TRIAGE_DELETE_PASSWORD=%s\n' "$DELETE_PASSWORD" >> "$CONFIG_FILE"
-    chmod 0600 "$CONFIG_FILE"
-    echo "Fehlendes Löschpasswort wurde zufällig erzeugt."
-  fi
 fi
 
 TEMP_SERVICE="$(mktemp)"
@@ -127,4 +105,3 @@ echo "TRIAGE//BOX wurde installiert."
 echo "Version: $("$PROJECT_ROOT/.venv/bin/forensic-triage-web" --version)"
 echo "Dienst: $(systemctl is-active forensic-triage-web.service)"
 echo "Konfiguration: $CONFIG_FILE"
-echo "Das lokale Löschpasswort kann mit 'sudoedit $CONFIG_FILE' geändert werden."

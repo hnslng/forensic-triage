@@ -53,7 +53,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 - kein versehentliches Protokollieren durch reine Navigation
 - Fallarchiv: sichtbare Aktionen „Öffnen“ und „Löschen“
 - aktiver Fall kann nicht gelöscht werden
-- falsches Löschpasswort verändert keine Fallakte
+- fehlende oder abweichende Fallbestätigung verändert keine Fallakte
 - korrektes Entfernen lässt Archiv geöffnet und verschiebt Unterlagen nach `.trash`
 - PDF-Bericht, ZIP-Export und Manifestprüfung
 - Tastaturfokus und kleiner Bildschirm
@@ -71,7 +71,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.4` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.5` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 ## English summary
 

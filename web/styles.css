@@ -162,6 +162,9 @@ h1 span { color: var(--acid); }
 .case-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .case-download { min-height: 40px; display: grid; place-items: center; padding: 9px 13px; border: 1px solid var(--acid); color: var(--acid); text-decoration: none; font-size: 10px; font-weight: 900; }
 .case-download.disabled { border-color: var(--line); color: var(--muted); pointer-events: none; }
+.delete-confirmation { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-size: 10px; font-weight: 900; }
+.delete-confirmation input { width: 18px; height: 18px; margin: 0; accent-color: var(--danger); flex: 0 0 auto; }
+.confirm-delete:disabled { border-color: var(--line); background: transparent; color: var(--muted); cursor: not-allowed; box-shadow: none; }
 .profile-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 12px 0 8px; padding: 12px; border: 1px solid var(--line); background: #090b08; }
 .profile-summary span { color: var(--muted); font-size: 10px; }
 .profile-summary strong { color: var(--ink); font-size: 18px; }

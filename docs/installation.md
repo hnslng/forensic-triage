@@ -69,7 +69,7 @@ Die Installation legt beim ersten Lauf an:
 /etc/forensic-triage/triage.env
 ```
 
-Der Installer erzeugt beim ersten Lauf ein zufälliges Löschpasswort in der lokalen Konfiguration. Vor echtem Einsatz mindestens dieses Passwort und den verschlüsselten Fallpfad prüfen:
+Vor echtem Einsatz insbesondere den verschlüsselten Fallpfad prüfen:
 
 ```bash
 sudoedit /etc/forensic-triage/triage.env
@@ -130,4 +130,4 @@ Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische R
 
 ## English quick install
 
-Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` with a random deletion password if it does not exist. Edit that root-only file to change host, port, storage roots, profile, and deletion password.
+Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` if it does not exist. Edit that root-only file to change host, port, storage roots, and the default profile.

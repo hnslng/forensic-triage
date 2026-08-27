@@ -21,8 +21,8 @@ Folgendes darf nie in das Repository gelangen:
 - lokale `.env`- beziehungsweise `triage.env`-Dateien
 - persönliche SSH-Starter mit realen Hosts und Schlüsselpfaden
 
-Das Installationsskript erzeugt ein zufälliges lokales Löschpasswort in `/etc/forensic-triage/triage.env`. Fehlt dieser Wert, sperrt der Webdienst die Fallentfernung. Das Passwort ist kein Ersatz für eine echte Benutzer- und Rollenverwaltung.
+Die Fallentfernung besitzt kein Passwort und ist keine Benutzer- oder Rollenverwaltung. Gegen versehentliche Bedienung verlangt der Dialog eine fallbezogene Doppelbestätigung; entfernte Fallakten bleiben im internen Papierkorb wiederherstellbar. Der Webdienst muss deshalb auf einer kontrollierten lokalen Schnittstelle bleiben.
 
 ## English
 
-TRIAGE//BOX is an alpha prototype with no version approved for unvalidated operational evidence handling. Do not publish vulnerability details, case data, credentials, or device identifiers in public issues. Use GitHub private vulnerability reporting when available. The service is unauthenticated and must remain on a controlled local interface. The installer creates a random local deletion password; this is not a user authentication system.
+TRIAGE//BOX is an alpha prototype with no version approved for unvalidated operational evidence handling. Do not publish vulnerability details, case data, credentials, or device identifiers in public issues. Use GitHub private vulnerability reporting when available. The service is unauthenticated and must remain on a controlled local interface. Case removal uses a case-specific double confirmation and recoverable trash, not user authentication.

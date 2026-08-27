@@ -53,8 +53,8 @@ Die Suche arbeitet ausschließlich auf Namen und Pfaden. Sie ist nicht gleichbed
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.4 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.5 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 
-The browser calls a local Python service, which coordinates one guarded scanner worker per eligible physical device. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.4 is metadata-only and does not inspect file signatures or contents.
+The browser calls a local Python service, which coordinates one guarded scanner worker per eligible physical device. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.5 is metadata-only and does not inspect file signatures or contents.

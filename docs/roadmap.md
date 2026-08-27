@@ -1,10 +1,10 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.4. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.5. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
-- [x] Standard-Löschpasswort entfernen und bei Installation einen zufälligen lokalen Wert erzeugen.
+- [x] Fallbezogene Doppelbestätigung und wiederherstellbaren Papierkorb ohne Passwort umsetzen.
 - [ ] Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher betreiben und Sicherungskonzept festlegen.
 - [ ] Hardware-Schreibblocker auswählen, beschaffen und mit dem Tool validieren.
 - [ ] Organisatorischen Ablauf für Berechtigung, Beweismittelidentität, Zeitquelle und Chain of Custody festlegen.
@@ -43,7 +43,7 @@ Stand: Version 0.2.0-alpha.4. Prioritäten richten sich nach forensischer Sicher
 - [ ] Administrativen Wiederherstellungsweg für entfernte Fälle dokumentieren und testen.
 - [ ] Aufbewahrungs- und Löschfristen für Fallakten definieren.
 - [ ] Rollen-/Berechtigungskonzept prüfen; das aktuelle Bearbeiterkürzel ist keine Anmeldung.
-- [ ] Passwortverwaltung statt eines einzelnen lokalen Löschkennworts bewerten.
+- [ ] Rollen-/Rechteverwaltung nur bei späterem Mehrbenutzerbedarf bewerten.
 - [x] Kompakten PDF-Fallbericht im Querformat mit einer Zeile je Datenträger ergänzen.
 - [ ] PDF-Berichtsaufbau und Formulierungen fachlich abnehmen.
 - [ ] Prüfen, ob digitale Signaturen zusätzlich zum SHA-256-Manifest erforderlich sind.

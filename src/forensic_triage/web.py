@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hmac
 import io
 import json
 import logging
@@ -30,7 +29,6 @@ EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
 ACTIVE_DEVICES_LOCK = threading.Lock()
 ACTIVE_DEVICES: set[str] = set()
-DELETE_PASSWORD = os.environ.get("FORENSIC_TRIAGE_DELETE_PASSWORD", "").strip()
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -435,17 +433,11 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         try:
             payload = self._read_payload()
-            password = str(payload.get("password", ""))
-            if not DELETE_PASSWORD:
-                self._json(
-                    HTTPStatus.SERVICE_UNAVAILABLE,
-                    {"error": "Fallentfernung ist ohne konfiguriertes Löschpasswort gesperrt."},
-                )
+            case_number = case_match.group(1)
+            if str(payload.get("confirmation", "")) != case_number:
+                self._json(HTTPStatus.CONFLICT, {"error": "Fallentfernung wurde nicht eindeutig bestätigt."})
                 return
-            if not hmac.compare_digest(password, DELETE_PASSWORD):
-                self._json(HTTPStatus.FORBIDDEN, {"error": "Passwort ist nicht korrekt."})
-                return
-            result = self.server.case_store.archive_case(case_match.group(1))
+            result = self.server.case_store.archive_case(case_number)
             self._json(HTTPStatus.OK, result)
         except KeyError as exc:
             self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})

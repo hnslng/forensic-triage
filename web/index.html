@@ -228,11 +228,12 @@
         <div class="modal-head"><div><span>!</span> FALL LÖSCHEN</div><button id="cancelDelete" type="button">ABBRECHEN ×</button></div>
         <div class="delete-body">
           <p>Fall <b id="deleteCaseNumber">—</b> wird aus dem Fallarchiv entfernt. Eine interne Sicherung bleibt wiederherstellbar.</p>
-          <label for="deletePassword">PASSWORT
-            <input id="deletePassword" type="password" inputmode="numeric" autocomplete="off" placeholder="PASSWORT EINGEBEN" />
+          <label class="delete-confirmation" for="deleteConfirmed">
+            <input id="deleteConfirmed" type="checkbox" />
+            <span>JA, FALL <b id="deleteConfirmCaseNumber">—</b> WIRKLICH AUS DEM AKTIVEN ARCHIV ENTFERNEN</span>
           </label>
           <p id="deleteMessage" class="delete-message"></p>
-          <button class="confirm-delete" type="submit">DIESEN FALL AUS DEM ARCHIV ENTFERNEN</button>
+          <button id="confirmDelete" class="confirm-delete" type="submit" disabled>DIESEN FALL AUS DEM ARCHIV ENTFERNEN</button>
         </div>
       </form>
     </dialog>

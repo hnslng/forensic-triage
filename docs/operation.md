@@ -67,7 +67,8 @@ TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann d
 2. Fallarchiv öffnen.
 3. Beim gewünschten Fall „Löschen“ wählen.
 4. Fallnummer in der Warnung prüfen.
-5. Lokales Löschpasswort eingeben und bestätigen.
+5. Die fallbezogene Bestätigung aktivieren.
+6. „Diesen Fall aus dem Archiv entfernen“ bewusst auslösen.
 
 Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bleibt während des Vorgangs geöffnet. Der aktive Fall kann nicht entfernt werden. Die lokale Fallakte wird in einen internen Papierkorb verschoben und bleibt administrativ wiederherstellbar; dies ist keine sichere Datenlöschung.
 

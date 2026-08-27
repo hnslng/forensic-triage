@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.5] – 2026-08-27
+
+### Geändert
+
+- Löschpasswort vollständig entfernt
+- Löschdialog und Server verlangen eine ausdrückliche Bestätigung für den konkret genannten Fall
+- endgültige Schaltfläche bleibt bis zur Bestätigung deaktiviert
+- Entfernen bleibt eine wiederherstellbare Verschiebung in den internen Papierkorb
+
 ## [0.2.0-alpha.4] – 2026-08-27
 
 ### Sicherheit

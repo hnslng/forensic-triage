@@ -45,7 +45,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | Ort | Inhalt | In Git? |
 |---|---|---|
 | Projektordner | Programmcode, Profile, Tests und Dokumentation | ja |
-| `/etc/forensic-triage/triage.env` | lokale Ports, Pfade und Löschpasswort | nein |
+| `/etc/forensic-triage/triage.env` | lokale Ports, Pfade und Profileinstellung | nein |
 | `casefiles/` oder konfigurierter Fallpfad | Fallakten, SQLite-Index, Audit, Berichte und Manifeste | niemals |
 | `results/` oder konfigurierter Ergebnispfad | technische Scannergebnisse | niemals |
 | `casefiles/.trash/` | entfernte, wiederherstellbare Fallordner | niemals |

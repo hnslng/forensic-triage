@@ -708,18 +708,22 @@ function stopCaseSession() {
 async function deleteCurrentCase() {
   const caseNumber = deleteTargetCaseNumber;
   if (!caseNumber || caseNumber === activeCaseNumber) return;
-  const password = $("deletePassword").value;
+  if (!$("deleteConfirmed").checked) {
+    $("deleteMessage").textContent = "BITTE DAS ENTFERNEN DIESES FALLS AUSDRÜCKLICH BESTÄTIGEN.";
+    return;
+  }
   $("deleteMessage").textContent = "FALL WIRD ENTFERNT …";
   try {
     const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ confirmation: caseNumber }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gelöscht werden");
     $("deleteModal").close();
-    $("deletePassword").value = "";
+    $("deleteConfirmed").checked = false;
+    $("confirmDelete").disabled = true;
     if ($("caseNumber").value.trim().toUpperCase() === caseNumber) $("caseNumber").value = "";
     deleteTargetCaseNumber = null;
     caseHistorySignature = "";
@@ -930,10 +934,12 @@ $("caseList").addEventListener("click", (event) => {
     if (!caseNumber || caseNumber === activeCaseNumber) return;
     deleteTargetCaseNumber = caseNumber;
     $("deleteCaseNumber").textContent = caseNumber;
-    $("deletePassword").value = "";
+    $("deleteConfirmCaseNumber").textContent = caseNumber;
+    $("deleteConfirmed").checked = false;
+    $("confirmDelete").disabled = true;
     $("deleteMessage").textContent = "";
     openNestedAuftragDialog("deleteModal");
-    $("deletePassword").focus();
+    $("deleteConfirmed").focus();
     return;
   }
   const item = event.target.closest("button[data-case-number]");
@@ -947,6 +953,10 @@ $("caseList").addEventListener("click", (event) => {
 $("caseStart").addEventListener("click", startCaseSession);
 $("caseStop").addEventListener("click", stopCaseSession);
 $("cancelDelete").addEventListener("click", () => $("deleteModal").close());
+$("deleteConfirmed").addEventListener("change", () => {
+  $("confirmDelete").disabled = !$("deleteConfirmed").checked;
+  if ($("deleteConfirmed").checked) $("deleteMessage").textContent = "";
+});
 for (const id of nestedAuftragDialogs) $(id).addEventListener("close", syncAuftragBackdrop);
 $("auftragModal").addEventListener("close", () => {
   $("auftragModal").classList.remove("nested-open");
