@@ -162,8 +162,9 @@ h1 span { color: var(--acid); }
 .case-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .case-download { min-height: 40px; display: grid; place-items: center; padding: 9px 13px; border: 1px solid var(--acid); color: var(--acid); text-decoration: none; font-size: 10px; font-weight: 900; }
 .case-download.disabled { border-color: var(--line); color: var(--muted); pointer-events: none; }
-.delete-confirmation { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-size: 10px; font-weight: 900; }
-.delete-confirmation input { width: 18px; height: 18px; margin: 0; accent-color: var(--danger); flex: 0 0 auto; }
+.delete-confirmation { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 11px; padding: 13px; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-size: 10px; font-weight: 900; line-height: 1.45; }
+.delete-confirmation input { width: 18px; height: 18px; margin: 0; padding: 0; border: 0; accent-color: var(--danger); }
+.delete-confirmation span { min-width: 0; }
 .confirm-delete:disabled { border-color: var(--line); background: transparent; color: var(--muted); cursor: not-allowed; box-shadow: none; }
 .profile-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 12px 0 8px; padding: 12px; border: 1px solid var(--line); background: #090b08; }
 .profile-summary span { color: var(--muted); font-size: 10px; }
@@ -333,19 +334,24 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .evidence-modal, .auftrag-modal, .case-archive-modal { max-height: calc(100vh - 36px); padding: 0; border: 1px solid var(--acid); background: var(--panel); color: var(--ink); box-shadow: 12px 12px 0 #050605; }
 .evidence-modal { width: min(780px, calc(100% - 28px)); }
 .auftrag-modal { width: min(1180px, calc(100% - 28px)); }
-.case-archive-modal { width: min(620px, calc(100% - 28px)); }
+.case-archive-modal { width: min(680px, calc(100% - 28px)); }
 .evidence-modal::backdrop, .auftrag-modal::backdrop, .case-archive-modal::backdrop { background: rgba(0, 0, 0, .82); backdrop-filter: blur(2px); }
 .auftrag-modal.nested-open::backdrop { background: transparent; backdrop-filter: none; }
 .case-archive-modal.nested-open::backdrop { background: transparent; backdrop-filter: none; }
-.case-archive-modal > p { margin: 0; padding: 13px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
-.case-archive-modal .case-list { max-height: min(55vh, 520px); padding: 10px; border: 0; }
+.case-archive-modal > p { margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.45; }
+.case-archive-modal .case-list { gap: 7px; max-height: min(55vh, 520px); padding: 12px; border: 0; }
+.case-archive-modal .case-list-copy { gap: 11px; padding: 12px 11px; }
+.case-archive-modal .case-list-copy strong { font-size: 14px; }
+.case-archive-modal .case-list-copy span { font-size: 10px; }
+.case-archive-modal .case-list-open,
+.case-archive-modal .case-list-delete { min-height: 40px; padding: 8px 11px; font-size: 9px; }
 .delete-modal { width: min(500px, calc(100% - 28px)); padding: 0; border: 1px solid var(--danger); background: var(--panel); color: var(--ink); box-shadow: 12px 12px 0 #050605; }
 .delete-modal::backdrop { background: rgba(0, 0, 0, .82); backdrop-filter: blur(2px); }
 .delete-body { display: grid; gap: 12px; padding: 16px; }
 .delete-body p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .delete-body label { color: var(--muted); font-size: 10px; }
-.delete-body input { width: 100%; margin-top: 6px; padding: 11px; border: 1px solid var(--line); background: #090b08; color: var(--ink); outline: none; }
-.delete-body input:focus { border-color: var(--danger); }
+.delete-body input:not([type="checkbox"]) { width: 100%; margin-top: 6px; padding: 11px; border: 1px solid var(--line); background: #090b08; color: var(--ink); outline: none; }
+.delete-body input:not([type="checkbox"]):focus { border-color: var(--danger); }
 .confirm-delete { min-height: 44px; border: 1px solid var(--danger); background: transparent; color: var(--danger); cursor: pointer; font-size: 10px; font-weight: 900; }
 .confirm-delete:hover { background: rgba(255, 91, 78, .08); }
 .delete-message { min-height: 12px; color: var(--danger) !important; }

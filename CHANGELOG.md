@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.7] – 2026-08-28
+
+### Geändert
+
+- Fallarchiv-Einträge und Aktionsschaltflächen behutsam vergrößert
+- Löschbestätigung als klar links ausgerichtete Checkbox-Zeile repariert
+- Zweck von lokaler Mac-Startdatei und versionierter Beispielvorlage ausdrücklich dokumentiert
+
 ## [0.2.0-alpha.6] – 2026-08-28
 
 ### Geändert
