@@ -1,10 +1,11 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.14. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.15. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
 - [x] Fallbezogene Doppelbestätigung und wiederherstellbaren Papierkorb ohne Passwort umsetzen.
+- [ ] Das in [security-concept.md](security-concept.md) festgehaltene einfache Zugriffsschutzkonzept vollständig implementieren und abnehmen.
 - [ ] Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher betreiben und Sicherungskonzept festlegen.
 - [ ] Hardware-Schreibblocker auswählen, beschaffen und mit dem Tool validieren.
 - [ ] Organisatorischen Ablauf für Berechtigung, Beweismittelidentität, Zeitquelle und Chain of Custody festlegen.
@@ -18,12 +19,13 @@ Stand: Version 0.2.0-alpha.14. Prioritäten richten sich nach forensischer Siche
 - [ ] Zielmodell, RAM, Speicher und Gehäuse festlegen.
 - [ ] Raspberry Pi OS/Debian installieren und vollständige Installationsanleitung praktisch nachspielen.
 - [ ] Aktiven, ausreichend versorgten USB-Hub für mehrere Datenträger validieren.
-- [ ] Raspberry Pi 3B+ als privaten, passwortgeschützten WLAN-Hotspot `TRIAGEBOX` einrichten; keine USB-Netzwerkverbindung vorsehen.
+- [ ] Raspberry Pi 3B+ als privaten, passwortgeschützten WPA3-/WPA2-WLAN-Hotspot `TRIAGEBOX` mit gerätespezifischem Passwort einrichten; keine USB-Netzwerkverbindung vorsehen.
 - [ ] Pi-Hostname `triagebox` festlegen und mDNS/Avahi einrichten, damit die Oberfläche im privaten Hotspot über `triagebox.local` erreichbar ist.
-- [ ] Portlose Adresse `http://triagebox.local/` über den Standardport 80 oder eine leichtgewichtige lokale Weiterleitung umsetzen und auf die vorgesehenen privaten Schnittstellen begrenzen.
+- [ ] Portlose HTTPS-Adresse `https://triagebox.local/` über Port 443 samt lokalem Zertifikatsverfahren umsetzen und auf die vorgesehenen privaten Schnittstellen begrenzen.
 - [ ] Direkte Ethernet-Verbindung mit fester privater Adresse als robuste Rückfallebene einrichten.
 - [ ] Feste private Pi-IP für WLAN und Ethernet dokumentieren, falls mDNS auf einem Laptop nicht funktioniert.
 - [ ] Hotspot-Verschlüsselung, starkes WLAN-Passwort, Firewall und Verhalten ohne Internetverbindung prüfen.
+- [ ] Gemeinsames Gerätepasswort, kurze Browsersitzung, Inaktivitätssperre und Abmeldung implementieren; keine zentrale Benutzerverwaltung für den ersten Feldprototyp.
 - [ ] Touch-/Kleinbildschirm mit der echten Auflösung und Bedienung testen.
 - [ ] Kontrolliertes Herunterfahren und Verhalten bei Stromverlust lösen.
 - [ ] Status-LED-Konzept (`ready`, `scanning`, `complete`, `error`) entwickeln und GPIO getrennt vom Scanner anbinden.

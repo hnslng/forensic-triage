@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.15] – 2026-08-28
+
+### Dokumentiert
+
+- einfaches Zugriffsschutzkonzept für den geplanten Raspberry-Pi-Feldbetrieb festgehalten
+- passwortgeschützten WPA3-/WPA2-Hotspot, gemeinsames Gerätepasswort, kurze Sitzung und lokales HTTPS als Zielbild definiert
+- verschlüsselten Fallspeicher, Firewall-, Wiederherstellungs- und Sicherheitstests als Pflicht vor echtem Einsatz ergänzt
+- zentrale Benutzerverwaltung für den ersten Feldprototyp bewusst ausgeschlossen; Bearbeiterkürzel bleibt Audit-Angabe statt Anmeldung
+
 ## [0.2.0-alpha.14] – 2026-08-28
 
 ### Geändert
