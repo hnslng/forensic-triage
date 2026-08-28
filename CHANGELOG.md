@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.13] – 2026-08-28
+
+### Geändert
+
+- Dateitypliste bündig an den Innenrändern des Panels ausgerichtet
+- Balkenspalte bis zum rechten Innenrand flexibel verbreitert
+- übermäßige Fettschrift der Kategorien an die übrigen Ergebnislisten angeglichen
+- Zahlenspalte kompakter gestaltet, ohne ihre tabellarische Ausrichtung aufzugeben
+
 ## [0.2.0-alpha.12] – 2026-08-28
 
 ### Geändert
