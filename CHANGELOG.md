@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.8] – 2026-08-28
+
+### Geändert
+
+- Dateityp-Balken wieder deutlicher sichtbar und kompakter angeordnet
+- Trefferzahl direkt hinter dem verkürzten Balken platziert
+- „Filter aufheben“ bei aktiver Filterung unmittelbar neben „Suchen“ eingeblendet
+
 ## [0.2.0-alpha.7] – 2026-08-28
 
 ### Geändert

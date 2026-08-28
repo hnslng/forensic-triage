@@ -202,6 +202,7 @@ function renderRecord(record) {
       $("inventoryTree").innerHTML = "";
       $("inventorySearchResults").hidden = true;
       $("inventoryFilterBar").hidden = true;
+      $("inventoryReset").hidden = true;
       $("inventoryMore").hidden = true;
       $("inventorySearch").value = "";
       $("inventoryCount").textContent = "—";
@@ -610,6 +611,7 @@ async function resetInventoryView() {
   inventoryListState = null;
   $("inventorySearch").value = "";
   $("inventoryFilterBar").hidden = true;
+  $("inventoryReset").hidden = true;
   $("inventoryMore").hidden = true;
   $("inventorySearchResults").hidden = true;
   $("inventoryTree").hidden = false;
@@ -639,6 +641,7 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     $("inventoryCount").textContent = `${visible} / ${data.total} DATEIEN`;
     $("inventoryFilterLabel").textContent = filterLabel.toUpperCase();
     $("inventoryFilterBar").hidden = false;
+    $("inventoryReset").hidden = false;
     $("inventoryTree").hidden = true;
     $("inventorySearchResults").hidden = false;
     const rows = data.files.map((file) => `
