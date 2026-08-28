@@ -1,18 +1,18 @@
-# Generische Entwicklungsumgebung / Generic development setup
+# Interne generische Entwicklungsumgebung / Internal generic development setup
 
-Dieses Dokument beschreibt ein neutrales Beispiel für die Entwicklung mit einem Verwaltungsrechner und einem getrennten Debian-Testsystem. Lokale Adressen, Benutzernamen und Schlüsselpfade gehören nicht in eine mögliche spätere Veröffentlichung.
+Dieses Dokument ist kein Bestandteil der Bedienung oder Pi-Installation. Es beschreibt ausschließlich ein neutrales Beispiel für reproduzierbare Entwicklung mit einem Verwaltungsrechner und einem getrennten Debian-Testsystem. Lokale Adressen, Benutzernamen und Schlüsselpfade gehören nicht in eine Veröffentlichung.
 
 ## Beispielaufbau
 
 - Quellcode und Git-Checkout: Verwaltungsrechner
-- privates GitHub-Repository: `hnslng/forensic-triage`
+- privates oder kontrolliert veröffentlichtes Git-Repository
 - Testsystem: getrennte Debian-VM oder Raspberry Pi
 - Webdienst in der VM: `127.0.0.1:8787`
-- Zugriff vom Mac: SSH-Tunnel auf `http://127.0.0.1:8787/`
+- Zugriff vom Verwaltungsrechner: SSH-Tunnel auf `http://127.0.0.1:8787/`
 
-## Starter am Mac
+## Lokaler Entwicklungsstarter
 
-`TRIAGE-BOX starten.command` ist ausschließlich eine private Hilfsdatei für den derzeitigen Mac-/VM-Testaufbau. Sie öffnet den lokalen SSH-Tunnel und anschließend die Weboberfläche. Die Datei enthält gerätespezifische Verbindungsangaben, wird von Git ignoriert und gehört nicht zur Raspberry-Pi-Produktinstallation. Eine öffentliche Beispielvorlage wird nicht mit dem Repository ausgeliefert.
+`TRIAGE-BOX starten.command` ist ausschließlich eine private Hilfsdatei eines Entwicklungsrechners. Sie enthält gerätespezifische Verbindungsangaben, wird von Git ignoriert und gehört nicht zur Raspberry-Pi-Produktinstallation. Eine öffentliche Beispielvorlage wird nicht ausgeliefert.
 
 Diese Datei wird für den späteren Pi-Betrieb voraussichtlich nicht benötigt. Bei direkter Ethernet-Verbindung öffnet der Laptop lediglich die Adresse des Pi im Browser.
 

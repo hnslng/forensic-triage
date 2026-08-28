@@ -56,7 +56,7 @@ Der kompakte PDF-Bericht wird bei jeder Änderung der Fallakte aktualisiert und 
 
 ## Was ist die Konfiguration?
 
-Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch kann dasselbe Programm auf VM und Raspberry Pi laufen, ohne Quellcode oder Git-Dateien ändern zu müssen. Ein Portwechsel oder ein anderer verschlüsselter Fallspeicher wird in `/etc/forensic-triage/triage.env` eingetragen und der Dienst anschließend neu gestartet.
+Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch kann dasselbe Programm auf unterschiedlichen Debian-Zielsystemen laufen, ohne Quellcode oder Git-Dateien ändern zu müssen. Ein Portwechsel oder ein anderer verschlüsselter Fallspeicher wird in `/etc/forensic-triage/triage.env` eingetragen und der Dienst anschließend neu gestartet.
 
 Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt versioniert, Passwörter und gerätespezifische Pfade bleiben lokal.
 

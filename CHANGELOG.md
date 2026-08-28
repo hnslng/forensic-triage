@@ -2,6 +2,20 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.18] – 2026-08-28
+
+### Hinzugefügt
+
+- Raspberry-Pi-Bootstrap für den Ein-Befehl-Ablauf bei kurzzeitig öffentlichem Repository
+- wiederholbare Installation beziehungsweise Aktualisierung unter `/opt/triagebox`
+- Schutz vor Überschreiben lokaler Codeänderungen im Bootstrap
+
+### Geändert
+
+- Pi-Installation im Einstieg priorisiert und internen Mac-/VM-Aufbau aus den Bedienunterlagen herausgelöst
+- Entwicklungsaufbau und frühere VM-Validierung als interne, weiterhin reproduzierbare Nachweise eingeordnet
+- Installationsbesitz am tatsächlichen Eigentümer des Projektordners ausgerichtet
+
 ## [0.2.0-alpha.17] – 2026-08-28
 
 ### Hinzugefügt

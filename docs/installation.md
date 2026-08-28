@@ -1,8 +1,22 @@
 # Installation und Aktualisierung / Installation and upgrade
 
-Das Ziel ist eine wiederholbare Installation auf einem Debian-basierten Scanner. Die aktuelle Debian-VM ist die Referenz; der Raspberry Pi wird erst auf der realen Hardware freigegeben.
+Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi ist das vorgesehene Feldgerät, bleibt aber bis zur praktischen Hardwareabnahme unvalidiert.
 
 ## Kurzfassung
+
+### Raspberry Pi mit kurzzeitig öffentlichem Repository
+
+Repository kurzzeitig auf öffentlich stellen und auf dem per Ethernet verbundenen Raspberry Pi einmal ausführen:
+
+```bash
+curl -fsSLo /tmp/triagebox-install.sh https://raw.githubusercontent.com/hnslng/forensic-triage/main/scripts/bootstrap_pi.sh && sudo bash /tmp/triagebox-install.sh
+```
+
+Der Bootstrap prüft Raspberry Pi OS/Debian, installiert Git, lädt das Repository nach `/opt/triagebox` und startet anschließend automatisch `install_debian.sh --pi`. Sobald der Befehl vollständig abgeschlossen ist, kann das Repository wieder privat gestellt werden. Die installierte Anwendung funktioniert danach ohne GitHub-Verbindung weiter. Für ein späteres Update über denselben Befehl muss das Repository erneut erreichbar sein oder der Pi einen eigenen Deploy-Key erhalten.
+
+Das Herunterladen und Ausführen eines Root-Skripts setzt Vertrauen in die angegebene Quelle voraus. Deshalb wird die Datei zuerst sichtbar unter `/tmp/triagebox-install.sh` gespeichert und nicht unmittelbar in eine Shell-Pipe geleitet.
+
+### Bereits vorhandener Quellcode
 
 Sobald der Quellcode auf dem Scanner liegt:
 
@@ -53,7 +67,7 @@ Keine privaten Schlüssel oder Zugriffstokens im Projektordner speichern.
 
 ### Alternative: freigegebenes Releasepaket übertragen
 
-Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Die derzeitige Mac-/VM-Testvariante ist getrennt in [development-setup.md](development-setup.md) dokumentiert.
+Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Interne Entwicklungs- und Validierungsaufbauten sind bewusst von dieser Produktinstallation getrennt dokumentiert.
 
 ## 2. Installation ausführen
 
@@ -152,8 +166,8 @@ Versionen:
 - kontrolliertes Herunterfahren und Stromverlust
 - Temperatur und Dauerlast
 
-Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische Referenz und nicht das spätere Einsatzgerät.
+Bis diese Punkte praktisch validiert sind, ist die Pi-Installation vorbereitet, aber noch keine freigegebene Einsatzinstallation.
 
 ## English quick install
 
-Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. On Raspberry Pi OS Bookworm, run `sudo ./scripts/install_debian.sh --pi` from Ethernet or the local console to additionally prepare the private hotspot, mDNS hostname, and forwarding guard. The development Wi-Fi password must be replaced before real use.
+For a temporarily public repository, download `scripts/bootstrap_pi.sh` from the documented raw GitHub URL and run the saved file with `sudo`; it clones into `/opt/triagebox` and starts the Pi installer. Alternatively clone with a read-only deploy key. Run Pi setup from Ethernet or the local console. The development Wi-Fi password must be replaced before real use.

@@ -74,7 +74,7 @@ if $CHECK_ONLY; then
   exit 0
 fi
 
-INSTALL_OWNER="${SUDO_USER:-$(stat -c '%U' "$PROJECT_ROOT")}"
+INSTALL_OWNER="$(stat -c '%U' "$PROJECT_ROOT")"
 if ! id "$INSTALL_OWNER" >/dev/null 2>&1; then
   echo "Installationsbenutzer existiert nicht: $INSTALL_OWNER" >&2
   exit 1

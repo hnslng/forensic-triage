@@ -17,16 +17,21 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 - [Architektur](architecture.md)
 - [Lokale Fallakte und Protokollierung](case-archive.md)
 - [Testplan](test-plan.md)
-- [Validierung vom 26. August 2026](validation-2026-08-26.md)
-- [Generische Entwicklungsumgebung](development-setup.md)
 - [Vorbereitung einer möglichen öffentlichen Bereitstellung](publication-review-2026-08-27.md)
 - [Sicherheitsrichtlinie](../SECURITY.md)
 - [Nutzungsbedingungen](../LICENSE.md)
 - [Änderungshistorie](../CHANGELOG.md)
 
+## Interne Entwicklungsnachweise
+
+Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Raspberry Pi, bleiben aber für Reproduzierbarkeit und Werkzeugvalidierung erhalten:
+
+- [Generische Entwicklungsumgebung](development-setup.md)
+- [Validierung vom 26. August 2026](validation-2026-08-26.md)
+
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.17 lautet die Python-Version gemäß PEP 440 `0.2.0a17`; der Git-Tag lautet `v0.2.0-alpha.17`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.18 lautet die Python-Version gemäß PEP 440 `0.2.0a18`; der Git-Tag lautet `v0.2.0-alpha.18`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.mark.parametrize("script", [
     "scripts/install_debian.sh",
+    "scripts/bootstrap_pi.sh",
     "scripts/configure_pi_network.sh",
     "scripts/apply_pi_firewall.sh",
 ])
@@ -28,3 +29,9 @@ def test_wifi_password_is_not_passed_to_web_service() -> None:
     web_service = (ROOT / "deploy/forensic-triage-web.service.in").read_text(encoding="utf-8")
     assert "TRIAGEBOX_WIFI_PASSWORD" not in web_environment
     assert "pi-network.env" not in web_service
+
+
+def test_public_bootstrap_targets_expected_repository() -> None:
+    bootstrap = (ROOT / "scripts/bootstrap_pi.sh").read_text(encoding="utf-8")
+    assert "https://github.com/hnslng/forensic-triage.git" in bootstrap
+    assert 'exec "$INSTALL_ROOT/scripts/install_debian.sh" --pi' in bootstrap

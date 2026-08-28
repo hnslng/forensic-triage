@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.17 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.18 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -32,7 +32,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.17 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.18 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -47,6 +47,14 @@ Das bedeutet insbesondere:
 Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
 
 ## Installation auf dem Scanner
+
+Wenn das Repository für die Dauer der Installation bewusst öffentlich geschaltet wird, genügt auf einem per Ethernet verbundenen Raspberry Pi:
+
+```bash
+curl -fsSLo /tmp/triagebox-install.sh https://raw.githubusercontent.com/hnslng/forensic-triage/main/scripts/bootstrap_pi.sh && sudo bash /tmp/triagebox-install.sh
+```
+
+Das Skript prüft das System, installiert Git, lädt TRIAGE//BOX nach `/opt/triagebox` und führt den Pi-Installer aus. Nach dem vollständigen Abschluss kann das Repository wieder privat gestellt werden.
 
 Das private Repository benötigt auf dem Scanner einen eigenen, möglichst nur lesenden GitHub-Deploy-Key:
 
@@ -94,7 +102,7 @@ Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
 Standardmäßig lauscht der Dienst ausschließlich auf `127.0.0.1:8787`. Zugriff erfolgt entweder auf einem lokalen Bildschirm oder über eine bewusst eingerichtete, geschützte Verbindung. Die spätere direkte Ethernet-Verbindung zwischen Pi und Laptop wird erst mit der realen Hardware konfiguriert.
 
-Der gegenwärtige Mac-/VM-Aufbau dient nur zum Entwickeln und Ausprobieren. Er ist getrennt in [Temporäre Entwicklungsumgebung](docs/development-setup.md) beschrieben und kein Bestandteil des Produkts.
+Entwicklungs- und Validierungsaufbauten sind interne technische Nachweise und kein Bestandteil der Pi-Bedienung.
 
 ## CLI-Scan für technische Tests
 
@@ -127,7 +135,6 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Testplan](docs/test-plan.md)
 - [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
 - [Roadmap und offene Aufgaben](docs/roadmap.md)
-- [Generische Entwicklungsumgebung](docs/development-setup.md)
 - [Sicherheitsrichtlinie](SECURITY.md)
 - [Nutzungsbedingungen](LICENSE.md)
 - [Änderungshistorie](CHANGELOG.md)
@@ -138,16 +145,16 @@ Das Repository enthält ausschließlich Quellcode, Profile, Tests und Dokumentat
 
 - echte Fall- oder Beweismitteldaten
 - Verzeichnisse `casefiles/` und `results/`
-- Passwörter, Tokens, private SSH-Schlüssel oder `.env`-Dateien
+- echte Kennwörter, Tokens, private SSH-Schlüssel oder `.env`-Dateien; der dokumentierte Alpha-Platzhalter ist kein Betriebsgeheimnis
 - Exporte aus echten Einsätzen
 
 Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen. Der Löschdialog verlangt zwei bewusste Bedienhandlungen für den konkret genannten Fall; entfernte Fälle bleiben im internen Papierkorb wiederherstellbar.
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a17` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.17`
-- automatisierte Tests: 43
+- Paketversion: `0.2.0a18` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.18`
+- automatisierte Tests: 45
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
 
@@ -159,4 +166,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.17 searches file and directory names, not file contents. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.18 searches file and directory names, not file contents. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
