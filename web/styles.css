@@ -164,6 +164,7 @@ h1 span { color: var(--acid); }
 .case-download.disabled { border-color: var(--line); color: var(--muted); pointer-events: none; }
 .delete-confirmation { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 11px; padding: 13px; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-size: 10px; font-weight: 900; line-height: 1.45; }
 .delete-confirmation input { width: 18px; height: 18px; margin: 0; padding: 0; border: 0; accent-color: var(--danger); }
+.delete-confirmation input:focus-visible { outline-color: var(--danger); }
 .delete-confirmation span { min-width: 0; }
 .confirm-delete:disabled { border-color: var(--line); background: transparent; color: var(--muted); cursor: not-allowed; box-shadow: none; }
 .profile-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 12px 0 8px; padding: 12px; border: 1px solid var(--line); background: #090b08; }
@@ -232,11 +233,11 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list, .keyword-list { padding: 14px 15px; }
-.bar-row { display: grid; grid-template-columns: minmax(180px, 300px); justify-content: start; gap: 6px; max-width: 300px; margin: 11px 0; font-size: 12px; }
+.bar-row { display: grid; grid-template-columns: auto minmax(80px, 150px); align-items: center; justify-content: start; gap: 12px; max-width: 320px; margin: 9px 0; font-size: 12px; }
 .bar-row.result-filter { width: 100%; padding: 3px 4px; border: 0; border-radius: 0; appearance: none; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
 .bar-row.result-filter:hover { color: var(--acid); background: rgba(201, 242, 82, .035); }
 .bar-row.result-filter.active { padding-left: 8px; color: var(--acid); background: rgba(201, 242, 82, .055); box-shadow: inset 3px 0 0 var(--acid); }
-.bar-heading { display: flex; align-items: baseline; gap: 7px; font-weight: 800; }
+.bar-heading { display: flex; min-width: 0; align-items: baseline; gap: 7px; font-weight: 800; white-space: nowrap; }
 .bar-track { width: 100%; height: 11px; outline: 1px solid #333c2f; background: #252b21; }
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); }

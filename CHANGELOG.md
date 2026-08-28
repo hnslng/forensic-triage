@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.10] – 2026-08-28
+
+### Geändert
+
+- Dateitypen wieder als platzsparende Ein-Zeilen-Liste dargestellt
+- kurze Vergleichsbalken rechts neben der zusammengehörigen Bezeichnung und Trefferzahl platziert
+- Fokusrahmen der Löschbestätigung von allgemeinem Grün auf Warnrot angepasst
+
 ## [0.2.0-alpha.9] – 2026-08-28
 
 ### Geändert
