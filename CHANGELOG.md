@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.9] – 2026-08-28
+
+### Geändert
+
+- Dateityp und Trefferzahl als kompakte Kopfzeile direkt zusammengeführt
+- Balken jeweils unmittelbar darunter angeordnet
+- dreigeteilte Ergebnisstruktur unverändert beibehalten
+
 ## [0.2.0-alpha.8] – 2026-08-28
 
 ### Geändert

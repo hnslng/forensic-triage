@@ -140,7 +140,7 @@ function renderResults(summary, hits = {}) {
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   $("categories").innerHTML = categories.map(([name, count]) => `
-    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span>${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span><span class="bar-value">${Number(count)}</span></button>
+    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-heading"><span>${escapeHtml(name.toUpperCase())}</span><span class="bar-value">${Number(count)}</span></span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>
   `).join("");
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>

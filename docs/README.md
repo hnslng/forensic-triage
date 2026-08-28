@@ -25,7 +25,7 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.8 lautet die Python-Version gemäß PEP 440 `0.2.0a8`; der Git-Tag lautet `v0.2.0-alpha.8`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.9 lautet die Python-Version gemäß PEP 440 `0.2.0a9`; der Git-Tag lautet `v0.2.0-alpha.9`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 
