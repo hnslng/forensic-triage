@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.14] – 2026-08-28
+
+### Geändert
+
+- linken Innenabstand der Dateitypliste reduziert
+- Zahlenspalte schmaler gesetzt und dadurch gesamten Tabellenblock nach links verschoben
+- mobile Ausrichtung entsprechend angeglichen
+
 ## [0.2.0-alpha.13] – 2026-08-28
 
 ### Geändert

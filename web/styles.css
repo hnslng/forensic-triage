@@ -232,8 +232,9 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .metrics .hot strong { color: var(--amber); }
 .analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
-.bar-list, .keyword-list { padding: 14px 15px; }
-.bar-row { display: grid; grid-template-columns: 42px minmax(96px, 118px) minmax(90px, 1fr); align-items: center; gap: 10px; max-width: none; margin: 9px 0; font-size: 12px; }
+.bar-list { padding: 14px 8px; }
+.keyword-list { padding: 14px 15px; }
+.bar-row { display: grid; grid-template-columns: 30px minmax(96px, 118px) minmax(90px, 1fr); align-items: center; gap: 10px; max-width: none; margin: 9px 0; font-size: 12px; }
 .bar-row.result-filter { width: 100%; padding: 3px 4px; border: 0; border-radius: 0; appearance: none; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
 .bar-row.result-filter:hover { color: var(--acid); background: rgba(201, 242, 82, .035); }
 .bar-row.result-filter.active { color: var(--acid); background: rgba(201, 242, 82, .055); box-shadow: inset 3px 0 0 var(--acid); }
@@ -413,7 +414,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .case-list-open { margin: 0 0 5px 5px; }
   .case-list-delete { margin: 0 5px 5px 0; }
   .device-list, .media-cards { grid-template-columns: 1fr; padding: 9px; }
-  .bar-row { grid-template-columns: 38px minmax(82px, 104px) minmax(64px, 1fr); gap: 8px; }
+  .bar-row { grid-template-columns: 28px minmax(82px, 104px) minmax(64px, 1fr); gap: 8px; }
   .decision-buttons { grid-template-columns: 1fr; }
   .decision-headline, .decision-fields { grid-template-columns: 1fr; }
   .archive-proof-grid { grid-template-columns: 1fr; }
