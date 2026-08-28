@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.11] – 2026-08-28
+
+### Bereinigt
+
+- Mac-/VM-spezifische Startervorlage aus dem Repository entfernt
+- persönliche lokale Startdatei bleibt weiterhin durch `.gitignore` ausgeschlossen
+- Entwicklungs- und Veröffentlichungsdokumentation entsprechend berichtigt
+
 ## [0.2.0-alpha.10] – 2026-08-28
 
 ### Geändert

@@ -12,7 +12,7 @@ Dieses Dokument beschreibt ein neutrales Beispiel für die Entwicklung mit einem
 
 ## Starter am Mac
 
-`TRIAGE-BOX starten.command.example` ist nur die neutrale, in Git gespeicherte Vorlage und wird nicht gestartet. Die lokal angepasste `TRIAGE-BOX starten.command` ist der eigentliche Starter auf diesem Mac. Sie enthält den passenden Host und Schlüsselpfad und wird deshalb von Git ignoriert. Zwei sichtbare Dateien sind in der Entwicklungsumgebung somit beabsichtigt; für die Bedienung wird ausschließlich die Datei ohne `.example` verwendet.
+`TRIAGE-BOX starten.command` ist ausschließlich eine private Hilfsdatei für den derzeitigen Mac-/VM-Testaufbau. Sie öffnet den lokalen SSH-Tunnel und anschließend die Weboberfläche. Die Datei enthält gerätespezifische Verbindungsangaben, wird von Git ignoriert und gehört nicht zur Raspberry-Pi-Produktinstallation. Eine öffentliche Beispielvorlage wird nicht mit dem Repository ausgeliefert.
 
 Diese Datei wird für den späteren Pi-Betrieb voraussichtlich nicht benötigt. Bei direkter Ethernet-Verbindung öffnet der Laptop lediglich die Adresse des Pi im Browser.
 

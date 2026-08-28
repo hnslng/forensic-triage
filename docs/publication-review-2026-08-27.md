@@ -15,7 +15,7 @@ Es wurden keine privaten Schlüssel, Zugriffstokens, API-Schlüssel oder echten 
 
 Historisch enthalten sind eine private RFC-1918-Adresse der früheren Entwicklungs-VM und das ausdrücklich als Entwicklungsvorgabe dokumentierte Löschkennwort einer alten Alpha-Version. Die aktuelle Version enthält weder diese lokale Adresse in der aktiven Vorlage noch ein Standardpasswort. Alte Alpha-Stände bleiben ausdrücklich ohne Einsatzfreigabe.
 
-Persönliche Starterdateien werden künftig von Git ignoriert. Das Repository enthält nur noch eine neutrale Vorlage. Fallakten, Ergebnisse, Exporte, `.env`-Dateien sowie Schlüsseldateien sind ausgeschlossen.
+Persönliche Starterdateien werden von Git ignoriert und es wird keine Mac-/VM-Startervorlage mehr ausgeliefert. Fallakten, Ergebnisse, Exporte, `.env`-Dateien sowie Schlüsseldateien sind ausgeschlossen.
 
 ## Veröffentlichungshinweis
 
