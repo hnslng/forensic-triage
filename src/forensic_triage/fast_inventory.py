@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
 
 from .classifier import classify, original_extension_for
+from .commands import run_command
 from .device import SafetyError
 
 
 def _run(*args: str) -> str:
-    return subprocess.run(args, check=True, text=True, capture_output=True).stdout
+    return run_command(args, capture_output=True).stdout
 
 
 def find_partition_path(lsblk_data: dict[str, Any], start_sector: int) -> Path:
@@ -95,9 +95,8 @@ def readonly_mount_inventory(
     mountpoint = Path(tempfile.mkdtemp(prefix="forensic-triage-", dir="/mnt"))
     mounted = False
     try:
-        subprocess.run(
+        run_command(
             ["mount", "-o", "ro,nosuid,nodev,noexec", str(partition_device), str(mountpoint)],
-            check=True,
         )
         mounted = True
         info = json.loads(
@@ -114,5 +113,5 @@ def readonly_mount_inventory(
         return files, directories, mount_info
     finally:
         if mounted:
-            subprocess.run(["umount", str(mountpoint)], check=True)
+            run_command(["umount", str(mountpoint)])
         mountpoint.rmdir()

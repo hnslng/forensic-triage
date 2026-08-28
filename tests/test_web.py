@@ -1,7 +1,15 @@
 import json
 from pathlib import Path
 
-from forensic_triage.web import EVIDENCE_PATTERN, ejected_usb_paths, latest_result, parse_media_devices, parser
+from forensic_triage.web import (
+    EVIDENCE_PATTERN,
+    QUARANTINED_DEVICES,
+    clear_absent_quarantines,
+    ejected_usb_paths,
+    latest_result,
+    parse_media_devices,
+    parser,
+)
 
 
 def test_evidence_number_is_strict() -> None:
@@ -31,21 +39,32 @@ def test_latest_complete_result(tmp_path) -> None:
     }
 
 
-def test_media_discovery_supports_multiple_usb_and_marks_optical_pending() -> None:
+def test_media_discovery_supports_usb_and_loaded_optical_media() -> None:
     devices = parse_media_devices([
         {"path": "/dev/sdb", "type": "disk", "tran": "usb", "size": 100, "model": "One", "mountpoints": [None]},
         {"path": "/dev/sdc", "type": "disk", "tran": "usb", "size": 200, "model": "Two", "mountpoints": [None]},
         {"path": "/dev/sdd", "type": "disk", "tran": "usb", "size": 300, "model": "Mounted", "mountpoints": ["/media/x"]},
         {"path": "/dev/sde", "type": "disk", "tran": "usb", "size": 0, "model": "Ejected", "mountpoints": [None]},
         {"path": "/dev/sr0", "type": "rom", "tran": "usb", "size": 0, "model": "DVD", "mountpoints": [None]},
+        {"path": "/dev/sr2", "type": "rom", "tran": "usb", "size": 4194304, "model": "Loaded DVD", "serial": "DRIVE-1", "uuid": "DISC-9", "label": "EVIDENCE", "mountpoints": [None]},
         {"path": "/dev/sr1", "type": "rom", "tran": "sata", "size": 4194304, "model": "System DVD", "mountpoints": [None]},
         {"path": "/dev/nvme0n1", "type": "disk", "tran": "nvme", "size": 999},
     ])
 
-    assert [item["path"] for item in devices] == ["/dev/sdb", "/dev/sdc", "/dev/sdd", "/dev/sr0"]
-    assert [item["scan_supported"] for item in devices] == [True, True, False, False]
+    assert [item["path"] for item in devices] == ["/dev/sdb", "/dev/sdc", "/dev/sdd", "/dev/sr0", "/dev/sr2"]
+    assert [item["scan_supported"] for item in devices] == [True, True, False, False, True]
     assert "/dev/sde" not in [item["path"] for item in devices]
     assert devices[-1]["media_type"] == "optical"
+    assert devices[-1]["serial"] == "OPTICAL:DISC-9:EVIDENCE:4194304"
+
+
+def test_timed_out_device_stays_quarantined_until_absent() -> None:
+    QUARANTINED_DEVICES.clear()
+    QUARANTINED_DEVICES.add("/dev/sdb")
+    clear_absent_quarantines([{"path": "/dev/sdb"}])
+    assert QUARANTINED_DEVICES == {"/dev/sdb"}
+    clear_absent_quarantines([{"path": "/dev/sdc"}])
+    assert QUARANTINED_DEVICES == set()
 
 
 def test_only_valid_zero_byte_usb_disks_are_reactivated() -> None:
@@ -67,6 +86,8 @@ def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
     monkeypatch.setenv("FORENSIC_TRIAGE_CASEFILES_ROOT", "/srv/triage/cases")
     monkeypatch.setenv("FORENSIC_TRIAGE_WEB_ROOT", "/opt/triage/web")
     monkeypatch.setenv("FORENSIC_TRIAGE_PROFILE", "/etc/forensic-triage/default.yaml")
+    monkeypatch.setenv("FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS", "90")
+    monkeypatch.setenv("FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS", "7")
 
     args = parser().parse_args([])
 
@@ -76,3 +97,5 @@ def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
     assert args.casefiles == Path("/srv/triage/cases")
     assert args.web_root == Path("/opt/triage/web")
     assert args.profile == Path("/etc/forensic-triage/default.yaml")
+    assert args.scan_timeout == 90
+    assert args.command_timeout == 7

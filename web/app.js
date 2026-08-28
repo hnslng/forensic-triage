@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 let devices = [];
 const deviceStates = new Map();
 const runningPaths = new Set();
+let quarantinedPaths = new Set();
 let batchTotal = 0;
 let batchDone = 0;
 let autoStartTimer = null;
@@ -350,25 +351,31 @@ function updateCaseSessionUi(message = "") {
 }
 
 const stateLabels = {
-  ready: "BEREIT", scanning: "SCAN LÄUFT", complete: "FERTIG", error: "PRÜFEN", unavailable: "NICHT BEREIT",
+  ready: "BEREIT", scanning: "SCAN LÄUFT", complete: "FERTIG", error: "PRÜFEN",
+  timeout: "MEDIUM ANTWORTET NICHT", unavailable: "NICHT BEREIT",
 };
 
 function resetDeviceStatesForCase() {
   for (const device of devices) {
     const recorded = activeCaseNumber && device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial);
     if (runningPaths.has(device.path)) deviceStates.set(device.path, "scanning");
+    else if (quarantinedPaths.has(device.path)) deviceStates.set(device.path, "timeout");
     else if (recorded) deviceStates.set(device.path, "complete");
     else deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
 }
 
-function renderDevices(items, activePaths = []) {
+function renderDevices(items, activePaths = [], blockedPaths = null) {
   devices = items || [];
+  if (blockedPaths !== null) quarantinedPaths = new Set(blockedPaths);
   const active = new Set(activePaths);
   const presentPaths = new Set(devices.map((device) => device.path));
   for (const path of deviceStates.keys()) if (!presentPaths.has(path)) deviceStates.delete(path);
   for (const device of devices) {
     if (active.has(device.path)) deviceStates.set(device.path, "scanning");
+    else if (quarantinedPaths.has(device.path)) deviceStates.set(device.path, "timeout");
+    else if (!device.scan_supported) deviceStates.set(device.path, "unavailable");
+    else if (deviceStates.get(device.path) === "unavailable") deviceStates.set(device.path, "ready");
     else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
   const visibleDevices = devices.filter((device) => !(
@@ -379,11 +386,12 @@ function renderDevices(items, activePaths = []) {
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
     const type = device.media_type === "optical" ? "CD/DVD" : "USB";
-    const disabled = !device.scan_supported || state === "scanning";
+    const disabled = !device.scan_supported || state === "scanning" || state === "timeout";
+    const stateReason = state === "timeout" ? "ABZIEHEN UND NEU VERBINDEN" : (device.unavailable_reason || "");
     return `<article class="device-card" data-state="${state}">
       <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● ONLINE</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
-      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(device.unavailable_reason || "")}</small></div>
+      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(stateReason)}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
@@ -401,7 +409,7 @@ function renderDevices(items, activePaths = []) {
 function updateScanAvailability() {
   for (const button of document.querySelectorAll("[data-scan-device]")) {
     const device = devices.find((item) => item.path === button.dataset.scanDevice);
-    button.disabled = !device?.scan_supported || deviceStates.get(device.path) === "scanning" || !activeCaseNumber || !activeOperator;
+    button.disabled = !device?.scan_supported || ["scanning", "timeout"].includes(deviceStates.get(device.path)) || !activeCaseNumber || !activeOperator;
   }
 }
 
@@ -436,7 +444,7 @@ async function refresh(loadLatest = false) {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
-    renderDevices(data.devices || [], data.active_devices || []);
+    renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     renderCaseHistory(data.cases || []);
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
@@ -451,7 +459,7 @@ async function refreshMediaDevices() {
     const response = await fetch("/api/devices/refresh", { method: "POST" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Datenträger konnten nicht aktualisiert werden");
-    renderDevices(data.devices || [], data.active_devices || []);
+    renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     const restored = Number(data.reactivated?.length || 0);
     setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "GESPERRT"));
   } catch (error) {
@@ -501,7 +509,7 @@ async function runScan(devicePath, standalone = true) {
     $("results").hidden = true;
   } catch (error) {
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
-    deviceStates.set(devicePath, "error");
+    deviceStates.set(devicePath, error.message.includes("Zeitlimit") ? "timeout" : "error");
     setSystemState("SCAN FEHLGESCHLAGEN", "error");
   } finally {
     runningPaths.delete(devicePath);

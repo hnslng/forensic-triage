@@ -10,6 +10,9 @@ EnvironmentFile=-/etc/forensic-triage/triage.env
 ExecStart=@PROJECT_ROOT@/.venv/bin/forensic-triage-web
 Restart=on-failure
 RestartSec=2
+KillMode=control-group
+TimeoutStopSec=10
+PrivateMounts=true
 
 [Install]
 WantedBy=multi-user.target

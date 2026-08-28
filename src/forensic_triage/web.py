@@ -19,8 +19,9 @@ from urllib.parse import parse_qs, urlsplit
 
 from . import __version__
 from .casefiles import CaseStore
+from .commands import run_command
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
-from .scanner import scan
+from .scan_process import ScanTimeoutError, run_isolated_scan
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +30,7 @@ EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
 ACTIVE_DEVICES_LOCK = threading.Lock()
 ACTIVE_DEVICES: set[str] = set()
+QUARANTINED_DEVICES: set[str] = set()
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -56,18 +58,26 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not (is_usb or is_optical):
             continue
         mounted = bool(_mountpoints(node))
-        supported = is_usb and not mounted
+        has_medium = int(node.get("size") or 0) > 0
+        supported = (is_usb or (is_optical and has_medium)) and not mounted
         reason = ""
-        if is_optical:
-            reason = "CD/DVD erkannt · Scan folgt nach Hardwaretest"
+        if is_optical and not has_medium:
+            reason = "Kein lesbares Medium im CD/DVD-Laufwerk"
         elif mounted:
             reason = "Medium ist bereits eingehängt"
+        reported_serial = (node.get("serial") or "").strip()
+        if is_optical and has_medium:
+            volume_id = (node.get("uuid") or "").strip()
+            volume_label = (node.get("label") or "").strip()
+            reported_serial = "OPTICAL:" + ":".join(
+                part for part in (volume_id, volume_label, str(node.get("size") or 0)) if part
+            )
         devices.append({
             "path": node.get("path"),
             "size": node.get("size", 0),
             "vendor": (node.get("vendor") or "").strip(),
             "model": (node.get("model") or "").strip(),
-            "serial": (node.get("serial") or "").strip(),
+            "serial": reported_serial,
             "read_only": bool(node.get("ro")),
             "media_type": "optical" if is_optical else "usb",
             "scan_supported": supported,
@@ -78,10 +88,10 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def list_block_devices() -> list[dict[str, Any]]:
     """Read the current kernel block-device inventory."""
-    completed = subprocess.run(
+    completed = run_command(
         [
             "lsblk", "--json", "--bytes", "--output",
-            "NAME,PATH,TYPE,TRAN,SIZE,VENDOR,MODEL,SERIAL,RO,MOUNTPOINTS",
+            "NAME,PATH,TYPE,TRAN,SIZE,VENDOR,MODEL,SERIAL,UUID,LABEL,RO,MOUNTPOINTS",
         ],
         check=True,
         text=True,
@@ -126,6 +136,23 @@ def release_device(path: str) -> None:
         ACTIVE_DEVICES.discard(path)
 
 
+def quarantine_device(path: str) -> None:
+    with ACTIVE_DEVICES_LOCK:
+        QUARANTINED_DEVICES.add(path)
+
+
+def quarantined_device_paths() -> list[str]:
+    with ACTIVE_DEVICES_LOCK:
+        return sorted(QUARANTINED_DEVICES)
+
+
+def clear_absent_quarantines(devices: list[dict[str, Any]]) -> None:
+    """A timed-out path becomes eligible again only after it disappeared once."""
+    present = {str(device.get("path", "")) for device in devices}
+    with ACTIVE_DEVICES_LOCK:
+        QUARANTINED_DEVICES.intersection_update(present)
+
+
 def latest_result(results_root: Path) -> dict[str, Any] | None:
     """Load the newest complete result set, if one exists."""
     candidates = sorted(
@@ -159,12 +186,16 @@ class TriageHTTPServer(ThreadingHTTPServer):
         results_root: Path,
         profile_path: Path,
         casefiles_root: Path,
+        scan_timeout_seconds: float,
+        command_timeout_seconds: float,
     ) -> None:
         super().__init__(address, TriageHandler)
         self.web_root = web_root
         self.results_root = results_root
         self.profile_path = profile_path
         self.case_store = CaseStore(casefiles_root)
+        self.scan_timeout_seconds = scan_timeout_seconds
+        self.command_timeout_seconds = command_timeout_seconds
 
 
 class TriageHandler(BaseHTTPRequestHandler):
@@ -244,12 +275,14 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/status":
             try:
                 devices = discover_media_devices()
+                clear_absent_quarantines(devices)
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
                 self._json(HTTPStatus.OK, {
                     "devices": devices,
                     "latest": latest,
                     "cases": self.server.case_store.list_cases(),
                     "active_devices": active_device_paths(),
+                    "quarantined_devices": quarantined_device_paths(),
                     "scan_running": bool(active_device_paths()),
                 })
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
@@ -455,11 +488,14 @@ class TriageHandler(BaseHTTPRequestHandler):
             if path in active_device_paths():
                 self._json(HTTPStatus.CONFLICT, {"error": "Scan läuft noch; Datenträger nicht abziehen."})
                 return
+            if path in quarantined_device_paths():
+                self._json(HTTPStatus.CONFLICT, {"error": "Datenträger reagierte nicht. Vor dem Auswerfen physisch trennen und erneut verbinden."})
+                return
             if not device.get("scan_supported"):
                 self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist noch eingebunden oder nicht auswerfbar."})
                 return
-            subprocess.run(["sync"], check=True)
-            subprocess.run(["/usr/bin/eject", path], check=True, text=True, capture_output=True)
+            run_command(["sync"])
+            run_command(["/usr/bin/eject", path], capture_output=True)
             self._json(HTTPStatus.OK, {"device_path": path, "ejected": True})
         except (OSError, subprocess.SubprocessError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Auswerfen fehlgeschlagen: {exc}"})
@@ -471,12 +507,15 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             paths = ejected_usb_paths(list_block_devices())
             for path in paths:
-                subprocess.run(["/usr/bin/eject", "-t", path], check=False, text=True, capture_output=True)
-            subprocess.run(["/usr/bin/udevadm", "settle"], check=True, text=True, capture_output=True)
+                run_command(["/usr/bin/eject", "-t", path], check=False, capture_output=True)
+            run_command(["/usr/bin/udevadm", "settle"], capture_output=True)
+            devices = discover_media_devices()
+            clear_absent_quarantines(devices)
             self._json(HTTPStatus.OK, {
-                "devices": discover_media_devices(),
+                "devices": devices,
                 "reactivated": paths,
                 "active_devices": active_device_paths(),
+                "quarantined_devices": quarantined_device_paths(),
             })
         except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträger konnten nicht aktualisiert werden: {exc}"})
@@ -561,6 +600,12 @@ class TriageHandler(BaseHTTPRequestHandler):
         if device is None:
             self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist nicht mehr verfügbar oder nicht scanbereit."})
             return
+        if device_path in quarantined_device_paths():
+            self._json(
+                HTTPStatus.CONFLICT,
+                {"error": "Datenträger ist nach einem Zeitlimit gesperrt. Medium abziehen und neu verbinden."},
+            )
+            return
         if not claim_device(device_path):
             self._json(HTTPStatus.CONFLICT, {"error": "Dieser Datenträger wird bereits gesichtet."})
             return
@@ -569,23 +614,32 @@ class TriageHandler(BaseHTTPRequestHandler):
             sighting_number = self.server.case_store.allocate_sighting_number(
                 case_number, operator, device_path,
             )
-            result_dir = scan(
-                Path(device_path),
-                self.server.profile_path.parent / f"{profile_ids[0]}.yaml",
-                sighting_number,
-                self.server.case_store.scan_root(case_number, sighting_number),
-                mode="fast",
-                keywords=selected_keywords,
-                profile_sources=[{
+            result_dir = run_isolated_scan({
+                "device": device_path,
+                "profile_path": str(self.server.profile_path.parent / f"{profile_ids[0]}.yaml"),
+                "evidence": sighting_number,
+                "results_root": str(self.server.case_store.scan_root(case_number, sighting_number)),
+                "mode": "fast",
+                "keywords": selected_keywords,
+                "profile_sources": [{
                     "id": profile["id"], "name": profile["name"],
                     "version": profile["version"], "sha256": profile["sha256"],
                 } for profile in loaded_profiles],
-            )
+            }, timeout_seconds=self.server.scan_timeout_seconds,
+                command_timeout_seconds=self.server.command_timeout_seconds)
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.CREATED, record)
+        except ScanTimeoutError as exc:
+            quarantine_device(device_path)
+            logging.exception("scan request timed out")
+            if sighting_number:
+                self.server.case_store.record_scan_failure(
+                    case_number, sighting_number, operator, device_path, str(exc),
+                )
+            self._json(HTTPStatus.GATEWAY_TIMEOUT, {"error": str(exc), "timed_out": True})
         except Exception as exc:  # Scanner errors must reach the operator cleanly.
             logging.exception("scan request failed")
             if sighting_number:
@@ -615,10 +669,16 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
 
-def serve(host: str, port: int, web_root: Path, results_root: Path, profile_path: Path, casefiles_root: Path) -> None:
+def serve(
+    host: str, port: int, web_root: Path, results_root: Path, profile_path: Path,
+    casefiles_root: Path, scan_timeout_seconds: float, command_timeout_seconds: float,
+) -> None:
     if not web_root.is_dir():
         raise FileNotFoundError(f"web interface not found: {web_root}")
-    server = TriageHTTPServer((host, port), web_root, results_root, profile_path, casefiles_root)
+    server = TriageHTTPServer(
+        (host, port), web_root, results_root, profile_path, casefiles_root,
+        scan_timeout_seconds, command_timeout_seconds,
+    )
     print(f"TRIAGE//BOX ready at http://{host}:{port}")
     server.serve_forever()
 
@@ -644,12 +704,27 @@ def parser() -> argparse.ArgumentParser:
         "--profile", type=Path,
         default=Path(os.environ.get("FORENSIC_TRIAGE_PROFILE", PROJECT_ROOT / "profiles/default.yaml")),
     )
+    result.add_argument(
+        "--scan-timeout", type=float,
+        default=float(os.environ.get("FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS", "180")),
+        help="maximum wall-clock seconds for one complete media scan",
+    )
+    result.add_argument(
+        "--command-timeout", type=float,
+        default=float(os.environ.get("FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS", "15")),
+        help="maximum seconds for one external device command",
+    )
     return result
 
 
 def main() -> None:
     args = parser().parse_args()
-    serve(args.host, args.port, args.web_root, args.results, args.profile, args.casefiles)
+    if args.scan_timeout <= 0 or args.command_timeout <= 0:
+        raise SystemExit("Zeitlimits müssen größer als null sein.")
+    serve(
+        args.host, args.port, args.web_root, args.results, args.profile, args.casefiles,
+        args.scan_timeout, args.command_timeout,
+    )
 
 
 if __name__ == "__main__":

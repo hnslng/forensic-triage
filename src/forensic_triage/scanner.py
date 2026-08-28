@@ -11,7 +11,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .device import enforce_read_only, inspect_device
+from .commands import run_command
+from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
 from .fast_inventory import partition_path_for_start, readonly_mount_inventory
 from .keywords import build_hits, load_profile
@@ -22,8 +23,51 @@ from .validation import compare_expected
 
 
 def _command(args: list[str]) -> str:
-    result = subprocess.run(args, check=True, text=True, capture_output=True)
+    result = run_command(args, capture_output=True)
     return result.stdout
+
+
+def _inventory_optical_medium(
+    device: Path, mode: str, raw_dir: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Inventory a CD/DVD filesystem that lives directly on the drive node."""
+    partition: dict[str, Any] = {
+        "slot": "OPT",
+        "location": "whole_medium",
+        "start_sector": 0,
+        "description": "Optical medium",
+        "allocated": True,
+    }
+    try:
+        try:
+            fsstat_output = _command(["fsstat", str(device)])
+            (raw_dir / "fsstat_OPT.txt").write_text(fsstat_output, encoding="utf-8")
+            partition["filesystem"] = filesystem_type(fsstat_output)
+        except subprocess.TimeoutExpired:
+            raise
+        except subprocess.SubprocessError as exc:
+            # Linux may still mount an optical UDF variant that this TSK build
+            # cannot describe. Keep fast-mode inventory available and record it.
+            partition["filesystem"] = "unknown"
+            partition["fsstat_error"] = str(exc)
+        if mode == "tsk":
+            fls_output = _command(["fls", "-r", "-p", "-u", "-m", "/", str(device)])
+            (raw_dir / "fls_OPT.txt").write_text(fls_output, encoding="utf-8")
+            files, directories = parse_fls(fls_output, "OPT")
+            partition["inventory_method"] = "tsk_fls"
+        elif mode == "fast":
+            files, directories, mount_info = readonly_mount_inventory(device, "OPT")
+            write_json(raw_dir / "fast_mount_OPT.json", mount_info)
+            partition["partition_device"] = str(device)
+            partition["inventory_method"] = "kernel_readonly_mount"
+        else:
+            raise ValueError(f"unsupported scan mode: {mode}")
+        partition["scan_status"] = "ok"
+        return files, directories, [partition]
+    except Exception as exc:
+        partition["scan_status"] = "unsupported_or_error"
+        partition["error"] = str(exc)
+        raise
 
 
 def scan(
@@ -57,41 +101,46 @@ def scan(
         device_info["scan_mode"] = mode
         write_json(result_dir / "device.json", device_info)
 
-        mmls_output = _command(["mmls", str(device)])
-        (raw_dir / "mmls.txt").write_text(mmls_output, encoding="utf-8")
-        partitions = parse_mmls(mmls_output)
+        if device_info.get("type") == "rom":
+            all_files, all_directories, partitions = _inventory_optical_medium(device, mode, raw_dir)
+        else:
+            mmls_output = _command(["mmls", str(device)])
+            (raw_dir / "mmls.txt").write_text(mmls_output, encoding="utf-8")
+            partitions = parse_mmls(mmls_output)
 
-        all_files: list[dict[str, Any]] = []
-        all_directories: list[dict[str, Any]] = []
-        for partition in partitions:
-            if not partition["allocated"]:
-                continue
-            slot = partition["slot"]
-            offset = str(partition["start_sector"])
-            try:
-                fsstat_output = _command(["fsstat", "-o", offset, str(device)])
-                (raw_dir / f"fsstat_{slot}.txt").write_text(fsstat_output, encoding="utf-8")
-                partition["filesystem"] = filesystem_type(fsstat_output)
-                if mode == "tsk":
-                    fls_output = _command(["fls", "-r", "-p", "-u", "-m", "/", "-o", offset, str(device)])
-                    (raw_dir / f"fls_{slot}.txt").write_text(fls_output, encoding="utf-8")
-                    files, directories = parse_fls(fls_output, slot)
-                    partition["inventory_method"] = "tsk_fls"
-                elif mode == "fast":
-                    partition_device = partition_path_for_start(device, partition["start_sector"])
-                    files, directories, mount_info = readonly_mount_inventory(partition_device, slot)
-                    write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
-                    partition["partition_device"] = str(partition_device)
-                    partition["inventory_method"] = "kernel_readonly_mount"
-                else:
-                    raise ValueError(f"unsupported scan mode: {mode}")
-                all_files.extend(files)
-                all_directories.extend(directories)
-                partition["scan_status"] = "ok"
-            except subprocess.CalledProcessError as exc:
-                partition["scan_status"] = "unsupported_or_error"
-                partition["error"] = exc.stderr.strip()
-                scan_logger.warning("partition %s skipped: %s", slot, exc.stderr.strip())
+            all_files = []
+            all_directories = []
+            for partition in partitions:
+                if not partition["allocated"]:
+                    continue
+                slot = partition["slot"]
+                offset = str(partition["start_sector"])
+                try:
+                    fsstat_output = _command(["fsstat", "-o", offset, str(device)])
+                    (raw_dir / f"fsstat_{slot}.txt").write_text(fsstat_output, encoding="utf-8")
+                    partition["filesystem"] = filesystem_type(fsstat_output)
+                    if mode == "tsk":
+                        fls_output = _command(["fls", "-r", "-p", "-u", "-m", "/", "-o", offset, str(device)])
+                        (raw_dir / f"fls_{slot}.txt").write_text(fls_output, encoding="utf-8")
+                        files, directories = parse_fls(fls_output, slot)
+                        partition["inventory_method"] = "tsk_fls"
+                    elif mode == "fast":
+                        partition_device = partition_path_for_start(device, partition["start_sector"])
+                        files, directories, mount_info = readonly_mount_inventory(partition_device, slot)
+                        write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
+                        partition["partition_device"] = str(partition_device)
+                        partition["inventory_method"] = "kernel_readonly_mount"
+                    else:
+                        raise ValueError(f"unsupported scan mode: {mode}")
+                    all_files.extend(files)
+                    all_directories.extend(directories)
+                    partition["scan_status"] = "ok"
+                except subprocess.TimeoutExpired:
+                    raise
+                except (OSError, ValueError, SafetyError, subprocess.SubprocessError) as exc:
+                    partition["scan_status"] = "unsupported_or_error"
+                    partition["error"] = str(exc)
+                    scan_logger.warning("partition %s skipped: %s", slot, exc)
 
         profile = load_profile(profile_path)
         selected_keywords = profile["keywords"] if keywords is None else keywords

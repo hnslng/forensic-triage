@@ -7,12 +7,12 @@ Die bedienende Person muss Berechtigung und physische Identität des Datenträge
 ## Implementierte Schutzfolge
 
 1. Übergebenen `/dev`-Pfad auflösen.
-2. Ganzes Blockgerät mit USB-Transport verlangen.
+2. Ganzes USB-Blockgerät oder externes optisches USB-Laufwerk verlangen.
 3. Den expliziten Systemdatenträger-Sentinel `/dev/sda` ablehnen.
 4. Mountpoints auf Gerät und Partitionen rekursiv ablehnen.
 5. Gesamtes Blockgerät mit `blockdev --setro` schreibschützen.
 6. Read-only-Zustand mit `blockdev --getro == 1` verifizieren.
-7. Partitionen und Dateisysteme mit `mmls` und `fsstat` erfassen.
+7. USB-Partitionen mit `mmls` und `fsstat` erfassen; das Dateisystem einer CD/DVD direkt am optischen Gerät prüfen.
 8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im garantierten Cleanup wieder unmounten.
 9. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden.
 
@@ -29,11 +29,17 @@ Trotzdem ist der aktuelle Schutz nur „defense in depth“. Für echte Beweismi
 - kein Imaging, Recovery oder Carving
 - keine Passwörter brechen oder Verschlüsselung umgehen
 - keine automatische Relevanz- oder Sicherstellungsentscheidung treffen
-- keine CD/DVD scannen, solange der reale Laufwerkspfad nicht validiert ist
+- CD/DVD-Unterstützung bis zum bestandenen Test mit dem vorgesehenen realen Laufwerk nur als Alpha-Funktion behandeln
+
+## Beschädigte Medien
+
+Der Webdienst führt jede Sichtung in einem getrennten Worker-Prozess mit eigenem Linux-Mount-Namensraum aus. Einzelne Gerätebefehle und der gesamte Scan besitzen feste Zeitlimits. Nach einer Überschreitung wird das Medium protokolliert und bis zum erkannten Abziehen gesperrt; andere Medien und die Bedienoberfläche sollen weiterarbeiten.
+
+Ein Prozess-Zeitlimit kann einen Linux-Prozess im nicht unterbrechbaren Hardware-Wartezustand nicht augenblicklich aus dem Kernel entfernen. Deshalb bleibt das physische Trennen des betroffenen Mediums beziehungsweise das Abschalten seines einzelnen Hub-Ports der letzte Rückfallweg. TRIAGE//BOX unternimmt keine langwierige Datenrettung und wiederholt fehlgeschlagene Leseversuche nicht automatisch.
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.15 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.16 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
 
 ## Schutz der Fallunterlagen
 
@@ -41,4 +47,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk, sets and verifies the block device as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.15 does not inspect signatures or contents.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.16 does not inspect signatures or contents.

@@ -27,6 +27,8 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_CASEFILES_ROOT` | `<Projekt>/casefiles` | dauerhafte lokale Fallakten |
 | `FORENSIC_TRIAGE_WEB_ROOT` | `<Projekt>/web` | statische Bedienoberfläche; normalerweise unverändert |
 | `FORENSIC_TRIAGE_PROFILE` | `<Projekt>/profiles/default.yaml` | Start-/Kompatibilitätsprofil |
+| `FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS` | `180` | maximale Gesamtdauer einer Grobsichtung in Sekunden |
+| `FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS` | `15` | maximale Dauer eines einzelnen Gerätebefehls in Sekunden |
 
 Beispiel:
 
@@ -37,7 +39,15 @@ FORENSIC_TRIAGE_RESULTS_ROOT=/srv/triage/results
 FORENSIC_TRIAGE_CASEFILES_ROOT=/srv/triage/casefiles
 FORENSIC_TRIAGE_WEB_ROOT=/opt/triage-box/web
 FORENSIC_TRIAGE_PROFILE=/opt/triage-box/profiles/default.yaml
+FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS=180
+FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS=15
 ```
+
+## Beschädigte oder sehr langsame Medien
+
+Jede Grobsichtung läuft in einem eigenen Prozess und – unter Linux – in einem privaten Mount-Namensraum. Ein vollständiger Scan wird standardmäßig nach 180 Sekunden beendet; einzelne Gerätebefehle bereits nach 15 Sekunden. Die Weboberfläche und andere parallele Scans bleiben dabei erreichbar.
+
+Nach einer Zeitüberschreitung wird nur der betroffene Gerätepfad gesperrt und als `MEDIUM ANTWORTET NICHT` angezeigt. Die Sperre verschwindet erst, nachdem das Medium physisch getrennt wurde und die Oberfläche den Offline-Zustand erkannt hat. Das verhindert automatische Endloswiederholungen. Die Zeitlimits sind bewusst konfigurierbar, dürfen aber erst nach praktischen Tests mit der Zielhardware erhöht werden.
 
 Für die Fallentfernung gibt es bewusst kein Passwort. Der Dialog verlangt zwei eindeutige Bedienhandlungen für den konkret genannten Fall. Entfernen verschiebt die Fallakte nur in den wiederherstellbaren internen Papierkorb. Das ist eine Fehlbedienungssperre, aber keine Benutzer- oder Rechteverwaltung.
 

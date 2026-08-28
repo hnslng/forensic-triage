@@ -35,7 +35,9 @@ Der Standardmodus `fast` liest aktive Verzeichniseinträge über einen Mount mit
 
 ## Webdienst und Parallelität
 
-Der Webdienst erkennt Geräte mit `lsblk`, führt geeignete USB-Medien getrennt und reserviert pro physischem Gerätepfad höchstens einen laufenden Worker. Jeder Worker ruft den abgesicherten Scanner auf.
+Der Webdienst erkennt Geräte mit `lsblk`, führt geeignete USB- und optische Medien getrennt und reserviert pro physischem Gerätepfad höchstens einen laufenden Worker-Prozess. Jeder Worker ruft den abgesicherten Scanner in einem privaten Linux-Mount-Namensraum auf. Einzelbefehle und Gesamtscan besitzen eigene Zeitlimits. Nach einer Überschreitung wird nur der betroffene Gerätepfad bis zum erkannten Abziehen gesperrt; Weboberfläche und parallele Scans bleiben unabhängig.
+
+Bei USB-Speichern dient die gemeldete Datenträgerseriennummer als Wiedererkennungsmerkmal. Bei CD/DVD darf die Seriennummer des Laufwerks nicht als Identität der eingelegten Scheibe gelten. Dort bildet der Webdienst deshalb eine Medienkennung aus vorhandener Volume-UUID, Volume-Label und Kapazität. Diese Kennung ist eine praktische Grobsichtungsidentität und keine kryptografische Prüfsumme des optischen Mediums.
 
 Sichtungsnummern werden in einer unmittelbaren SQLite-Transaktion reserviert. Lesbare Fallexporte werden serialisiert. Dadurch dürfen parallele Scans weder dieselbe `SICHT-###`-Nummer erhalten noch gleichzeitig denselben Bericht überschreiben.
 
@@ -53,8 +55,8 @@ Die Suche arbeitet ausschließlich auf Namen und Pfaden. Sie ist nicht gleichbed
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.15 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.16 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 
-The browser calls a local Python service, which coordinates one guarded scanner worker per eligible physical device. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.15 is metadata-only and does not inspect file signatures or contents.
+The browser calls a local Python service, which coordinates one guarded scanner process per eligible physical device. Each process has per-command and whole-scan deadlines and uses a private Linux mount namespace. A timed-out path is quarantined until physical disconnect so the dashboard and other scans remain available without an automatic retry loop. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.16 is metadata-only and does not inspect file signatures or contents.

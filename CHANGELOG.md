@@ -2,6 +2,22 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.16] – 2026-08-28
+
+### Hinzugefügt
+
+- eigener Scanner-Prozess je Datenträger mit privatem Linux-Mount-Namensraum
+- konfigurierbares Gesamtzeitlimit von 180 Sekunden und Befehlszeitlimit von 15 Sekunden
+- Gerätequarantäne nach Zeitüberschreitung bis zum erkannten physischen Trennen
+- direkter, nur-lesender Inventarpfad für eingelegte Medien in externen USB-CD/DVD-Laufwerken
+- roter Dashboard-Zustand `MEDIUM ANTWORTET NICHT` ohne automatische Endloswiederholung
+
+### Geändert
+
+- Geräte-, Mount-, TSK-, Auswerf- und Aktualisierungsbefehle zeitlich begrenzt
+- systemd-Dienst verwendet private Mounts und beendet Worker als gemeinsame Kontrollgruppe
+- Fehler-, Timeout-, Quarantäne- und optische Scanpfade durch zusätzliche Tests abgesichert
+
 ## [0.2.0-alpha.15] – 2026-08-28
 
 ### Dokumentiert

@@ -65,14 +65,16 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 - Abziehen während Scan und während offener Entscheidung
 - defektes, nicht lesbares und unbekanntes Dateisystem
 - CD und DVD im vorgesehenen Laufwerk
+- künstlich blockierter Scanner-Worker: Zeitlimit, Gerätequarantäne und weiterhin reagierende Weboberfläche
+- physisch blockierender Datenträger: anderer USB-Port und paralleler Scan bleiben bedienbar
 - Raspberry Pi einschließlich direkter Ethernet-Verbindung und kleinem Display
 - Stromverlust und kontrollierter Wiederanlauf
 - Hardware-Schreibblocker
 
 ## Releasekriterium
 
-`v0.2.0-alpha.15` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.16` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 ## English summary
 
-The project currently has 30 automated tests plus a synthetic 960-file physical-media fixture. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.
+The project currently has 38 automated tests plus a synthetic 960-file physical-media fixture. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.

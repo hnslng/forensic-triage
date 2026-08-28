@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from pathlib import Path
 from typing import Any
+
+from .commands import run_command
 
 
 class SafetyError(RuntimeError):
@@ -14,7 +15,7 @@ class SafetyError(RuntimeError):
 
 
 def _run(*args: str) -> str:
-    return subprocess.run(args, check=True, text=True, capture_output=True).stdout
+    return run_command(args, capture_output=True).stdout
 
 
 def inspect_device(device: Path) -> dict[str, Any]:
@@ -24,7 +25,7 @@ def inspect_device(device: Path) -> dict[str, Any]:
     data = json.loads(
         _run(
             "lsblk", "--json", "--bytes",
-            "--output", "NAME,PATH,TYPE,TRAN,SIZE,VENDOR,MODEL,SERIAL,RO,MOUNTPOINTS",
+            "--output", "NAME,PATH,TYPE,TRAN,SIZE,VENDOR,MODEL,SERIAL,UUID,LABEL,RO,MOUNTPOINTS",
             str(resolved),
         )
     )
@@ -32,8 +33,8 @@ def inspect_device(device: Path) -> dict[str, Any]:
     if len(devices) != 1:
         raise SafetyError(f"could not uniquely identify {resolved}")
     info = devices[0]
-    if info.get("type") != "disk":
-        raise SafetyError(f"target is not a whole disk: {resolved}")
+    if info.get("type") not in {"disk", "rom"}:
+        raise SafetyError(f"target is not a whole removable medium: {resolved}")
     if str(resolved) == "/dev/sda":
         raise SafetyError("refusing explicit system-disk sentinel /dev/sda")
     if info.get("tran") != "usb":
@@ -54,7 +55,7 @@ def inspect_device(device: Path) -> dict[str, Any]:
 def enforce_read_only(device: Path) -> None:
     if os.geteuid() != 0:
         raise SafetyError("root privileges are required to set block-device read-only mode")
-    subprocess.run(["blockdev", "--setro", str(device)], check=True)
+    run_command(["blockdev", "--setro", str(device)])
     state = _run("blockdev", "--getro", str(device)).strip()
     if state != "1":
         raise SafetyError(f"read-only verification failed for {device}: {state!r}")

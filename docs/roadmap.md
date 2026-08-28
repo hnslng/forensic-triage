@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.15. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.16. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -9,7 +9,7 @@ Stand: Version 0.2.0-alpha.15. Prioritäten richten sich nach forensischer Siche
 - [ ] Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher betreiben und Sicherungskonzept festlegen.
 - [ ] Hardware-Schreibblocker auswählen, beschaffen und mit dem Tool validieren.
 - [ ] Organisatorischen Ablauf für Berechtigung, Beweismittelidentität, Zeitquelle und Chain of Custody festlegen.
-- [ ] Mehrere physische USB-Medien gleichzeitig testen, einschließlich Fehler- und Abbruchszenarien.
+- [ ] Mehrere physische USB-Medien gleichzeitig testen, einschließlich der implementierten Prozessisolation, Zeitlimits und Fehlerquarantäne.
 - [ ] Wiederanlauf nach Strom-, Netzwerk- und Browserausfall prüfen.
 - [ ] Audit-Log, Manifestprüfung, ZIP-Export und Wiederherstellung aus dem internen Papierkorb validieren.
 - [ ] Freigabekriterien und dokumentierte Abnahme für eine Einsatzversion definieren.
@@ -33,7 +33,7 @@ Stand: Version 0.2.0-alpha.15. Prioritäten richten sich nach forensischer Siche
 
 ## Datenträger und Scanunterstützung
 
-- [ ] CD/DVD-Laufwerk mit realen Medien validieren und erst danach freischalten.
+- [ ] Implementierten CD/DVD-Scanpfad mit realen intakten und beschädigten Medien im vorgesehenen Laufwerk validieren.
 - [ ] Weitere Dateisysteme und beschädigte Medien systematisch testen.
 - [ ] Klären, ob eine sehr leichte Dateisignatur-/Magic-Byte-Prüfung ohne Vollinhaltsanalyse in den Grobsichtungsumfang aufgenommen wird.
 - [ ] Falls umgesetzt: Abweichung zwischen Dateiendung und Signatur deutlich als Hinweis anzeigen.
