@@ -29,6 +29,14 @@ Nur Voraussetzungen prüfen, ohne etwas zu installieren:
 sudo ./scripts/install_debian.sh --check
 ```
 
+Für den späteren Raspberry Pi gibt es zusätzlich einen ausdrücklich gewählten Pi-Modus:
+
+```bash
+sudo ./scripts/install_debian.sh --pi
+```
+
+Dieser Modus ist für Raspberry Pi OS Bookworm vorgesehen, muss über Ethernet oder direkt an der Konsole gestartet werden und verweigert die Umschaltung, wenn die laufende SSH-Verbindung über `wlan0` kommt.
+
 ## 1. Quellcode bereitstellen
 
 ### Empfohlen: privates Git-Checkout auf dem Scanner
@@ -82,9 +90,27 @@ Alle Werte und Sicherheitsregeln stehen in [configuration.md](configuration.md).
 
 Bei `127.0.0.1` ist die Oberfläche nur auf dem Scanner selbst erreichbar. Das ist für lokale Anzeige oder einen abgesicherten SSH-Tunnel geeignet.
 
-Für den Raspberry Pi 3B+ ist ein privater, passwortgeschützter WLAN-Hotspot `TRIAGEBOX` als Hauptzugang vorgesehen. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend `http://triagebox.local/`. Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die robuste Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
+Für den Raspberry Pi 3B+ bereitet der Pi-Modus einen privaten WPA2-Hotspot `TRIAGEBOX` als Hauptzugang vor. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend:
 
-Hostname, mDNS/Avahi, Standardport 80, feste Rückfalladressen und Firewall werden erst auf der realen Hardware eingerichtet und gemeinsam validiert. Die Konfiguration darf die Oberfläche nicht versehentlich in anderen WLANs oder im Internet freigeben.
+```text
+http://triagebox.local:8787/
+```
+
+Die derzeitige Alpha-Vorlage verwendet absichtlich das einfache Entwicklungskennwort `triagebox123`. Es ist öffentlich bekannt, kein echtes Geheimnis und muss vor einem realen Einsatz in `/etc/forensic-triage/pi-network.env` geändert werden. Danach den Pi-Modus erneut ausführen oder die NetworkManager-Verbindung aktualisieren.
+
+Der Pi-Modus erledigt automatisch:
+
+- Hostname `triagebox` und mDNS/Avahi,
+- 2,4-GHz-Hotspot über `wlan0`,
+- WPA2/RSN mit CCMP,
+- private Adresse `10.42.0.1/24` und DHCP über NetworkManager,
+- Bindung des Webdienstes an die Hotspot-Adresse,
+- Firewall-Regel gegen Weiterleitung vom Hotspot ins Ethernet/Internet,
+- automatischen Hotspot-Start beim Booten.
+
+Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die geplante Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
+
+Portloses HTTPS, das gemeinsame Gerätepasswort und feste Ethernet-Rückfalladressen folgen getrennt. Hotspot, mDNS und Firewall sind im Installer vorbereitet, gelten aber bis zum Test auf dem echten Pi weiterhin als unvalidiert.
 
 ## 5. Aktualisieren
 
@@ -130,4 +156,4 @@ Bis diese Punkte praktisch validiert sind, bleibt die Debian-VM die technische R
 
 ## English quick install
 
-Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. The idempotent installer installs packages, creates the virtual environment, runs tests, installs the systemd service, and creates `/etc/forensic-triage/triage.env` if it does not exist. Edit that root-only file to change host, port, storage roots, and the default profile.
+Clone the private repository with a read-only deploy key or place a trusted release bundle on a Debian-based scanner, then run `sudo ./scripts/install_debian.sh`. On Raspberry Pi OS Bookworm, run `sudo ./scripts/install_debian.sh --pi` from Ethernet or the local console to additionally prepare the private hotspot, mDNS hostname, and forwarding guard. The development Wi-Fi password must be replaced before real use.

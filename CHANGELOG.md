@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.17] – 2026-08-28
+
+### Hinzugefügt
+
+- opt-in Raspberry-Pi-Installation über `install_debian.sh --pi`
+- getrennte, root-geschützte Hotspot-Konfiguration unter `/etc/forensic-triage/pi-network.env`
+- vorbereiteter WPA2-Hotspot `TRIAGEBOX`, Hostname `triagebox`, Avahi/mDNS und feste Adresse `10.42.0.1`
+- eigener nftables-Weiterleitungsschutz gegen Internet-/Ethernet-Routing aus dem Hotspot
+- Schutz vor dem Abbruch einer laufenden SSH-Sitzung über `wlan0`
+
+### Dokumentiert
+
+- Entwicklungskennwort `triagebox123` klar als öffentlich bekannten Alpha-Wert ausgewiesen
+- Pi-Installation, Kennwortwechsel, Adresse und noch ausstehende Hardwarevalidierung beschrieben
+
 ## [0.2.0-alpha.16] – 2026-08-28
 
 ### Hinzugefügt

@@ -1,0 +1,13 @@
+[Unit]
+Description=TRIAGE//BOX private hotspot forwarding guard
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=@PROJECT_ROOT@/scripts/apply_pi_firewall.sh
+ExecStop=-/usr/sbin/nft delete table inet triagebox
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

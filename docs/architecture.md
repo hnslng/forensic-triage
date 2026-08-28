@@ -55,8 +55,8 @@ Die Suche arbeitet ausschließlich auf Namen und Pfaden. Sie ist nicht gleichbed
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.16 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.17 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Sie öffnet oder interpretiert keine Dateiinhalte. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 
-The browser calls a local Python service, which coordinates one guarded scanner process per eligible physical device. Each process has per-command and whole-scan deadlines and uses a private Linux mount namespace. A timed-out path is quarantined until physical disconnect so the dashboard and other scans remain available without an automatic retry loop. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.16 is metadata-only and does not inspect file signatures or contents.
+The browser calls a local Python service, which coordinates one guarded scanner process per eligible physical device. Each process has per-command and whole-scan deadlines and uses a private Linux mount namespace. A timed-out path is quarantined until physical disconnect so the dashboard and other scans remain available without an automatic retry loop. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.17 is metadata-only and does not inspect file signatures or contents.

@@ -15,5 +15,6 @@ TRIAGE-BOX starten.command
 
 # Never commit credentials or local operator configuration.
 .env
+*.env
 *.key
 *.pem

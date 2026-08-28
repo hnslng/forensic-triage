@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.16 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.17 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -27,12 +27,12 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - Entscheidungen „Sichern“, „Nicht ausgewählt“ und „Weitere Prüfung“
 - lokale Fallakte mit Audit-Log, Medienregister, Bericht und SHA-256-Manifest
 - ZIP-Export der Falldaten
-- direktes Öffnen und passwortgeschütztes Entfernen einzelner Fälle im Fallarchiv
+- direktes Öffnen und doppelt bestätigtes, wiederherstellbares Entfernen einzelner Fälle im Fallarchiv
 - sicherer Software-Auswurf und erneute Geräteerkennung
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.16 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.17 liest **keine Dateiinhalte**. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -63,9 +63,15 @@ Anschließend auf einem Debian-basierten Scanner:
 sudo ./scripts/install_debian.sh
 ```
 
+Auf Raspberry Pi OS Bookworm über Ethernet beziehungsweise an der lokalen Konsole:
+
+```bash
+sudo ./scripts/install_debian.sh --pi
+```
+
 Das wiederholbar ausführbare Skript installiert Systempakete, Python-Umgebung, Tests, Konfiguration und systemd-Dienst. Es überschreibt bei Aktualisierungen weder lokale Konfiguration noch Fallakten. Einzelheiten: [Installation und Aktualisierung](docs/installation.md).
 
-Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Siehe [Konfiguration](docs/configuration.md).
+Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Der Pi-Modus trennt WLAN-SSID und Kennwort in `/etc/forensic-triage/pi-network.env`. Siehe [Konfiguration](docs/configuration.md).
 
 ## Bedienablauf
 
@@ -139,9 +145,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a16` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.16`
-- automatisierte Tests: 30
+- Paketversion: `0.2.0a17` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.17`
+- automatisierte Tests: 43
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
 
@@ -153,4 +159,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.16 searches file and directory names, not file contents. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.17 searches file and directory names, not file contents. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

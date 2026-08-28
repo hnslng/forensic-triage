@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.16. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.17. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -16,6 +16,7 @@ Stand: Version 0.2.0-alpha.16. Prioritäten richten sich nach forensischer Siche
 
 ## Raspberry Pi und Feldhardware
 
+- [x] Opt-in-Installationsmodus `--pi` für NetworkManager-Hotspot, Hostname, Avahi und Weiterleitungsschutz vorbereiten.
 - [ ] Zielmodell, RAM, Speicher und Gehäuse festlegen.
 - [ ] Raspberry Pi OS/Debian installieren und vollständige Installationsanleitung praktisch nachspielen.
 - [ ] Aktiven, ausreichend versorgten USB-Hub für mehrere Datenträger validieren.

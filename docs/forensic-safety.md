@@ -39,7 +39,7 @@ Ein Prozess-Zeitlimit kann einen Linux-Prozess im nicht unterbrechbaren Hardware
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.16 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.17 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt.
 
 ## Schutz der Fallunterlagen
 
@@ -47,4 +47,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.16 does not inspect signatures or contents.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.17 does not inspect signatures or contents.

@@ -73,8 +73,8 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.16` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.17` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 ## English summary
 
-The project currently has 38 automated tests plus a synthetic 960-file physical-media fixture. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.
+The project currently has 43 automated tests plus a synthetic 960-file physical-media fixture. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.

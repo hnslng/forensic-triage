@@ -10,10 +10,19 @@ Lokale Einstellungen gehören nicht in den Programmcode und nicht in Git. Das In
 
 Sie gehört `root`, hat Dateimodus `0600` und wird bei einer erneuten Installation nicht überschrieben.
 
+Der optionale Pi-Modus legt Netzwerkgeheimnisse bewusst getrennt vom Webdienst ab:
+
+```text
+/etc/forensic-triage/pi-network.env
+```
+
+Auch diese Datei gehört `root`, hat Modus `0600` und wird bei Aktualisierungen nicht überschrieben. Dadurch erhält der Webprozess das WLAN-Kennwort nicht als eigene Umgebungsvariable.
+
 Bearbeiten:
 
 ```bash
 sudoedit /etc/forensic-triage/triage.env
+sudoedit /etc/forensic-triage/pi-network.env  # nur im Pi-Modus
 sudo systemctl restart forensic-triage-web.service
 ```
 
@@ -51,6 +60,22 @@ Nach einer Zeitüberschreitung wird nur der betroffene Gerätepfad gesperrt und 
 
 Für die Fallentfernung gibt es bewusst kein Passwort. Der Dialog verlangt zwei eindeutige Bedienhandlungen für den konkret genannten Fall. Entfernen verschiebt die Fallakte nur in den wiederherstellbaren internen Papierkorb. Das ist eine Fehlbedienungssperre, aber keine Benutzer- oder Rechteverwaltung.
 
+## Pi-Netzwerk
+
+Die lokale Datei `pi-network.env` enthält:
+
+| Name | Alpha-Standard | Bedeutung |
+|---|---|---|
+| `TRIAGEBOX_WIFI_SSID` | `TRIAGEBOX` | sichtbarer WLAN-Name |
+| `TRIAGEBOX_WIFI_PASSWORD` | `triagebox123` | ausschließlich einfaches Entwicklungskennwort |
+| `TRIAGEBOX_WIFI_INTERFACE` | `wlan0` | integrierte WLAN-Schnittstelle |
+| `TRIAGEBOX_WIFI_CONNECTION` | `TRIAGEBOX-HOTSPOT` | Name des NetworkManager-Profils |
+| `TRIAGEBOX_WIFI_ADDRESS` | `10.42.0.1/24` | private Hotspot-Adresse und Netz |
+| `TRIAGEBOX_HOSTNAME` | `triagebox` | mDNS-Hostname für `triagebox.local` |
+| `TRIAGEBOX_WIFI_COUNTRY` | `AT` | WLAN-Regulierungsland |
+
+Das Entwicklungskennwort ist absichtlich leicht zu merken, aber allgemein bekannt und daher **nicht für echten Einsatz geeignet**. Ein späteres starkes Kennwort kann in Anführungszeichen als shell-kompatibler `KEY=VALUE`-Eintrag hinterlegt werden. Anschließend aus dem Projektordner erneut `sudo ./scripts/install_debian.sh --pi` ausführen.
+
 ## Port und Netzwerk
 
 `127.0.0.1` ist die sichere Voreinstellung für Entwicklung oder Zugriff über SSH. Der Raspberry Pi 3B+ soll später primär einen privaten WLAN-Hotspot `TRIAGEBOX` bereitstellen; Ethernet bleibt die Rückfallebene. Eine andere Bindeadresse darf erst nach festgelegten privaten IP-Adressen und Firewallregeln aktiviert werden. `0.0.0.0` würde auf allen Netzwerkschnittstellen lauschen und soll nicht unüberlegt verwendet werden.
@@ -79,4 +104,4 @@ Explizite Kommandozeilenargumente wie `--port` überschreiben die Werte aus der 
 
 ## English summary
 
-Local settings are stored in the root-only `/etc/forensic-triage/triage.env` file and are preserved on reinstall. It controls host, port, result and case roots, and the default profile. Keep localhost for SSH-based access, store real case data on encrypted storage, and never commit the configuration file.
+Local web settings are stored in root-only `/etc/forensic-triage/triage.env`. Pi hotspot settings and the Wi-Fi secret are kept separately in root-only `/etc/forensic-triage/pi-network.env`, so the web service does not receive the Wi-Fi password. Both files are preserved on reinstall and must never be committed.
