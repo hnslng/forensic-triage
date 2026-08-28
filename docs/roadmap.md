@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.11. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.12. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 

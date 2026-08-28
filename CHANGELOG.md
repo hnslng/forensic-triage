@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.12] – 2026-08-28
+
+### Geändert
+
+- Dateitypen als ruhige unsichtbare Tabelle mit Zahl, Bezeichnung und Balken angeordnet
+- Zahlen rechtsbündig mit tabellarischen Ziffern vor die Bezeichnung gesetzt
+- alle Vergleichsbalken auf identische Start- und Endpositionen ausgerichtet
+- aktive Filterzeile verändert die Spaltenpositionen nicht mehr
+
 ## [0.2.0-alpha.11] – 2026-08-28
 
 ### Bereinigt
