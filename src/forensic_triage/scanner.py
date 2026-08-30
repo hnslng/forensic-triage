@@ -12,7 +12,13 @@ from pathlib import Path
 from typing import Any
 
 from .commands import run_command
-from .container_inventory import ContainerLimits, empty_catalog, merge_catalogs, virtual_files
+from .container_inventory import (
+    ContainerLimits,
+    archive_encryption_summary,
+    empty_catalog,
+    merge_catalogs,
+    virtual_files,
+)
 from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
 from .fast_inventory import partition_path_for_start, readonly_mount_inventory
@@ -180,6 +186,7 @@ def scan(
             "selected_keywords": selected_keywords,
         }
         summary = summarize(all_files, all_directories)
+        summary["archive_encryption"] = archive_encryption_summary(all_files, container_catalog)
         summary.update(
             {
                 "evidence": evidence,

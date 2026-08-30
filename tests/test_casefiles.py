@@ -132,6 +132,7 @@ def test_container_inventory_is_expandable_and_searchable_without_changing_count
         "status": "ok",
         "containers": [{
             "path": "Ablage.zip", "format": "zip", "status": "ok", "entry_count": 2,
+            "encrypted": True,
             "truncated": False,
             "entries": [
                 {"path": "Dokumente", "kind": "directory", "size": 0, "category": "Ordner", "extension": ""},
@@ -149,6 +150,7 @@ def test_container_inventory_is_expandable_and_searchable_without_changing_count
     root = store.directory_inventory(media_id)
     assert root["entries"][0]["kind"] == "container"
     assert root["entries"][0]["entry_count"] == 2
+    assert root["entries"][0]["encrypted"] is True
     container_root = store.container_inventory(media_id, "Ablage.zip")
     assert container_root["entries"][0]["name"] == "Dokumente"
     assert store.container_inventory(media_id, "Ablage.zip", "Dokumente")["entries"][0]["name"] == "Rechnung.pdf"

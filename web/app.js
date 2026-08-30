@@ -140,8 +140,9 @@ function renderResults(summary, hits = {}) {
   $("totalBytes").textContent = formatBytes(summary.total_file_bytes);
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
+  const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => `
-    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>
+    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}${name === "Archive" && Number(archiveEncryption.total || 0) ? `<small>${Number(archiveEncryption.encrypted || 0)} VERSCHLÜSSELT${Number(archiveEncryption.unknown || 0) ? ` · ${Number(archiveEncryption.unknown)} UNGEPRÜFT` : ""}</small>` : ""}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>
   `).join("");
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
@@ -584,8 +585,9 @@ function treeEntriesHtml(entries, containerPath = "") {
         ? "NICHT LESBAR"
         : entry.truncated ? `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE · LIMIT`
           : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`;
+      const encryptionState = entry.encrypted ? " · VERSCHLÜSSELT" : "";
       return `<details class="tree-folder tree-container" data-loaded="false">
-        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><em>${escapeHtml(format)}</em><small>${escapeHtml(state)}</small></summary>
+        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><em>${escapeHtml(format)}</em><small>${escapeHtml(state + encryptionState)}</small></summary>
         <div class="tree-children"><p class="tree-loading">${escapeHtml(format)}-VERZEICHNIS ÖFFNEN …</p></div>
       </details>`;
     }

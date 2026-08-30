@@ -570,6 +570,7 @@ class CaseStore:
                             "container_id": container.get("id", container.get("path", child_path)),
                             "container_status": container.get("status", "unknown"),
                             "entry_count": int(container.get("entry_count", 0)),
+                            "encrypted": bool(container.get("encrypted", False)),
                             "truncated": bool(container.get("truncated", False)),
                         } if container else {}),
                     })

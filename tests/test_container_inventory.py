@@ -4,7 +4,12 @@ import zipfile
 
 import pycdlib
 
-from forensic_triage.container_inventory import ContainerLimits, index_containers, virtual_files
+from forensic_triage.container_inventory import (
+    ContainerLimits,
+    archive_encryption_summary,
+    index_containers,
+    virtual_files,
+)
 
 
 LIMITS = ContainerLimits(seconds=5, max_containers=5, max_entries_per_container=100, max_total_entries=200)
@@ -89,3 +94,39 @@ def test_nested_archive_is_only_a_listed_entry(tmp_path) -> None:
 
     assert catalog["containers_indexed"] == 1
     assert catalog["containers"][0]["entries"][0]["path"] == "inner.zip"
+
+
+def test_zip_encryption_flag_is_detected_without_reading_payload(tmp_path) -> None:
+    archive_path = tmp_path / "encrypted.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("secret.txt", b"payload")
+    raw = bytearray(archive_path.read_bytes())
+    local_header = raw.index(b"PK\x03\x04")
+    central_header = raw.index(b"PK\x01\x02")
+    raw[local_header + 6] |= 0x01
+    raw[central_header + 8] |= 0x01
+    archive_path.write_bytes(raw)
+
+    catalog = index_containers(
+        tmp_path, [{"path": "encrypted.zip", "extension": "zip"}], "001", LIMITS,
+    )
+
+    assert catalog["containers"][0]["encrypted"] is True
+    assert catalog["containers"][0]["entries"][0]["encrypted"] is True
+
+
+def test_archive_encryption_summary_keeps_unsupported_formats_unknown() -> None:
+    files = [
+        {"partition_slot": "001", "path": f"archive-{index}.zip", "category": "Archive"}
+        for index in range(5)
+    ] + [{"partition_slot": "001", "path": "unknown.7z", "category": "Archive"}]
+    catalog = {
+        "containers": [{
+            "partition_slot": "001", "path": f"archive-{index}.zip", "format": "zip",
+            "status": "ok", "truncated": False, "encrypted": True,
+        } for index in range(5)],
+    }
+
+    assert archive_encryption_summary(files, catalog) == {
+        "total": 6, "encrypted": 5, "not_encrypted": 0, "unknown": 1,
+    }

@@ -65,6 +65,8 @@ TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann d
 
 Im Datei-Explorer besitzen erkannte ZIP-Dateien und ISO-Images einen eigenen Formatmarker und können wie ein Ordner aufgeklappt werden. Angezeigt und durchsucht werden ausschließlich katalogisierte Namen und Verzeichniswege. `LIMIT` bedeutet, dass das kurze Zeit- oder Mengenbudget erreicht wurde und die virtuelle Liste bewusst unvollständig ist. `NICHT LESBAR` ist kein Beweis für einen leeren Container; der Datenträger muss bei Relevanz einer professionellen Folgeprüfung zugeführt werden.
 
+Die Dateitypzeile `ARCHIVE` ergänzt die Gesamtanzahl um `VERSCHLÜSSELT` und gegebenenfalls `UNGEPRÜFT`. Der erste Wert stammt aus eindeutig erkannten ZIP-Merkmalen. `UNGEPRÜFT` umfasst insbesondere noch nicht unterstützte Formate sowie beschädigte oder nur teilweise katalogisierte Archive und ist ausdrücklich kein Entwarnungsstatus.
+
 ## 8. Fall entfernen
 
 1. Aktiven Fall gegebenenfalls zuerst beenden.

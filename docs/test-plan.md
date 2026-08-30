@@ -73,7 +73,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.19` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.20` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Extraktion oder Dekompression, sichtbare Limitkennzeichnung, höchstens das konfigurierte Zusatzzeitbudget sowie unveränderte äußere Datei-/Ordnerzahlen.
 

@@ -243,6 +243,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.bar-name small { display: block; margin-top: 2px; color: var(--amber); font-size: 7px; line-height: 1.15; }
 .keyword-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--line); padding: 9px 1px; font-size: 12px; }
 .keyword-row.result-filter { width: 100%; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; appearance: none; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
 .keyword-row.result-filter:hover { color: var(--acid); background: rgba(201, 242, 82, .035); }

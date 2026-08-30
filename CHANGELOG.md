@@ -2,6 +2,19 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.20] – 2026-08-30
+
+### Hinzugefügt
+
+- kompakte Verschlüsselungsangabe direkt unter der Kategorie `ARCHIVE`
+- konservative Aufteilung in `VERSCHLÜSSELT`, nachweislich nicht verschlüsselt und `UNGEPRÜFT`
+- sichtbare Verschlüsselungskennzeichnung am aufklappbaren ZIP-Container
+
+### Sicherheit
+
+- nicht unterstützte, beschädigte oder wegen eines Limits nur teilweise gelesene Archive werden niemals als unverschlüsselt angenommen
+- keine Passwortversuche, Entschlüsselung oder zusätzliche Rekursion
+
 ## [0.2.0-alpha.19] – 2026-08-30
 
 ### Hinzugefügt

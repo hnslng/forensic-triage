@@ -24,6 +24,8 @@ In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem 
 
 ZIP- und ISO-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird über das Zentralverzeichnis, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen gelesen. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte Container und erreichte Limits werden sichtbar markiert.
 
+Unter der Kategorie `ARCHIVE` steht zusätzlich die Anzahl sicher erkannter verschlüsselter ZIPs. Archive, deren Verschlüsselungszustand wegen Format, Beschädigung oder Limit nicht zuverlässig feststeht, werden getrennt als `UNGEPRÜFT` ausgewiesen. TRIAGE//BOX versucht keine Passwörter und deutet `UNGEPRÜFT` niemals als unverschlüsselt.
+
 Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Scannerlauf erhalten. Ein Datenträger bekommt dabei automatisch eine neutrale Nummer wie `SICHT-001`.
 
 ## Welche Teile gibt es?
