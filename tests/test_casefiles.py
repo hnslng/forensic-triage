@@ -54,7 +54,7 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
         "offset": 0,
         "next_offset": 1,
         "has_more": False,
-        "files": [{"path": "a", "size": 1, "extension": "", "category": "Unbekannt", "mtime": ""}],
+        "files": [{"path": "a", "size": 1, "extension": "", "category": "Unbekannt", "mtime": "", "source": "media_inventory", "container_format": "", "size_known": True}],
     }
 
 
@@ -118,6 +118,43 @@ def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
     paged = store.directory_inventory(media_id, "partition_001", limit=1)
     assert paged["has_more"] is True
     assert store.directory_inventory(media_id, "partition_001", limit=1, offset=1)["entries"][0]["name"] == "photo.jpg"
+
+
+def test_container_inventory_is_expandable_and_searchable_without_changing_counts(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-CONTAINER", "SICHT-001")
+    (result_dir / "files.csv").write_text(
+        "path,size,extension,category\n"
+        "Ablage.zip,100,zip,Archive\n",
+        encoding="utf-8",
+    )
+    (result_dir / "container-index.json").write_text(json.dumps({
+        "status": "ok",
+        "containers": [{
+            "path": "Ablage.zip", "format": "zip", "status": "ok", "entry_count": 2,
+            "truncated": False,
+            "entries": [
+                {"path": "Dokumente", "kind": "directory", "size": 0, "category": "Ordner", "extension": ""},
+                {"path": "Dokumente/Rechnung.pdf", "kind": "file", "size": 42, "category": "Dokumente", "extension": "pdf"},
+            ],
+        }],
+    }), encoding="utf-8")
+    (result_dir / "hits.json").write_text(json.dumps({
+        "by_keyword": {"rechnung": {"count": 1, "paths": ["Ablage.zip › Dokumente/Rechnung.pdf"]}},
+    }), encoding="utf-8")
+    media_id = store.record_scan(
+        "FALL-CONTAINER", "SICHT-001", "HL", {"path": "/dev/sdb"}, result_dir,
+    )["media"]["id"]
+
+    root = store.directory_inventory(media_id)
+    assert root["entries"][0]["kind"] == "container"
+    assert root["entries"][0]["entry_count"] == 2
+    container_root = store.container_inventory(media_id, "Ablage.zip")
+    assert container_root["entries"][0]["name"] == "Dokumente"
+    assert store.container_inventory(media_id, "Ablage.zip", "Dokumente")["entries"][0]["name"] == "Rechnung.pdf"
+    search = store.file_inventory(media_id, query="rechnung")
+    assert search["files"][0]["match_source"] == "ZIP-INHALT"
+    assert search["files"][0]["path"] == "Ablage.zip › Dokumente/Rechnung.pdf"
 
 
 def test_archive_case_removes_active_record_and_keeps_recoverable_copy(tmp_path) -> None:

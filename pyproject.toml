@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forensic-triage"
-version = "0.2.0a18"
+version = "0.2.0a19"
 description = "Read-only field-triage inventory for removable media"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["PyYAML>=6.0", "reportlab>=4.2"]
+dependencies = ["PyYAML>=6.0", "reportlab>=4.2", "pycdlib>=1.16,<2"]
 
 [project.optional-dependencies]
 test = ["pytest>=8.0", "pytest-cov>=5.0"]

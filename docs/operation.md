@@ -63,6 +63,8 @@ TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann d
 
 „PDF-Bericht“ lädt eine kurze, druckbare Fallübersicht im A4-Querformat. Pro Datenträger enthält sie eine Zeile mit Seriennummer, technischen Dateikategorien, Entscheidung und gegebenenfalls der Begründung für „Nicht ausgewählt“. „Falldaten ZIP“ erzeugt zusätzlich den vollständigen Export der lokalen Fallakte. Beide Exporte enthalten keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
 
+Im Datei-Explorer besitzen erkannte ZIP-Dateien und ISO-Images einen eigenen Formatmarker und können wie ein Ordner aufgeklappt werden. Angezeigt und durchsucht werden ausschließlich katalogisierte Namen und Verzeichniswege. `LIMIT` bedeutet, dass das kurze Zeit- oder Mengenbudget erreicht wurde und die virtuelle Liste bewusst unvollständig ist. `NICHT LESBAR` ist kein Beweis für einen leeren Container; der Datenträger muss bei Relevanz einer professionellen Folgeprüfung zugeführt werden.
+
 ## 8. Fall entfernen
 
 1. Aktiven Fall gegebenenfalls zuerst beenden.

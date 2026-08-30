@@ -35,6 +35,7 @@ casefiles/
 ## Inhalte
 
 - `files.csv`: vollständiges Verzeichnis der beobachteten aktiven Dateien mit Pfad, Endung, Kategorie, Größe und Dateisystem-Zeitstempeln; keine Dateiinhalte
+- `container-index.json`: begrenztes Inhaltsverzeichnis erkannter ZIP-Dateien und ISO-Images; keine extrahierten oder dekomprimierten Nutzdaten
 - `media-register.csv`: Übersicht aller Sichtungen und Entscheidungen im Fall
 - `case-report.pdf`: kompakter, druckbarer Querformat-Bericht mit einer Zeile je Datenträger
 - `case-report.txt`: menschenlesbare Fallzusammenfassung

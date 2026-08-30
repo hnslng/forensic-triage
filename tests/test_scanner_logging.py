@@ -34,15 +34,17 @@ def test_optical_medium_uses_whole_device_readonly_inventory(tmp_path, monkeypat
             [{"path": "photos/image.jpg", "size": 5, "category": "Bilder"}],
             [{"path": "photos"}],
             {"source": str(device), "options": "ro"},
+            {"status": "ok", "containers": []},
         ),
     )
 
-    files, directories, partitions = scanner._inventory_optical_medium(
+    files, directories, partitions, containers = scanner._inventory_optical_medium(
         tmp_path / "sr0", "fast", tmp_path,
     )
 
     assert files[0]["path"] == "photos/image.jpg"
     assert directories[0]["path"] == "photos"
+    assert containers["status"] == "ok"
     assert partitions == [{
         "slot": "OPT",
         "location": "whole_medium",
@@ -67,10 +69,10 @@ def test_fast_optical_inventory_survives_unsupported_fsstat(tmp_path, monkeypatc
     monkeypatch.setattr(
         scanner,
         "readonly_mount_inventory",
-        lambda device, slot: ([], [], {"source": str(device), "options": "ro"}),
+        lambda device, slot: ([], [], {"source": str(device), "options": "ro"}, {"status": "ok", "containers": []}),
     )
 
-    _files, _directories, partitions = scanner._inventory_optical_medium(
+    _files, _directories, partitions, _containers = scanner._inventory_optical_medium(
         tmp_path / "sr0", "fast", tmp_path,
     )
 

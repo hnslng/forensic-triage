@@ -15,11 +15,14 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 5. Der Scanner setzt das Blockgerät softwareseitig auf read-only und kontrolliert diesen Zustand.
 6. Im schnellen Modus werden vorhandene Verzeichnis-Metadaten kurzzeitig über einen zusätzlichen Read-only-Mount gelesen.
 7. Dateinamen, Pfade, Endungen, Größen und Zeitstempel werden in eine Tabelle geschrieben.
-8. Aus diesen Daten entstehen Kategorien, Größenstatistik und Stichworttreffer.
-9. Das Dashboard zeigt das Ergebnis. Es öffnet keine Nutzdatei vom Datenträger.
-10. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
+8. ZIP-Dateien und ISO-Images erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex; es wird nichts extrahiert oder dekomprimiert.
+9. Aus den äußeren Metadaten und den zusätzlichen virtuellen Containerpfaden entstehen Kategorien, Größenstatistik und Stichworttreffer. Die normalen Datei-/Ordnerzahlen zählen Containerinhalte bewusst nicht doppelt.
+10. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
+11. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
 In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Der aktive Filter steht in einer eigenen schmalen Statusleiste; zugleich erscheint „Filter aufheben“ direkt neben der Suche und stellt den vollständigen Verzeichnisbaum wieder her. Die freie Namens- und Pfadsuche bleibt eine davon getrennte Funktion. Große Treffermengen werden seitenweise nachgeladen.
+
+ZIP- und ISO-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird über das Zentralverzeichnis, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen gelesen. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte Container und erreichte Limits werden sichtbar markiert.
 
 Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Scannerlauf erhalten. Ein Datenträger bekommt dabei automatisch eine neutrale Nummer wie `SICHT-001`.
 
@@ -34,6 +37,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `src/forensic_triage/device.py` | Zielprüfung und Read-only-Schutz |
 | `src/forensic_triage/scanner.py` | zentraler Ablauf eines Scans |
 | `src/forensic_triage/fast_inventory.py` | schneller Metadatenlauf über verifizierten Read-only-Mount |
+| `src/forensic_triage/container_inventory.py` | begrenzter ZIP-/ISO-Verzeichnisindex ohne Extraktion |
 | `src/forensic_triage/filesystem.py` | Verarbeitung des mountfreien TSK-Laufs |
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
@@ -62,7 +66,7 @@ Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt version
 
 ## Was passiert ausdrücklich nicht?
 
-TRIAGE//BOX öffnet keine Dateien, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Eine umbenannte Datenbank mit Endung `.jpg` erscheint derzeit als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
+TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-Verzeichnisstrukturen; Einträge werden nicht extrahiert, dekomprimiert oder rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
 
 ## English summary
 

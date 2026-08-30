@@ -330,10 +330,13 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .tree-arrow { color: var(--acid); font-size: 10px; transition: transform .15s ease; }
 .tree-folder[open] > summary .tree-arrow { transform: rotate(90deg); }
 .tree-folder b, .tree-file b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.tree-container > summary { border-left: 2px solid var(--amber); }
+.tree-container > summary em { padding: 3px 5px; border: 1px solid var(--amber); color: var(--amber); font-size: 8px; font-style: normal; }
 .tree-folder small, .tree-file small { margin-left: auto; color: var(--muted); font-size: 9px; white-space: nowrap; }
 .tree-children { margin-left: 14px; }
 .tree-loading { margin: 0; padding: 12px; color: var(--muted); font-size: 10px; }
 .tree-loading.error { color: var(--danger); }
+.tree-loading.warning { color: var(--amber); }
 .tree-more { width: 100%; min-height: 40px; margin-top: 8px; border: 1px dashed var(--acid); background: transparent; color: var(--acid); cursor: pointer; font-size: 10px; font-weight: 900; }
 .evidence-modal, .auftrag-modal, .case-archive-modal { max-height: calc(100vh - 36px); padding: 0; border: 1px solid var(--acid); background: var(--panel); color: var(--ink); box-shadow: 12px 12px 0 #050605; }
 .evidence-modal { width: min(780px, calc(100% - 28px)); }

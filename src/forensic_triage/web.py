@@ -372,6 +372,23 @@ class TriageHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
+        container_match = re.fullmatch(r"/api/media/(\d+)/container", route)
+        if container_match:
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                result = self.server.case_store.container_inventory(
+                    int(container_match.group(1)),
+                    str(query.get("path", [""])[0]),
+                    str(query.get("prefix", [""])[0]),
+                    int(query.get("limit", ["300"])[0]),
+                    int(query.get("offset", ["0"])[0]),
+                )
+                self._json(HTTPStatus.OK, result)
+            except KeyError as exc:
+                self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+            except ValueError as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
         media_match = re.fullmatch(r"/api/media/(\d+)", route)
         if media_match:
             result = self.server.case_store.media_detail(int(media_match.group(1)))

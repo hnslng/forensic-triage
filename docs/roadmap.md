@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.18. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.19. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -41,6 +41,9 @@ Stand: Version 0.2.0-alpha.18. Prioritäten richten sich nach forensischer Siche
 - [ ] Falls umgesetzt: Abweichung zwischen Dateiendung und Signatur deutlich als Hinweis anzeigen.
 - [ ] Verhalten bei verschlüsselten Volumes objektiv erkennen und dokumentieren, ohne Inhalte zu öffnen.
 - [ ] Große Verzeichnisbäume und viele kleine Dateien auf Laufzeit und Speicherbedarf testen.
+- [x] ZIP- und ISO-Verzeichnisstrukturen ohne Extraktion, Rekursion oder Änderung der äußeren Dateizahlen katalogisieren.
+- [ ] ZIP-/ISO-Schnellindex und Drei-Sekunden-Budget auf dem Raspberry Pi mit großen, beschädigten, verschlüsselten und ungewöhnlichen Containern validieren.
+- [ ] 7z-/TAR-Unterstützung nach Messung des ZIP-/ISO-Prototyps bewerten; RAR bleibt wegen Zusatzwerkzeugen vorerst außerhalb des Umfangs.
 
 ## Workflow und Dokumentation
 

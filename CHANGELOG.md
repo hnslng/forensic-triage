@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.19] – 2026-08-30
+
+### Hinzugefügt
+
+- begrenzter, nicht extrahierender Verzeichnisindex für ZIP-Dateien und ISO-Images
+- aufklappbare ZIP-/ISO-Container im vorhandenen Datei-Explorer
+- freie Pfad- und Stichwortsuche über katalogisierte interne Dateinamen
+- sichtbare Zustände für beschädigte beziehungsweise wegen Limits unvollständige Container
+
+### Sicherheit
+
+- gemeinsames Standard-Zeitbudget von drei Sekunden und Mengenlimits je Medium
+- keine Dekompression, keine Extraktion und keine rekursive Öffnung verschachtelter Archive
+- äußere Datei-/Ordnerzahlen und Datenvolumen bleiben von virtuellen Containerpfaden unberührt
+
 ## [0.2.0-alpha.18] – 2026-08-28
 
 ### Hinzugefügt

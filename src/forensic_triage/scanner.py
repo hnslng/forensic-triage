@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .commands import run_command
+from .container_inventory import ContainerLimits, empty_catalog, merge_catalogs, virtual_files
 from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
 from .fast_inventory import partition_path_for_start, readonly_mount_inventory
@@ -29,7 +30,7 @@ def _command(args: list[str]) -> str:
 
 def _inventory_optical_medium(
     device: Path, mode: str, raw_dir: Path,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Inventory a CD/DVD filesystem that lives directly on the drive node."""
     partition: dict[str, Any] = {
         "slot": "OPT",
@@ -55,15 +56,16 @@ def _inventory_optical_medium(
             (raw_dir / "fls_OPT.txt").write_text(fls_output, encoding="utf-8")
             files, directories = parse_fls(fls_output, "OPT")
             partition["inventory_method"] = "tsk_fls"
+            containers = empty_catalog("unavailable_in_tsk_mode")
         elif mode == "fast":
-            files, directories, mount_info = readonly_mount_inventory(device, "OPT")
+            files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT")
             write_json(raw_dir / "fast_mount_OPT.json", mount_info)
             partition["partition_device"] = str(device)
             partition["inventory_method"] = "kernel_readonly_mount"
         else:
             raise ValueError(f"unsupported scan mode: {mode}")
         partition["scan_status"] = "ok"
-        return files, directories, [partition]
+        return files, directories, [partition], containers
     except Exception as exc:
         partition["scan_status"] = "unsupported_or_error"
         partition["error"] = str(exc)
@@ -102,7 +104,7 @@ def scan(
         write_json(result_dir / "device.json", device_info)
 
         if device_info.get("type") == "rom":
-            all_files, all_directories, partitions = _inventory_optical_medium(device, mode, raw_dir)
+            all_files, all_directories, partitions, container_catalog = _inventory_optical_medium(device, mode, raw_dir)
         else:
             mmls_output = _command(["mmls", str(device)])
             (raw_dir / "mmls.txt").write_text(mmls_output, encoding="utf-8")
@@ -110,6 +112,11 @@ def scan(
 
             all_files = []
             all_directories = []
+            container_catalogs: list[dict[str, Any]] = []
+            configured_container_limits = ContainerLimits.from_environment()
+            container_deadline = time.monotonic() + configured_container_limits.seconds
+            indexed_containers = 0
+            indexed_entries = 0
             for partition in partitions:
                 if not partition["allocated"]:
                     continue
@@ -124,9 +131,18 @@ def scan(
                         (raw_dir / f"fls_{slot}.txt").write_text(fls_output, encoding="utf-8")
                         files, directories = parse_fls(fls_output, slot)
                         partition["inventory_method"] = "tsk_fls"
+                        containers = empty_catalog("unavailable_in_tsk_mode")
                     elif mode == "fast":
                         partition_device = partition_path_for_start(device, partition["start_sector"])
-                        files, directories, mount_info = readonly_mount_inventory(partition_device, slot)
+                        remaining_limits = ContainerLimits(
+                            seconds=max(0.0, container_deadline - time.monotonic()),
+                            max_containers=max(0, configured_container_limits.max_containers - indexed_containers),
+                            max_entries_per_container=configured_container_limits.max_entries_per_container,
+                            max_total_entries=max(0, configured_container_limits.max_total_entries - indexed_entries),
+                        )
+                        files, directories, mount_info, containers = readonly_mount_inventory(
+                            partition_device, slot, remaining_limits,
+                        )
                         write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
                         partition["partition_device"] = str(partition_device)
                         partition["inventory_method"] = "kernel_readonly_mount"
@@ -134,6 +150,9 @@ def scan(
                         raise ValueError(f"unsupported scan mode: {mode}")
                     all_files.extend(files)
                     all_directories.extend(directories)
+                    container_catalogs.append(containers)
+                    indexed_containers += int(containers.get("containers_indexed", 0))
+                    indexed_entries += int(containers.get("entries_indexed", 0))
                     partition["scan_status"] = "ok"
                 except subprocess.TimeoutExpired:
                     raise
@@ -141,10 +160,11 @@ def scan(
                     partition["scan_status"] = "unsupported_or_error"
                     partition["error"] = str(exc)
                     scan_logger.warning("partition %s skipped: %s", slot, exc)
+            container_catalog = merge_catalogs(container_catalogs)
 
         profile = load_profile(profile_path)
         selected_keywords = profile["keywords"] if keywords is None else keywords
-        hits = build_hits(all_files, selected_keywords)
+        hits = build_hits([*all_files, *virtual_files(container_catalog)], selected_keywords)
         sources = profile_sources or [{
             "id": str(profile.get("id", profile_path.stem)),
             "name": str(profile.get("name", profile_path.stem.upper())),
@@ -167,11 +187,20 @@ def scan(
                 "duration_seconds": round(time.monotonic() - started, 3),
                 "scan_mode": mode,
                 "keyword_matches": hits["total_matches"],
+                "container_index": {
+                    "status": container_catalog.get("status", "ok"),
+                    "containers_seen": container_catalog.get("containers_seen", 0),
+                    "containers_indexed": container_catalog.get("containers_indexed", 0),
+                    "entries_indexed": container_catalog.get("entries_indexed", 0),
+                    "duration_seconds": container_catalog.get("duration_seconds", 0),
+                    "truncated": container_catalog.get("truncated", False),
+                },
             }
         )
 
         write_json(result_dir / "partitions.json", partitions)
         write_files_csv(result_dir / "files.csv", all_files)
+        write_json(result_dir / "container-index.json", container_catalog)
         write_json(result_dir / "hits.json", hits)
         write_json(result_dir / "summary.json", summary)
         if expected_path is not None:

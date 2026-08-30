@@ -157,6 +157,7 @@ function renderArchive(archive) {
   $("documentationGrid").hidden = false;
   $("archiveCasePath").textContent = archive.case_path || "—";
   $("archiveInventory").textContent = archive.result_path ? `${archive.result_path}/files.csv` : "files.csv";
+  $("archiveContainerIndex").textContent = archive.result_path ? `${archive.result_path}/container-index.json` : "container-index.json";
   $("archiveRegister").textContent = archive.media_register || "media-register.csv";
   $("archivePdfReport").textContent = archive.pdf_report || "case-report.pdf";
   $("archiveReport").textContent = archive.case_report || "case-report.txt";
@@ -568,15 +569,27 @@ async function saveDecision() {
   }
 }
 
-function treeEntriesHtml(entries) {
+function treeEntriesHtml(entries, containerPath = "") {
   return entries.map((entry) => {
     if (entry.kind === "directory") {
+      const sizeLabel = entry.size_known === false ? "GRÖSSE NICHT INDEXIERT" : formatBytes(entry.size);
       return `<details class="tree-folder" data-loaded="false">
-        <summary data-tree-prefix="${escapeHtml(entry.path)}"><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${Number(entry.file_count).toLocaleString("de-AT")} DATEIEN · ${formatBytes(entry.size)}</small></summary>
+        <summary ${containerPath ? `data-container-path="${escapeHtml(containerPath)}" data-container-prefix="${escapeHtml(entry.path)}"` : `data-tree-prefix="${escapeHtml(entry.path)}"`}><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${Number(entry.file_count).toLocaleString("de-AT")} DATEIEN · ${sizeLabel}</small></summary>
         <div class="tree-children"><p class="tree-loading">ORDNER ÖFFNEN …</p></div>
       </details>`;
     }
-    return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(entry.category)} · ${formatBytes(entry.size)}</small></div>`;
+    if (entry.kind === "container") {
+      const format = String(entry.container_format || "CONTAINER").toUpperCase();
+      const state = entry.container_status === "invalid_or_unsupported"
+        ? "NICHT LESBAR"
+        : entry.truncated ? `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE · LIMIT`
+          : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`;
+      return `<details class="tree-folder tree-container" data-loaded="false">
+        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><em>${escapeHtml(format)}</em><small>${escapeHtml(state)}</small></summary>
+        <div class="tree-children"><p class="tree-loading">${escapeHtml(format)}-VERZEICHNIS ÖFFNEN …</p></div>
+      </details>`;
+    }
+    return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(entry.category)} · ${entry.size_known === false ? "GRÖSSE NICHT INDEXIERT" : formatBytes(entry.size)}</small></div>`;
   }).join("") || '<p class="tree-loading">ORDNER IST LEER</p>';
 }
 
@@ -602,6 +615,30 @@ async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offse
         await loadInventoryTree(data.entries[0].path, folder.querySelector(".tree-children"));
       }
     }
+  } catch (error) {
+    target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function loadContainerTree(containerPath, prefix = "", target, offset = 0) {
+  if (!currentMediaId || !target) return;
+  if (offset === 0) target.innerHTML = '<p class="tree-loading">ZIP-/ISO-VERZEICHNIS WIRD GELADEN …</p>';
+  else target.querySelector(".tree-more")?.remove();
+  try {
+    const parameters = new URLSearchParams({ path: containerPath, prefix, limit: "300", offset: String(offset) });
+    const response = await fetch(`/api/media/${currentMediaId}/container?${parameters}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "ZIP-/ISO-Verzeichnis nicht verfügbar");
+    let entries = treeEntriesHtml(data.entries || [], containerPath);
+    if (!(data.entries || []).length && data.container_status === "invalid_or_unsupported") {
+      entries = '<p class="tree-loading error">VERZEICHNIS NICHT LESBAR ODER NICHT UNTERSTÜTZT</p>';
+    } else if (!(data.entries || []).length) {
+      entries = '<p class="tree-loading">CONTAINER IST LEER</p>';
+    }
+    if (offset === 0) target.innerHTML = entries;
+    else target.insertAdjacentHTML("beforeend", entries);
+    if (data.has_more) target.insertAdjacentHTML("beforeend", `<button class="tree-more" type="button" data-container-path="${escapeHtml(containerPath)}" data-container-prefix="${escapeHtml(prefix)}" data-container-offset="${Number(data.next_offset)}">WEITERE EINTRÄGE LADEN</button>`);
+    if (data.truncated && offset === 0) target.insertAdjacentHTML("beforeend", '<p class="tree-loading warning">SCHNELLINDEX-LIMIT ERREICHT · VERZEICHNIS IST UNVOLLSTÄNDIG</p>');
   } catch (error) {
     target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
   }
@@ -653,7 +690,7 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     $("inventoryTree").hidden = true;
     $("inventorySearchResults").hidden = false;
     const rows = data.files.map((file) => `
-      <tr><td>${escapeHtml(file.path)}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${formatBytes(file.size)}</td></tr>
+      <tr><td>${escapeHtml(file.path)}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>
     `).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
@@ -1030,7 +1067,20 @@ $("inventoryPanel").addEventListener("toggle", () => {
 $("inventoryTree").addEventListener("click", (event) => {
   const more = event.target.closest("button.tree-more");
   if (more) {
-    loadInventoryTree(more.dataset.treePrefix, more.parentElement, Number(more.dataset.treeOffset));
+    if (more.dataset.containerPath) {
+      loadContainerTree(more.dataset.containerPath, more.dataset.containerPrefix, more.parentElement, Number(more.dataset.containerOffset));
+    } else {
+      loadInventoryTree(more.dataset.treePrefix, more.parentElement, Number(more.dataset.treeOffset));
+    }
+    return;
+  }
+  const containerSummary = event.target.closest("summary[data-container-path]");
+  if (containerSummary) {
+    const container = containerSummary.parentElement;
+    if (!container.open && container.dataset.loaded !== "true") {
+      container.dataset.loaded = "true";
+      setTimeout(() => loadContainerTree(containerSummary.dataset.containerPath, containerSummary.dataset.containerPrefix, container.querySelector(".tree-children")), 0);
+    }
     return;
   }
   const summary = event.target.closest("summary[data-tree-prefix]");

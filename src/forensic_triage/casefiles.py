@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .container_inventory import empty_catalog, virtual_files
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 
@@ -337,7 +338,11 @@ class CaseStore:
                 "VALUES (?, ?, ?, 'scan_completed', ?, ?)",
                 (
                     case_id, media_id, now, operator or None,
-                    json.dumps({"scan_id": result_dir.name, "sighting_number": sighting_number}, ensure_ascii=False),
+                    json.dumps({
+                        "scan_id": result_dir.name,
+                        "sighting_number": sighting_number,
+                        "container_index": summary.get("container_index", {}),
+                    }, ensure_ascii=False),
                 ),
             )
         self.refresh_exports(case_number)
@@ -459,36 +464,50 @@ class CaseStore:
         total = 0
         start = max(0, offset)
         capped = max(1, min(limit, 500))
-        with inventory_path.open(encoding="utf-8", newline="") as handle:
-            for item in csv.DictReader(handle):
-                path = str(item.get("path", ""))
-                if needle and needle not in path.casefold():
-                    continue
-                if selected_category and str(item.get("category", "Unbekannt")).casefold() != selected_category:
-                    continue
-                if keyword_paths is not None and path not in keyword_paths:
-                    continue
-                total += 1
-                if total <= start:
-                    continue
-                if len(matches) < capped:
-                    record = {
-                        "path": path,
-                        "size": int(item.get("size", 0) or 0),
-                        "extension": item.get("extension", ""),
-                        "category": item.get("category", "Unbekannt"),
-                        "mtime": item.get("mtime", ""),
-                    }
-                    if selected_keyword:
-                        normalized = path.replace("\\", "/")
-                        parent, separator, filename = normalized.rpartition("/")
-                        if match_keywords(filename if separator else normalized, [selected_keyword]):
-                            record["match_source"] = "DATEINAME"
-                        elif parent and match_keywords(parent, [selected_keyword]):
-                            record["match_source"] = "ORDNERPFAD"
-                        else:
-                            record["match_source"] = "PFAD"
-                    matches.append(record)
+        catalog = self._load_container_catalog(inventory_path.parent)
+
+        def inventory_items():
+            with inventory_path.open(encoding="utf-8", newline="") as handle:
+                yield from csv.DictReader(handle)
+            yield from virtual_files(catalog)
+
+        for item in inventory_items():
+            path = str(item.get("path", ""))
+            if needle and needle not in path.casefold():
+                continue
+            if selected_category and str(item.get("category", "Unbekannt")).casefold() != selected_category:
+                continue
+            if keyword_paths is not None and path not in keyword_paths:
+                continue
+            total += 1
+            if total <= start:
+                continue
+            if len(matches) < capped:
+                record = {
+                    "path": path,
+                    "size": int(item.get("size", 0) or 0),
+                    "extension": item.get("extension", ""),
+                    "category": item.get("category", "Unbekannt"),
+                    "mtime": item.get("mtime", ""),
+                    "source": item.get("source", "media_inventory"),
+                    "container_format": item.get("container_format", ""),
+                    "size_known": item.get("size_known", True),
+                }
+                container_format = str(item.get("container_format", ""))
+                if selected_keyword:
+                    normalized = path.replace("\\", "/")
+                    parent, separator, filename = normalized.rpartition("/")
+                    if match_keywords(filename if separator else normalized, [selected_keyword]):
+                        record["match_source"] = "DATEINAME"
+                    elif parent and match_keywords(parent, [selected_keyword]):
+                        record["match_source"] = "ORDNERPFAD"
+                    else:
+                        record["match_source"] = "PFAD"
+                    if container_format:
+                        record["match_source"] += f" · {container_format}-INHALT"
+                elif container_format:
+                    record["match_source"] = f"{container_format}-INHALT"
+                matches.append(record)
         next_offset = start + len(matches)
         return {
             "total": total,
@@ -512,6 +531,8 @@ class CaseStore:
         if any(part in {".", ".."} for part in normalized_prefix.split("/") if part):
             raise ValueError("Ungültiger Verzeichnispfad.")
         inventory_path = self.root / str(row["result_path"]) / "files.csv"
+        catalog = self._load_container_catalog(inventory_path.parent)
+        container_records = list(catalog.get("containers", []))
         folders: dict[str, dict[str, Any]] = {}
         files: list[dict[str, Any]] = []
         base = f"{normalized_prefix}/" if normalized_prefix else ""
@@ -534,10 +555,23 @@ class CaseStore:
                     folder["file_count"] += 1
                     folder["size"] += size
                 else:
+                    partition_slot = str(item.get("partition_slot", ""))
+                    container = next((
+                        record for record in container_records
+                        if str(record.get("path", "")) == child_path
+                        and (not record.get("partition_slot") or str(record.get("partition_slot")) == partition_slot)
+                    ), None)
                     files.append({
-                        "kind": "file", "name": first, "path": child_path,
+                        "kind": "container" if container else "file", "name": first, "path": child_path,
                         "size": size, "extension": item.get("extension", ""),
                         "category": item.get("category", "Unbekannt"),
+                        **({
+                            "container_format": container.get("format", "container"),
+                            "container_id": container.get("id", container.get("path", child_path)),
+                            "container_status": container.get("status", "unknown"),
+                            "entry_count": int(container.get("entry_count", 0)),
+                            "truncated": bool(container.get("truncated", False)),
+                        } if container else {}),
                     })
         entries = sorted(folders.values(), key=lambda entry: entry["name"].casefold())
         entries.extend(sorted(files, key=lambda entry: entry["name"].casefold()))
@@ -550,6 +584,102 @@ class CaseStore:
             "offset": start, "next_offset": next_offset,
             "has_more": next_offset < len(entries), "entries": page,
         }
+
+    def container_inventory(
+        self,
+        media_id: int,
+        container_path: str,
+        prefix: str = "",
+        limit: int = 300,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Return one virtual directory level from a bounded ZIP/ISO index."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT result_path FROM media WHERE id=?", (media_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError("Medienakte nicht gefunden.")
+        result_dir = self.root / str(row["result_path"])
+        catalog = self._load_container_catalog(result_dir)
+        container = next(
+            (
+                item for item in catalog.get("containers", [])
+                if str(item.get("id", "")) == container_path or str(item.get("path", "")) == container_path
+            ),
+            None,
+        )
+        if container is None:
+            raise KeyError("ZIP-/ISO-Verzeichnis nicht gefunden.")
+        normalized_prefix = "/".join(part for part in prefix.replace("\\", "/").split("/") if part)
+        if any(part in {".", ".."} for part in normalized_prefix.split("/") if part):
+            raise ValueError("Ungültiger Containerpfad.")
+
+        folders: dict[str, dict[str, Any]] = {}
+        files: list[dict[str, Any]] = []
+        base = f"{normalized_prefix}/" if normalized_prefix else ""
+        for item in container.get("entries", []):
+            path = str(item.get("path", "")).replace("\\", "/").strip("/")
+            if base and not path.startswith(base):
+                continue
+            remainder = path[len(base):] if base else path
+            if not remainder:
+                continue
+            first, separator, _rest = remainder.partition("/")
+            child_path = f"{base}{first}" if base else first
+            size = int(item.get("size", 0) or 0)
+            if separator or item.get("kind") == "directory":
+                folders.setdefault(child_path, {
+                    "kind": "directory", "name": first, "path": child_path,
+                    "file_count": 0, "size": 0,
+                })
+            else:
+                files.append({
+                    "kind": "file", "name": first, "path": child_path,
+                    "size": size, "extension": item.get("extension", ""),
+                    "category": item.get("category", "Unbekannt"),
+                    "encrypted": bool(item.get("encrypted", False)),
+                    "size_known": bool(item.get("size_known", True)),
+                })
+        # Aggregate descendant file counts and sizes independently of explicit directory records.
+        for folder in folders.values():
+            folder_prefix = f"{folder['path']}/"
+            descendants = [
+                item for item in container.get("entries", [])
+                if item.get("kind") == "file" and str(item.get("path", "")).startswith(folder_prefix)
+            ]
+            folder["file_count"] = len(descendants)
+            folder["size"] = sum(int(item.get("size", 0) or 0) for item in descendants)
+            folder["size_known"] = all(bool(item.get("size_known", True)) for item in descendants)
+
+        entries = sorted(folders.values(), key=lambda entry: entry["name"].casefold())
+        entries.extend(sorted(files, key=lambda entry: entry["name"].casefold()))
+        capped = max(1, min(limit, 500))
+        start = max(0, offset)
+        page = entries[start:start + capped]
+        next_offset = start + len(page)
+        return {
+            "container_path": str(container.get("path", container_path)),
+            "container_id": str(container.get("id", container_path)),
+            "container_format": container.get("format", "container"),
+            "container_status": container.get("status", "unknown"),
+            "truncated": bool(container.get("truncated", False)),
+            "prefix": normalized_prefix,
+            "total": len(entries), "shown": len(page), "offset": start,
+            "next_offset": next_offset, "has_more": next_offset < len(entries),
+            "entries": page,
+        }
+
+    @staticmethod
+    def _load_container_catalog(result_dir: Path) -> dict[str, Any]:
+        path = result_dir / "container-index.json"
+        if not path.is_file():
+            return empty_catalog("not_available_for_older_scan")
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return empty_catalog("invalid_index")
+        return data if isinstance(data, dict) else empty_catalog("invalid_index")
 
     def list_cases(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
@@ -719,6 +849,7 @@ class CaseStore:
         return {
             "case_path": str(case_dir),
             "result_path": str(result_dir) if result_dir else None,
+            "container_index": str(result_dir / "container-index.json") if result_dir else None,
             "database": str(self.db_path),
             "media_register": str(case_dir / "media-register.csv"),
             "case_report": str(case_dir / "case-report.txt"),

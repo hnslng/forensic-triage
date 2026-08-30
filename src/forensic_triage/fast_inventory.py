@@ -10,6 +10,7 @@ from typing import Any
 
 from .classifier import classify, original_extension_for
 from .commands import run_command
+from .container_inventory import ContainerLimits, index_containers
 from .device import SafetyError
 
 
@@ -87,8 +88,8 @@ def inventory_tree(root: Path, partition_slot: str) -> tuple[list[dict[str, Any]
 
 
 def readonly_mount_inventory(
-    partition_device: Path, partition_slot: str
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    partition_device: Path, partition_slot: str, container_limits: ContainerLimits | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     """Mount an already read-only partition defensively, inventory, and unmount."""
     if os.geteuid() != 0:
         raise SafetyError("root privileges are required for read-only mount inventory")
@@ -110,7 +111,8 @@ def readonly_mount_inventory(
         if "ro" not in options:
             raise SafetyError(f"mount is not read-only: {mount_info.get('options')}")
         files, directories = inventory_tree(mountpoint, partition_slot)
-        return files, directories, mount_info
+        containers = index_containers(mountpoint, files, partition_slot, container_limits)
+        return files, directories, mount_info, containers
     finally:
         if mounted:
             run_command(["umount", str(mountpoint)])
