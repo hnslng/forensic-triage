@@ -90,7 +90,7 @@ run_as_owner() {
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-PACKAGES=(git python3 python3-venv python3-pip sleuthkit util-linux udev eject)
+PACKAGES=(git python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip)
 if $PI_MODE; then
   PACKAGES+=(network-manager avahi-daemon libnss-mdns nftables)
 fi

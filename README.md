@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.20 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.21 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -9,7 +9,7 @@ TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von
 
 Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
-> **English summary:** TRIAGE//BOX is a private alpha prototype for fast, read-only field triage of removable media. It is not approved for operational evidence handling. It inventories active files and metadata, searches names and paths, and creates a local audit trail. It reads only bounded ZIP/ISO directory metadata, never file payloads; it does not image, carve, recover deleted data, or make seizure decisions. See [English summary](#english-summary).
+> **English summary:** TRIAGE//BOX is a private alpha prototype for fast, read-only field triage of removable media. It is not approved for operational evidence handling. It inventories active files and metadata, searches names and paths, and creates a local audit trail. It reads only bounded ZIP, ISO, 7Z and RAR directory metadata, never file payloads; it does not image, carve, recover deleted data, or make seizure decisions. See [English summary](#english-summary).
 
 ## Aktueller Funktionsumfang
 
@@ -20,7 +20,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - schneller Standardmodus mit kurzzeitigem, verifiziert schreibgeschütztem Mount
 - langsamer, mountfreier TSK-Modus für technische Vergleichstests
 - vollständiges Metadaten-Inhaltsverzeichnis als `files.csv`
-- begrenzter ZIP-/ISO-Schnellindex: interne Verzeichnisnamen ohne Extraktion im Explorer aufklappbar und durchsuchbar
+- begrenzter ZIP-/ISO-/7Z-/RAR-Schnellindex: interne Verzeichnisnamen ohne Extraktion im Explorer aufklappbar und durchsuchbar
 - Kategorien nach Dateiendung, Größenstatistik und größte Dateien
 - kombinierbare und lokal bearbeitbare Stichwortprofile
 - Stichwortsuche ohne Beachtung der Groß-/Kleinschreibung in Namen und Pfaden
@@ -33,7 +33,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.20 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien und ISO-Images gelesen; Einträge werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.21 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen; Einträge werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -41,9 +41,10 @@ Das bedeutet insbesondere:
 - Es gibt noch keine Magic-Byte-/Dateisignaturprüfung.
 - Es werden keine gelöschten Dateien wiederhergestellt und keine Daten geschnitzt („Carving“).
 - Es wird kein forensisches Image erzeugt.
-- Verschlüsselte ZIP-Einträge werden nur als solche gekennzeichnet; Inhalte werden nicht entschlüsselt.
-- Die Archivstatistik nennt erkannte verschlüsselte ZIPs; bei nicht unterstützten oder nicht vollständig geprüften Archiven steht bewusst `UNGEPRÜFT`.
-- Verschachtelte Archive, 7z und RAR werden nicht rekursiv beziehungsweise derzeit gar nicht katalogisiert.
+- Eindeutig erkannte verschlüsselte ZIP-, 7Z- und RAR-Archive werden gekennzeichnet; Inhalte werden nicht entschlüsselt.
+- Bei verschlüsselten Archivköpfen werden keine Passwörter angefordert oder ausprobiert; interne Namen bleiben verborgen.
+- Die Archivstatistik nennt sicher erkannte Verschlüsselung; bei nicht unterstützten, beschädigten oder nicht vollständig geprüften Archiven steht bewusst `UNGEPRÜFT`.
+- Verschachtelte Archive werden nur als Eintrag angezeigt und nicht rekursiv geöffnet. TAR und weitere Formate werden derzeit nicht katalogisiert.
 - Geladene Medien in externen USB-CD/DVD-Laufwerken werden über einen eigenen, nur-lesenden Scanpfad erfasst; der reale Hardwaretest steht noch aus.
 - Das System trifft keine rechtliche oder fachliche Sicherstellungsentscheidung.
 
@@ -155,9 +156,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a20` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.20`
-- automatisierte Tests: 53
+- Paketversion: `0.2.0a21` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.21`
+- automatisierte Tests: 59
 - validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
 - noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
 
@@ -169,4 +170,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, r
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.20 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO directory index is the explicit exception: entries can be expanded and searched, but are never extracted or decompressed. Detected encrypted ZIP entries are counted; unsupported or incomplete checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.21 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but are never extracted or decompressed. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

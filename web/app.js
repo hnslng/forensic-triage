@@ -581,11 +581,16 @@ function treeEntriesHtml(entries, containerPath = "") {
     }
     if (entry.kind === "container") {
       const format = String(entry.container_format || "CONTAINER").toUpperCase();
-      const state = entry.container_status === "invalid_or_unsupported"
-        ? "NICHT LESBAR"
-        : entry.truncated ? `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE · LIMIT`
-          : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`;
-      const encryptionState = entry.encrypted ? " · VERSCHLÜSSELT" : "";
+      const stateLabels = {
+        invalid_or_unsupported: "NICHT LESBAR",
+        encrypted_headers: "NAMEN VERSCHLÜSSELT",
+        incomplete: "UNVOLLSTÄNDIG",
+        tool_unavailable: "WERKZEUG FEHLT",
+      };
+      const state = stateLabels[entry.container_status]
+        || (entry.truncated ? `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE · LIMIT`
+          : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`);
+      const encryptionState = entry.encrypted && entry.container_status !== "encrypted_headers" ? " · VERSCHLÜSSELT" : "";
       return `<details class="tree-folder tree-container" data-loaded="false">
         <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><em>${escapeHtml(format)}</em><small>${escapeHtml(state + encryptionState)}</small></summary>
         <div class="tree-children"><p class="tree-loading">${escapeHtml(format)}-VERZEICHNIS ÖFFNEN …</p></div>
@@ -624,18 +629,25 @@ async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offse
 
 async function loadContainerTree(containerPath, prefix = "", target, offset = 0) {
   if (!currentMediaId || !target) return;
-  if (offset === 0) target.innerHTML = '<p class="tree-loading">ZIP-/ISO-VERZEICHNIS WIRD GELADEN …</p>';
+  if (offset === 0) target.innerHTML = '<p class="tree-loading">CONTAINER-VERZEICHNIS WIRD GELADEN …</p>';
   else target.querySelector(".tree-more")?.remove();
   try {
     const parameters = new URLSearchParams({ path: containerPath, prefix, limit: "300", offset: String(offset) });
     const response = await fetch(`/api/media/${currentMediaId}/container?${parameters}`);
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "ZIP-/ISO-Verzeichnis nicht verfügbar");
+    if (!response.ok) throw new Error(data.error || "Container-Verzeichnis nicht verfügbar");
     let entries = treeEntriesHtml(data.entries || [], containerPath);
-    if (!(data.entries || []).length && data.container_status === "invalid_or_unsupported") {
-      entries = '<p class="tree-loading error">VERZEICHNIS NICHT LESBAR ODER NICHT UNTERSTÜTZT</p>';
-    } else if (!(data.entries || []).length) {
-      entries = '<p class="tree-loading">CONTAINER IST LEER</p>';
+    if (!(data.entries || []).length) {
+      const emptyLabels = {
+        invalid_or_unsupported: "VERZEICHNIS NICHT LESBAR ODER NICHT UNTERSTÜTZT",
+        encrypted_headers: "DATEINAMEN VERSCHLÜSSELT · KEIN PASSWORTVERSUCH",
+        incomplete: "ARCHIV UNVOLLSTÄNDIG ODER TEILVOLUME FEHLT",
+        tool_unavailable: "7ZIP-WERKZEUG NICHT INSTALLIERT",
+        limit_reached: "ZEIT- ODER MENGENLIMIT ERREICHT",
+      };
+      entries = emptyLabels[data.container_status]
+        ? `<p class="tree-loading error">${emptyLabels[data.container_status]}</p>`
+        : '<p class="tree-loading">CONTAINER IST LEER</p>';
     }
     if (offset === 0) target.innerHTML = entries;
     else target.insertAdjacentHTML("beforeend", entries);

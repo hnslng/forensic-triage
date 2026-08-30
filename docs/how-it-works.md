@@ -15,16 +15,16 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 5. Der Scanner setzt das Blockgerät softwareseitig auf read-only und kontrolliert diesen Zustand.
 6. Im schnellen Modus werden vorhandene Verzeichnis-Metadaten kurzzeitig über einen zusätzlichen Read-only-Mount gelesen.
 7. Dateinamen, Pfade, Endungen, Größen und Zeitstempel werden in eine Tabelle geschrieben.
-8. ZIP-Dateien und ISO-Images erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex; es wird nichts extrahiert oder dekomprimiert.
+8. ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archive erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex; es wird nichts extrahiert oder dekomprimiert.
 9. Aus den äußeren Metadaten und den zusätzlichen virtuellen Containerpfaden entstehen Kategorien, Größenstatistik und Stichworttreffer. Die normalen Datei-/Ordnerzahlen zählen Containerinhalte bewusst nicht doppelt.
 10. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
 11. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
 In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Der aktive Filter steht in einer eigenen schmalen Statusleiste; zugleich erscheint „Filter aufheben“ direkt neben der Suche und stellt den vollständigen Verzeichnisbaum wieder her. Die freie Namens- und Pfadsuche bleibt eine davon getrennte Funktion. Große Treffermengen werden seitenweise nachgeladen.
 
-ZIP- und ISO-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird über das Zentralverzeichnis, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen gelesen. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte Container und erreichte Limits werden sichtbar markiert.
+ZIP-, ISO-, 7Z- und RAR-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird direkt über das Zentralverzeichnis gelesen, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen. Für 7Z und RAR ruft der Scanner das vom Debian-Installer bereitgestellte Werkzeug `7z` ausschließlich im Listenmodus `l -slt` auf. Die Standardeingabe ist dabei geschlossen: TRIAGE//BOX gibt kein Passwort ein und startet keinen interaktiven Passwortversuch. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte, unvollständige, kopfverschlüsselte Container und erreichte Limits werden sichtbar unterschieden.
 
-Unter der Kategorie `ARCHIVE` steht zusätzlich die Anzahl sicher erkannter verschlüsselter ZIPs. Archive, deren Verschlüsselungszustand wegen Format, Beschädigung oder Limit nicht zuverlässig feststeht, werden getrennt als `UNGEPRÜFT` ausgewiesen. TRIAGE//BOX versucht keine Passwörter und deutet `UNGEPRÜFT` niemals als unverschlüsselt.
+Unter der Kategorie `ARCHIVE` steht zusätzlich die Anzahl sicher erkannter verschlüsselter ZIP-, 7Z- und RAR-Archive. Archive, deren Verschlüsselungszustand wegen Format, Beschädigung, fehlendem Teilvolume oder Limit nicht zuverlässig feststeht, werden getrennt als `UNGEPRÜFT` ausgewiesen. TRIAGE//BOX versucht keine Passwörter und deutet `UNGEPRÜFT` niemals als unverschlüsselt.
 
 Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Scannerlauf erhalten. Ein Datenträger bekommt dabei automatisch eine neutrale Nummer wie `SICHT-001`.
 
@@ -39,7 +39,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `src/forensic_triage/device.py` | Zielprüfung und Read-only-Schutz |
 | `src/forensic_triage/scanner.py` | zentraler Ablauf eines Scans |
 | `src/forensic_triage/fast_inventory.py` | schneller Metadatenlauf über verifizierten Read-only-Mount |
-| `src/forensic_triage/container_inventory.py` | begrenzter ZIP-/ISO-Verzeichnisindex ohne Extraktion |
+| `src/forensic_triage/container_inventory.py` | begrenzter ZIP-/ISO-/7Z-/RAR-Verzeichnisindex ohne Extraktion |
 | `src/forensic_triage/filesystem.py` | Verarbeitung des mountfreien TSK-Laufs |
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
@@ -68,7 +68,7 @@ Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt version
 
 ## Was passiert ausdrücklich nicht?
 
-TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-Verzeichnisstrukturen; Einträge werden nicht extrahiert, dekomprimiert oder rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
+TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Einträge werden nicht extrahiert, dekomprimiert oder rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
 
 ## English summary
 

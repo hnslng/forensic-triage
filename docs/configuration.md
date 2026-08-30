@@ -38,8 +38,8 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_PROFILE` | `<Projekt>/profiles/default.yaml` | Start-/Kompatibilitätsprofil |
 | `FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS` | `180` | maximale Gesamtdauer einer Grobsichtung in Sekunden |
 | `FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS` | `15` | maximale Dauer eines einzelnen Gerätebefehls in Sekunden |
-| `FORENSIC_TRIAGE_CONTAINER_INDEX_SECONDS` | `3` | gemeinsames maximales Zusatzzeitbudget für ZIP-/ISO-Verzeichnisse je Medium |
-| `FORENSIC_TRIAGE_CONTAINER_MAX_FILES` | `50` | höchstens katalogisierte ZIP-/ISO-Dateien je Medium |
+| `FORENSIC_TRIAGE_CONTAINER_INDEX_SECONDS` | `3` | gemeinsames maximales Zusatzzeitbudget für ZIP-/ISO-/7Z-/RAR-Verzeichnisse je Medium |
+| `FORENSIC_TRIAGE_CONTAINER_MAX_FILES` | `50` | höchstens katalogisierte ZIP-/ISO-/7Z-/RAR-Dateien je Medium |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_ENTRIES` | `2000` | höchstens Einträge je Container |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_TOTAL_ENTRIES` | `10000` | höchstens interne Einträge insgesamt je Medium |
 
@@ -66,7 +66,7 @@ Jede Grobsichtung läuft in einem eigenen Prozess und – unter Linux – in ein
 
 Nach einer Zeitüberschreitung wird nur der betroffene Gerätepfad gesperrt und als `MEDIUM ANTWORTET NICHT` angezeigt. Die Sperre verschwindet erst, nachdem das Medium physisch getrennt wurde und die Oberfläche den Offline-Zustand erkannt hat. Das verhindert automatische Endloswiederholungen. Die Zeitlimits sind bewusst konfigurierbar, dürfen aber erst nach praktischen Tests mit der Zielhardware erhöht werden.
 
-Der ZIP-/ISO-Schnellindex hat zusätzlich ein gemeinsames Standardbudget von drei Sekunden je Medium. Mengenlimits schützen gegen übergroße Zentralverzeichnisse und sogenannte ZIP-Bomben; da niemals dekomprimiert oder extrahiert wird, werden angegebene entpackte Größen nur als Metadaten behandelt. Ein erreichtes Limit erzeugt einen unvollständigen, sichtbar gekennzeichneten Index und keinen endlosen Tiefenscan. Verschachtelte Container werden nicht geöffnet.
+Der ZIP-/ISO-/7Z-/RAR-Schnellindex hat zusätzlich ein gemeinsames Standardbudget von drei Sekunden je Medium. Mengenlimits schützen gegen übergroße Verzeichnisse und sogenannte Archivbomben; da niemals dekomprimiert oder extrahiert wird, werden angegebene entpackte Größen nur als Metadaten behandelt. Ein erreichtes Limit erzeugt einen unvollständigen, sichtbar gekennzeichneten Index und keinen endlosen Tiefenscan. Verschachtelte Container werden nicht geöffnet.
 
 Für die Fallentfernung gibt es bewusst kein Passwort. Der Dialog verlangt zwei eindeutige Bedienhandlungen für den konkret genannten Fall. Entfernen verschiebt die Fallakte nur in den wiederherstellbaren internen Papierkorb. Das ist eine Fehlbedienungssperre, aber keine Benutzer- oder Rechteverwaltung.
 

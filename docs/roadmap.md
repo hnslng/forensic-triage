@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.20. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.21. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -42,8 +42,9 @@ Stand: Version 0.2.0-alpha.20. Prioritäten richten sich nach forensischer Siche
 - [ ] Verhalten bei verschlüsselten Volumes objektiv erkennen und dokumentieren, ohne Inhalte zu öffnen.
 - [ ] Große Verzeichnisbäume und viele kleine Dateien auf Laufzeit und Speicherbedarf testen.
 - [x] ZIP- und ISO-Verzeichnisstrukturen ohne Extraktion, Rekursion oder Änderung der äußeren Dateizahlen katalogisieren.
-- [ ] ZIP-/ISO-Schnellindex und Drei-Sekunden-Budget auf dem Raspberry Pi mit großen, beschädigten, verschlüsselten und ungewöhnlichen Containern validieren.
-- [ ] 7z-/TAR-Unterstützung nach Messung des ZIP-/ISO-Prototyps bewerten; RAR bleibt wegen Zusatzwerkzeugen vorerst außerhalb des Umfangs.
+- [x] 7Z- und RAR-Verzeichnisstrukturen über Debians `7zip` nur im Listenmodus katalogisieren und Verschlüsselung konservativ kennzeichnen.
+- [ ] ZIP-/ISO-/7Z-/RAR-Schnellindex und Drei-Sekunden-Budget auf dem Raspberry Pi mit großen, beschädigten, verschlüsselten, mehrteiligen und ungewöhnlichen Containern validieren.
+- [ ] TAR-Unterstützung nach der Hardwaremessung bewerten.
 
 ## Workflow und Dokumentation
 

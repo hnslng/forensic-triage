@@ -594,7 +594,7 @@ class CaseStore:
         limit: int = 300,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """Return one virtual directory level from a bounded ZIP/ISO index."""
+        """Return one virtual directory level from a bounded container index."""
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT result_path FROM media WHERE id=?", (media_id,),
@@ -611,7 +611,7 @@ class CaseStore:
             None,
         )
         if container is None:
-            raise KeyError("ZIP-/ISO-Verzeichnis nicht gefunden.")
+            raise KeyError("Container-Verzeichnis nicht gefunden.")
         normalized_prefix = "/".join(part for part in prefix.replace("\\", "/").split("/") if part)
         if any(part in {".", ".."} for part in normalized_prefix.split("/") if part):
             raise ValueError("Ungültiger Containerpfad.")

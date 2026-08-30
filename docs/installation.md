@@ -28,7 +28,7 @@ sudo ./scripts/install_debian.sh
 Das Skript:
 
 1. prüft Debian und den Projektordner,
-2. installiert die benötigten Systempakete,
+2. installiert die benötigten Systempakete einschließlich Debian-`7zip` für die reine 7Z-/RAR-Verzeichnisauflistung,
 3. erstellt beziehungsweise aktualisiert `.venv`,
 4. installiert TRIAGE//BOX,
 5. führt alle automatisierten Tests aus,

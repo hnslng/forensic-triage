@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.21] – 2026-08-30
+
+### Hinzugefügt
+
+- begrenzte Verzeichnisauflistung für 7Z- und RAR-Archive über Debians `7zip`
+- eigene sichtbare Zustände für verschlüsselte Archivköpfe, fehlende Teilvolumes und fehlendes Werkzeug
+- konservative Verschlüsselungsstatistik über ZIP, 7Z und RAR
+- automatische Installation des benötigten `7zip`-Systempakets
+
+### Sicherheit
+
+- ausschließlich Listenmodus ohne Extraktion, Dekompression oder rekursive Öffnung
+- geschlossene Standardeingabe und damit keine interaktiven Passwortversuche
+- bestehendes gemeinsames Zeit- und Mengenbudget gilt unverändert auch für 7Z und RAR
+
 ## [0.2.0-alpha.20] – 2026-08-30
 
 ### Hinzugefügt

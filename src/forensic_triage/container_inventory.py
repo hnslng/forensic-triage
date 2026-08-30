@@ -1,8 +1,10 @@
-"""Bounded directory-only indexing for ZIP archives and ISO images."""
+"""Bounded directory-only indexing for common archives and ISO images."""
 
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import time
 import zipfile
 from dataclasses import dataclass
@@ -13,9 +15,10 @@ from typing import Any, Iterable
 import pycdlib
 
 from .classifier import classify
+from .commands import run_command
 
 
-SUPPORTED_CONTAINER_EXTENSIONS = {"zip": "zip", "iso": "iso"}
+SUPPORTED_CONTAINER_EXTENSIONS = {"zip": "zip", "iso": "iso", "7z": "7z", "rar": "rar"}
 
 
 @dataclass(frozen=True)
@@ -170,6 +173,114 @@ def _index_iso(path: Path, limits: ContainerLimits, deadline: float, total: int)
     }
 
 
+def parse_7zip_slt(
+    output: str, max_entries: int, max_total_remaining: int,
+) -> dict[str, Any]:
+    """Parse machine-readable ``7z l -slt`` output without reading payloads."""
+    entries: list[dict[str, Any]] = []
+    encrypted = False
+    truncated = False
+    effective_limit = max(0, min(max_entries, max_total_remaining))
+    in_entries = False
+    record: dict[str, str] = {}
+
+    def append_record() -> None:
+        nonlocal encrypted, truncated
+        if not record or "Path" not in record:
+            return
+        if len(entries) >= effective_limit:
+            truncated = True
+            return
+        internal = _safe_internal_path(record["Path"])
+        if internal is None:
+            return
+        attributes = record.get("Attributes", "").lstrip()
+        kind = "directory" if record.get("Folder") == "+" or attributes.startswith("D") else "file"
+        raw_size = record.get("Size", "")
+        size = int(raw_size) if raw_size.isdigit() else None
+        item_encrypted = record.get("Encrypted") == "+"
+        encrypted = encrypted or item_encrypted
+        entries.append(_entry(internal, kind, size, item_encrypted))
+
+    for line in output.splitlines():
+        if not in_entries:
+            if line.strip() == "----------":
+                in_entries = True
+            continue
+        if not line.strip():
+            append_record()
+            record = {}
+            continue
+        key, separator, value = line.partition(" = ")
+        if separator:
+            record[key] = value
+    append_record()
+    return {"entries": entries, "encrypted": encrypted, "truncated": truncated}
+
+
+def _seven_zip_binary() -> str | None:
+    return shutil.which("7zz") or shutil.which("7z")
+
+
+def _index_7zip_archive(
+    path: Path, limits: ContainerLimits, deadline: float, total: int,
+) -> dict[str, Any]:
+    binary = _seven_zip_binary()
+    if binary is None:
+        return {
+            "status": "tool_unavailable", "encrypted": False, "truncated": False,
+            "entries": [], "error": "7z/7zz ist nicht installiert",
+        }
+    remaining = max(0.05, deadline - time.monotonic())
+    try:
+        completed = run_command(
+            [binary, "l", "-slt", "-bd", "--", str(path)],
+            check=False,
+            capture_output=True,
+            timeout=remaining,
+            stdin=subprocess.DEVNULL,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "limit_reached", "encrypted": False, "truncated": True,
+            "entries": [], "error": "Zeitlimit beim Lesen des Archivverzeichnisses erreicht",
+        }
+
+    output = "\n".join(filter(None, [completed.stdout or "", completed.stderr or ""]))
+    lowered = output.casefold()
+    if "enter password" in lowered or "wrong password" in lowered or "encrypted archive" in lowered:
+        return {
+            "status": "encrypted_headers", "encrypted": True, "truncated": False,
+            "entries": [], "error": "Archivnamen sind verschlüsselt; kein Passwortversuch",
+        }
+    if "missing volume" in lowered or "unexpected end of archive" in lowered:
+        return {
+            "status": "incomplete", "encrypted": False, "truncated": False,
+            "entries": [], "error": "Archiv ist unvollständig oder ein Teilvolume fehlt",
+        }
+    if completed.returncode not in {0, 1}:
+        detail = next((line.strip() for line in output.splitlines() if line.strip()), "7z-Fehler")
+        return {
+            "status": "invalid_or_unsupported", "encrypted": False, "truncated": False,
+            "entries": [], "error": detail[:300],
+        }
+
+    parsed = parse_7zip_slt(
+        output,
+        limits.max_entries_per_container,
+        max(0, limits.max_total_entries - total),
+    )
+    parsed["status"] = (
+        "limit_reached" if parsed["truncated"]
+        else "incomplete" if completed.returncode == 1
+        else "ok"
+    )
+    if completed.returncode == 1:
+        parsed["error"] = "7z meldete eine Warnung; Verzeichnis möglicherweise unvollständig"
+    return parsed
+
+
 def index_containers(
     root: Path,
     files: Iterable[dict[str, Any]],
@@ -210,11 +321,14 @@ def index_containers(
         }
         try:
             absolute = root / relative
-            indexed = (
-                _index_zip(absolute, selected_limits, deadline, int(result["entries_indexed"]))
-                if container_format == "zip"
-                else _index_iso(absolute, selected_limits, deadline, int(result["entries_indexed"]))
-            )
+            if container_format == "zip":
+                indexed = _index_zip(absolute, selected_limits, deadline, int(result["entries_indexed"]))
+            elif container_format == "iso":
+                indexed = _index_iso(absolute, selected_limits, deadline, int(result["entries_indexed"]))
+            else:
+                indexed = _index_7zip_archive(
+                    absolute, selected_limits, deadline, int(result["entries_indexed"]),
+                )
             record.update(indexed)
         except (OSError, ValueError, zipfile.BadZipFile, pycdlib.pycdlibexception.PyCdlibException) as exc:
             record["status"] = "invalid_or_unsupported"
@@ -230,7 +344,7 @@ def index_containers(
 
     result["duration_seconds"] = round(time.monotonic() - started, 3)
     result["policy"] = {
-        "formats": ["zip", "iso"],
+        "formats": ["zip", "iso", "7z", "rar"],
         "directory_metadata_only": True,
         "extract_files": False,
         "nested_containers": False,
@@ -295,7 +409,7 @@ def archive_encryption_summary(
     encrypted: set[tuple[str, str]] = set()
     clear: set[tuple[str, str]] = set()
     for container in catalog.get("containers", []):
-        if str(container.get("format", "")).casefold() != "zip":
+        if str(container.get("format", "")).casefold() not in {"zip", "7z", "rar"}:
             continue
         key = (str(container.get("partition_slot", "")), str(container.get("path", "")))
         if key not in archive_keys:

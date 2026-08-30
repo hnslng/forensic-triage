@@ -14,7 +14,7 @@ Die bedienende Person muss Berechtigung und physische Identität des Datenträge
 6. Read-only-Zustand mit `blockdev --getro == 1` verifizieren.
 7. USB-Partitionen mit `mmls` und `fsstat` erfassen; das Dateisystem einer CD/DVD direkt am optischen Gerät prüfen.
 8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im garantierten Cleanup wieder unmounten.
-9. ZIP-/ISO-Verzeichnisstrukturen nur begrenzt, ohne Extraktion und ohne Rekursion katalogisieren.
+9. ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen nur begrenzt, ohne Extraktion und ohne Rekursion katalogisieren.
 10. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden; dort ist der Containerindex nicht verfügbar.
 
 ## Bedeutung des Software-Schreibschutzes
@@ -25,7 +25,7 @@ Trotzdem ist der aktuelle Schutz nur „defense in depth“. Für echte Beweismi
 
 ## Was der Scanner nicht tut
 
-- keine Nutzdatei-Payload öffnen, dekomprimieren oder darstellen; nur ZIP-/ISO-Verzeichnisstrukturen lesen
+- keine Nutzdatei-Payload öffnen, dekomprimieren oder darstellen; nur ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen lesen
 - keine Makros, Programme oder Skripte vom Medium ausführen
 - kein Imaging, Recovery oder Carving
 - keine Passwörter brechen oder Verschlüsselung umgehen
@@ -40,7 +40,7 @@ Ein Prozess-Zeitlimit kann einen Linux-Prozess im nicht unterbrechbaren Hardware
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.20 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus äußeren oder in ZIP-/ISO-Verzeichnissen gespeicherten Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig gesetzte ZIP-Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, verschlüsselte Kopfbereiche oder unvollständige Prüfungen bleiben `UNGEPRÜFT`.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.21 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Stichworttreffer stammen nur aus äußeren oder in ZIP-/ISO-/7Z-/RAR-Verzeichnissen gespeicherten Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig erkannte Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, unvollständige oder wegen eines Limits nicht fertig geprüfte Archive bleiben `UNGEPRÜFT`. Bei verschlüsselten Kopfbereichen werden keine Passwörter versucht.
 
 ## Schutz der Fallunterlagen
 
@@ -48,4 +48,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.20 reads bounded ZIP/ISO directory metadata but does not inspect signatures or file payloads.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.21 reads bounded ZIP/ISO/7Z/RAR directory metadata but does not inspect signatures or file payloads.

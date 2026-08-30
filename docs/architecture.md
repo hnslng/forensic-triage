@@ -12,7 +12,7 @@ Browser
             ├─ Scanner: fast oder tsk
             │    ├─ Partitionserkennung
             │    ├─ Metadaten-Inventar
-            │    ├─ begrenzter ZIP-/ISO-Verzeichnisindex
+            │    ├─ begrenzter ZIP-/ISO-/7Z-/RAR-Verzeichnisindex
             │    ├─ Klassifizierung und Stichwortsuche
             │    └─ JSON/CSV/Log-Ergebnisse
             └─ Fallarchiv
@@ -30,7 +30,7 @@ Der Scanner besitzt einen gemeinsamen Orchestrierungspfad und zwei Inventarmodi:
 - `fast_inventory` ordnet Partitionen Linux-Geräten zu und führt einen kurzzeitigen verifizierten Read-only-Mount aus.
 - `filesystem` verarbeitet `fsstat` sowie das Bodyfile-Format von `fls` im TSK-Modus.
 - `classifier`, `keywords` und `statistics` erzeugen objektive Ableitungen aus Metadaten.
-- `container_inventory` katalogisiert ZIP- und ISO-Verzeichnisstrukturen innerhalb harter Mengen- und Zeitgrenzen, ohne Einträge zu extrahieren.
+- `container_inventory` katalogisiert ZIP-, ISO-, 7Z- und RAR-Verzeichnisstrukturen innerhalb harter Mengen- und Zeitgrenzen, ohne Einträge zu extrahieren. 7Z und RAR werden über Debians `7z` ausschließlich im Listenmodus verarbeitet.
 - `reporting` schreibt normalisierte Ergebnisse und behält rohe Werkzeugausgaben.
 
 Der Standardmodus `fast` liest aktive Verzeichniseinträge über einen Mount mit `ro,nosuid,nodev,noexec`, nachdem das gesamte Blockgerät schreibgeschützt wurde. `tsk` verwendet `fls -u` ohne Mount und ist auf großen Datenträgern erheblich langsamer.
@@ -49,7 +49,7 @@ Der aktive Fall ist eine bewusste Sitzung im Browser. Nach einem Seiten- oder Di
 
 Profile liegen als YAML-Dateien unter `profiles/`. Mehrere ausgewählte Profile werden vor dem Scan zusammengeführt und Begriffe dedupliziert. Die tatsächlich ausgewählte Liste sowie Profilversion und SHA-256-Profilhash werden mit dem Scan gespeichert.
 
-Die Suche arbeitet ausschließlich auf Namen und Pfaden, einschließlich katalogisierter ZIP-/ISO-Pfade. Sie ist nicht gleichbedeutend mit Inhaltsanalyse oder struktureller Erkennung eines Wallets.
+Die Suche arbeitet ausschließlich auf Namen und Pfaden, einschließlich katalogisierter ZIP-/ISO-/7Z-/RAR-Pfade. Sie ist nicht gleichbedeutend mit Inhaltsanalyse oder struktureller Erkennung eines Wallets.
 
 ## Frontend
 
@@ -57,8 +57,8 @@ Die Suche arbeitet ausschließlich auf Namen und Pfaden, einschließlich katalog
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.20 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien und ISO-Images zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige ZIP-Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.21 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 
-The browser calls a local Python service, which coordinates one guarded scanner process per eligible physical device. Each process has per-command and whole-scan deadlines and uses a private Linux mount namespace. A timed-out path is quarantined until physical disconnect so the dashboard and other scans remain available without an automatic retry loop. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.20 adds a bounded ZIP/ISO directory index and conservative ZIP encryption counts but does not inspect file signatures or payloads.
+The browser calls a local Python service, which coordinates one guarded scanner process per eligible physical device. Each process has per-command and whole-scan deadlines and uses a private Linux mount namespace. A timed-out path is quarantined until physical disconnect so the dashboard and other scans remain available without an automatic retry loop. Both CLI and dashboard use the same scanner. Atomic SQLite sighting reservations and serialized exports protect parallel case records. The fast path uses a verified read-only mount; TSK provides a slower mount-free walk. Version 0.2.0-alpha.21 adds a bounded ZIP/ISO/7Z/RAR directory index and conservative archive encryption counts but does not inspect file signatures or payloads.

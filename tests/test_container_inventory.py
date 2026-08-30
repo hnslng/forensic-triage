@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+import subprocess
 import zipfile
 
 import pycdlib
@@ -8,6 +9,7 @@ from forensic_triage.container_inventory import (
     ContainerLimits,
     archive_encryption_summary,
     index_containers,
+    parse_7zip_slt,
     virtual_files,
 )
 
@@ -96,6 +98,117 @@ def test_nested_archive_is_only_a_listed_entry(tmp_path) -> None:
     assert catalog["containers"][0]["entries"][0]["path"] == "inner.zip"
 
 
+def test_7zip_slt_parser_lists_names_and_encryption_state() -> None:
+    output = """Path = sample.7z
+Type = 7z
+
+----------
+Path = Dokumente
+Size = 0
+Attributes = D drwxr-xr-x
+Encrypted = -
+
+Path = Dokumente/Geheim.txt
+Size = 42
+Attributes = A -rw-r--r--
+Encrypted = +
+"""
+
+    parsed = parse_7zip_slt(output, 100, 100)
+
+    assert [item["path"] for item in parsed["entries"]] == [
+        "Dokumente", "Dokumente/Geheim.txt",
+    ]
+    assert parsed["entries"][0]["kind"] == "directory"
+    assert parsed["entries"][1]["size"] == 42
+    assert parsed["encrypted"] is True
+    assert parsed["truncated"] is False
+
+
+def test_7zip_and_rar_are_listed_with_bounded_external_tool(tmp_path, monkeypatch) -> None:
+    (tmp_path / "Ablage.7z").write_bytes(b"container")
+    output = """----------
+Path = Datei.txt
+Size = 12
+Attributes = A
+Encrypted = -
+"""
+    calls: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        calls.append(list(args))
+        assert kwargs["stdin"] is subprocess.DEVNULL
+        assert kwargs["timeout"] <= LIMITS.seconds
+        return subprocess.CompletedProcess(args, 0, output, "")
+
+    monkeypatch.setattr("forensic_triage.container_inventory._seven_zip_binary", lambda: "/usr/bin/7z")
+    monkeypatch.setattr("forensic_triage.container_inventory.run_command", fake_run)
+    catalog = index_containers(
+        tmp_path, [{"path": "Ablage.7z", "extension": "7z"}], "001", LIMITS,
+    )
+
+    assert calls[0][1:5] == ["l", "-slt", "-bd", "--"]
+    assert catalog["containers"][0]["format"] == "7z"
+    assert catalog["containers"][0]["entries"][0]["path"] == "Datei.txt"
+
+
+def test_password_protected_headers_are_marked_without_password_attempt(tmp_path, monkeypatch) -> None:
+    (tmp_path / "Geheim.rar").write_bytes(b"container")
+
+    monkeypatch.setattr("forensic_triage.container_inventory._seven_zip_binary", lambda: "/usr/bin/7z")
+    monkeypatch.setattr(
+        "forensic_triage.container_inventory.run_command",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args, 2, "Enter password (will not be echoed):", "Break signaled",
+        ),
+    )
+    catalog = index_containers(
+        tmp_path, [{"path": "Geheim.rar", "extension": "rar"}], "001", LIMITS,
+    )
+
+    container = catalog["containers"][0]
+    assert container["status"] == "encrypted_headers"
+    assert container["encrypted"] is True
+    assert container["entries"] == []
+
+
+def test_missing_rar_volume_is_marked_incomplete(tmp_path, monkeypatch) -> None:
+    (tmp_path / "Teil.rar").write_bytes(b"container")
+    monkeypatch.setattr("forensic_triage.container_inventory._seven_zip_binary", lambda: "/usr/bin/7z")
+    monkeypatch.setattr(
+        "forensic_triage.container_inventory.run_command",
+        lambda args, **kwargs: subprocess.CompletedProcess(args, 2, "", "Missing volume"),
+    )
+
+    catalog = index_containers(
+        tmp_path, [{"path": "Teil.rar", "extension": "rar"}], "001", LIMITS,
+    )
+
+    assert catalog["containers"][0]["status"] == "incomplete"
+
+
+def test_7zip_warning_keeps_entries_but_never_marks_check_complete(tmp_path, monkeypatch) -> None:
+    (tmp_path / "Warnung.7z").write_bytes(b"container")
+    output = """----------
+Path = teilweise.txt
+Size = 8
+Attributes = A
+Encrypted = -
+"""
+    monkeypatch.setattr("forensic_triage.container_inventory._seven_zip_binary", lambda: "/usr/bin/7z")
+    monkeypatch.setattr(
+        "forensic_triage.container_inventory.run_command",
+        lambda args, **kwargs: subprocess.CompletedProcess(args, 1, output, "Warnings: 1"),
+    )
+
+    catalog = index_containers(
+        tmp_path, [{"path": "Warnung.7z", "extension": "7z"}], "001", LIMITS,
+    )
+
+    assert catalog["containers"][0]["status"] == "incomplete"
+    assert catalog["containers"][0]["entry_count"] == 1
+
+
 def test_zip_encryption_flag_is_detected_without_reading_payload(tmp_path) -> None:
     archive_path = tmp_path / "encrypted.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
@@ -115,18 +228,25 @@ def test_zip_encryption_flag_is_detected_without_reading_payload(tmp_path) -> No
     assert catalog["containers"][0]["entries"][0]["encrypted"] is True
 
 
-def test_archive_encryption_summary_keeps_unsupported_formats_unknown() -> None:
+def test_archive_encryption_summary_includes_zip_7z_and_rar() -> None:
     files = [
-        {"partition_slot": "001", "path": f"archive-{index}.zip", "category": "Archive"}
-        for index in range(5)
-    ] + [{"partition_slot": "001", "path": "unknown.7z", "category": "Archive"}]
+        {"partition_slot": "001", "path": "encrypted.zip", "category": "Archive"},
+        {"partition_slot": "001", "path": "encrypted.7z", "category": "Archive"},
+        {"partition_slot": "001", "path": "encrypted.rar", "category": "Archive"},
+        {"partition_slot": "001", "path": "clear.rar", "category": "Archive"},
+        {"partition_slot": "001", "path": "broken.7z", "category": "Archive"},
+        {"partition_slot": "001", "path": "unknown.tar", "category": "Archive"},
+    ]
     catalog = {
-        "containers": [{
-            "partition_slot": "001", "path": f"archive-{index}.zip", "format": "zip",
-            "status": "ok", "truncated": False, "encrypted": True,
-        } for index in range(5)],
+        "containers": [
+            {"partition_slot": "001", "path": "encrypted.zip", "format": "zip", "status": "ok", "truncated": False, "encrypted": True},
+            {"partition_slot": "001", "path": "encrypted.7z", "format": "7z", "status": "ok", "truncated": False, "encrypted": True},
+            {"partition_slot": "001", "path": "encrypted.rar", "format": "rar", "status": "encrypted_headers", "truncated": False, "encrypted": True},
+            {"partition_slot": "001", "path": "clear.rar", "format": "rar", "status": "ok", "truncated": False, "encrypted": False},
+            {"partition_slot": "001", "path": "broken.7z", "format": "7z", "status": "incomplete", "truncated": False, "encrypted": False},
+        ],
     }
 
     assert archive_encryption_summary(files, catalog) == {
-        "total": 6, "encrypted": 5, "not_encrypted": 0, "unknown": 1,
+        "total": 6, "encrypted": 3, "not_encrypted": 1, "unknown": 2,
     }

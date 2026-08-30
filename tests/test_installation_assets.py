@@ -35,3 +35,8 @@ def test_public_bootstrap_targets_expected_repository() -> None:
     bootstrap = (ROOT / "scripts/bootstrap_pi.sh").read_text(encoding="utf-8")
     assert "https://github.com/hnslng/forensic-triage.git" in bootstrap
     assert 'exec "$INSTALL_ROOT/scripts/install_debian.sh" --pi' in bootstrap
+
+
+def test_debian_installer_includes_archive_directory_tool() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    assert "eject 7zip)" in installer
