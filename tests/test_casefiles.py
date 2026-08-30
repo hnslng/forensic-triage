@@ -151,6 +151,10 @@ def test_container_inventory_is_expandable_and_searchable_without_changing_count
     assert root["entries"][0]["kind"] == "container"
     assert root["entries"][0]["entry_count"] == 2
     assert root["entries"][0]["encrypted"] is True
+    archive_filter = store.file_inventory(media_id, category="Archive")["files"][0]
+    assert archive_filter["container_id"] == "Ablage.zip"
+    assert archive_filter["container_status"] == "ok"
+    assert archive_filter["entry_count"] == 2
     container_root = store.container_inventory(media_id, "Ablage.zip")
     assert container_root["entries"][0]["name"] == "Dokumente"
     assert store.container_inventory(media_id, "Ablage.zip", "Dokumente")["entries"][0]["name"] == "Rechnung.pdf"

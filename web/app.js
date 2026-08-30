@@ -592,12 +592,24 @@ function treeEntriesHtml(entries, containerPath = "") {
           : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`);
       const encryptionState = entry.encrypted && entry.container_status !== "encrypted_headers" ? " · VERSCHLÜSSELT" : "";
       return `<details class="tree-folder tree-container" data-loaded="false">
-        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><em>${escapeHtml(format)}</em><small>${escapeHtml(state + encryptionState)}</small></summary>
+        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(state + encryptionState)}</small></summary>
         <div class="tree-children"><p class="tree-loading">${escapeHtml(format)}-VERZEICHNIS ÖFFNEN …</p></div>
       </details>`;
     }
     return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(entry.category)} · ${entry.size_known === false ? "GRÖSSE NICHT INDEXIERT" : formatBytes(entry.size)}</small></div>`;
   }).join("") || '<p class="tree-loading">ORDNER IST LEER</p>';
+}
+
+function inventoryRowsHtml(files) {
+  return files.map((file) => {
+    const path = escapeHtml(file.path);
+    const pathCell = file.container_id
+      ? `<button class="inventory-container-toggle" type="button" data-container-path="${escapeHtml(file.container_id)}" aria-expanded="false"><span>▶</span><b>${path}</b></button>`
+      : path;
+    const row = `<tr><td>${pathCell}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
+    if (!file.container_id) return row;
+    return `${row}<tr class="inventory-container-detail" hidden><td colspan="5"><div class="tree-children"><p class="tree-loading">ARCHIVVERZEICHNIS ÖFFNEN …</p></div></td></tr>`;
+  }).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
 }
 
 async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offset = 0) {
@@ -703,9 +715,7 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     $("inventoryReset").hidden = false;
     $("inventoryTree").hidden = true;
     $("inventorySearchResults").hidden = false;
-    const rows = data.files.map((file) => `
-      <tr><td>${escapeHtml(file.path)}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>
-    `).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
+    const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
     inventoryListState = { category, keyword, search: searchText, nextOffset: Number(data.next_offset || visible) };
@@ -1045,6 +1055,19 @@ $("inventoryMore").addEventListener("click", () => {
   if (inventoryListState) loadInventory({ ...inventoryListState, offset: inventoryListState.nextOffset });
 });
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
+$("inventoryFiles").addEventListener("click", (event) => {
+  const button = event.target.closest("button.inventory-container-toggle");
+  if (!button) return;
+  const detail = button.closest("tr")?.nextElementSibling;
+  if (!detail?.classList.contains("inventory-container-detail")) return;
+  const opening = detail.hidden;
+  detail.hidden = !opening;
+  button.setAttribute("aria-expanded", String(opening));
+  if (opening && detail.dataset.loaded !== "true") {
+    detail.dataset.loaded = "true";
+    loadContainerTree(button.dataset.containerPath, "", detail.querySelector(".tree-children"));
+  }
+});
 $("categories").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-category]");
   if (!button) return;

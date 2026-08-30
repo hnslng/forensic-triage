@@ -322,6 +322,12 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .inventory-empty td { padding: 24px 12px; color: var(--muted); text-align: center; }
 .inventory-more { display: block; width: calc(100% - 24px); margin: 8px 12px 12px; padding: 10px; border: 1px solid var(--acid); background: transparent; color: var(--acid); cursor: pointer; font-weight: 900; }
 .inventory-more[hidden] { display: none; }
+.inventory-container-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.inventory-container-toggle span { color: var(--acid); font-size: 9px; transition: transform .15s ease; }
+.inventory-container-toggle[aria-expanded="true"] span { transform: rotate(90deg); }
+.inventory-container-toggle b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: inherit; }
+.inventory-container-detail td { padding: 0 12px 12px 24px; background: rgba(201, 242, 82, .02); text-align: left !important; }
+.inventory-container-detail .tree-children { margin-left: 0; }
 .inventory-tree { max-height: 520px; overflow: auto; padding: 8px 12px 14px; }
 .tree-folder { border-left: 1px solid var(--line); margin-left: 8px; }
 .tree-folder > summary, .tree-file { min-height: 40px; display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px dashed var(--line); list-style: none; }
@@ -332,7 +338,6 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .tree-folder[open] > summary .tree-arrow { transform: rotate(90deg); }
 .tree-folder b, .tree-file b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .tree-container > summary { border-left: 2px solid var(--amber); }
-.tree-container > summary em { padding: 3px 5px; border: 1px solid var(--amber); color: var(--amber); font-size: 8px; font-style: normal; }
 .tree-folder small, .tree-file small { margin-left: auto; color: var(--muted); font-size: 9px; white-space: nowrap; }
 .tree-children { margin-left: 14px; }
 .tree-loading { margin: 0; padding: 12px; color: var(--muted); font-size: 10px; }

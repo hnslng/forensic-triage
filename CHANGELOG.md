@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.22] – 2026-08-30
+
+### Geändert
+
+- Archive lassen sich nun auch direkt in der nach Dateityp gefilterten Tabelle aufklappen.
+- redundante ZIP-/7Z-/RAR-Formatplakette neben dem bereits eindeutigen Dateinamen entfernt.
+
+### Tests
+
+- API-Metadaten für aufklappbare Container in gefilterten Ergebnissen abgesichert.
+
 ## [0.2.0-alpha.21] – 2026-08-30
 
 ### Hinzugefügt

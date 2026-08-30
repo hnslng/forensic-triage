@@ -465,6 +465,7 @@ class CaseStore:
         start = max(0, offset)
         capped = max(1, min(limit, 500))
         catalog = self._load_container_catalog(inventory_path.parent)
+        container_records = list(catalog.get("containers", []))
 
         def inventory_items():
             with inventory_path.open(encoding="utf-8", newline="") as handle:
@@ -493,6 +494,26 @@ class CaseStore:
                     "container_format": item.get("container_format", ""),
                     "size_known": item.get("size_known", True),
                 }
+                if str(item.get("source", "media_inventory")) != "container_index":
+                    partition_slot = str(item.get("partition_slot", ""))
+                    container = next((
+                        candidate for candidate in container_records
+                        if str(candidate.get("path", "")) == path
+                        and (
+                            not candidate.get("partition_slot")
+                            or str(candidate.get("partition_slot")) == partition_slot
+                        )
+                    ), None)
+                    if container:
+                        record.update({
+                            "container_id": container.get("id", container.get("path", path)),
+                            "container_status": container.get("status", "unknown"),
+                            "entry_count": int(
+                                container.get("entry_count", len(container.get("entries", [])))
+                            ),
+                            "encrypted": bool(container.get("encrypted", False)),
+                            "truncated": bool(container.get("truncated", False)),
+                        })
                 container_format = str(item.get("container_format", ""))
                 if selected_keyword:
                     normalized = path.replace("\\", "/")
