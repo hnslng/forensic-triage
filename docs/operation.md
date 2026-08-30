@@ -15,7 +15,7 @@ Nach jedem Seiten- oder Dienstneustart ist **kein Fall aktiv**. Der Systemstatus
 
 ## 2. Neuen Fall vorbereiten
 
-1. „Auftrag öffnen“ wählen.
+1. Links „Fall anlegen / öffnen“ wählen.
 2. Neue Fallnummer eingeben.
 3. Bearbeiter-/Kürzel eintragen.
 4. Mindestens ein Suchprofil auswählen. Mehrere Profile werden zusammengeführt; doppelte Begriffe werden nur einmal gesucht.
@@ -26,7 +26,7 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 
 ## 3. Vorhandenen Fall öffnen
 
-1. „Auftrag öffnen“ und anschließend „Fallarchiv öffnen“ wählen.
+1. „Fall anlegen / öffnen“ und anschließend „Fallarchiv öffnen“ wählen.
 2. Beim gewünschten Fall „Öffnen“ wählen.
 3. Bearbeiterkürzel eintragen beziehungsweise prüfen.
 4. Suchprofile prüfen.

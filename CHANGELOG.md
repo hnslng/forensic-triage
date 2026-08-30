@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.23] – 2026-08-30
+
+### Geändert
+
+- sichtbaren Begriff „Auftrag“ durch den fachlich eindeutigen Begriff „Fall“ ersetzt.
+- Einstieg als „Fall anlegen / öffnen“ links vor Fallstatus und Suchprofilen angeordnet.
+- Button wechselt bei aktiver Sitzung zu „Fall verwalten“ und wird optisch zurückgenommen.
+- Falldialog als „Fall anlegen oder öffnen“ eindeutig beschriftet.
+
 ## [0.2.0-alpha.22] – 2026-08-30
 
 ### Geändert

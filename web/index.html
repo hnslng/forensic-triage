@@ -27,10 +27,10 @@
       </section>
 
       <section id="dashboardView">
-      <section class="case-dock" aria-label="Auftragsstatus">
-        <div class="case-dock-primary"><span>01 · AUFTRAG</span><strong id="dockCaseNumber">KEIN FALL AKTIV</strong><small id="dockOperator">SCANS GESPERRT</small></div>
+      <section class="case-dock" aria-label="Fallsteuerung">
+        <button id="openAuftragModal" type="button">＋ FALL ANLEGEN / ÖFFNEN</button>
+        <div class="case-dock-primary"><span>01 · FALLSTATUS</span><strong id="dockCaseNumber">KEIN FALL AKTIV</strong><small id="dockOperator">SCANS GESPERRT</small></div>
         <div class="case-dock-profiles"><span>SUCHPROFILE</span><strong id="dockProfiles">ALLGEMEIN / WIRTSCHAFT</strong><small id="dockKeywordCount">10 STICHWÖRTER</small></div>
-        <button id="openAuftragModal" type="button">AUFTRAG ÖFFNEN</button>
       </section>
       <section class="control-grid">
         <article class="panel device-panel">
@@ -166,7 +166,7 @@
       </section>
     </main>
     <dialog id="auftragModal" class="auftrag-modal">
-      <div class="modal-head"><div><span>01</span> AUFTRAG &amp; SUCHFOKUS</div><button id="closeAuftragModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><span>01</span> FALL ANLEGEN ODER ÖFFNEN</div><button id="closeAuftragModal" type="button">SCHLIESSEN ×</button></div>
       <div class="action-body">
         <section class="case-select">
           <div class="subhead"><span>1 · FALL</span><small>NEU ODER ARCHIV</small></div>

@@ -43,13 +43,15 @@ h1 span { color: var(--acid); }
 .system-state.error { color: #8b160e; }
 .system-state.busy { color: #6f4a0d; }
 .control-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; align-items: start; }
-.case-dock { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: 1px; margin-top: 10px; border: 1px solid var(--line); background: var(--line); box-shadow: 4px 4px 0 #050605; }
+.case-dock { display: grid; grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; gap: 1px; margin-top: 10px; border: 1px solid var(--line); background: var(--line); box-shadow: 4px 4px 0 #050605; }
 .case-dock > div { min-width: 0; min-height: 62px; display: grid; align-content: center; padding: 9px 13px; background: var(--panel); }
 .case-dock span, .case-dock small { color: var(--muted); font-size: 8px; letter-spacing: .09em; }
 .case-dock strong { margin: 3px 0; overflow: hidden; color: var(--ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .case-dock-primary.active strong { color: var(--acid); }
-.case-dock > button { align-self: stretch; min-width: 176px; padding: 10px 18px; border: 0; background: #1a2016; color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 950; }
-.case-dock > button:hover { background: #242c1e; color: var(--acid); }
+.case-dock > button { align-self: stretch; min-width: 220px; padding: 10px 18px; border: 0; background: var(--acid); color: #111; cursor: pointer; font-size: 11px; font-weight: 950; }
+.case-dock > button:hover { background: #dafc76; color: #111; }
+.case-dock > button.active-case { background: #1a2016; color: var(--ink); }
+.case-dock > button.active-case:hover { background: #242c1e; color: var(--acid); }
 .panel { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(255,255,255,.025), transparent 55%), var(--panel); box-shadow: 4px 4px 0 #050605; }
 .panel-title { border-bottom: 1px solid var(--line); padding: 10px 12px; color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .1em; }
 .panel-title span { color: var(--acid); margin-right: 8px; }
@@ -389,7 +391,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .system-state { font-size: 9px; }
   .action-body { grid-template-columns: 1fr; }
   .case-session-footer { grid-template-columns: 1fr; }
-  .case-dock { grid-template-columns: 1fr auto; }
+  .case-dock { grid-template-columns: auto 1fr; }
   .case-dock-profiles { display: none !important; }
   .result-head { align-items: start; }
   .decision-fields { grid-template-columns: 1fr; }

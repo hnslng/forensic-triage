@@ -307,13 +307,15 @@ function updateDashboardState() {
   }
   const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial)).length;
   $("deviceCount").textContent = `${online} ONLINE · ${offline} OFFLINE`;
-  $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM AUFTRAG";
+  $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM FALL";
   $("deviceEmptyCopy").textContent = "USB-Medium einstecken. Auto-Scan übernimmt die geschützte Grobsichtung.";
   $("deviceEmpty").hidden = online > 0;
 }
 
 function updateOrderSummary() {
   $("dockCaseNumber").textContent = activeCaseNumber || "KEIN FALL AKTIV";
+  $("openAuftragModal").textContent = activeCaseNumber ? "FALL VERWALTEN" : "＋ FALL ANLEGEN / ÖFFNEN";
+  $("openAuftragModal").classList.toggle("active-case", Boolean(activeCaseNumber));
   $("dockOperator").textContent = activeCaseNumber ? `BEARBEITER ${activeOperator}` : "SCANS GESPERRT";
   $("dockCaseNumber").parentElement.classList.toggle("active", Boolean(activeCaseNumber));
   $("autoScanToggle").nextElementSibling.textContent = $("autoScanToggle").checked ? "AUTO-SCAN EIN" : "AUTO-SCAN AUS";
