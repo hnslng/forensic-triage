@@ -42,6 +42,12 @@ def test_debian_installer_includes_archive_directory_tool() -> None:
     assert "7zip nginx" in installer
 
 
+def test_manual_install_switches_runtime_link_to_tested_checkout() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    assert 'ln -sfn "$PROJECT_ROOT" "$RUNTIME_LINK"' in installer
+    assert '[[ -e "$RUNTIME_LINK" && ! -L "$RUNTIME_LINK" ]]' in installer
+
+
 def test_pi_installer_configures_port_free_local_url() -> None:
     installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
     network_script = (ROOT / "scripts/configure_pi_network.sh").read_text(encoding="utf-8")
@@ -53,6 +59,7 @@ def test_pi_installer_configures_port_free_local_url() -> None:
     assert "allow 10.0.0.0/8" in nginx_template
     assert "allow 172.16.0.0/12" in nginx_template
     assert "allow 192.168.0.0/16" in nginx_template
+    assert "listen [::]" not in nginx_template
 
 
 def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:

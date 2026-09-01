@@ -114,9 +114,14 @@ run_as_owner "$PROJECT_ROOT/.venv/bin/python" -m pytest "$PROJECT_ROOT/tests" -q
 install -d -m 0750 "$CONFIG_DIR"
 RUNTIME_LINK="${PROJECT_ROOT}-current"
 RELEASES_ROOT="${PROJECT_ROOT}-releases"
-if [[ ! -e "$RUNTIME_LINK" && ! -L "$RUNTIME_LINK" ]]; then
-  ln -s "$PROJECT_ROOT" "$RUNTIME_LINK"
+if [[ -e "$RUNTIME_LINK" && ! -L "$RUNTIME_LINK" ]]; then
+  echo "Laufzeitpfad ist kein sicher austauschbarer Symlink: $RUNTIME_LINK" >&2
+  exit 1
 fi
+# A deliberate manual installation means that this tested checkout becomes
+# the live release. Otherwise a previous atomic updater release would remain
+# active even though pip and the service templates were refreshed here.
+ln -sfn "$PROJECT_ROOT" "$RUNTIME_LINK"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   TEMP_CONFIG="$(mktemp)"
   sed -e "s|@PROJECT_ROOT@|$PROJECT_ROOT|g" \

@@ -2,7 +2,6 @@
 # Only hosts connected to the private TRIAGEBOX hotspot may reach the UI.
 server {
     listen 80 default_server;
-    listen [::]:80 default_server;
     server_name triagebox.local triagebox;
 
     access_log /var/log/nginx/forensic-triage.access.log;

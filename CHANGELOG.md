@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.28] – 2026-09-02
+
+### Behoben
+
+- erneutes manuelles Ausführen des Installers schaltet den Laufzeit-Symlink nun auf den tatsächlich geprüften Checkout; ein alter atomarer Release bleibt nicht irrtümlich aktiv.
+- `triagebox.local` fällt im privaten LAN nicht mehr auf einen von nginx abgewiesenen globalen IPv6-Zugang, sondern verwendet den vorgesehenen IPv4-Zugang.
+
+### Tests
+
+- 69 automatisierte Tests erfolgreich, einschließlich Laufzeit-Symlink und IPv4-only-Reverse-Proxy.
+
 ## [0.2.0-alpha.27] – 2026-09-02
 
 ### Behoben
