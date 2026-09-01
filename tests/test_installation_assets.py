@@ -39,4 +39,29 @@ def test_public_bootstrap_targets_expected_repository() -> None:
 
 def test_debian_installer_includes_archive_directory_tool() -> None:
     installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
-    assert "eject 7zip)" in installer
+    assert "7zip nginx" in installer
+
+
+def test_pi_installer_configures_port_free_local_url() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    network_script = (ROOT / "scripts/configure_pi_network.sh").read_text(encoding="utf-8")
+    nginx_template = (ROOT / "deploy/forensic-triage-nginx.conf.in").read_text(encoding="utf-8")
+    assert "nginx.service" in installer
+    assert "http://${TRIAGEBOX_HOSTNAME:-triagebox}.local/" in installer
+    assert "FORENSIC_TRIAGE_WEB_HOST=127.0.0.1" in network_script
+    assert "proxy_pass http://127.0.0.1:@WEB_PORT@" in nginx_template
+
+
+def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
+    updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")
+    assert "tag --list 'v[0-9]*'" in updater
+    assert "git -C \"$CURRENT_ROOT\" worktree add --detach" in updater
+    assert 'mv -Tf "${RUNTIME_LINK}.next" "$RUNTIME_LINK"' in updater
+    assert "VORVERSION WIEDERHERGESTELLT" in updater
+
+
+def test_update_timer_checks_only_and_never_installs() -> None:
+    timer = (ROOT / "deploy/forensic-triage-update-check.timer").read_text(encoding="utf-8")
+    assert "OnUnitActiveSec=1d" in timer
+    assert "forensic-triage-update@check.service" in timer
+    assert "forensic-triage-update@install.service" not in timer

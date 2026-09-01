@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.24] – 2026-09-01
+
+### Hinzugefügt
+
+- portfreie Pi-Adresse `http://triagebox.local/` über einen lokalen nginx-Reverse-Proxy; der Python-Dienst bleibt auf `127.0.0.1:8787`.
+- tägliche reine Prüfung auf freigegebene Git-Release-Tags, zusätzlich fünf Minuten nach dem Start.
+- Dashboard-Aktionen „Update prüfen“ und „Update installieren“.
+- getrennte Update-Vorbereitung mit Testlauf, atomarem Versionswechsel und automatischer Rückkehr zur Vorversion, falls der neue Webdienst nicht startet.
+
+### Sicherheit
+
+- der Reverse-Proxy akzeptiert ausschließlich lokale Zugriffe sowie Geräte aus dem privaten `10.42.0.0/24`-Hotspot.
+- die Update-Installation wird serverseitig abgewiesen, solange ein Fall aktiv ist oder ein Scan läuft.
+- die zeitgesteuerte Prüfung installiert niemals selbstständig eine neue Version.
+
 ## [0.2.0-alpha.23] – 2026-08-30
 
 ### Geändert

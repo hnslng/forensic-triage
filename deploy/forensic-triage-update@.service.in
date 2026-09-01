@@ -1,0 +1,12 @@
+[Unit]
+Description=TRIAGE//BOX deliberate update action (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/forensic-triage/triage.env
+ExecStart=@RUNTIME_ROOT@/scripts/update_triagebox.sh %i
+TimeoutStartSec=15min
+Nice=10

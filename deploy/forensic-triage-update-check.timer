@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily TRIAGE//BOX update availability check
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1d
+RandomizedDelaySec=15min
+Persistent=true
+Unit=forensic-triage-update@check.service
+
+[Install]
+WantedBy=timers.target

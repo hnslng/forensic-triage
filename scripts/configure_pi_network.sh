@@ -99,17 +99,16 @@ nmcli radio wifi on
 "$SCRIPT_DIR/apply_pi_firewall.sh" "$NETWORK_CONFIG"
 nmcli connection up "$TRIAGEBOX_WIFI_CONNECTION"
 
-HOTSPOT_IP="${TRIAGEBOX_WIFI_ADDRESS%/*}"
+# The Python service is never exposed directly. nginx serves the port-free
+# address and only accepts clients from the private hotspot network.
 if grep -q '^FORENSIC_TRIAGE_WEB_HOST=' "$WEB_CONFIG"; then
-  sed -i "s/^FORENSIC_TRIAGE_WEB_HOST=.*/FORENSIC_TRIAGE_WEB_HOST=$HOTSPOT_IP/" "$WEB_CONFIG"
+  sed -i 's/^FORENSIC_TRIAGE_WEB_HOST=.*/FORENSIC_TRIAGE_WEB_HOST=127.0.0.1/' "$WEB_CONFIG"
 else
-  printf '\nFORENSIC_TRIAGE_WEB_HOST=%s\n' "$HOTSPOT_IP" >>"$WEB_CONFIG"
+  printf '\nFORENSIC_TRIAGE_WEB_HOST=127.0.0.1\n' >>"$WEB_CONFIG"
 fi
-WEB_PORT="$(sed -n 's/^FORENSIC_TRIAGE_WEB_PORT=//p' "$WEB_CONFIG" | tail -n 1)"
-WEB_PORT="${WEB_PORT:-8787}"
 
 echo "Pi-Netzwerk vorbereitet."
 echo "Hostname: $TRIAGEBOX_HOSTNAME.local"
 echo "Hotspot: $TRIAGEBOX_WIFI_SSID"
-echo "Adresse: http://$TRIAGEBOX_HOSTNAME.local:$WEB_PORT/"
+echo "Adresse: http://$TRIAGEBOX_HOSTNAME.local/"
 echo "Das WLAN-Kennwort steht nur in $NETWORK_CONFIG."

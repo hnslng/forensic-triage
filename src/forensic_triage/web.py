@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import threading
 import zipfile
@@ -31,6 +32,8 @@ OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
 ACTIVE_DEVICES_LOCK = threading.Lock()
 ACTIVE_DEVICES: set[str] = set()
 QUARANTINED_DEVICES: set[str] = set()
+CASE_SESSION_LOCK = threading.Lock()
+ACTIVE_CASE_SESSION: dict[str, str] | None = None
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -151,6 +154,51 @@ def clear_absent_quarantines(devices: list[dict[str, Any]]) -> None:
     present = {str(device.get("path", "")) for device in devices}
     with ACTIVE_DEVICES_LOCK:
         QUARANTINED_DEVICES.intersection_update(present)
+
+
+def active_case_session() -> dict[str, str] | None:
+    with CASE_SESSION_LOCK:
+        return dict(ACTIVE_CASE_SESSION) if ACTIVE_CASE_SESSION else None
+
+
+def set_active_case_session(case_number: str, operator: str) -> None:
+    global ACTIVE_CASE_SESSION
+    with CASE_SESSION_LOCK:
+        ACTIVE_CASE_SESSION = {"case_number": case_number, "operator": operator}
+
+
+def clear_active_case_session() -> None:
+    global ACTIVE_CASE_SESSION
+    with CASE_SESSION_LOCK:
+        ACTIVE_CASE_SESSION = None
+
+
+def read_update_status() -> dict[str, str]:
+    """Read the root-only updater result without evaluating its shell syntax."""
+    state_file = Path(os.environ.get(
+        "FORENSIC_TRIAGE_UPDATE_STATE_FILE", "/var/lib/forensic-triage/update-status.env",
+    ))
+    default = {
+        "state": "unknown", "message": "UPDATE NOCH NICHT GEPRÜFT",
+        "available_version": "", "current_version": __version__, "updated_at": "",
+    }
+    try:
+        for line in state_file.read_text(encoding="utf-8").splitlines():
+            if "=" not in line:
+                continue
+            parsed = shlex.split(line, comments=False, posix=True)
+            if len(parsed) != 1 or "=" not in parsed[0]:
+                continue
+            key, value = parsed[0].split("=", 1)
+            mapped = {
+                "STATE": "state", "MESSAGE": "message", "AVAILABLE_VERSION": "available_version",
+                "CURRENT_VERSION": "current_version", "UPDATED_AT": "updated_at",
+            }.get(key)
+            if mapped:
+                default[mapped] = value
+    except (OSError, ValueError):
+        pass
+    return default
 
 
 def latest_result(results_root: Path) -> dict[str, Any] | None:
@@ -284,6 +332,8 @@ class TriageHandler(BaseHTTPRequestHandler):
                     "active_devices": active_device_paths(),
                     "quarantined_devices": quarantined_device_paths(),
                     "scan_running": bool(active_device_paths()),
+                    "active_case": active_case_session(),
+                    "update": read_update_status(),
                 })
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Systemstatus nicht verfügbar: {exc}"})
@@ -296,6 +346,9 @@ class TriageHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.OK, {"profiles": list_profiles(self.server.profile_path.parent)})
             except (OSError, ValueError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profile nicht verfügbar: {exc}"})
+            return
+        if route == "/api/updates":
+            self._json(HTTPStatus.OK, {"update": read_update_status()})
             return
         if route == "/api/profile":
             try:
@@ -416,6 +469,12 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/cases/start":
             self._post_case_start()
             return
+        if route == "/api/cases/stop":
+            self._post_case_stop()
+            return
+        if route in {"/api/updates/check", "/api/updates/install"}:
+            self._post_update(route.rsplit("/", 1)[-1])
+            return
         if route == "/api/scans":
             self._post_scan()
             return
@@ -471,9 +530,34 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         try:
             result = self.server.case_store.start_case(case_number, operator)
+            set_active_case_session(result["case"]["case_number"], operator)
             self._json(HTTPStatus.OK, result)
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
+    def _post_case_stop(self) -> None:
+        if active_device_paths():
+            self._json(HTTPStatus.CONFLICT, {"error": "Ein Scan läuft noch."})
+            return
+        clear_active_case_session()
+        self._json(HTTPStatus.OK, {"active_case": None})
+
+    def _post_update(self, action: str) -> None:
+        if action == "install":
+            if active_device_paths():
+                self._json(HTTPStatus.CONFLICT, {"error": "UPDATE WÄHREND EINES SCANS GESPERRT"})
+                return
+            if active_case_session():
+                self._json(HTTPStatus.CONFLICT, {"error": "FALL ZUERST BEENDEN, DANN UPDATE INSTALLIEREN"})
+                return
+        try:
+            subprocess.run(
+                ["/usr/bin/systemctl", "start", "--no-block", f"forensic-triage-update@{action}.service"],
+                check=True, capture_output=True, text=True, timeout=5,
+            )
+            self._json(HTTPStatus.ACCEPTED, {"update": read_update_status(), "action": action})
+        except (OSError, subprocess.SubprocessError) as exc:
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": f"UPDATE-DIENST NICHT VERFÜGBAR: {exc}"})
 
     def do_DELETE(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path

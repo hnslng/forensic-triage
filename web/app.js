@@ -27,6 +27,7 @@ let profilesInitialized = false;
 let keywordDraft = [];
 let draftSelectedKeywords = new Set();
 let profileEditorId = "default";
+let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -41,6 +42,34 @@ function setSystemState(text, state = activeCaseNumber ? "ready" : "locked") {
   $("systemState").textContent = text;
   $("systemStatus").classList.remove("locked", "error", "busy");
   if (state !== "ready") $("systemStatus").classList.add(state);
+}
+
+function renderUpdateState(value = {}) {
+  updateState = { ...updateState, ...value };
+  const state = updateState.state || "unknown";
+  const available = updateState.available_version || "";
+  $("updateStatus").textContent = updateState.message || "UPDATE NOCH NICHT GEPRÜFT";
+  $("updateInstall").hidden = state !== "available";
+  $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
+  $("updateInstall").disabled = Boolean(activeCaseNumber) || runningPaths.size > 0 || state === "installing";
+  $("updateCheck").disabled = state === "checking" || state === "installing";
+}
+
+async function requestUpdate(action) {
+  if (action === "install" && !window.confirm("Update jetzt installieren? Der Fall muss beendet sein und der Dienst wird kurz neu gestartet.")) return;
+  $("updateCheck").disabled = true;
+  $("updateInstall").disabled = true;
+  $("updateStatus").textContent = action === "check" ? "UPDATE WIRD GEPRÜFT …" : "UPDATE WIRD VORBEREITET …";
+  try {
+    const response = await fetch(`/api/updates/${action}`, { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Update-Aktion nicht möglich");
+    setTimeout(() => refresh(false), 800);
+  } catch (error) {
+    renderUpdateState({ state: "error", message: `FEHLER: ${error.message}` });
+  } finally {
+    setTimeout(() => renderUpdateState(updateState), 300);
+  }
 }
 
 function openAuftrag() {
@@ -352,6 +381,7 @@ function updateCaseSessionUi(message = "") {
   updateOrderSummary();
   updateScanAvailability();
   updateDecisionAvailability();
+  renderUpdateState(updateState);
 }
 
 const stateLabels = {
@@ -450,6 +480,7 @@ async function refresh(loadLatest = false) {
     const data = await response.json();
     renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     renderCaseHistory(data.cases || []);
+    renderUpdateState(data.update || {});
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
     setSystemState("VERBINDUNG PRÜFEN", "error");
@@ -789,6 +820,7 @@ function stopCaseSession() {
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
   setSystemState("GESPERRT", "locked");
   openAuftrag();
+  fetch("/api/cases/stop", { method: "POST" }).catch(() => {});
 }
 
 async function deleteCurrentCase() {
@@ -1135,6 +1167,8 @@ $("caseMedia").addEventListener("click", (event) => {
   if (row) openMedia(Number(row.dataset.mediaId));
 });
 $("decisionReason").addEventListener("change", updateDecisionAvailability);
+$("updateCheck").addEventListener("click", () => requestUpdate("check"));
+$("updateInstall").addEventListener("click", () => requestUpdate("install"));
 $("decisionEvidence").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {

@@ -42,6 +42,9 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_CONTAINER_MAX_FILES` | `50` | höchstens katalogisierte ZIP-/ISO-/7Z-/RAR-Dateien je Medium |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_ENTRIES` | `2000` | höchstens Einträge je Container |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_TOTAL_ENTRIES` | `10000` | höchstens interne Einträge insgesamt je Medium |
+| `FORENSIC_TRIAGE_UPDATE_ENABLED` | `true` | aktiviert nur die tägliche Update-Prüfung, niemals eine automatische Installation |
+| `FORENSIC_TRIAGE_UPDATE_REMOTE` | `origin` | Git-Remote für die Release-Prüfung |
+| `FORENSIC_TRIAGE_UPDATE_STATE_FILE` | `/var/lib/forensic-triage/update-status.env` | lokaler, root-geschützter Update-Status für das Dashboard |
 
 Beispiel:
 
@@ -91,6 +94,14 @@ Das Entwicklungskennwort ist absichtlich leicht zu merken, aber allgemein bekann
 `127.0.0.1` ist die sichere Voreinstellung für Entwicklung oder Zugriff über SSH. Der Raspberry Pi 3B+ soll später primär einen privaten WLAN-Hotspot `TRIAGEBOX` bereitstellen; Ethernet bleibt die Rückfallebene. Eine andere Bindeadresse darf erst nach festgelegten privaten IP-Adressen und Firewallregeln aktiviert werden. `0.0.0.0` würde auf allen Netzwerkschnittstellen lauschen und soll nicht unüberlegt verwendet werden.
 
 Nach einem Portwechsel muss auch die aufrufende Adresse angepasst werden. Bei Port `8877` wäre das beispielsweise `http://127.0.0.1:8877/`.
+
+Auf einem Pi wird dieser interne Port durch nginx nur innerhalb des Hotspots als portfreie Adresse `http://triagebox.local/` veröffentlicht. Der Python-Dienst selbst bleibt auf `127.0.0.1`. HTTP ist für den privaten WPA2-Hotspot eine Bedienvereinfachung, aber noch kein Ersatz für das in `security-concept.md` geplante HTTPS und die gemeinsame Geräteentsperrung.
+
+## Updates
+
+Beim Booten mit Verzögerung und anschließend täglich startet ein `systemd`-Timer ausschließlich die Prüfung auf einen neuen Git-Release-Tag. Das Update wird niemals selbstständig installiert. Das Dashboard zeigt den Status und kann die Installation bewusst anfordern. Serverseitig wird sie verweigert, solange ein Fall aktiv oder ein Scan aktiv ist.
+
+Die Installation erzeugt einen separaten Release-Checkout, erstellt die Python-Umgebung und führt die Tests aus. Erst danach ersetzt ein atomarer Symlink die laufende Version. Falls der neue Dienst nicht startet, zeigt der Symlink wieder auf die vorherige Version. Fallakten, Ergebnisse und die lokale Konfiguration liegen außerhalb dieser Release-Ordner und bleiben unberührt.
 
 ## Speicherpfade
 

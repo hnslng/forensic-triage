@@ -107,7 +107,7 @@ Bei `127.0.0.1` ist die Oberfläche nur auf dem Scanner selbst erreichbar. Das i
 Für den Raspberry Pi 3B+ bereitet der Pi-Modus einen privaten WPA2-Hotspot `TRIAGEBOX` als Hauptzugang vor. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend:
 
 ```text
-http://triagebox.local:8787/
+http://triagebox.local/
 ```
 
 Die derzeitige Alpha-Vorlage verwendet absichtlich das einfache Entwicklungskennwort `triagebox123`. Es ist öffentlich bekannt, kein echtes Geheimnis und muss vor einem realen Einsatz in `/etc/forensic-triage/pi-network.env` geändert werden. Danach den Pi-Modus erneut ausführen oder die NetworkManager-Verbindung aktualisieren.
@@ -118,25 +118,30 @@ Der Pi-Modus erledigt automatisch:
 - 2,4-GHz-Hotspot über `wlan0`,
 - WPA2/RSN mit CCMP,
 - private Adresse `10.42.0.1/24` und DHCP über NetworkManager,
-- Bindung des Webdienstes an die Hotspot-Adresse,
+- Bindung des Python-Webdienstes ausschließlich an `127.0.0.1` sowie portfreien Zugriff über den lokalen Reverse-Proxy,
 - Firewall-Regel gegen Weiterleitung vom Hotspot ins Ethernet/Internet,
 - automatischen Hotspot-Start beim Booten.
 
 Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die geplante Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
 
-Portloses HTTPS, das gemeinsame Gerätepasswort und feste Ethernet-Rückfalladressen folgen getrennt. Hotspot, mDNS und Firewall sind im Installer vorbereitet, gelten aber bis zum Test auf dem echten Pi weiterhin als unvalidiert.
+Die portfreie HTTP-Adresse ist für den privaten WPA2-Hotspot vorbereitet. Portloses HTTPS, das gemeinsame Gerätepasswort und feste Ethernet-Rückfalladressen folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall gelten bis zum Test auf dem echten Pi weiterhin als unvalidiert.
 
 ## 5. Aktualisieren
+
+Der Pi prüft fünf Minuten nach dem Start und danach täglich auf den neuesten Git-Release-Tag. Ohne erreichbares Repository wird nichts verändert. Das Prüfen lädt keinen Code in die laufende Anwendung und installiert nichts.
+
+Eine gefundene Version erscheint im Dashboard. Die Installation wird bewusst dort gestartet und ist gesperrt, solange ein Fall aktiv ist oder ein Scan läuft. Sie läuft getrennt ab: neuer Release-Checkout, Python-Abhängigkeiten und Tests, atomarer Wechsel auf die neue Version, Neustart. Startet die neue Version nicht, stellt das Skript automatisch den vorherigen Release wieder her.
+
+Für Wartung ohne Dashboard bleibt möglich:
 
 Nur ohne laufenden Scan und nach beendetem Fall:
 
 ```bash
-cd /home/triage/forensic-triage
-git pull --ff-only origin main
-sudo ./scripts/install_debian.sh
+sudo systemctl start forensic-triage-update@check.service
+sudo systemctl start forensic-triage-update@install.service
 ```
 
-Bei einer Installation aus einem Releasepaket zuerst den neuen freigegebenen Code übertragen und anschließend dasselbe Installationsskript erneut ausführen.
+Die bewusste Installation benötigt ein erreichbares Git-Repository und einen freigegebenen Git-Tag. Bei einer Installation aus einem Releasepaket zuerst den neuen freigegebenen Code übertragen und anschließend dasselbe Installationsskript erneut ausführen.
 
 Vor größeren Aktualisierungen ist eine verschlüsselte Sicherung der Fallakten vorzusehen. Das Installationsskript verschiebt keine bestehenden Speicherpfade und löscht keine Fallakten.
 

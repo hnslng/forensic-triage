@@ -35,11 +35,17 @@ h1 span { color: var(--acid); }
 .active-case-display em { color: var(--muted); font: 900 13px/1 "SFMono-Regular", "Courier New", monospace; letter-spacing: .02em; }
 .active-case-display.locked small, .active-case-display.locked strong { color: var(--amber); }
 .system-state { display: flex; align-items: center; font-size: 13px; font-weight: 800; padding-bottom: 3px; }
-.rulebar { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 22px; padding: 9px 13px; background: var(--ink); color: #111; font-size: 11px; font-weight: 900; }
+.rulebar { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 16px; padding: 9px 13px; background: var(--ink); color: #111; font-size: 11px; font-weight: 900; }
 .mode-badge { letter-spacing: .04em; }
 .rulebar .mini-auto { color: #252a20; font-size: 10px; }
 .rulebar .mini-auto:has(input:checked) { color: #111; }
 .rulebar .system-state { justify-self: end; padding: 0; font-size: 10px; }
+.update-control { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.update-control button { min-height: 22px; padding: 3px 7px; border: 1px solid #4c5545; background: transparent; color: #252a20; cursor: pointer; font-size: 8px; font-weight: 950; white-space: nowrap; }
+.update-control button:hover { border-color: #111; }
+.update-control button:disabled { border-color: #9a9c94; color: #777a72; cursor: wait; }
+.update-control #updateInstall { border-color: #8a610e; color: #6f4a0d; }
+.update-control small { max-width: 150px; overflow: hidden; color: #53564f; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .system-state.error { color: #8b160e; }
 .system-state.busy { color: #6f4a0d; }
 .control-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; align-items: start; }

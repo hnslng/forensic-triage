@@ -9,6 +9,7 @@ from forensic_triage.web import (
     latest_result,
     parse_media_devices,
     parser,
+    read_update_status,
 )
 
 
@@ -99,3 +100,23 @@ def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
     assert args.profile == Path("/etc/forensic-triage/default.yaml")
     assert args.scan_timeout == 90
     assert args.command_timeout == 7
+
+
+def test_update_status_defaults_without_state_file(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("FORENSIC_TRIAGE_UPDATE_STATE_FILE", str(tmp_path / "missing.env"))
+    status = read_update_status()
+    assert status["state"] == "unknown"
+    assert status["message"] == "UPDATE NOCH NICHT GEPRÜFT"
+
+
+def test_update_status_reads_shell_escaped_values(monkeypatch, tmp_path) -> None:
+    state_file = tmp_path / "update-status.env"
+    state_file.write_text(
+        "STATE=available\nMESSAGE=UPDATE\\ IST\\ BEREIT\\ ZUR\\ INSTALLATION\nAVAILABLE_VERSION=v0.2.0-alpha.24\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FORENSIC_TRIAGE_UPDATE_STATE_FILE", str(state_file))
+    status = read_update_status()
+    assert status["state"] == "available"
+    assert status["message"] == "UPDATE IST BEREIT ZUR INSTALLATION"
+    assert status["available_version"] == "v0.2.0-alpha.24"
