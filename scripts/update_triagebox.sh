@@ -48,7 +48,8 @@ if ! flock -n 9; then
 fi
 
 CURRENT_ROOT="$(readlink -f "$RUNTIME_LINK" 2>/dev/null || true)"
-if [[ -z "$CURRENT_ROOT" || ! -d "$CURRENT_ROOT/.git" ]]; then
+if [[ -z "$CURRENT_ROOT" ]] || \
+   ! git -C "$CURRENT_ROOT" rev-parse --is-inside-work-tree 2>/dev/null | grep -qx true; then
   write_status "error" "AKTUELLE INSTALLATION IST KEIN GIT-CHECKOUT"
   exit 1
 fi

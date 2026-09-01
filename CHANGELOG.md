@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.29] – 2026-09-02
+
+### Behoben
+
+- der sichere Updater akzeptiert nun sowohl normale Git-Checkouts als auch die von ihm selbst erzeugten verknüpften Git-Worktrees.
+- ein installierter Release wird nicht mehr fälschlich mit `AKTUELLE INSTALLATION IST KEIN GIT-CHECKOUT` abgewiesen.
+
+### Tests
+
+- 70 automatisierte Tests erfolgreich, einschließlich Prüfung auf Unterstützung verknüpfter Git-Worktrees.
+
 ## [0.2.0-alpha.28] – 2026-09-02
 
 ### Behoben

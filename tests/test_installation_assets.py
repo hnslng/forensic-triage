@@ -74,6 +74,12 @@ def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
     assert "systemctl daemon-reload" in updater
 
 
+def test_deliberate_update_accepts_linked_git_worktree_releases() -> None:
+    updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")
+    assert "rev-parse --is-inside-work-tree" in updater
+    assert '! -d "$CURRENT_ROOT/.git"' not in updater
+
+
 def test_update_timer_checks_only_and_never_installs() -> None:
     timer = (ROOT / "deploy/forensic-triage-update-check.timer").read_text(encoding="utf-8")
     assert "OnUnitActiveSec=1d" in timer
