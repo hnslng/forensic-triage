@@ -208,6 +208,8 @@ def read_update_status() -> dict[str, str]:
                 "CURRENT_VERSION": "current_version", "UPDATED_AT": "updated_at",
             }.get(key)
             if mapped:
+                if mapped == "current_version" and not value:
+                    continue
                 default[mapped] = value
     except (OSError, ValueError):
         pass

@@ -64,7 +64,7 @@ function renderUpdateState(value = {}) {
     installing: "INSTALLATION LÄUFT …",
     unknown: "NOCH NICHT GEPRÜFT",
   };
-  const summaryLabels = { current: "AKTUELL", installed: "AKTUELL", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "FEHLER" };
+  const summaryLabels = { current: "AKTUELL", installed: "AKTUELL", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "UPDATE-FEHLER" };
   $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("updateCheckedAt").textContent = updateState.updated_at

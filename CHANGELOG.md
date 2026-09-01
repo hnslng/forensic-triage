@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.30] – 2026-09-02
+
+### Behoben
+
+- die installierte Version bleibt im Systemdialog sichtbar, auch wenn eine fehlgeschlagene Update-Aktion keinen Versionswert in ihre Statusdatei geschrieben hat.
+- ein Fehler der Update-Prüfung wird im Kopf ausdrücklich als `UPDATE-FEHLER` bezeichnet und nicht mehr als allgemeiner Systemfehler.
+
+### Tests
+
+- 71 automatisierte Tests erfolgreich, einschließlich Versions-Fallback bei unvollständigen Fehlerstatusdaten.
+
 ## [0.2.0-alpha.29] – 2026-09-02
 
 ### Behoben

@@ -140,6 +140,20 @@ def test_update_status_reads_shell_escaped_values(monkeypatch, tmp_path) -> None
     assert status["available_version"] == "v0.2.0-alpha.24"
 
 
+def test_update_status_keeps_running_version_when_error_file_has_no_version(monkeypatch, tmp_path) -> None:
+    state_file = tmp_path / "update-status.env"
+    state_file.write_text(
+        "STATE=error\nMESSAGE=PRÜFUNG\\ FEHLGESCHLAGEN\nCURRENT_VERSION=\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FORENSIC_TRIAGE_UPDATE_STATE_FILE", str(state_file))
+
+    status = read_update_status()
+
+    assert status["state"] == "error"
+    assert status["current_version"].startswith("0.2.0a")
+
+
 def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
     calls = []
 
