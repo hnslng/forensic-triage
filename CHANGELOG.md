@@ -2,6 +2,23 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.27] – 2026-09-02
+
+### Behoben
+
+- Update-Prüfung zeigt während des asynchronen Systemdienststarts nicht mehr kurz den veralteten vorherigen Status.
+- Update-Installation bleibt sichtbar in Bearbeitung, wartet einen vorübergehenden Neustart des Webdienstes ab und lädt die Oberfläche nach Erfolg neu.
+- Blockierende Fälle oder Scans werden direkt und konkret im Systemdialog angezeigt, statt nur im allgemeinen Bestätigungstext erwähnt zu werden.
+
+### Geändert
+
+- Oberfläche fragt den tatsächlichen systemd-Arbeitsstatus bis zum Ergebnis ab; die Prüfung hat 30 Sekunden, die getestete Installation höchstens 15 Minuten Zeit.
+- Installationsbestätigung beschreibt nur noch den tatsächlichen Dienstneustart; Voraussetzungen werden vor dem Dialog geprüft.
+
+### Tests
+
+- 68 automatisierte Tests erfolgreich, einschließlich Statusermittlung der getrennten Update-Dienste.
+
 ## [0.2.0-alpha.26] – 2026-09-02
 
 ### Behoben

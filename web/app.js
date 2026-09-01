@@ -29,6 +29,9 @@ let keywordDraft = [];
 let draftSelectedKeywords = new Set();
 let profileEditorId = "default";
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
+let updateActionInProgress = null;
+let serverActiveCase = null;
+const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const formatReleaseVersion = (value) => {
   const match = String(value || "").match(/^(\d+\.\d+\.\d+)a(\d+)$/);
   return match ? `v${match[1]}-alpha.${match[2]}` : String(value || "—");
@@ -71,24 +74,94 @@ function renderUpdateState(value = {}) {
   $("openUpdateModal").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
-  $("updateInstall").disabled = Boolean(activeCaseNumber) || runningPaths.size > 0 || state === "installing";
-  $("updateCheck").disabled = state === "checking" || state === "installing";
+  const activeCase = activeCaseNumber || serverActiveCase?.case_number;
+  const actionRunning = Boolean(updateActionInProgress) || state === "checking" || state === "installing";
+  $("updateInstall").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning;
+  $("updateCheck").disabled = actionRunning;
+  if (!updateActionInProgress) {
+    if (state === "available" && activeCase) {
+      $("updateActionMessage").textContent = `FALL ${activeCase} ZUERST BEENDEN`;
+    } else if (state === "available" && runningPaths.size > 0) {
+      $("updateActionMessage").textContent = "LAUFENDEN SCAN ZUERST ABSCHLIESSEN";
+    } else {
+      $("updateActionMessage").textContent = "";
+    }
+  }
+}
+
+async function waitForUpdateResult(action) {
+  const startedAt = Date.now();
+  const timeout = action === "check" ? 30000 : 15 * 60 * 1000;
+  let workerObserved = false;
+  while (Date.now() - startedAt < timeout) {
+    await wait(action === "check" ? 700 : 1000);
+    try {
+      const response = await fetch("/api/updates", { cache: "no-store" });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const state = data.update?.state || "unknown";
+      const workerRunning = Boolean(data.jobs?.[action]);
+      const stateRunning = state === "checking" || state === "installing";
+      workerObserved ||= workerRunning || stateRunning;
+      if (workerRunning || stateRunning) {
+        renderUpdateState(data.update || {});
+        $("updateActionMessage").textContent = action === "check"
+          ? "FREIGEGEBENE VERSION WIRD GEPRÜFT …"
+          : "UPDATE WIRD SICHER VORBEREITET · DIENSTSTART ABWARTEN …";
+        continue;
+      }
+      // systemctl starts asynchronously. Do not accept a stale previous result
+      // before the worker has had a chance to write its new state.
+      if (!workerObserved && Date.now() - startedAt < 2500) continue;
+      renderUpdateState(data.update || {});
+      $("updateActionMessage").textContent = "";
+      return state;
+    } catch (_) {
+      // During installation the web service restarts briefly. Keep polling.
+    }
+  }
+  throw new Error(action === "check"
+    ? "PRÜFUNG DAUERT LÄNGER ALS 30 SEKUNDEN"
+    : "INSTALLATION HAT INNERHALB VON 15 MINUTEN KEIN ERGEBNIS GELIEFERT");
 }
 
 async function requestUpdate(action) {
-  if (action === "install" && !window.confirm("Update jetzt installieren? Der Fall muss beendet sein und der Dienst wird kurz neu gestartet.")) return;
-  $("updateCheck").disabled = true;
-  $("updateInstall").disabled = true;
-  $("updateStatus").textContent = action === "check" ? "UPDATE WIRD GEPRÜFT …" : "UPDATE WIRD VORBEREITET …";
+  if (updateActionInProgress) return;
+  const activeCase = activeCaseNumber || serverActiveCase?.case_number;
+  if (action === "install" && activeCase) {
+    $("updateActionMessage").textContent = `FALL ${activeCase} ZUERST BEENDEN`;
+    return;
+  }
+  if (action === "install" && runningPaths.size > 0) {
+    $("updateActionMessage").textContent = "LAUFENDEN SCAN ZUERST ABSCHLIESSEN";
+    return;
+  }
+  if (action === "install" && !window.confirm("Update jetzt installieren? Der Dienst wird kurz neu gestartet.")) return;
+  const previousUpdateState = { ...updateState };
+  updateActionInProgress = action;
+  renderUpdateState({
+    state: action === "check" ? "checking" : "installing",
+    message: action === "check" ? "UPDATE WIRD GEPRÜFT" : "UPDATE WIRD VORBEREITET",
+  });
+  $("updateActionMessage").textContent = action === "check"
+    ? "PRÜFUNG WIRD GESTARTET …"
+    : "INSTALLATION WIRD GESTARTET …";
   try {
     const response = await fetch(`/api/updates/${action}`, { method: "POST" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Update-Aktion nicht möglich");
-    setTimeout(() => refresh(false), 800);
+    const result = await waitForUpdateResult(action);
+    if (action === "install" && result === "installed") {
+      $("updateActionMessage").textContent = "UPDATE INSTALLIERT · OBERFLÄCHE WIRD NEU GELADEN …";
+      await wait(1000);
+      window.location.reload();
+    }
   } catch (error) {
-    renderUpdateState({ state: "error", message: `FEHLER: ${error.message}` });
+    renderUpdateState(previousUpdateState);
+    $("updateActionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
-    setTimeout(() => renderUpdateState(updateState), 300);
+    updateActionInProgress = null;
+    renderUpdateState(updateState);
   }
 }
 
@@ -501,9 +574,10 @@ async function refresh(loadLatest = false) {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
+    serverActiveCase = data.active_case || null;
     renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     renderCaseHistory(data.cases || []);
-    renderUpdateState(data.update || {});
+    if (!updateActionInProgress) renderUpdateState(data.update || {});
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
     setSystemState("VERBINDUNG PRÜFEN", "error");
@@ -805,6 +879,7 @@ async function startCaseSession() {
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gestartet werden");
     activeCaseNumber = data.case.case_number;
     activeOperator = operator;
+    serverActiveCase = { case_number: activeCaseNumber, operator: activeOperator };
     $("caseNumber").value = activeCaseNumber;
     currentMediaId = null;
     currentCaseMedia = [];
@@ -824,7 +899,7 @@ async function startCaseSession() {
   }
 }
 
-function stopCaseSession() {
+async function stopCaseSession() {
   if (runningPaths.size) return;
   clearTimeout(autoStartTimer);
   activeCaseNumber = null;
@@ -846,7 +921,15 @@ function stopCaseSession() {
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
   setSystemState("GESPERRT", "locked");
   openAuftrag();
-  fetch("/api/cases/stop", { method: "POST" }).catch(() => {});
+  try {
+    const response = await fetch("/api/cases/stop", { method: "POST" });
+    if (!response.ok) throw new Error("Fall konnte am Gerät nicht beendet werden");
+    serverActiveCase = null;
+    renderUpdateState(updateState);
+  } catch (error) {
+    $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
+    await refresh(false);
+  }
 }
 
 async function deleteCurrentCase() {

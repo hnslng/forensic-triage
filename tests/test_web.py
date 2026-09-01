@@ -10,6 +10,7 @@ from forensic_triage.web import (
     parse_media_devices,
     parser,
     read_update_status,
+    update_job_states,
 )
 
 
@@ -137,3 +138,19 @@ def test_update_status_reads_shell_escaped_values(monkeypatch, tmp_path) -> None
     assert status["state"] == "available"
     assert status["message"] == "UPDATE IST BEREIT ZUR INSTALLATION"
     assert status["available_version"] == "v0.2.0-alpha.24"
+
+
+def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(command, **_kwargs):
+        calls.append(command[-1])
+        return type("Result", (), {"returncode": 0 if "@check.service" in command[-1] else 3})()
+
+    monkeypatch.setattr("forensic_triage.web.subprocess.run", fake_run)
+
+    assert update_job_states() == {"check": True, "install": False}
+    assert calls == [
+        "forensic-triage-update@check.service",
+        "forensic-triage-update@install.service",
+    ]

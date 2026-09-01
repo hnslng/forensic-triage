@@ -380,6 +380,8 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .update-modal { width: min(680px, calc(100% - 28px)); }
 .update-modal-body { padding: 15px; }
 .update-modal-body > p { margin: 13px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.update-modal-body .update-action-message { min-height: 15px; color: var(--amber); font-weight: 900; }
+.update-modal-body .update-action-message:empty { display: none; }
 .update-version-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); }
 .update-version-grid > div { min-width: 0; padding: 13px; border-right: 1px solid var(--line); }
 .update-version-grid > div:last-child { border-right: 0; }

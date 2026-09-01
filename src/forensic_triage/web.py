@@ -214,6 +214,21 @@ def read_update_status() -> dict[str, str]:
     return default
 
 
+def update_job_states() -> dict[str, bool]:
+    """Return whether a deliberate update worker is currently active."""
+    states: dict[str, bool] = {}
+    for action in ("check", "install"):
+        try:
+            completed = subprocess.run(
+                ["/usr/bin/systemctl", "is-active", "--quiet", f"forensic-triage-update@{action}.service"],
+                check=False, capture_output=True, timeout=2,
+            )
+            states[action] = completed.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            states[action] = False
+    return states
+
+
 def latest_result(results_root: Path) -> dict[str, Any] | None:
     """Load the newest complete result set, if one exists."""
     candidates = sorted(
@@ -361,7 +376,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profile nicht verfügbar: {exc}"})
             return
         if route == "/api/updates":
-            self._json(HTTPStatus.OK, {"update": read_update_status()})
+            self._json(HTTPStatus.OK, {"update": read_update_status(), "jobs": update_job_states()})
             return
         if route == "/api/profile":
             try:
