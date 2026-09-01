@@ -46,13 +46,21 @@ def _mountpoints(node: dict[str, Any]) -> list[str]:
 def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert lsblk nodes into operator-facing removable media records."""
     devices: list[dict[str, Any]] = []
+    # Linux device names depend on discovery order. Never assume that /dev/sda
+    # is the operating-system disk: exclude the top-level device that actually
+    # contains the mounted root filesystem instead.
+    system_device_paths = {
+        str(node.get("path", ""))
+        for node in nodes
+        if "/" in _mountpoints(node)
+    }
     for node in nodes:
         device_type = str(node.get("type", ""))
         transport = str(node.get("tran", ""))
         is_usb = (
             device_type == "disk"
             and transport == "usb"
-            and node.get("path") != "/dev/sda"
+            and str(node.get("path", "")) not in system_device_paths
             and int(node.get("size") or 0) > 0
         )
         # The field unit uses external USB optical drives. Ignore internal or
@@ -110,6 +118,11 @@ def discover_media_devices() -> list[dict[str, Any]]:
 
 def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
     """Return validated USB disk nodes whose medium was software-ejected."""
+    system_device_paths = {
+        str(node.get("path", ""))
+        for node in nodes
+        if "/" in _mountpoints(node)
+    }
     return [
         str(node["path"])
         for node in nodes
@@ -117,7 +130,7 @@ def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
         and node.get("tran") == "usb"
         and int(node.get("size") or 0) == 0
         and re.fullmatch(r"/dev/sd[a-z]+", str(node.get("path", "")))
-        and node.get("path") != "/dev/sda"
+        and str(node.get("path", "")) not in system_device_paths
     ]
 
 

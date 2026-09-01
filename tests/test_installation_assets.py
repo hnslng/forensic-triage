@@ -53,7 +53,9 @@ def test_pi_installer_configures_port_free_local_url() -> None:
 
 
 def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
-    updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")
+    updater_path = ROOT / "scripts/update_triagebox.sh"
+    updater = updater_path.read_text(encoding="utf-8")
+    assert updater_path.stat().st_mode & 0o111
     assert "tag --list 'v[0-9]*'" in updater
     assert "git -C \"$CURRENT_ROOT\" worktree add --detach" in updater
     assert 'mv -Tf "${RUNTIME_LINK}.next" "$RUNTIME_LINK"' in updater

@@ -2,6 +2,19 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.25] – 2026-09-02
+
+### Behoben
+
+- Systemdatenträger wird anhand des tatsächlich eingehängten Root-Dateisystems ausgeschlossen, nicht mehr anhand des instabilen Gerätenamens `/dev/sda`.
+- USB-Datenträger bleiben dadurch auch nach einer beim Neustart geänderten Linux-Gerätereihenfolge sichtbar.
+- Update-Skript wird ausführbar ausgeliefert, damit Prüfung und Statusanzeige tatsächlich starten.
+
+### Tests
+
+- vertauschte Gerätenamen von System-SSD und Sichtungsstick reproduziert und abgesichert.
+- ausführbares Update-Skript als Installationsvoraussetzung abgesichert.
+
 ## [0.2.0-alpha.24] – 2026-09-01
 
 ### Hinzugefügt

@@ -59,6 +59,23 @@ def test_media_discovery_supports_usb_and_loaded_optical_media() -> None:
     assert devices[-1]["serial"] == "OPTICAL:DISC-9:EVIDENCE:4194304"
 
 
+def test_media_discovery_excludes_actual_root_disk_not_device_name() -> None:
+    devices = parse_media_devices([
+        {
+            "path": "/dev/sdb", "type": "disk", "tran": "usb", "size": 500,
+            "model": "System SSD", "mountpoints": [None],
+            "children": [
+                {"path": "/dev/sdb1", "type": "part", "mountpoints": ["/boot/firmware"]},
+                {"path": "/dev/sdb2", "type": "part", "mountpoints": ["/"]},
+            ],
+        },
+        {"path": "/dev/sda", "type": "disk", "tran": "usb", "size": 100, "model": "Evidence USB", "mountpoints": [None]},
+    ])
+
+    assert [item["path"] for item in devices] == ["/dev/sda"]
+    assert devices[0]["model"] == "Evidence USB"
+
+
 def test_timed_out_device_stays_quarantined_until_absent() -> None:
     QUARANTINED_DEVICES.clear()
     QUARANTINED_DEVICES.add("/dev/sdb")
@@ -77,7 +94,7 @@ def test_only_valid_zero_byte_usb_disks_are_reactivated() -> None:
         {"path": "/dev/sdd", "type": "disk", "tran": "sata", "size": 0},
     ]
 
-    assert ejected_usb_paths(nodes) == ["/dev/sdb"]
+    assert ejected_usb_paths(nodes) == ["/dev/sdb", "/dev/sda"]
 
 
 def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
