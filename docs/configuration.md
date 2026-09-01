@@ -95,7 +95,7 @@ Das Entwicklungskennwort ist absichtlich leicht zu merken, aber allgemein bekann
 
 Nach einem Portwechsel muss auch die aufrufende Adresse angepasst werden. Bei Port `8877` wäre das beispielsweise `http://127.0.0.1:8877/`.
 
-Auf einem Pi wird dieser interne Port durch nginx nur innerhalb des Hotspots als portfreie Adresse `http://triagebox.local/` veröffentlicht. Der Python-Dienst selbst bleibt auf `127.0.0.1`. HTTP ist für den privaten WPA2-Hotspot eine Bedienvereinfachung, aber noch kein Ersatz für das in `security-concept.md` geplante HTTPS und die gemeinsame Geräteentsperrung.
+Auf einem Pi wird dieser interne Port durch nginx als portfreie Adresse `http://triagebox.local/` veröffentlicht. Zugelassen sind ausschließlich Loopback sowie private IPv4-Netze (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). Damit funktioniert dieselbe Adresse im TRIAGEBOX-Hotspot und über Ethernet im normalen privaten LAN; aus öffentlichen Netzen wird der Zugriff abgewiesen. Der Python-Dienst selbst bleibt auf `127.0.0.1`. HTTP ist eine Bedienvereinfachung, aber noch kein Ersatz für das in `security-concept.md` geplante HTTPS und die gemeinsame Geräteentsperrung.
 
 ## Updates
 

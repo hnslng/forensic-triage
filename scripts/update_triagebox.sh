@@ -102,10 +102,41 @@ fi
 "$candidate/.venv/bin/python" -m pip install -e "$candidate[test]"
 "$candidate/.venv/bin/python" -m pytest "$candidate/tests" -q
 
+# Apply deployment templates from the tested candidate before switching code.
+# This lets later releases update nginx and systemd without touching case data.
+web_port="${FORENSIC_TRIAGE_WEB_PORT:-8787}"
+nginx_site="/etc/nginx/sites-available/forensic-triage"
+nginx_backup="$(mktemp)"
+if [[ -f "$nginx_site" ]]; then
+  cp "$nginx_site" "$nginx_backup"
+fi
+temp_web_service="$(mktemp)"
+temp_update_service="$(mktemp)"
+temp_nginx="$(mktemp)"
+sed "s|@RUNTIME_ROOT@|$RUNTIME_LINK|g" "$candidate/deploy/forensic-triage-web.service.in" >"$temp_web_service"
+sed "s|@RUNTIME_ROOT@|$RUNTIME_LINK|g" "$candidate/deploy/forensic-triage-update@.service.in" >"$temp_update_service"
+sed "s|@WEB_PORT@|$web_port|g" "$candidate/deploy/forensic-triage-nginx.conf.in" >"$temp_nginx"
+install -o root -g root -m 0644 "$temp_web_service" /etc/systemd/system/forensic-triage-web.service
+install -o root -g root -m 0644 "$temp_update_service" /etc/systemd/system/forensic-triage-update@.service
+install -o root -g root -m 0644 "$candidate/deploy/forensic-triage-update-check.timer" /etc/systemd/system/forensic-triage-update-check.timer
+install -o root -g root -m 0644 "$temp_nginx" "$nginx_site"
+rm -f "$temp_web_service" "$temp_update_service" "$temp_nginx"
+if ! nginx -t; then
+  if [[ -s "$nginx_backup" ]]; then
+    install -o root -g root -m 0644 "$nginx_backup" "$nginx_site"
+  fi
+  rm -f "$nginx_backup"
+  write_status "error" "SYSTEMKONFIGURATION DER NEUEN VERSION IST UNGÜLTIG" "$target" "$current_version"
+  exit 1
+fi
+rm -f "$nginx_backup"
+systemctl daemon-reload
+
 previous_root="$CURRENT_ROOT"
 ln -s "$candidate" "${RUNTIME_LINK}.next"
 mv -Tf "${RUNTIME_LINK}.next" "$RUNTIME_LINK"
 systemctl restart forensic-triage-web.service
+systemctl reload nginx.service
 sleep 2
 if ! systemctl is-active --quiet forensic-triage-web.service; then
   ln -s "$previous_root" "${RUNTIME_LINK}.rollback"

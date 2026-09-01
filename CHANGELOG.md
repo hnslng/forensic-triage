@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.26] – 2026-09-02
+
+### Behoben
+
+- zweite veraltete `/dev/sda`-Sperre im eigentlichen Scanner entfernt; ein ungemounteter Sichtungsstick auf `/dev/sda` kann nun gescannt werden.
+- eingehängte Systemdatenträger bleiben unabhängig vom Linux-Gerätenamen weiterhin zwingend gesperrt.
+- konkreter Scanfehler bleibt direkt in der Medienkachel sichtbar, statt nur als allgemeiner Kopfstatus zu erscheinen.
+
+### Geändert
+
+- System- und Update-Funktionen aus der engen weißen Statusleiste in einen eigenen kompakten Dialog verschoben.
+- aktueller Stand wird eindeutig als `KEIN UPDATE VERFÜGBAR` dargestellt.
+- portfreie Oberfläche ist zusätzlich über private Ethernet-/WLAN-Netze erreichbar; der Python-Dienst bleibt ausschließlich an `127.0.0.1` gebunden.
+- der Release-Updater übernimmt künftig geprüfte nginx- und systemd-Vorlagen einer neuen Version.
+
 ## [0.2.0-alpha.25] – 2026-09-02
 
 ### Behoben

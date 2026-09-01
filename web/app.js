@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 let devices = [];
 const deviceStates = new Map();
+const deviceErrors = new Map();
 const runningPaths = new Set();
 let quarantinedPaths = new Set();
 let batchTotal = 0;
@@ -28,6 +29,10 @@ let keywordDraft = [];
 let draftSelectedKeywords = new Set();
 let profileEditorId = "default";
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
+const formatReleaseVersion = (value) => {
+  const match = String(value || "").match(/^(\d+\.\d+\.\d+)a(\d+)$/);
+  return match ? `v${match[1]}-alpha.${match[2]}` : String(value || "—");
+};
 const formatBytes = (bytes) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes || 0), unit = 0;
@@ -48,7 +53,22 @@ function renderUpdateState(value = {}) {
   updateState = { ...updateState, ...value };
   const state = updateState.state || "unknown";
   const available = updateState.available_version || "";
-  $("updateStatus").textContent = updateState.message || "UPDATE NOCH NICHT GEPRÜFT";
+  const statusLabels = {
+    current: "KEIN UPDATE VERFÜGBAR",
+    installed: "UPDATE ERFOLGREICH INSTALLIERT",
+    available: "UPDATE VERFÜGBAR",
+    checking: "PRÜFUNG LÄUFT …",
+    installing: "INSTALLATION LÄUFT …",
+    unknown: "NOCH NICHT GEPRÜFT",
+  };
+  const summaryLabels = { current: "AKTUELL", installed: "AKTUELL", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "FEHLER" };
+  $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
+  $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
+  $("updateCheckedAt").textContent = updateState.updated_at
+    ? new Date(updateState.updated_at).toLocaleString("de-AT")
+    : "—";
+  $("updateSummary").textContent = summaryLabels[state] || "UPDATE";
+  $("openUpdateModal").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
   $("updateInstall").disabled = Boolean(activeCaseNumber) || runningPaths.size > 0 || state === "installing";
@@ -405,6 +425,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   const active = new Set(activePaths);
   const presentPaths = new Set(devices.map((device) => device.path));
   for (const path of deviceStates.keys()) if (!presentPaths.has(path)) deviceStates.delete(path);
+  for (const path of deviceErrors.keys()) if (!presentPaths.has(path)) deviceErrors.delete(path);
   for (const device of devices) {
     if (active.has(device.path)) deviceStates.set(device.path, "scanning");
     else if (quarantinedPaths.has(device.path)) deviceStates.set(device.path, "timeout");
@@ -421,11 +442,13 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const serial = device.serial || "NICHT GEMELDET";
     const type = device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = !device.scan_supported || state === "scanning" || state === "timeout";
-    const stateReason = state === "timeout" ? "ABZIEHEN UND NEU VERBINDEN" : (device.unavailable_reason || "");
+    const stateReason = state === "timeout"
+      ? "ABZIEHEN UND NEU VERBINDEN"
+      : (deviceErrors.get(device.path) || device.unavailable_reason || "");
     return `<article class="device-card" data-state="${state}">
       <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● ONLINE</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
-      <div class="device-state"><b>${stateLabels[state]}</b><small>${escapeHtml(stateReason)}</small></div>
+      <div class="device-state"><b>${stateLabels[state]}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
     </article>`;
@@ -521,6 +544,7 @@ async function runScan(devicePath, standalone = true) {
     return;
   }
   if (standalone) { batchTotal = 1; batchDone = 0; }
+  deviceErrors.delete(devicePath);
   runningPaths.add(devicePath);
   deviceStates.set(devicePath, "scanning");
   renderDevices(devices);
@@ -540,10 +564,12 @@ async function runScan(devicePath, standalone = true) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
     deviceStates.set(devicePath, "complete");
+    deviceErrors.delete(devicePath);
     await loadCase(data.media.case_number);
     $("results").hidden = true;
   } catch (error) {
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
+    deviceErrors.set(devicePath, error.message);
     deviceStates.set(devicePath, error.message.includes("Zeitlimit") ? "timeout" : "error");
     setSystemState("SCAN FEHLGESCHLAGEN", "error");
   } finally {
@@ -992,6 +1018,11 @@ $("openEvidenceModal").addEventListener("click", () => $("evidenceModal").showMo
 $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close());
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
+});
+$("openUpdateModal").addEventListener("click", () => $("updateModal").showModal());
+$("closeUpdateModal").addEventListener("click", () => $("updateModal").close());
+$("updateModal").addEventListener("click", (event) => {
+  if (event.target === $("updateModal")) $("updateModal").close();
 });
 $("createProfile").addEventListener("click", () => openProfileEditor(null));
 $("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());

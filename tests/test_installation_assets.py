@@ -50,6 +50,9 @@ def test_pi_installer_configures_port_free_local_url() -> None:
     assert "http://${TRIAGEBOX_HOSTNAME:-triagebox}.local/" in installer
     assert "FORENSIC_TRIAGE_WEB_HOST=127.0.0.1" in network_script
     assert "proxy_pass http://127.0.0.1:@WEB_PORT@" in nginx_template
+    assert "allow 10.0.0.0/8" in nginx_template
+    assert "allow 172.16.0.0/12" in nginx_template
+    assert "allow 192.168.0.0/16" in nginx_template
 
 
 def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
@@ -60,6 +63,8 @@ def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
     assert "git -C \"$CURRENT_ROOT\" worktree add --detach" in updater
     assert 'mv -Tf "${RUNTIME_LINK}.next" "$RUNTIME_LINK"' in updater
     assert "VORVERSION WIEDERHERGESTELLT" in updater
+    assert "forensic-triage-nginx.conf.in" in updater
+    assert "systemctl daemon-reload" in updater
 
 
 def test_update_timer_checks_only_and_never_installs() -> None:

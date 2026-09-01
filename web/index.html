@@ -23,7 +23,7 @@
         <span class="mode-badge" title="Der geprüfte Grobsichtungsmodus liest ausschließlich Metadaten.">FAST/RO · NUR LESEN</span>
         <span class="system-state locked" id="systemStatus"><span id="systemState">GESPERRT</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
-        <span class="update-control"><button id="updateCheck" type="button">↻ UPDATE PRÜFEN</button><button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button><small id="updateStatus">UPDATE NOCH NICHT GEPRÜFT</small></span>
+        <button id="openUpdateModal" class="system-button" type="button">SYSTEM <small id="updateSummary">UPDATE</small></button>
         <span id="clock">UTC --:--:--</span>
       </section>
 
@@ -259,6 +259,21 @@
         <div class="keyword-save-actions">
           <button id="saveKeywordSettings" class="apply-keywords" type="button">NUR FÜR DIESEN SCAN ÜBERNEHMEN</button>
           <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="updateModal" class="evidence-modal update-modal">
+      <div class="modal-head"><div><span>SYS</span> SYSTEM &amp; UPDATES</div><button id="closeUpdateModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="update-modal-body">
+        <div class="update-version-grid">
+          <div><span>INSTALLIERTE VERSION</span><strong id="updateCurrentVersion">—</strong></div>
+          <div><span>UPDATE-STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
+          <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
+        </div>
+        <p>TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
+        <div class="update-actions">
+          <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>
+          <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
         </div>
       </div>
     </dialog>

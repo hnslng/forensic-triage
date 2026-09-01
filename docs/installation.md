@@ -110,6 +110,8 @@ Für den Raspberry Pi 3B+ bereitet der Pi-Modus einen privaten WPA2-Hotspot `TRI
 http://triagebox.local/
 ```
 
+Ist der Pi gleichzeitig per Ethernet mit demselben privaten LAN wie der Laptop verbunden, funktioniert dieselbe Adresse ohne Wechsel in den Hotspot. Falls mDNS nicht aufgelöst wird, kann ersatzweise die von Router beziehungsweise FRITZ!Box vergebene LAN-IP verwendet werden, zum Beispiel `http://10.0.1.87/`.
+
 Die derzeitige Alpha-Vorlage verwendet absichtlich das einfache Entwicklungskennwort `triagebox123`. Es ist öffentlich bekannt, kein echtes Geheimnis und muss vor einem realen Einsatz in `/etc/forensic-triage/pi-network.env` geändert werden. Danach den Pi-Modus erneut ausführen oder die NetworkManager-Verbindung aktualisieren.
 
 Der Pi-Modus erledigt automatisch:
@@ -124,7 +126,7 @@ Der Pi-Modus erledigt automatisch:
 
 Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die geplante Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
 
-Die portfreie HTTP-Adresse ist für den privaten WPA2-Hotspot vorbereitet. Portloses HTTPS, das gemeinsame Gerätepasswort und feste Ethernet-Rückfalladressen folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall gelten bis zum Test auf dem echten Pi weiterhin als unvalidiert.
+Die portfreie HTTP-Adresse ist für den privaten WPA2-Hotspot und private LANs vorbereitet. Portloses HTTPS, das gemeinsame Gerätepasswort und eine feste Ethernet-Rückfalladresse folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall müssen vor einem echten Einsatz weiter validiert werden.
 
 ## 5. Aktualisieren
 

@@ -35,8 +35,6 @@ def inspect_device(device: Path) -> dict[str, Any]:
     info = devices[0]
     if info.get("type") not in {"disk", "rom"}:
         raise SafetyError(f"target is not a whole removable medium: {resolved}")
-    if str(resolved) == "/dev/sda":
-        raise SafetyError("refusing explicit system-disk sentinel /dev/sda")
     if info.get("tran") != "usb":
         raise SafetyError(f"target transport is not USB: {info.get('tran')!r}")
 

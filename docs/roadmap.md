@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.25. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.26. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -18,7 +18,7 @@ Stand: Version 0.2.0-alpha.25. Prioritäten richten sich nach forensischer Siche
 
 - [x] Opt-in-Installationsmodus `--pi` für NetworkManager-Hotspot, Hostname, Avahi und Weiterleitungsschutz vorbereiten.
 - [x] Ein-Befehl-Bootstrap für eine kontrolliert öffentliche GitHub-Phase vorbereiten.
-- [x] Portfreie lokale HTTP-Adresse `http://triagebox.local/` über einen auf das Hotspot-Netz begrenzten Reverse-Proxy vorbereiten.
+- [x] Portfreie lokale HTTP-Adresse `http://triagebox.local/` über einen auf private Hotspot- und LAN-Netze begrenzten Reverse-Proxy vorbereiten.
 - [x] Tägliche reine Release-Prüfung und bewusst auslösbare, rollback-fähige Aktualisierung vorbereiten.
 - [ ] Zielmodell, RAM, Speicher und Gehäuse festlegen.
 - [ ] Raspberry Pi OS/Debian installieren und vollständige Installationsanleitung praktisch nachspielen.
