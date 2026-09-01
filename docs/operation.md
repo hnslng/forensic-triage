@@ -50,8 +50,9 @@ Die freie Suche ist davon getrennt: Suchbegriff in „Dateiname oder Pfad filter
 ## 5. Entscheidung dokumentieren
 
 - **Sichern:** Medium soll in den nachfolgenden Sicherungs-/Laborprozess überführt werden. Erst jetzt ist eine offizielle Beweismittel-/Asservatennummer Pflicht.
-- **Nicht ausgewählt:** Medium wird nach der Grobsichtung nicht ausgewählt. Eine strukturierte Begründung ist Pflicht, damit später nachvollziehbar bleibt, warum es nicht mitgenommen wurde.
-- **Weitere Prüfung:** Entscheidung wird vertagt beziehungsweise zusätzliche Prüfung ist erforderlich.
+- **Nicht sichern:** Medium wird nach der Grobsichtung nicht ausgewählt. Eine strukturierte Begründung ist Pflicht, damit später nachvollziehbar bleibt, warum es nicht mitgenommen wurde.
+
+Einen eigenen Zustand „Weitere Prüfung“ gibt es nicht mehr. Bestehen nach der Grobsichtung noch Zweifel, wird das Medium zur Sicherung ausgewählt und erhält eine Beweismittel-/Asservatennummer. Historische Protokolle mit dem früheren Status bleiben unverändert nachvollziehbar, der Status kann aber nicht erneut vergeben werden.
 
 Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Deshalb Auswahl, Fall, Medium und Bearbeiter vor dem Speichern kontrollieren.
 
@@ -61,7 +62,7 @@ TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann d
 
 ## 7. Fall exportieren
 
-„PDF-Bericht“ lädt eine kurze, druckbare Fallübersicht im A4-Querformat. Pro Datenträger enthält sie eine Zeile mit Seriennummer, technischen Dateikategorien, Entscheidung und gegebenenfalls der Begründung für „Nicht ausgewählt“. „Falldaten ZIP“ erzeugt zusätzlich den vollständigen Export der lokalen Fallakte. Beide Exporte enthalten keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
+„PDF-Bericht“ lädt eine kurze, druckbare Fallübersicht im A4-Querformat. Pro Datenträger enthält sie eine Zeile mit Seriennummer, technischen Dateikategorien, Entscheidung und gegebenenfalls der Begründung für „Nicht sichern“. „Falldaten ZIP“ erzeugt zusätzlich den vollständigen Export der lokalen Fallakte. Beide Exporte enthalten keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
 
 Im Datei-Explorer können erkannte ZIP-, ISO-, 7Z- und RAR-Dateien wie ein Ordner aufgeklappt werden – auch in der nach `ARCHIVE` gefilterten Tabelle. Das Format ergibt sich aus dem Dateinamen; eine zusätzliche Plakette wird bewusst nicht wiederholt. Angezeigt und durchsucht werden ausschließlich katalogisierte Namen und Verzeichniswege. `LIMIT` bedeutet, dass das kurze Zeit- oder Mengenbudget erreicht wurde und die virtuelle Liste bewusst unvollständig ist. `NAMEN VERSCHLÜSSELT`, `UNVOLLSTÄNDIG` und `NICHT LESBAR` sind keine Beweise für einen leeren Container; der Datenträger muss bei Relevanz einer professionellen Folgeprüfung zugeführt werden.
 
@@ -92,4 +93,4 @@ Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bl
 
 ## English workflow summary
 
-The system always starts without an active case. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record one of three decisions. An evidence number is required only for “Secure”; a structured reason is required for “Not selected”. End the case before changing locations or deleting it. Cases can be opened or removed directly from the archive; the active case is protected.
+The system always starts without an active case. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record either “Secure” or reasoned “Do not secure”. An evidence number is required only for “Secure”. End the case before changing locations or deleting it. Cases can be opened or removed directly from the archive; the active case is protected.

@@ -64,13 +64,14 @@ function renderUpdateState(value = {}) {
     installing: "INSTALLATION LÄUFT …",
     unknown: "NOCH NICHT GEPRÜFT",
   };
-  const summaryLabels = { current: "AKTUELL", installed: "AKTUELL", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "UPDATE-FEHLER" };
+  const summaryLabels = { current: "", installed: "", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "UPDATE-FEHLER" };
   $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
+  $("systemVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
-  $("updateSummary").textContent = summaryLabels[state] || "UPDATE";
+  $("updateSummary").textContent = summaryLabels[state] ?? "STATUS";
   $("openUpdateModal").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
@@ -292,13 +293,13 @@ const decisionLabels = {
   open: "ENTSCHEIDUNG OFFEN",
   secure: "ZUR SICHERUNG AUSGEWÄHLT",
   not_selected: "NICHT ZUR SICHERUNG AUSGEWÄHLT",
-  review: "WEITERE PRÜFUNG",
+  review: "ENTSCHEIDUNG OFFEN · ALTER STATUS",
 };
 
 function renderDecision(media) {
   if (!media) return;
   currentMediaId = media.id;
-  currentDecision = media.decision === "open" ? null : media.decision;
+  currentDecision = ["secure", "not_selected"].includes(media.decision) ? media.decision : null;
   $("decisionState").textContent = decisionLabels[media.decision] || decisionLabels.open;
   $("decisionEvidence").value = media.evidence_number || "";
   updateDecisionFields();
@@ -435,11 +436,8 @@ function updateDashboardState() {
 }
 
 function updateOrderSummary() {
-  $("dockCaseNumber").textContent = activeCaseNumber || "KEIN FALL AKTIV";
   $("openAuftragModal").textContent = activeCaseNumber ? "FALL VERWALTEN" : "＋ FALL ANLEGEN / ÖFFNEN";
   $("openAuftragModal").classList.toggle("active-case", Boolean(activeCaseNumber));
-  $("dockOperator").textContent = activeCaseNumber ? `BEARBEITER ${activeOperator}` : "SCANS GESPERRT";
-  $("dockCaseNumber").parentElement.classList.toggle("active", Boolean(activeCaseNumber));
   $("autoScanToggle").nextElementSibling.textContent = $("autoScanToggle").checked ? "AUTO-SCAN EIN" : "AUTO-SCAN AUS";
 }
 
@@ -1069,7 +1067,12 @@ async function saveProfileEditor() {
   }
 }
 
-setInterval(() => { $("clock").textContent = `UTC ${new Date().toISOString().slice(11, 19)}`; }, 1000);
+const clockFormatter = new Intl.DateTimeFormat("de-AT", {
+  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+});
+function updateClock() { $("clock").textContent = `LOKAL ${clockFormatter.format(new Date())}`; }
+updateClock();
+setInterval(updateClock, 1000);
 $("autoScanToggle").addEventListener("change", () => {
   updateOrderSummary();
   if (!activeCaseNumber) setSystemState("GESPERRT", "locked");

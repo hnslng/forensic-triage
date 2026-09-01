@@ -17,7 +17,7 @@ from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 
 
-DECISIONS = {"open", "secure", "not_selected", "review"}
+DECISIONS = {"open", "secure", "not_selected"}
 REASONS = {
     "no_indicators",
     "known_media",
@@ -31,7 +31,7 @@ DECISION_LABELS = {
     "open": "Entscheidung offen",
     "secure": "Zur Sicherung ausgewählt",
     "not_selected": "Nicht zur Sicherung ausgewählt",
-    "review": "Weitere Prüfung",
+    "review": "Entscheidung offen (historischer Status)",
 }
 REASON_LABELS = {
     "no_indicators": "Keine fallbezogenen Indikatoren",

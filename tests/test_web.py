@@ -168,3 +168,12 @@ def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
         "forensic-triage-update@check.service",
         "forensic-triage-update@install.service",
     ]
+
+
+def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:
+    html = (Path(__file__).resolve().parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+
+    assert html.count('data-decision="') == 2
+    assert 'data-decision="secure"' in html
+    assert 'data-decision="not_selected"' in html
+    assert 'data-decision="review"' not in html

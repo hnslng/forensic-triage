@@ -2,7 +2,7 @@
 
 ## Automatisierte Tests
 
-Der aktuelle Stand umfasst 71 automatisierte Tests. Lokal ausführen:
+Der aktuelle Stand umfasst 73 automatisierte Tests. Lokal ausführen:
 
 ```bash
 .venv/bin/python -m pytest
@@ -49,7 +49,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 - mehrere Suchprofile gleichzeitig
 - parallele Medienkacheln und unabhängige Statuswerte
 - Online-/Offline-Zustand und offene Entscheidung nach Abziehen
-- Entscheidungspflichten: Beweismittelnummer bei „Sichern“, Begründung bei „Nicht ausgewählt“
+- Entscheidungspflichten: Beweismittelnummer bei „Sichern“, Begründung bei „Nicht sichern“
 - kein versehentliches Protokollieren durch reine Navigation
 - Fallarchiv: sichtbare Aktionen „Öffnen“ und „Löschen“
 - aktiver Fall kann nicht gelöscht werden
@@ -73,7 +73,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.30` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.31` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Extraktion oder Dekompression, keine Passwortversuche, sichtbare Limitkennzeichnung, höchstens das konfigurierte Zusatzzeitbudget sowie unveränderte äußere Datei-/Ordnerzahlen.
 

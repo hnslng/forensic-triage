@@ -23,15 +23,14 @@
         <span class="mode-badge" title="Der geprüfte Grobsichtungsmodus liest ausschließlich Metadaten.">FAST/RO · NUR LESEN</span>
         <span class="system-state locked" id="systemStatus"><span id="systemState">GESPERRT</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
-        <button id="openUpdateModal" class="system-button" type="button">SYSTEM <small id="updateSummary">UPDATE</small></button>
-        <span id="clock">UTC --:--:--</span>
+        <button id="openUpdateModal" class="system-button" type="button">SYSTEM <small id="systemVersion">v—</small><span id="updateSummary"></span></button>
+        <span id="clock">LOKAL --:--:--</span>
       </section>
 
       <section id="dashboardView">
       <section class="case-dock" aria-label="Fallsteuerung">
         <button id="openAuftragModal" type="button">＋ FALL ANLEGEN / ÖFFNEN</button>
-        <div class="case-dock-primary"><span>01 · FALLSTATUS</span><strong id="dockCaseNumber">KEIN FALL AKTIV</strong><small id="dockOperator">SCANS GESPERRT</small></div>
-        <div class="case-dock-profiles"><span>SUCHPROFILE</span><strong id="dockProfiles">ALLGEMEIN / WIRTSCHAFT</strong><small id="dockKeywordCount">10 STICHWÖRTER</small></div>
+        <div class="case-dock-profiles"><span>01 · AKTIVE SUCHPROFILE</span><strong id="dockProfiles">ALLGEMEIN / WIRTSCHAFT</strong><small id="dockKeywordCount">10 STICHWÖRTER</small></div>
       </section>
       <section class="control-grid">
         <article class="panel device-panel">
@@ -126,20 +125,19 @@
           </details>
           <article class="panel decision-panel">
             <div class="panel-title"><span>09</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>
-            <p id="decisionHelp" class="decision-help">Wählen Sie den vorläufigen Umgang mit diesem Medium. Eine Beweismittelnummer wird nur bei <b>„Sichern“</b> verlangt.</p>
+            <p id="decisionHelp" class="decision-help">Wählen Sie <b>„Sichern“</b> oder <b>„Nicht sichern“</b>. Eine Beweismittelnummer ist nur bei Sicherung erforderlich; eine Nicht-Sicherung muss nachvollziehbar begründet werden.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
               <div class="decision-buttons">
                 <button type="button" data-decision="secure">SICHERN</button>
-                <button type="button" data-decision="not_selected">NICHT AUSGEWÄHLT</button>
-                <button type="button" data-decision="review">WEITERE PRÜFUNG</button>
+                <button type="button" data-decision="not_selected">NICHT SICHERN</button>
               </div>
             </div>
             <div class="decision-fields">
               <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
                 <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
               </label>
-              <label id="decisionReasonWrap" for="decisionReason">BEGRÜNDUNG
+              <label id="decisionReasonWrap" for="decisionReason">GRUND DER NICHT-SICHERUNG <b>· PFLICHT</b>
                 <select id="decisionReason">
                   <option value="">— auswählen —</option>
                   <option value="no_indicators">Keine fallbezogenen Indikatoren</option>
@@ -151,8 +149,8 @@
                   <option value="other">Sonstige Begründung</option>
                 </select>
               </label>
-              <label id="decisionNoteWrap" for="decisionNote">ERGÄNZENDE NOTIZ
-                <textarea id="decisionNote" rows="2" maxlength="1000" placeholder="Kurze, sachliche Begründung …"></textarea>
+              <label id="decisionNoteWrap" for="decisionNote">SACHLICHE FESTSTELLUNG / ERGÄNZUNG
+                <textarea id="decisionNote" rows="3" maxlength="1000" placeholder="Kurz festhalten, was sichtbar war und warum das Medium nicht gesichert wurde …"></textarea>
               </label>
               <button id="saveDecision" class="save-decision" type="button" disabled>ENTSCHEIDUNG PROTOKOLLIEREN</button>
             </div>

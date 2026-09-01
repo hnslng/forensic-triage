@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.31] – 2026-09-02
+
+### Geändert
+
+- Entscheidungsworkflow auf die eindeutigen Zustände `SICHERN` und `NICHT SICHERN` reduziert; Nicht-Sicherung verlangt weiterhin eine strukturierte Begründung.
+- historischer Status „Weitere Prüfung“ bleibt in bestehenden Akten lesbar, kann aber nicht mehr neu gespeichert werden.
+- doppelte Fallnummer und Bearbeiterangabe aus der Fallsteuerungsleiste entfernt; die große Kopfanzeige ist nun die einzige primäre Fallanzeige.
+- zentrale Bedien-, Geräte-, Status- und Modalbeschriftungen für Laptop- und Kleinbildschirme vergrößert.
+- Systemschaltfläche zeigt die installierte Version direkt und blendet nur relevante Updatezustände zusätzlich ein.
+- sichtbare Uhr von UTC auf die lokale Browserzeit umgestellt; Audit- und Nachweiszeitstempel bleiben unverändert in UTC.
+
+### Tests
+
+- 73 automatisierte Tests erfolgreich, einschließlich serverseitiger Ablehnung des historischen Entscheidungsstatus und Prüfung auf genau zwei Entscheidungsbuttons.
+
 ## [0.2.0-alpha.30] – 2026-09-02
 
 ### Behoben

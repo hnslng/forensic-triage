@@ -86,7 +86,7 @@ def decision_summary(row: Mapping[str, Any]) -> tuple[str, colors.Color]:
         "open": "ENTSCHEIDUNG OFFEN",
         "secure": "ZUR SICHERUNG AUSGEWÄHLT",
         "not_selected": "NICHT AUSGEWÄHLT",
-        "review": "WEITERE PRÜFUNG",
+        "review": "ENTSCHEIDUNG OFFEN (HISTORISCHER STATUS)",
     }
     reasons = {
         "no_indicators": "Keine fallbezogenen Indikatoren",

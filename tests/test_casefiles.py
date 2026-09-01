@@ -80,6 +80,15 @@ def test_non_selection_requires_reason(tmp_path) -> None:
         store.record_decision(media_id, "not_selected", None, "", "HL")
 
 
+def test_legacy_review_status_cannot_be_recorded_again(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-1", "SICHT-001")
+    media_id = store.record_scan("FALL-1", "SICHT-001", "", {"path": "/dev/sdb"}, result_dir)["media"]["id"]
+
+    with pytest.raises(ValueError, match="Entscheidungsstatus"):
+        store.record_decision(media_id, "review", None, "", "HL")
+
+
 def test_directory_inventory_returns_one_lazy_tree_level(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     result_dir = make_result(store, "FALL-TREE", "SICHT-001")

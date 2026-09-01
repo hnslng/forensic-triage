@@ -47,7 +47,7 @@ JSON-, CSV-, Text- und Logdateien bleiben unabhängig lesbar, falls Dashboard od
 
 ## Entscheidungen und Audit
 
-Eine Entscheidungsänderung erzeugt ein neues Ereignis, statt die frühere Historie still zu überschreiben. „Nicht ausgewählt“ verlangt eine strukturierte Begründung. „Sichern“ verlangt eine offizielle Beweismittelnummer. „Weitere Prüfung“ hält den offenen Zustand fest.
+Eine Entscheidungsänderung erzeugt ein neues Ereignis, statt die frühere Historie still zu überschreiben. „Nicht sichern“ verlangt eine strukturierte Begründung. „Sichern“ verlangt eine offizielle Beweismittelnummer. Der frühere Zustand „Weitere Prüfung“ bleibt in historischen Datensätzen lesbar, kann aber nicht mehr neu gespeichert werden.
 
 Bearbeiterkürzel werden bei Fallstart, Sichtungsreservierung und Entscheidung mitgeführt. Das Kürzel ist eine Verantwortlichkeitsangabe, aber noch keine technische Benutzeranmeldung.
 
