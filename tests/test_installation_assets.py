@@ -42,6 +42,19 @@ def test_debian_installer_includes_archive_directory_tool() -> None:
     assert "7zip nginx" in installer
 
 
+def test_install_and_update_enable_bounded_persistent_journal() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")
+    journal = (ROOT / "deploy/forensic-triage-journald.conf").read_text(encoding="utf-8")
+    assert "Storage=persistent" in journal
+    assert "SystemMaxUse=64M" in journal
+    assert "MaxRetentionSec=14day" in journal
+    assert "forensic-triage-journald.conf" in installer
+    assert "forensic-triage-journald.conf" in updater
+    assert "journalctl --flush" in installer
+    assert "journalctl --flush" in updater
+
+
 def test_manual_install_switches_runtime_link_to_tested_checkout() -> None:
     installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
     assert 'ln -sfn "$PROJECT_ROOT" "$RUNTIME_LINK"' in installer

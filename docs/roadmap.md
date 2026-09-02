@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.36. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.37. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -21,6 +21,8 @@ Stand: Version 0.2.0-alpha.36. Prioritäten richten sich nach forensischer Siche
 - [x] Portfreie lokale HTTP-Adresse `http://triagebox.local/` über einen auf private Hotspot- und LAN-Netze begrenzten Reverse-Proxy vorbereiten.
 - [x] Tägliche reine Release-Prüfung und bewusst auslösbare, rollback-fähige Aktualisierung vorbereiten.
 - [ ] Zielmodell, RAM, Speicher und Gehäuse festlegen.
+- [x] Begrenzte persistente Kernel- und Dienstprotokolle über Neustarts hinweg konfigurieren.
+- [ ] Pi-3B+-Systemmedium von den zu prüfenden USB-Geräten trennen; USB-System-SSD nicht für den Feldaufbau verwenden.
 - [ ] Raspberry Pi OS/Debian installieren und vollständige Installationsanleitung praktisch nachspielen.
 - [ ] Aktiven, ausreichend versorgten USB-Hub für mehrere Datenträger validieren.
 - [ ] Raspberry Pi 3B+ als privaten, passwortgeschützten WPA3-/WPA2-WLAN-Hotspot `TRIAGEBOX` mit gerätespezifischem Passwort einrichten; keine USB-Netzwerkverbindung vorsehen.

@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.37] – 2026-09-02
+
+### Hinzugefügt
+
+- persistentes, komprimiertes Systemjournal für Kernel-, USB- und Dienstdiagnosen über Neustarts hinweg; auf 64 MB und 14 Tage begrenzt.
+
+### Sicherheit
+
+- Installer und bewusster Web-Updater richten die Diagnosekonfiguration automatisch ein und schreiben flüchtige Meldungen auf persistenten Speicher aus.
+- die dokumentierten Hardwaregrenzen des Pi 3B+ umfassen nun ausdrücklich die fehlende Trennung zwischen USB-System-SSD und zu prüfenden USB-Medien.
+
+### Tests
+
+- 78 automatisierte Tests erfolgreich, einschließlich Installations- und Updaterprüfung der begrenzten persistenten Journal-Konfiguration.
+
 ## [0.2.0-alpha.36] – 2026-09-02
 
 ### Hinzugefügt

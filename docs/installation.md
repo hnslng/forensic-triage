@@ -147,11 +147,14 @@ Die bewusste Installation benötigt ein erreichbares Git-Repository und einen fr
 
 Vor größeren Aktualisierungen ist eine verschlüsselte Sicherung der Fallakten vorzusehen. Das Installationsskript verschiebt keine bestehenden Speicherpfade und löscht keine Fallakten.
 
+Installer und Updater aktivieren ein persistentes, komprimiertes Systemjournal. Es ist auf 64 MB und 14 Tage begrenzt, damit USB-, Kernel- und Dienstfehler auch nach einem unkontrollierten Neustart diagnostizierbar bleiben, ohne den Systemspeicher unbegrenzt zu belegen.
+
 ## 6. Manuelle Diagnose
 
 ```bash
 sudo systemctl status forensic-triage-web.service --no-pager
 sudo journalctl -u forensic-triage-web.service -n 100 --no-pager
+sudo journalctl -b -1 -k --no-pager
 sudo ./scripts/install_debian.sh --check
 ```
 
@@ -166,6 +169,7 @@ Versionen:
 
 - Betriebssystem und Paketverfügbarkeit
 - aktiver USB-Hub und ausreichende Stromversorgung
+- Systemlaufwerk nicht am selben störanfälligen USB-Pfad wie Prüfmedien; beim Pi 3B+ bevorzugt hochwertige MicroSD für das System
 - mehrere USB-Geräte gleichzeitig
 - reales CD/DVD-Laufwerk
 - direkter Ethernet-Zugriff und Firewall

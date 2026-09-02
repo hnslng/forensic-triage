@@ -13,6 +13,8 @@ UPDATE_TIMER_FILE="/etc/systemd/system/forensic-triage-update-check.timer"
 NGINX_SITE_FILE="/etc/nginx/sites-available/forensic-triage"
 NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/forensic-triage"
 PI_FIREWALL_SERVICE_FILE="/etc/systemd/system/forensic-triage-pi-firewall.service"
+JOURNAL_CONFIG_DIR="/etc/systemd/journald.conf.d"
+JOURNAL_CONFIG_FILE="$JOURNAL_CONFIG_DIR/forensic-triage.conf"
 SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-web.service.in"
 UPDATE_SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-update@.service.in"
 UPDATE_TIMER_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-update-check.timer"
@@ -20,6 +22,7 @@ NGINX_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-nginx.conf.in"
 CONFIG_TEMPLATE="$PROJECT_ROOT/deploy/triage.env.example"
 PI_NETWORK_TEMPLATE="$PROJECT_ROOT/deploy/pi-network.env.example"
 PI_FIREWALL_SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-pi-firewall.service.in"
+JOURNAL_CONFIG_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-journald.conf"
 CHECK_ONLY=false
 PI_MODE=false
 
@@ -56,7 +59,7 @@ if [[ ! "$PROJECT_ROOT" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
   exit 1
 fi
 
-REQUIRED_FILES=("$PROJECT_ROOT/pyproject.toml" "$SERVICE_TEMPLATE" "$CONFIG_TEMPLATE")
+REQUIRED_FILES=("$PROJECT_ROOT/pyproject.toml" "$SERVICE_TEMPLATE" "$CONFIG_TEMPLATE" "$JOURNAL_CONFIG_TEMPLATE")
 REQUIRED_FILES+=("$UPDATE_SERVICE_TEMPLATE" "$UPDATE_TIMER_TEMPLATE" "$NGINX_TEMPLATE" "$PROJECT_ROOT/scripts/update_triagebox.sh")
 if $PI_MODE; then
   REQUIRED_FILES+=(
@@ -103,6 +106,15 @@ if $PI_MODE; then
   PACKAGES+=(network-manager avahi-daemon libnss-mdns nftables)
 fi
 apt-get install -y "${PACKAGES[@]}"
+
+# Keep bounded diagnostics across an unclean reboot. This is essential when a
+# defective USB medium or optical drive takes the shared Raspberry Pi USB bus
+# down and the live journal in /run disappears with the reboot.
+install -d -o root -g root -m 0755 "$JOURNAL_CONFIG_DIR"
+install -o root -g root -m 0644 "$JOURNAL_CONFIG_TEMPLATE" "$JOURNAL_CONFIG_FILE"
+install -d -o root -g systemd-journal -m 2755 /var/log/journal
+systemctl restart systemd-journald.service
+journalctl --flush
 
 if [[ ! -x "$PROJECT_ROOT/.venv/bin/python" ]]; then
   run_as_owner python3 -m venv "$PROJECT_ROOT/.venv"

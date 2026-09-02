@@ -121,6 +121,9 @@ install -o root -g root -m 0644 "$temp_web_service" /etc/systemd/system/forensic
 install -o root -g root -m 0644 "$temp_update_service" /etc/systemd/system/forensic-triage-update@.service
 install -o root -g root -m 0644 "$candidate/deploy/forensic-triage-update-check.timer" /etc/systemd/system/forensic-triage-update-check.timer
 install -o root -g root -m 0644 "$temp_nginx" "$nginx_site"
+install -d -o root -g root -m 0755 /etc/systemd/journald.conf.d
+install -o root -g root -m 0644 "$candidate/deploy/forensic-triage-journald.conf" /etc/systemd/journald.conf.d/forensic-triage.conf
+install -d -o root -g systemd-journal -m 2755 /var/log/journal
 rm -f "$temp_web_service" "$temp_update_service" "$temp_nginx"
 if ! nginx -t; then
   if [[ -s "$nginx_backup" ]]; then
@@ -132,6 +135,8 @@ if ! nginx -t; then
 fi
 rm -f "$nginx_backup"
 systemctl daemon-reload
+systemctl restart systemd-journald.service
+journalctl --flush
 
 previous_root="$CURRENT_ROOT"
 ln -s "$candidate" "${RUNTIME_LINK}.next"
