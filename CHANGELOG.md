@@ -2,6 +2,19 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.40] – 2026-09-03
+
+### Geändert
+
+- Archivstatus mit größeren Zahlen in einem eigenen, dezenten Bereich unter der Dateitypenliste; Dateianzahlen und Balken bleiben durchgehend ausgerichtet.
+- Größte Dateien mit fester Größenspalte links, Dateiname und Ordner daneben. Lange Namen werden abgekürzt, ohne die Größe aus dem sichtbaren Bereich zu verschieben.
+- Dateinamen sind per Maus und Tastatur auswählbar: Der Klick zeigt exakt den gespeicherten Metadateneintrag im unteren Verzeichnis, ohne Nutzdateien zu öffnen oder erneut auf das Medium zuzugreifen. „Filter aufheben“ stellt den Explorer wieder her.
+
+### Validierung
+
+- 91 Python-Tests und 18 isolierte Browser-Tests erfolgreich. Zusätzlich Darstellung mit vorhandenen Scanergebnissen auf 1440 und 800 Pixeln geprüft; automatische Layoutprüfungen auch bei 470 Pixeln.
+- Exakte Pfadauswahl mit Umlauten, Sonderzeichen und ähnlich benannten Dateien getestet; Navigation verändert keine Fallprotokolle.
+
 ## [0.2.0-alpha.39] – 2026-09-02
 
 ### Behoben

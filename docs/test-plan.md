@@ -66,6 +66,8 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 - keine fremden oder unsichtbaren Verzeichnisse nach schnellem Medien-/Filterwechsel
 - Archiv-Unterordner und weitere Einträge in Explorer und gefilterter Liste
 - äußere Dateien und zusätzliche Archiv-Fundstellen klar getrennt beschriftet
+- Größen der größten Dateien bei langen Pfaden ohne horizontales Scrollen sichtbar; Klick wählt exakt den Metadateneintrag, auch bei Sonderzeichen
+- Archivstatus separat lesbar; Zahlen und Balken der Dateitypliste bleiben ausgerichtet
 - Online-/Offline-Zustand und offene Entscheidung nach Abziehen
 - Entscheidungspflichten: Beweismittelnummer bei „Sichern“, Begründung bei „Nicht sichern“
 - kein versehentliches Protokollieren durch reine Navigation
@@ -91,7 +93,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.39` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.40` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Extraktion oder Dekompression, keine Passwortversuche, sichtbare Limitkennzeichnung, höchstens das konfigurierte Zusatzzeitbudget sowie unveränderte äußere Datei-/Ordnerzahlen.
 

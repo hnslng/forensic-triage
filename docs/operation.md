@@ -72,7 +72,9 @@ Bei einem externen USB-CD/DVD-Laufwerk erscheint direkt in der Laufwerkskachel `
 
 Im Datei-Explorer können erkannte ZIP-, ISO-, 7Z- und RAR-Dateien wie ein Ordner aufgeklappt werden – auch in der nach `ARCHIVE` gefilterten Tabelle. Das Format ergibt sich aus dem Dateinamen; eine zusätzliche Plakette wird bewusst nicht wiederholt. Angezeigt und durchsucht werden ausschließlich katalogisierte Namen und Verzeichniswege. `LIMIT` bedeutet, dass das kurze Zeit- oder Mengenbudget erreicht wurde und die virtuelle Liste bewusst unvollständig ist. `NAMEN VERSCHLÜSSELT`, `UNVOLLSTÄNDIG` und `NICHT LESBAR` sind keine Beweise für einen leeren Container; der Datenträger muss bei Relevanz einer professionellen Folgeprüfung zugeführt werden.
 
-Die Dateitypzeile `ARCHIVE` ergänzt die Gesamtanzahl um `VERSCHLÜSSELT` und gegebenenfalls `UNGEPRÜFT`. Der erste Wert stammt aus eindeutig erkannten ZIP-, 7Z- oder RAR-Merkmalen. `UNGEPRÜFT` umfasst insbesondere noch nicht unterstützte Formate sowie beschädigte, unvollständige oder nur teilweise katalogisierte Archive und ist ausdrücklich kein Entwarnungsstatus.
+Unter der Dateitypenliste zeigt `ARCHIVSTATUS` die Werte `Verschlüsselt` und `Ungeprüft` in einem eigenen Bereich. Die Dateitypzeile `ARCHIVE` behält ihre äußere Dateianzahl und den ausgerichteten Balken. Der Verschlüsselungswert stammt aus eindeutig erkannten ZIP-, 7Z- oder RAR-Merkmalen. `Ungeprüft` umfasst insbesondere noch nicht unterstützte Formate sowie beschädigte, unvollständige oder nur teilweise katalogisierte Archive und ist ausdrücklich kein Entwarnungsstatus.
+
+Bei `GRÖSSTE DATEIEN` steht die Größe fest links, daneben der Dateiname und darunter der Ordner. Lange Namen werden in der Kachel abgekürzt; der vollständige Pfad bleibt im Tooltip und nach Auswahl im Dateiverzeichnis verfügbar. Ein Klick zeigt exakt diesen gespeicherten Pfad im unteren Metadatenverzeichnis. Er öffnet keine Nutzdatei und liest den Datenträger nicht erneut. `Filter aufheben` führt zurück zum vollständigen Explorer.
 
 ## 8. Fall entfernen
 

@@ -451,6 +451,7 @@ class CaseStore:
         category: str = "",
         keyword: str = "",
         offset: int = 0,
+        exact_path: str | None = None,
     ) -> dict[str, Any]:
         with self._connect() as connection:
             row = connection.execute(
@@ -483,6 +484,8 @@ class CaseStore:
 
         for item in inventory_items():
             path = str(item.get("path", ""))
+            if exact_path is not None and path != exact_path:
+                continue
             if needle and needle not in path.casefold():
                 continue
             if selected_category and str(item.get("category", "Unbekannt")).casefold() != selected_category:

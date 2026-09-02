@@ -1,3 +1,4 @@
+import csv
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
@@ -77,6 +78,28 @@ def test_media_detail_exposes_stored_device_metadata(tmp_path) -> None:
     assert detail is not None
     assert detail["device"]["serial"] == "SER-123"
     assert detail["device"]["read_only_verified"] is True
+
+
+def test_exact_file_navigation_does_not_match_similar_paths_or_change_audit(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-PFAD", "SICHT-001")
+    exact = "Ordner/Übergabe ' & # % <Test>.bin"
+    paths = [exact, exact + ".bak", "Backup/" + exact, exact.upper()]
+    with (result_dir / "files.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["path", "size"])
+        writer.writeheader()
+        writer.writerows({"path": path, "size": 42} for path in paths)
+    media_id = store.record_scan("FALL-PFAD", "SICHT-001", "TEST", {"path": "/dev/sdb"}, result_dir)["media"]["id"]
+    audit = store.case_path("FALL-PFAD") / "audit.log"
+    before = audit.read_bytes()
+
+    result = store.file_inventory(media_id, exact_path=exact)
+
+    assert result["total"] == 1
+    assert result["files"][0]["path"] == exact
+    assert store.file_inventory(media_id, query=exact)["total"] == 4
+    assert store.file_inventory(media_id, exact_path="missing.bin")["total"] == 0
+    assert audit.read_bytes() == before
 
 
 def test_case_is_created_only_by_explicit_start(tmp_path) -> None:

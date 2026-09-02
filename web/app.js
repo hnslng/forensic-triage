@@ -272,16 +272,22 @@ function renderResults(summary, hits = {}) {
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
-    const isArchive = name === "Archive" && Number(archiveEncryption.total || 0);
-    const archiveStats = isArchive ? `<span class="archive-stats"><span><b>${Number(archiveEncryption.encrypted || 0)}</b> VERSCHLÜSSELT</span><span class="${Number(archiveEncryption.unknown || 0) ? "warning" : ""}"><b>${Number(archiveEncryption.unknown || 0)}</b> UNGEPRÜFT</span></span>` : "";
-    return `<button class="bar-row result-filter${isArchive ? " has-archive-stats" : ""}" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span>${archiveStats}</button>`;
+    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
+  $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
+  $("archiveEncryptedCount").textContent = Number(archiveEncryption.encrypted || 0).toLocaleString("de-AT");
+  $("archiveUnknownCount").textContent = Number(archiveEncryption.unknown || 0).toLocaleString("de-AT");
+  $("archiveUnknownCount").classList.toggle("warning", Number(archiveEncryption.unknown || 0) > 0);
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
   `).join("");
-  $("largestFiles").innerHTML = (summary.largest_files || []).map((file, index) => `
-    <tr><td>${String(index + 1).padStart(2, "0")}</td><td>${escapeHtml(file.path)}</td><td>${formatBytes(file.size)}</td></tr>
-  `).join("");
+  $("largestFiles").innerHTML = (summary.largest_files || []).map((file) => {
+    const path = String(file.path || "");
+    const separator = path.lastIndexOf("/");
+    const name = path.slice(separator + 1);
+    const folder = separator >= 0 ? path.slice(0, separator) : "Stammverzeichnis";
+    return `<tr><td class="largest-size">${formatBytes(file.size)}</td><td><button class="largest-file-link" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}" aria-label="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(folder)}</small><span aria-hidden="true">↗</span></button></td></tr>`;
+  }).join("") || '<tr><td colspan="2">KEINE DATEIEN ERFASST</td></tr>';
   $("results").hidden = false;
 }
 
@@ -993,24 +999,26 @@ async function resetInventoryView() {
   await loadInventoryTree();
 }
 
-async function loadInventory({ category = "", keyword = "", search = null, offset = 0 } = {}) {
+async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, offset = 0 } = {}) {
   if (!currentMediaId) return;
   const searchText = search === null ? $("inventorySearch").value.trim() : search;
-  if (!searchText && !category && !keyword) {
+  if (!searchText && !category && !keyword && exactPath === null) {
     $("inventorySearch").focus();
     return;
   }
-  if (searchText && !category && !keyword) clearInventoryFilterState();
+  if (exactPath !== null || (searchText && !category && !keyword)) clearInventoryFilterState();
   if (offset === 0) {
     inventoryViewRevision += 1;
-    inventoryListState = { category, keyword, search: searchText, nextOffset: 0 };
+    inventoryListState = { category, keyword, search: searchText, exactPath, nextOffset: 0 };
     $("inventoryFiles").innerHTML = '<tr><td colspan="5">FUNDSTELLEN WERDEN GELADEN …</td></tr>';
   }
   const target = $("inventoryFiles");
   const request = beginInventoryRequest(target);
   $("inventoryTree").hidden = true;
   $("inventorySearchResults").hidden = false;
-  $("inventoryFilterLabel").textContent = (category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`).toUpperCase();
+  const filterLabel = exactPath !== null ? `DATEI: ${exactPath}` : category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`;
+  $("inventoryFilterLabel").textContent = filterLabel.toUpperCase();
+  $("inventoryFilterLabel").title = filterLabel;
   $("inventoryFilterBar").hidden = false;
   $("inventoryReset").hidden = false;
   $("inventoryMore").hidden = true;
@@ -1020,6 +1028,7 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     if (searchText) parameters.set("q", searchText);
     if (category) parameters.set("category", category);
     if (keyword) parameters.set("keyword", keyword);
+    if (exactPath !== null) parameters.set("exact_path", exactPath);
     const response = await fetch(`/api/media/${request.mediaId}/files?${parameters}`);
     const data = await response.json();
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -1029,7 +1038,7 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
-    inventoryListState = { category, keyword, search: searchText, nextOffset: Number(data.next_offset || visible) };
+    inventoryListState = { category, keyword, search: searchText, exactPath, nextOffset: Number(data.next_offset || visible) };
     $("inventoryMore").hidden = !data.has_more;
   } catch (error) {
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -1414,6 +1423,14 @@ $("inventoryMore").addEventListener("click", () => {
   if (inventoryListState) loadInventory({ ...inventoryListState, offset: inventoryListState.nextOffset });
 });
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
+$("largestFiles").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-inventory-file]");
+  if (!button || !currentMediaId) return;
+  $("inventoryPanel").open = true;
+  $("inventorySearch").value = button.dataset.inventoryFile;
+  loadInventory({ exactPath: button.dataset.inventoryFile, search: "" });
+  $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 $("inventoryFiles").addEventListener("click", (event) => {
   const button = event.target.closest("button.inventory-container-toggle");
   if (!button) return;

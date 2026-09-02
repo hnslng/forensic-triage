@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+
 from forensic_triage.web import (
     EVIDENCE_PATTERN,
     QUARANTINED_DEVICES,
@@ -21,6 +22,28 @@ from forensic_triage.web import (
     read_update_status,
     update_job_states,
 )
+
+
+@pytest.mark.parametrize("exact_path", [None, "Ordner/Übergabe ' & # % <Test>.bin"])
+def test_file_inventory_endpoint_forwards_exact_path(exact_path) -> None:
+    from urllib.parse import urlencode
+    import forensic_triage.web as web
+
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.path = "/api/media/12/files" + ("?" + urlencode({"exact_path": exact_path}) if exact_path is not None else "")
+    calls = []
+
+    def inventory(*args, **kwargs):
+        calls.append((args, kwargs))
+        return {"files": [], "total": 0}
+
+    handler.server = SimpleNamespace(case_store=SimpleNamespace(file_inventory=inventory))
+    responses = []
+    handler._json = lambda status, body: responses.append((status, body))
+    handler.do_GET()
+    assert calls[0][0][0] == 12
+    assert calls[0][1] == {"exact_path": exact_path}
+    assert responses[0][0] == 200
 
 
 def test_evidence_number_is_strict() -> None:

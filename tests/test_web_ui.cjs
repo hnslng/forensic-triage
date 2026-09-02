@@ -243,3 +243,64 @@ test('dashboard and case table sort sightings numerically, preserving online/off
   assert.deepEqual(await page.locator('#mediaCards .media-card > strong').allTextContents(), ['SICHT-2', 'SICHT-10']);
   assert.deepEqual(await labels(), ['SICHT-1', 'SICHT-3', 'SICHT-8']);
 });
+
+test('largest-file sizes remain visible without horizontal scrolling for long paths', async t => {
+  const longPath = 'Sehr langer Ordner/'.repeat(12) + 'Langer Dateiname '.repeat(20) + '.mkv';
+  const { page } = await setup(t, url => {
+    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, largest_files: [{ path: longPath, size: 22 * 1024 ** 3 }] } } };
+  });
+  await open(page, 1);
+  for (const width of [1440, 800, 470]) {
+    await page.setViewportSize({ width, height: 900 });
+    const geometry = await page.locator('.files-panel').evaluate(panel => {
+      const wrap = panel.querySelector('.table-wrap');
+      const size = panel.querySelector('.largest-size').getBoundingClientRect();
+      const bounds = panel.getBoundingClientRect();
+      return { overflow: wrap.scrollWidth > wrap.clientWidth, sizeVisible: size.left >= bounds.left && size.right <= bounds.right };
+    });
+    assert.deepEqual(geometry, { overflow: false, sizeVisible: true });
+    assert.equal(await page.locator('.largest-size').innerText(), '22 GB');
+  }
+  assert.match(await page.locator('.largest-file-link').getAttribute('title'), /Sehr langer Ordner/);
+});
+
+test('largest-file click navigates to the exact stored path and filter reset still works', async t => {
+  const exactPath = "Ordner/Übergabe ' & # % <Test>.mkv";
+  const { page, requests } = await setup(t, url => {
+    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, largest_files: [{ path: exactPath, size: 300 }] } } };
+    if (url.pathname === '/api/media/1/files' && url.searchParams.has('exact_path')) {
+      assert.equal(url.searchParams.get('exact_path'), exactPath);
+      assert.equal(url.searchParams.has('category'), false);
+      return { json: { files: [{ path: exactPath, size: 300, category: 'Video', source: 'readonly_mount' }], total: 1, shown: 1 } };
+    }
+  });
+  await open(page, 1); await filter(page);
+  await page.locator('.largest-file-link').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.getElementById('inventoryCount').textContent === '1 / 1 FUNDSTELLEN');
+  assert.equal(await page.locator('#inventorySearch').inputValue(), exactPath);
+  assert.match(await page.locator('#inventoryFiles').innerText(), /Übergabe/);
+  assert.equal(await page.locator('.result-filter.active').count(), 0);
+  assert.equal(requests.filter(request => request.method !== 'GET').length, 0);
+  await page.locator('#inventoryReset').click();
+  await page.waitForFunction(() => !document.getElementById('inventoryTree').hidden);
+  assert.equal(await page.locator('#inventorySearch').inputValue(), '');
+});
+
+test('archive counts have their own readable section, without altering bar alignment', async t => {
+  const { page } = await setup(t, url => {
+    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, archive_encryption: { total: 10, encrypted: 4, unknown: 2 } } } };
+  });
+  await open(page, 1);
+  assert.equal(await page.locator('#archiveStatus').isVisible(), true);
+  assert.equal(await page.locator('#archiveEncryptedCount').innerText(), '4');
+  assert.equal(await page.locator('#archiveUnknownCount').innerText(), '2');
+  assert.doesNotMatch(await page.locator('#categories').innerText(), /VERSCHLÜSSELT|UNGEPRÜFT/);
+  const tracks = await page.locator('#categories .bar-track').evaluateAll(nodes => nodes.map(node => ({ x: node.getBoundingClientRect().x, width: node.getBoundingClientRect().width })));
+  assert.deepEqual(tracks[0], tracks[1]);
+  await page.evaluate(() => renderResults({ archive_encryption: { total: 3, encrypted: 0, unknown: 0 } }));
+  assert.equal(await page.locator('#archiveUnknownCount').innerText(), '0');
+  assert.equal(await page.locator('#archiveUnknownCount').getAttribute('class'), '');
+  await open(page, 2);
+  assert.equal(await page.locator('#archiveStatus').isVisible(), false);
+});

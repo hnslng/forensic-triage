@@ -496,6 +496,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     str(query.get("category", [""])[0]),
                     str(query.get("keyword", [""])[0]),
                     int(query.get("offset", ["0"])[0]),
+                    exact_path=query.get("exact_path", [None])[0],
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:
