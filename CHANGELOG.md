@@ -2,6 +2,23 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.34] – 2026-09-02
+
+### Geändert
+
+- redundante Kennzeichnung `NUR GESICHTET` aus Medienkacheln ohne Beweismittelnummer entfernt; der konkrete Entscheidungsstatus bleibt allein sichtbar.
+- Modusangabe von `FAST/RO · NUR LESEN` auf das eindeutige `FAST · NUR LESEN` verkürzt.
+- reproduzierbarer macOS-Generator für kleine realistische USB- und CD-R-Testmedien mit echten offenen, verschlüsselten, verschachtelten, beschädigten und unvollständigen Archiven ergänzt.
+
+### Behoben
+
+- hybride macOS-ISO-Images verwenden bevorzugt ihre lesbaren Joliet-Namen, wenn zugleich unvollständige Rock-Ridge-Metadaten vorhanden sind.
+- ein fehlerhafter ISO-Verzeichniseintrag kann nicht mehr den gesamten Containerindex eines Mediums abbrechen.
+
+### Tests
+
+- 76 automatisierte Tests erfolgreich; erzeugte USB- und CD-Testdaten wurden zusätzlich mit der echten Containerlogik und SHA-256-Prüflisten validiert.
+
 ## [0.2.0-alpha.33] – 2026-09-02
 
 ### Geändert

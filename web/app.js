@@ -422,10 +422,12 @@ function renderMediaCards(media) {
     if (alreadyRecorded && deviceStates.get(device.path) === "ready") deviceStates.set(device.path, "complete");
   }
   const renderCard = (medium, connected) => {
-    const title = medium.evidence_number || "NUR GESICHTET";
+    const evidenceLabel = medium.evidence_number
+      ? `<b>${escapeHtml(medium.evidence_number)}</b>`
+      : "";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
     return `<div class="media-card-shell${connected ? " online" : " offline"}"><button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
-      <span class="media-card-top"><b>${escapeHtml(title)}</b>${statusTag(medium.decision)}</span>
+      <span class="media-card-top">${evidenceLabel}${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>

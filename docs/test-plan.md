@@ -2,7 +2,7 @@
 
 ## Automatisierte Tests
 
-Der aktuelle Stand umfasst 75 automatisierte Tests. Lokal ausführen:
+Der aktuelle Stand umfasst 76 automatisierte Tests. Lokal ausführen:
 
 ```bash
 .venv/bin/python -m pytest
@@ -22,6 +22,8 @@ Abgedeckt sind insbesondere:
 - Geräteerkennung, Software-Auswurf und Reaktivierung
 
 ## Synthetischer Testdatenträger
+
+Für realistische offene, verschlüsselte, verschachtelte und beschädigte Archive sowie ein brennbares CD-R-Abbild siehe [test-media.md](test-media.md). Der folgende große deterministische Datensatz bleibt der Laufzeit- und Zählwertvergleich.
 
 1. Autorisierten SanDisk anhand von Transport, Modell, Seriennummer und Kapazität identifizieren.
 2. Sicherstellen, dass kein Systemdatenträger das Ziel sein kann.
@@ -73,7 +75,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.33` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.34` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Extraktion oder Dekompression, keine Passwortversuche, sichtbare Limitkennzeichnung, höchstens das konfigurierte Zusatzzeitbudget sowie unveränderte äußere Datei-/Ordnerzahlen.
 

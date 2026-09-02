@@ -7,6 +7,7 @@ import pycdlib
 
 from forensic_triage.container_inventory import (
     ContainerLimits,
+    _iso_namespace,
     archive_encryption_summary,
     index_containers,
     parse_7zip_slt,
@@ -15,6 +16,23 @@ from forensic_triage.container_inventory import (
 
 
 LIMITS = ContainerLimits(seconds=5, max_containers=5, max_entries_per_container=100, max_total_entries=200)
+
+
+def test_iso_namespace_prefers_joliet_when_hybrid_metadata_is_present() -> None:
+    class HybridImage:
+        @staticmethod
+        def has_joliet() -> bool:
+            return True
+
+        @staticmethod
+        def has_rock_ridge() -> bool:
+            return True
+
+        @staticmethod
+        def has_udf() -> bool:
+            return False
+
+    assert _iso_namespace(HybridImage()) == ("joliet_path", "joliet")
 
 
 def test_zip_index_lists_names_without_extracting(tmp_path, monkeypatch) -> None:

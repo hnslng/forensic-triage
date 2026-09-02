@@ -172,6 +172,7 @@ def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
 
 def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:
     html = (Path(__file__).resolve().parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+    script = (Path(__file__).resolve().parents[1] / "web" / "app.js").read_text(encoding="utf-8")
 
     assert html.count('data-decision="') == 2
     assert 'data-decision="secure"' in html
@@ -179,3 +180,6 @@ def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:
     assert 'data-decision="review"' not in html
     assert 'id="evidenceDeviceSerial"' in html
     assert 'id="evidenceDeviceReadOnly"' in html
+    assert "FAST · NUR LESEN" in html
+    assert "FAST/RO · NUR LESEN" not in html
+    assert '"NUR GESICHTET"' not in script

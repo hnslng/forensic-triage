@@ -17,6 +17,7 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 - [Architektur](architecture.md)
 - [Lokale Fallakte und Protokollierung](case-archive.md)
 - [Testplan](test-plan.md)
+- [Realistische USB-/CD-Testmedien](test-media.md)
 - [Vorbereitung einer möglichen öffentlichen Bereitstellung](publication-review-2026-08-27.md)
 - [Sicherheitsrichtlinie](../SECURITY.md)
 - [Nutzungsbedingungen](../LICENSE.md)
@@ -31,7 +32,7 @@ Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Ras
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.33 lautet die Python-Version gemäß PEP 440 `0.2.0a33`; der Git-Tag lautet `v0.2.0-alpha.33`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Für Version 0.2.0-alpha.34 lautet die Python-Version gemäß PEP 440 `0.2.0a34`; der Git-Tag lautet `v0.2.0-alpha.34`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

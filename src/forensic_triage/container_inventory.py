@@ -116,10 +116,10 @@ def _index_zip(path: Path, limits: ContainerLimits, deadline: float, total: int)
 
 
 def _iso_namespace(image: pycdlib.PyCdlib) -> tuple[str, str]:
-    if image.has_rock_ridge():
-        return "rr_path", "rock_ridge"
     if image.has_joliet():
         return "joliet_path", "joliet"
+    if image.has_rock_ridge():
+        return "rr_path", "rock_ridge"
     if image.has_udf():
         return "udf_path", "udf"
     return "iso_path", "iso9660"
@@ -330,7 +330,10 @@ def index_containers(
                     absolute, selected_limits, deadline, int(result["entries_indexed"]),
                 )
             record.update(indexed)
-        except (OSError, ValueError, zipfile.BadZipFile, pycdlib.pycdlibexception.PyCdlibException) as exc:
+        except (
+            OSError, ValueError, AttributeError, zipfile.BadZipFile,
+            pycdlib.pycdlibexception.PyCdlibException,
+        ) as exc:
             record["status"] = "invalid_or_unsupported"
             record["error"] = f"{type(exc).__name__}: {exc}"[:300]
         record["entry_count"] = len(record["entries"])
