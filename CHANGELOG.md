@@ -2,6 +2,16 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.38] – 2026-09-02
+
+### Geändert
+
+- Bootstrap-Release, damit eine bereits aktive Alpha 37 die neue persistente Journal-Konfiguration über den bewussten Updater tatsächlich auf das Pi-System ausrollt.
+
+### Tests
+
+- 78 automatisierte Tests erfolgreich.
+
 ## [0.2.0-alpha.37] – 2026-09-02
 
 ### Hinzugefügt
