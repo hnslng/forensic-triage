@@ -266,9 +266,11 @@ function renderResults(summary, hits = {}) {
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
-  $("categories").innerHTML = categories.map(([name, count]) => `
-    <button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}${name === "Archive" && Number(archiveEncryption.total || 0) ? `<small>${Number(archiveEncryption.encrypted || 0)} VERSCHLÜSSELT${Number(archiveEncryption.unknown || 0) ? ` · ${Number(archiveEncryption.unknown)} UNGEPRÜFT` : ""}</small>` : ""}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>
-  `).join("");
+  $("categories").innerHTML = categories.map(([name, count]) => {
+    const isArchive = name === "Archive" && Number(archiveEncryption.total || 0);
+    const archiveStats = isArchive ? `<span class="archive-stats"><span><b>${Number(archiveEncryption.encrypted || 0)}</b> VERSCHLÜSSELT</span><span class="${Number(archiveEncryption.unknown || 0) ? "warning" : ""}"><b>${Number(archiveEncryption.unknown || 0)}</b> UNGEPRÜFT</span></span>` : "";
+    return `<button class="bar-row result-filter${isArchive ? " has-archive-stats" : ""}" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span>${archiveStats}</button>`;
+  }).join("");
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
   `).join("");
@@ -289,6 +291,24 @@ function renderArchive(archive) {
   $("archiveReport").textContent = archive.case_report || "case-report.txt";
   $("archiveAudit").textContent = archive.audit_log || "audit.log";
   $("archiveManifestCount").textContent = Number(archive.manifest_entries || 0).toLocaleString("de-AT");
+}
+
+function renderDeviceEvidence(media = {}, storedDevice = {}) {
+  const liveDevice = devices.find((device) => device.serial && device.serial === media.serial) || {};
+  const device = { ...liveDevice, ...storedDevice };
+  const model = [media.vendor || device.vendor, media.model || device.model].filter(Boolean).join(" ") || "UNBEKANNT";
+  const isOptical = device.type === "rom" || device.media_type === "optical" || String(media.device_path || "").startsWith("/dev/sr");
+  const readOnly = device.read_only_verified === true
+    ? "BEIM SCAN VERIFIZIERT"
+    : (device.read_only || device.ro ? "AKTIV" : "NICHT DOKUMENTIERT");
+  $("evidenceDeviceModel").textContent = model;
+  $("evidenceDeviceSerial").textContent = media.serial || device.serial || "NICHT GEMELDET";
+  $("evidenceDeviceCapacity").textContent = Number(media.size || device.size || 0) > 0
+    ? formatBytes(media.size || device.size)
+    : "NICHT GEMELDET";
+  $("evidenceDeviceType").textContent = isOptical ? "CD/DVD (USB)" : "USB-DATENTRÄGER";
+  $("evidenceDevicePath").textContent = media.device_path || device.path || "—";
+  $("evidenceDeviceReadOnly").textContent = readOnly;
 }
 
 const decisionLabels = {
@@ -338,6 +358,7 @@ function renderRecord(record) {
     const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
     $("detailConnectionState").textContent = connected ? "● ONLINE" : "○ OFFLINE";
     $("detailConnectionState").className = connected ? "connected" : "disconnected";
+    renderDeviceEvidence(record.media, record.device);
     renderArchive(record.archive);
     renderDecision(record.media);
     loadCase(record.media.case_number);

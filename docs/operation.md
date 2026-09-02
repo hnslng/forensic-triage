@@ -41,9 +41,13 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 5. Fortschritt und Abschlussstatus je Kachel beobachten.
 6. Detailansicht öffnen und Kategorien, Stichworttreffer, Größen sowie Verzeichnisbaum prüfen.
 
+„Nachweis anzeigen“ nennt die beim Scan gespeicherten Geräteangaben (Modell, Seriennummer, Kapazität, Medientyp und Gerätepfad) sowie den verifizierten Schreibschutz. Diese Angaben stammen aus der Sichtungsakte und bleiben deshalb auch nach dem Abziehen des Mediums verfügbar.
+
 Dateikategorien und Stichwortzeilen sind anklickbar. Die passende Dateiliste öffnet sich darunter automatisch; der aktive Filter wird direkt über der Liste angezeigt. Bei Stichworttreffern zeigt „Treffer in“, ob der Begriff aus dem Dateinamen oder einem Ordnerpfad stammt. „Weitere Dateien laden“ ergänzt große Trefferlisten. Der nur bei aktiver Filterung direkt neben „Suchen“ eingeblendete Befehl „Filter aufheben“ führt eindeutig zum vollständigen Verzeichnisbaum zurück.
 
 Die freie Suche ist davon getrennt: Suchbegriff in „Dateiname oder Pfad filtern“ eingeben und „Suchen“ wählen oder die Eingabetaste drücken. Ein leerer Suchbegriff verändert die aktuelle Ansicht nicht. Dateiinhalte werden dabei nicht durchsucht.
+
+Regulär vorhandene versteckte Dateien und Ordner erscheinen im Metadateninventar ebenfalls. Gelöschte Dateien, bewusst ausgefilterte interne Dateisystemeinträge und wegen Beschädigung nicht lesbare Einträge gehören nicht zu dieser Grobsichtung.
 
 „Online“ bedeutet, dass das Medium gegenwärtig erkannt wird. Nach Entfernen bleibt ein bereits protokolliertes Medium als „Offline“ in der Fallhistorie sichtbar. Ein offener Entscheidungsstatus muss weiterhin erkennbar bleiben.
 

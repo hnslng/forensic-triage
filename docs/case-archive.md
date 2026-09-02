@@ -35,6 +35,7 @@ casefiles/
 ## Inhalte
 
 - `files.csv`: vollständiges Verzeichnis der beobachteten aktiven Dateien mit Pfad, Endung, Kategorie, Größe und Dateisystem-Zeitstempeln; keine Dateiinhalte
+- `device.json`: beim Scan gespeicherte Geräteangaben einschließlich Modell, Seriennummer, Kapazität, Transport und verifiziertem Read-only-Zustand
 - `container-index.json`: begrenztes Inhaltsverzeichnis erkannter ZIP-, ISO-, 7Z- und RAR-Dateien; keine extrahierten oder dekomprimierten Nutzdaten
 - `media-register.csv`: Übersicht aller Sichtungen und Entscheidungen im Fall
 - `case-report.pdf`: kompakter, druckbarer Querformat-Bericht mit einer Zeile je Datenträger
@@ -44,6 +45,8 @@ casefiles/
 - `case-index.sqlite3`: durchsuchbarer lokaler Index
 
 JSON-, CSV-, Text- und Logdateien bleiben unabhängig lesbar, falls Dashboard oder Datenbank nicht verfügbar sind.
+
+Die wesentlichen Geräteangaben stehen außerdem im lokalen Fallindex und in `media-register.csv`. Der Nachweisdialog liest für Details die gespeicherte `device.json`, damit die Identität eines bereits abgezogenen Mediums weiterhin kontrolliert werden kann.
 
 ## Entscheidungen und Audit
 

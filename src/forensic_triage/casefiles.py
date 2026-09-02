@@ -422,8 +422,17 @@ class CaseStore:
         result_dir = self.root / str(row["result_path"])
         summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
         hits_data = json.loads((result_dir / "hits.json").read_text(encoding="utf-8"))
+        device: dict[str, Any] = {}
+        try:
+            stored_device = json.loads((result_dir / "device.json").read_text(encoding="utf-8"))
+            if isinstance(stored_device, dict):
+                device = stored_device
+        except (OSError, json.JSONDecodeError):
+            # Older or incomplete records remain readable from their database fields.
+            pass
         return {
             "media": self._media_dict(row),
+            "device": device,
             "summary": summary,
             "hits": {word: int(value.get("count", 0)) for word, value in hits_data.get("by_keyword", {}).items()},
             "archive": self._archive_info(str(row["case_number"]), result_dir),

@@ -58,6 +58,27 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
     }
 
 
+def test_media_detail_exposes_stored_device_metadata(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-GERAET", "SICHT-001")
+    (result_dir / "device.json").write_text(json.dumps({
+        "path": "/dev/sdb", "type": "disk", "tran": "usb", "size": 64000000000,
+        "vendor": "SanDisk", "model": "Ultra", "serial": "SER-123",
+        "read_only_verified": True,
+    }), encoding="utf-8")
+    recorded = store.record_scan(
+        "FALL-GERAET", "SICHT-001", "HL",
+        {"path": "/dev/sdb", "vendor": "SanDisk", "model": "Ultra", "serial": "SER-123", "size": 64000000000},
+        result_dir,
+    )
+
+    detail = store.media_detail(recorded["media"]["id"])
+
+    assert detail is not None
+    assert detail["device"]["serial"] == "SER-123"
+    assert detail["device"]["read_only_verified"] is True
+
+
 def test_case_is_created_only_by_explicit_start(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
 

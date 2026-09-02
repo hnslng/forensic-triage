@@ -177,3 +177,5 @@ def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:
     assert 'data-decision="secure"' in html
     assert 'data-decision="not_selected"' in html
     assert 'data-decision="review"' not in html
+    assert 'id="evidenceDeviceSerial"' in html
+    assert 'id="evidenceDeviceReadOnly"' in html

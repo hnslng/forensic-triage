@@ -207,6 +207,17 @@
     <dialog id="evidenceModal" class="evidence-modal">
       <div class="modal-head"><div><span>◆</span> DOKUMENTATION &amp; NACHWEIS</div><button id="closeEvidenceModal" type="button">SCHLIESSEN ×</button></div>
       <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>
+      <section class="device-evidence" aria-labelledby="deviceEvidenceTitle">
+        <h3 id="deviceEvidenceTitle">DATENTRÄGER-METADATEN</h3>
+        <dl class="device-evidence-grid">
+          <div><dt>GERÄT</dt><dd id="evidenceDeviceModel">—</dd></div>
+          <div><dt>SERIENNUMMER</dt><dd id="evidenceDeviceSerial">—</dd></div>
+          <div><dt>KAPAZITÄT</dt><dd id="evidenceDeviceCapacity">—</dd></div>
+          <div><dt>MEDIENTYP</dt><dd id="evidenceDeviceType">—</dd></div>
+          <div><dt>TECHNISCHER PFAD</dt><dd id="evidenceDevicePath">—</dd></div>
+          <div><dt>SCHREIBSCHUTZ</dt><dd id="evidenceDeviceReadOnly">—</dd></div>
+        </dl>
+      </section>
       <div class="archive-proof-grid">
         <div><b>DATEILISTE</b><span>Vollständiges Inhaltsverzeichnis gespeichert</span></div>
         <div><b>FALLPROTOKOLL</b><span>Medium und Entscheidung nachvollziehbar</span></div>

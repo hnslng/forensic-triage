@@ -2,6 +2,22 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.33] – 2026-09-02
+
+### Geändert
+
+- lange Entscheidungskennzeichnungen in den Medienkacheln werden vollständig und ohne Abschneiden in einer eigenen Zeile dargestellt.
+- Archiv-Verschlüsselungsstatus steht als lesbare, ausgerichtete Zusatzzeile unter der Archivkategorie statt als gequetschter Kleinsttext im Kategorienamen.
+- der Nachweisdialog zeigt gespeicherte Datenträger-Metadaten wie Modell, Seriennummer, Kapazität, Medientyp, Gerätepfad und den beim Scan verifizierten Schreibschutz.
+
+### Dokumentation
+
+- Erfassung normaler versteckter aktiver Dateien sowie die bewusste Abgrenzung zu gelöschten, internen oder unlesbaren Dateisystemeinträgen ausdrücklich dokumentiert.
+
+### Tests
+
+- 75 automatisierte Tests erfolgreich, einschließlich versteckter Dateien und gespeicherter Gerätemetadaten.
+
 ## [0.2.0-alpha.32] – 2026-09-02
 
 ### Behoben

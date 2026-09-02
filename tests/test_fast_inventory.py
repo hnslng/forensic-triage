@@ -23,3 +23,15 @@ def test_inventory_tree_collects_metadata_without_contents(tmp_path):
     assert files[0]["size"] == 4
     assert files[0]["original_extension"] == "PDF"
     assert files[0]["category"] == "Dokumente"
+
+
+def test_inventory_tree_includes_hidden_files_and_directories(tmp_path):
+    hidden_folder = tmp_path / ".intern"
+    hidden_folder.mkdir()
+    (tmp_path / ".hinweis.txt").write_text("sichtbar im Inventar", encoding="utf-8")
+    (hidden_folder / ".daten.csv").write_text("a,b\n", encoding="utf-8")
+
+    files, directories = inventory_tree(tmp_path, "001")
+
+    assert [item["path"] for item in directories] == [".intern"]
+    assert {item["path"] for item in files} == {".hinweis.txt", ".intern/.daten.csv"}

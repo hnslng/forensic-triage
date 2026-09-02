@@ -20,6 +20,8 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 10. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
 11. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
+Normale versteckte Dateien und Ordner werden dabei wie andere aktive Dateisystemeinträge erfasst: Dazu gehören Unix-Namen mit führendem Punkt und reguläre aktive Einträge mit einem Hidden-Attribut. Bewusst nicht gesucht werden gelöschte Dateien; interne Dateisystem-Hilfsstrukturen werden ausgefiltert. Beschädigte oder nicht lesbare Einträge können ohne Recovery ebenfalls fehlen.
+
 In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Archive bleiben auch in dieser gefilterten Tabelle über einen Pfeil aufklappbar. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Der aktive Filter steht in einer eigenen schmalen Statusleiste; zugleich erscheint „Filter aufheben“ direkt neben der Suche und stellt den vollständigen Verzeichnisbaum wieder her. Die freie Namens- und Pfadsuche bleibt eine davon getrennte Funktion. Große Treffermengen werden seitenweise nachgeladen.
 
 ZIP-, ISO-, 7Z- und RAR-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird direkt über das Zentralverzeichnis gelesen, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen. Für 7Z und RAR ruft der Scanner das vom Debian-Installer bereitgestellte Werkzeug `7z` ausschließlich im Listenmodus `l -slt` auf. Die Standardeingabe ist dabei geschlossen: TRIAGE//BOX gibt kein Passwort ein und startet keinen interaktiven Passwortversuch. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte, unvollständige, kopfverschlüsselte Container und erreichte Limits werden sichtbar unterschieden.
@@ -59,6 +61,8 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | Browser/Laptop | nur Darstellung und gegebenenfalls SSH-Verbindung | keine dauerhafte Fallakte |
 
 Der kompakte PDF-Bericht wird bei jeder Änderung der Fallakte aktualisiert und dort mitgeführt. PDF und ZIP werden beim Download zusätzlich im verwendeten Browser gespeichert; dieser Speicherort hängt vom Browser ab.
+
+Die beim Scan gelesenen Gerätedaten liegen pro Sichtung in `device.json`; die zentralen Angaben stehen zusätzlich im lokalen Fallindex und in `media-register.csv`. Der Nachweisdialog zeigt Modell, Seriennummer, Kapazität, Medientyp, technischen Gerätepfad und den dokumentierten Schreibschutz direkt an. Dadurch bleiben die Identitätsangaben auch sichtbar, wenn der Datenträger später offline ist.
 
 ## Was ist die Konfiguration?
 

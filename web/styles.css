@@ -119,9 +119,9 @@ h1 span { color: var(--acid); }
 .media-card.offline > strong, .media-card.offline > small, .media-card.offline .media-card-metrics, .media-card.offline .connection-badge { opacity: .48; }
 .media-card.offline .status-open { border-color: var(--amber); color: var(--amber); box-shadow: 0 0 11px rgba(255, 180, 59, .16); }
 .media-card:hover, .media-card.active { border-color: var(--acid); background: #141a10; transform: translateY(-1px); }
-.media-card-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.media-card-top { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 7px; }
 .media-card-top > b { color: var(--acid); font-size: 11px; }
-.media-card-top .status-tag { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.media-card-top .status-tag { width: fit-content; max-width: 100%; line-height: 1.3; white-space: normal; }
 .media-card > strong { margin-top: 14px; font: 900 26px/1 Arial Black, Impact, sans-serif; }
 .media-card > small { color: var(--muted); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .media-card-metrics { display: flex; gap: 14px; margin-top: 12px; padding-top: 9px; border-top: 1px dashed var(--line); }
@@ -250,7 +250,11 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.bar-name small { display: block; margin-top: 3px; color: var(--amber); font-size: 9px; line-height: 1.2; }
+.bar-row.has-archive-stats { row-gap: 6px; }
+.archive-stats { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px 15px; color: var(--muted); font-size: 9px; line-height: 1.3; }
+.archive-stats span { white-space: nowrap; }
+.archive-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.archive-stats .warning, .archive-stats .warning b { color: var(--amber); }
 .keyword-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--line); padding: 9px 1px; font-size: 12px; }
 .keyword-row.result-filter { width: 100%; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; appearance: none; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
 .keyword-row.result-filter:hover { color: var(--acid); background: rgba(201, 242, 82, .035); }
@@ -266,6 +270,12 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .disclosure[open] > summary::after { content: "− SCHLIESSEN"; }
 .disclosure > summary small { margin-left: 8px; color: var(--ink); font-size: 9px; letter-spacing: .04em; }
 .archive-explainer { margin: 0; padding: 16px; color: var(--ink); font-size: 14px; line-height: 1.55; }
+.device-evidence { border-top: 1px solid var(--line); }
+.device-evidence h3 { margin: 0; padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--acid); font-size: 11px; letter-spacing: .08em; }
+.device-evidence-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; background: var(--line); gap: 1px; }
+.device-evidence-grid div { min-width: 0; padding: 12px 14px; background: var(--panel); }
+.device-evidence-grid dt { margin-bottom: 6px; color: var(--muted); font-size: 9px; }
+.device-evidence-grid dd { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 12px; line-height: 1.35; }
 .archive-proof-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
 .archive-proof-grid > div { min-height: 92px; padding: 14px; background: var(--panel); }
 .archive-proof-grid b, .archive-proof-grid span { display: block; }
@@ -453,6 +463,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .decision-buttons { grid-template-columns: 1fr; }
   .decision-headline, .decision-fields { grid-template-columns: 1fr; }
   .archive-proof-grid { grid-template-columns: 1fr; }
+  .device-evidence-grid { grid-template-columns: 1fr 1fr; }
   .save-decision { width: 100%; min-width: 0; }
   .result-title-line, .result-actions { align-items: flex-start; flex-direction: column; }
   .inventory-tools { grid-template-columns: 1fr; }
