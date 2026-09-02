@@ -42,7 +42,7 @@ Auf einem Raspberry Pi 3B+ teilen sich externe USB-Medien den USB-Pfad mit einer
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.38 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Regulär vorhandene versteckte Dateien werden inventarisiert; gelöschte Dateien, interne Dateisystem-Hilfseinträge und nicht lesbare Einträge werden nicht wiederhergestellt. Stichworttreffer stammen nur aus äußeren oder in ZIP-/ISO-/7Z-/RAR-Verzeichnissen gespeicherten Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig erkannte Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, unvollständige oder wegen eines Limits nicht fertig geprüfte Archive bleiben `UNGEPRÜFT`. Bei verschlüsselten Kopfbereichen werden keine Passwörter versucht.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.39 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Regulär vorhandene versteckte Dateien werden inventarisiert; gelöschte Dateien, interne Dateisystem-Hilfseinträge und nicht lesbare Einträge werden nicht wiederhergestellt. Stichworttreffer stammen nur aus äußeren oder in ZIP-/ISO-/7Z-/RAR-Verzeichnissen gespeicherten Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig erkannte Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, unvollständige oder wegen eines Limits nicht fertig geprüfte Archive bleiben `UNGEPRÜFT`. Bei verschlüsselten Kopfbereichen werden keine Passwörter versucht.
 
 ## Schutz der Fallunterlagen
 
@@ -50,4 +50,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.38 reads bounded ZIP/ISO/7Z/RAR directory metadata but does not inspect signatures or file payloads.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.39 reads bounded ZIP/ISO/7Z/RAR directory metadata but does not inspect signatures or file payloads.

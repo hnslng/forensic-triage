@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 let devices = [];
+let deviceDiscoveryError = "";
 const deviceStates = new Map();
 const deviceErrors = new Map();
 const runningPaths = new Set();
@@ -12,6 +13,10 @@ let currentMediaId = null;
 let currentDecision = null;
 let inventoryTreeMediaId = null;
 let inventoryListState = null;
+let mediaViewRevision = 0;
+let inventoryViewRevision = 0;
+let caseLoadRevision = 0;
+const inventoryRequests = new WeakMap();
 let caseHistorySignature = "";
 let knownCases = [];
 let activeCaseNumber = null;
@@ -344,20 +349,10 @@ function updateDecisionFields() {
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   if (record.media) {
-    if (inventoryTreeMediaId !== record.media.id) {
-      inventoryTreeMediaId = null;
-      inventoryListState = null;
-      $("inventoryTree").innerHTML = "";
-      $("inventorySearchResults").hidden = true;
-      $("inventoryFilterBar").hidden = true;
-      $("inventoryReset").hidden = true;
-      $("inventoryMore").hidden = true;
-      $("inventorySearch").value = "";
-      $("inventoryCount").textContent = "—";
-    }
+    clearInventoryView();
     const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
-    $("detailConnectionState").textContent = connected ? "● ONLINE" : "○ OFFLINE";
-    $("detailConnectionState").className = connected ? "connected" : "disconnected";
+    $("detailConnectionState").textContent = deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE";
+    $("detailConnectionState").className = connected && !deviceDiscoveryError ? "connected" : "disconnected";
     renderDeviceEvidence(record.media, record.device);
     renderArchive(record.archive);
     renderDecision(record.media);
@@ -384,6 +379,7 @@ function setCaseDownloads(caseNumber = null) {
 }
 
 async function loadCase(caseNumber) {
+  const revision = ++caseLoadRevision;
   if (!caseNumber) {
     currentCaseMedia = [];
     renderMediaCards([]);
@@ -394,6 +390,7 @@ async function loadCase(caseNumber) {
   try {
     const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`);
     const data = await response.json();
+    if (revision !== caseLoadRevision) return;
     if (response.status === 404) {
       currentCaseMedia = [];
       renderMediaCards([]);
@@ -402,21 +399,29 @@ async function loadCase(caseNumber) {
       return;
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
-    currentCaseMedia = data.media || [];
+    currentCaseMedia = sortedSightings(data.media || []);
     renderMediaCards(currentCaseMedia);
     renderDevices(devices);
     $("casePanel").hidden = false;
     $("casePanelNumber").textContent = data.case.case_number;
     setCaseDownloads(data.case.case_number);
-    $("caseMedia").innerHTML = data.media.map((medium) => `
+    $("caseMedia").innerHTML = currentCaseMedia.map((medium) => `
       <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
     `).join("");
   } catch (error) {
+    if (revision !== caseLoadRevision) return;
     $("decisionMessage").textContent = error.message;
   }
 }
 
+function sortedSightings(media) {
+  return [...media].sort((left, right) =>
+    String(left.sighting_number || "").localeCompare(String(right.sighting_number || ""), "de", { numeric: true })
+    || Number(left.id) - Number(right.id));
+}
+
 function renderMediaCards(media) {
+  media = sortedSightings(media);
   for (const device of devices) {
     const alreadyRecorded = device.serial && media.some((medium) => medium.serial === device.serial);
     if (alreadyRecorded && deviceStates.get(device.path) === "ready") deviceStates.set(device.path, "complete");
@@ -434,9 +439,9 @@ function renderMediaCards(media) {
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
-      <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● ONLINE" : "○ OFFLINE"}</span>
+      <span class="connection-badge ${connected && !deviceDiscoveryError ? "connected" : "disconnected"}">${deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
-    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}">${ejectLabel}</button>` : ""}</div>`;
+    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}" ${deviceDiscoveryError ? "disabled" : ""}>${ejectLabel}</button>` : ""}</div>`;
   };
   const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
   const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
@@ -449,6 +454,13 @@ function renderMediaCards(media) {
 
 function updateDashboardState() {
   const online = devices.length;
+  if (deviceDiscoveryError) {
+    $("deviceCount").textContent = "ERKENNUNG GESTÖRT · LETZTER STAND";
+    $("deviceEmptyTitle").textContent = "DATENTRÄGERERKENNUNG PRÜFEN";
+    $("deviceEmptyCopy").textContent = "Ein Geräteabruf ist noch offen oder fehlgeschlagen. Der Verbindungsstatus ist derzeit unbekannt; neue Scans warten auf eine erfolgreiche Erkennung.";
+    $("deviceEmpty").hidden = online > 0;
+    return;
+  }
   if (!activeCaseNumber) {
     $("deviceCount").textContent = `${online} ONLINE · WARTET AUF FALL`;
     $("deviceEmptyTitle").textContent = "KEIN FALL AKTIV";
@@ -543,14 +555,14 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
     const type = device.media_type === "optical" ? "CD/DVD" : "USB";
-    const disabled = !device.scan_supported || state === "scanning" || state === "timeout";
+    const disabled = deviceDiscoveryError || !device.scan_supported || state === "scanning" || state === "timeout";
     const stateReason = state === "timeout"
       ? "ABZIEHEN UND NEU VERBINDEN"
       : (deviceErrors.get(device.path) || device.unavailable_reason || "");
     const optical = device.media_type === "optical";
-    const ejectDisabled = ["scanning", "timeout"].includes(state) || device.mounted;
+    const ejectDisabled = deviceDiscoveryError || ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>${optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>● ONLINE</em></span>
+      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>${optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
       <div class="device-state"><b>${stateLabels[state]}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
@@ -565,6 +577,12 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     $("offlineMediaPanel").hidden = true;
   }
   renderMediaCards(currentCaseMedia);
+  const detailMedium = currentCaseMedia.find((medium) => Number(medium.id) === currentMediaId);
+  if (detailMedium) {
+    const connected = devices.some((device) => device.serial && device.serial === detailMedium.serial);
+    $("detailConnectionState").textContent = deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE";
+    $("detailConnectionState").className = connected && !deviceDiscoveryError ? "connected" : "disconnected";
+  }
   updateDashboardState();
   updateScanAvailability();
   scheduleAutoScan(400);
@@ -573,7 +591,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
 function updateScanAvailability() {
   for (const button of document.querySelectorAll("[data-scan-device]")) {
     const device = devices.find((item) => item.path === button.dataset.scanDevice);
-    button.disabled = !device?.scan_supported || ["scanning", "timeout"].includes(deviceStates.get(device.path)) || !activeCaseNumber || !activeOperator;
+    button.disabled = Boolean(deviceDiscoveryError) || !device?.scan_supported || ["scanning", "timeout"].includes(deviceStates.get(device.path)) || !activeCaseNumber || !activeOperator;
   }
 }
 
@@ -610,6 +628,7 @@ async function syncCaseSessionFromServer(session) {
   serverActiveCase = session || null;
   if (!serverCaseNumber) {
     if (!activeCaseNumber) return;
+    invalidateMediaView();
     activeCaseNumber = null;
     activeOperator = "";
     currentCaseMedia = [];
@@ -629,6 +648,7 @@ async function syncCaseSessionFromServer(session) {
     return;
   }
   if (activeCaseNumber === serverCaseNumber && activeOperator === serverOperator) return;
+  invalidateMediaView();
   activeCaseNumber = serverCaseNumber;
   activeOperator = serverOperator;
   $("caseNumber").value = activeCaseNumber;
@@ -648,12 +668,18 @@ async function refresh(loadLatest = false) {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
+    const previousDeviceError = deviceDiscoveryError;
+    deviceDiscoveryError = data.device_error || "";
     await syncCaseSessionFromServer(data.active_case || null);
     renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     renderCaseHistory(data.cases || []);
+    if (data.device_error) setSystemState("DATENTRÄGERERKENNUNG PRÜFEN", "error");
+    else if (previousDeviceError) setSystemState(activeCaseNumber ? "BEREIT" : "GESPERRT");
     if (!updateActionInProgress) renderUpdateState(data.update || {});
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
+    deviceDiscoveryError = "Verbindung zur Geräteerkennung unterbrochen";
+    renderDevices(devices);
     setSystemState("VERBINDUNG PRÜFEN", "error");
   }
 }
@@ -665,9 +691,14 @@ async function refreshMediaDevices() {
     const response = await fetch("/api/devices/refresh", { method: "POST" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Datenträger konnten nicht aktualisiert werden");
+    deviceDiscoveryError = data.device_error || "";
     renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     const restored = Number(data.reactivated?.length || 0);
-    setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "GESPERRT"));
+    if (data.device_error) {
+      setSystemState("DATENTRÄGERERKENNUNG PRÜFEN", "error");
+    } else {
+      setSystemState(restored ? `${restored} DATENTRÄGER REAKTIVIERT` : (activeCaseNumber ? "DATENTRÄGER AKTUELL" : "GESPERRT"));
+    }
   } catch (error) {
     setSystemState(`FEHLER: ${error.message}`, "error");
   } finally {
@@ -686,6 +717,7 @@ function updateProgress() {
 }
 
 async function runScan(devicePath, standalone = true) {
+  if (deviceDiscoveryError) return;
   if (!activeCaseNumber || !activeOperator) {
     setSystemState("GESPERRT", "locked");
     openAuftrag();
@@ -730,7 +762,10 @@ async function runScan(devicePath, standalone = true) {
 }
 
 async function runReadyScans() {
-  const paths = devices.filter((device) => device.scan_supported && deviceStates.get(device.path) === "ready").map((device) => device.path);
+  if (deviceDiscoveryError) return;
+  const paths = devices
+    .filter((device) => device.scan_supported && deviceStates.get(device.path) === "ready")
+    .map((device) => device.path);
   if (!paths.length) return;
   batchTotal = paths.length;
   batchDone = 0;
@@ -739,6 +774,7 @@ async function runReadyScans() {
 }
 
 function maybeAutoScan() {
+  if (deviceDiscoveryError) return;
   if (!$("autoScanToggle").checked) return;
   if (!activeCaseNumber || !activeOperator) return;
   const ready = devices.some((device) => device.scan_supported && deviceStates.get(device.path) === "ready");
@@ -752,10 +788,12 @@ function scheduleAutoScan(delay = 700) {
 
 async function saveDecision() {
   if (!currentMediaId || !currentDecision) return;
+  const mediaId = currentMediaId;
+  const revision = mediaViewRevision;
   $("saveDecision").disabled = true;
   $("decisionMessage").textContent = "Wird protokolliert …";
   try {
-    const response = await fetch(`/api/media/${currentMediaId}/decision`, {
+    const response = await fetch(`/api/media/${mediaId}/decision`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -767,10 +805,12 @@ async function saveDecision() {
       }),
     });
     const data = await response.json();
+    if (revision !== mediaViewRevision || mediaId !== currentMediaId) return;
     if (!response.ok) throw new Error(data.error || "Entscheidung konnte nicht gespeichert werden");
     renderRecord(data);
     $("decisionMessage").textContent = "ENTSCHEIDUNG MIT ZEITSTEMPEL PROTOKOLLIERT";
   } catch (error) {
+    if (revision !== mediaViewRevision || mediaId !== currentMediaId) return;
     $("decisionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     updateDecisionAvailability();
@@ -813,47 +853,106 @@ function inventoryRowsHtml(files) {
     const pathCell = file.container_id
       ? `<button class="inventory-container-toggle" type="button" data-container-path="${escapeHtml(file.container_id)}" aria-expanded="false"><span>▶</span><b>${path}</b></button>`
       : path;
-    const row = `<tr><td>${pathCell}</td><td>${escapeHtml(file.match_source || "—")}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
+    const inside = file.source === "container_index";
+    const location = inside ? `IM ${String(file.container_format || "ARCHIV").toUpperCase()}` : "AUF DEM MEDIUM";
+    const nested = inside && ["Archive", "Datenträger-/Backup-Images"].includes(file.category);
+    const note = nested ? '<small class="inventory-entry-note">VERSCHACHTELT · NICHT WEITER GEÖFFNET</small>' : "";
+    const matchNote = file.match_source && (!inside || !file.match_source.endsWith("-INHALT") || file.match_source.includes(" · "))
+      ? `<small class="inventory-entry-note">${escapeHtml(file.match_source)}</small>` : "";
+    const row = `<tr${inside ? ' class="inventory-inner-file"' : ""}><td title="${path}">${pathCell}${note}</td><td><span class="inventory-location">${escapeHtml(location)}</span>${matchNote}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
     if (!file.container_id) return row;
     return `${row}<tr class="inventory-container-detail" hidden><td colspan="5"><div class="tree-children"><p class="tree-loading">ARCHIVVERZEICHNIS ÖFFNEN …</p></div></td></tr>`;
   }).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
 }
 
+function clearInventoryView() {
+  inventoryViewRevision += 1;
+  inventoryTreeMediaId = null;
+  inventoryListState = null;
+  clearInventoryFilterState();
+  $("inventoryTree").innerHTML = "";
+  $("inventoryTree").hidden = false;
+  $("inventoryFiles").innerHTML = "";
+  $("inventorySearchResults").hidden = true;
+  $("inventoryFilterBar").hidden = true;
+  $("inventoryReset").hidden = true;
+  $("inventoryMore").hidden = true;
+  $("inventorySearch").value = "";
+  $("inventoryCount").textContent = "—";
+}
+
+function invalidateMediaView() {
+  mediaViewRevision += 1;
+  caseLoadRevision += 1;
+  currentMediaId = null;
+  currentDecision = null;
+  clearInventoryView();
+  updateDecisionAvailability();
+}
+
+function beginInventoryRequest(target) {
+  // Bind responses to the view incarnation, not just an ID: A → B → A must
+  // also reject the first A's response. Per-target tokens keep sibling folders independent.
+  const request = { mediaId: currentMediaId, mediaRevision: mediaViewRevision, inventoryRevision: inventoryViewRevision };
+  inventoryRequests.set(target, request);
+  return request;
+}
+
+function inventoryRequestIsCurrent(target, request) {
+  return target.isConnected && inventoryRequests.get(target) === request
+    && currentMediaId === request.mediaId && mediaViewRevision === request.mediaRevision
+    && inventoryViewRevision === request.inventoryRevision;
+}
+
 async function loadInventoryTree(prefix = "", target = $("inventoryTree"), offset = 0) {
   if (!currentMediaId) return;
+  const request = beginInventoryRequest(target);
+  const moreButton = target.querySelector(":scope > .tree-more");
   if (offset === 0) target.innerHTML = '<p class="tree-loading">VERZEICHNIS WIRD GELADEN …</p>';
-  else target.querySelector(".tree-more")?.remove();
+  else if (moreButton) moreButton.disabled = true;
+  target.querySelector(":scope > .tree-page-error")?.remove();
   try {
-    const response = await fetch(`/api/media/${currentMediaId}/tree?prefix=${encodeURIComponent(prefix)}&limit=300&offset=${offset}`);
+    const response = await fetch(`/api/media/${request.mediaId}/tree?prefix=${encodeURIComponent(prefix)}&limit=300&offset=${offset}`);
     const data = await response.json();
+    if (!inventoryRequestIsCurrent(target, request)) return;
     if (!response.ok) throw new Error(data.error || "Verzeichnis nicht verfügbar");
     const entries = treeEntriesHtml(data.entries || []);
     if (offset === 0) target.innerHTML = entries;
-    else target.insertAdjacentHTML("beforeend", entries);
+    else { moreButton?.remove(); target.insertAdjacentHTML("beforeend", entries); }
     if (data.has_more) target.insertAdjacentHTML("beforeend", `<button class="tree-more" type="button" data-tree-prefix="${escapeHtml(prefix)}" data-tree-offset="${Number(data.next_offset)}">WEITERE EINTRÄGE LADEN</button>`);
-    inventoryTreeMediaId = currentMediaId;
-    $("inventoryCount").textContent = `${data.total} EINTRÄGE AUF DIESER EBENE`;
+    const folderOwner = target.closest(".tree-folder");
+    if (folderOwner) folderOwner.dataset.loaded = "true";
+    if (target === $("inventoryTree")) {
+      inventoryTreeMediaId = request.mediaId;
+      $("inventoryCount").textContent = `${data.total} EINTRÄGE AUF DIESER EBENE`;
+    }
     if (prefix === "" && offset === 0 && data.entries?.length === 1 && data.entries[0].kind === "directory") {
       const folder = target.querySelector(":scope > .tree-folder");
       if (folder) {
         folder.open = true;
-        folder.dataset.loaded = "true";
         await loadInventoryTree(data.entries[0].path, folder.querySelector(".tree-children"));
       }
     }
   } catch (error) {
-    target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
+    if (!inventoryRequestIsCurrent(target, request)) return;
+    const message = `<p class="tree-loading error tree-page-error">FEHLER: ${escapeHtml(error.message)}</p>`;
+    if (offset === 0) target.innerHTML = message;
+    else { target.insertAdjacentHTML("beforeend", message); if (moreButton) moreButton.disabled = false; }
   }
 }
 
 async function loadContainerTree(containerPath, prefix = "", target, offset = 0) {
   if (!currentMediaId || !target) return;
+  const request = beginInventoryRequest(target);
+  const moreButton = target.querySelector(":scope > .tree-more");
   if (offset === 0) target.innerHTML = '<p class="tree-loading">CONTAINER-VERZEICHNIS WIRD GELADEN …</p>';
-  else target.querySelector(".tree-more")?.remove();
+  else if (moreButton) moreButton.disabled = true;
+  target.querySelector(":scope > .tree-page-error")?.remove();
   try {
     const parameters = new URLSearchParams({ path: containerPath, prefix, limit: "300", offset: String(offset) });
-    const response = await fetch(`/api/media/${currentMediaId}/container?${parameters}`);
+    const response = await fetch(`/api/media/${request.mediaId}/container?${parameters}`);
     const data = await response.json();
+    if (!inventoryRequestIsCurrent(target, request)) return;
     if (!response.ok) throw new Error(data.error || "Container-Verzeichnis nicht verfügbar");
     let entries = treeEntriesHtml(data.entries || [], containerPath);
     if (!(data.entries || []).length) {
@@ -869,11 +968,16 @@ async function loadContainerTree(containerPath, prefix = "", target, offset = 0)
         : '<p class="tree-loading">CONTAINER IST LEER</p>';
     }
     if (offset === 0) target.innerHTML = entries;
-    else target.insertAdjacentHTML("beforeend", entries);
+    else { moreButton?.remove(); target.insertAdjacentHTML("beforeend", entries); }
     if (data.has_more) target.insertAdjacentHTML("beforeend", `<button class="tree-more" type="button" data-container-path="${escapeHtml(containerPath)}" data-container-prefix="${escapeHtml(prefix)}" data-container-offset="${Number(data.next_offset)}">WEITERE EINTRÄGE LADEN</button>`);
     if (data.truncated && offset === 0) target.insertAdjacentHTML("beforeend", '<p class="tree-loading warning">SCHNELLINDEX-LIMIT ERREICHT · VERZEICHNIS IST UNVOLLSTÄNDIG</p>');
+    const owner = target.closest(".tree-folder, .inventory-container-detail");
+    if (owner) owner.dataset.loaded = "true";
   } catch (error) {
-    target.innerHTML = `<p class="tree-loading error">FEHLER: ${escapeHtml(error.message)}</p>`;
+    if (!inventoryRequestIsCurrent(target, request)) return;
+    const message = `<p class="tree-loading error tree-page-error">FEHLER: ${escapeHtml(error.message)}</p>`;
+    if (offset === 0) target.innerHTML = message;
+    else { target.insertAdjacentHTML("beforeend", message); if (moreButton) moreButton.disabled = false; }
   }
 }
 
@@ -885,14 +989,7 @@ function clearInventoryFilterState() {
 }
 
 async function resetInventoryView() {
-  clearInventoryFilterState();
-  inventoryListState = null;
-  $("inventorySearch").value = "";
-  $("inventoryFilterBar").hidden = true;
-  $("inventoryReset").hidden = true;
-  $("inventoryMore").hidden = true;
-  $("inventorySearchResults").hidden = true;
-  $("inventoryTree").hidden = false;
+  clearInventoryView();
   await loadInventoryTree();
 }
 
@@ -904,31 +1001,41 @@ async function loadInventory({ category = "", keyword = "", search = null, offse
     return;
   }
   if (searchText && !category && !keyword) clearInventoryFilterState();
+  if (offset === 0) {
+    inventoryViewRevision += 1;
+    inventoryListState = { category, keyword, search: searchText, nextOffset: 0 };
+    $("inventoryFiles").innerHTML = '<tr><td colspan="5">FUNDSTELLEN WERDEN GELADEN …</td></tr>';
+  }
+  const target = $("inventoryFiles");
+  const request = beginInventoryRequest(target);
+  $("inventoryTree").hidden = true;
+  $("inventorySearchResults").hidden = false;
+  $("inventoryFilterLabel").textContent = (category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`).toUpperCase();
+  $("inventoryFilterBar").hidden = false;
+  $("inventoryReset").hidden = false;
+  $("inventoryMore").hidden = true;
   $("inventoryCount").textContent = "LÄDT …";
   try {
-    if (offset === 0) inventoryListState = { category, keyword, search: searchText, nextOffset: 0 };
     const parameters = new URLSearchParams({ limit: "250", offset: String(offset) });
     if (searchText) parameters.set("q", searchText);
     if (category) parameters.set("category", category);
     if (keyword) parameters.set("keyword", keyword);
-    const response = await fetch(`/api/media/${currentMediaId}/files?${parameters}`);
+    const response = await fetch(`/api/media/${request.mediaId}/files?${parameters}`);
     const data = await response.json();
+    if (!inventoryRequestIsCurrent(target, request)) return;
     if (!response.ok) throw new Error(data.error || "Verzeichnis nicht verfügbar");
-    const filterLabel = category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`;
     const visible = Number(data.offset || 0) + Number(data.shown || 0);
-    $("inventoryCount").textContent = `${visible} / ${data.total} DATEIEN`;
-    $("inventoryFilterLabel").textContent = filterLabel.toUpperCase();
-    $("inventoryFilterBar").hidden = false;
-    $("inventoryReset").hidden = false;
-    $("inventoryTree").hidden = true;
-    $("inventorySearchResults").hidden = false;
+    $("inventoryCount").textContent = `${visible} / ${data.total} FUNDSTELLEN`;
     const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
     inventoryListState = { category, keyword, search: searchText, nextOffset: Number(data.next_offset || visible) };
     $("inventoryMore").hidden = !data.has_more;
   } catch (error) {
+    if (!inventoryRequestIsCurrent(target, request)) return;
     $("inventoryCount").textContent = `FEHLER: ${error.message}`;
+    if (offset === 0) target.innerHTML = `<tr><td colspan="5">FEHLER: ${escapeHtml(error.message)}</td></tr>`;
+    else $("inventoryMore").hidden = false;
   }
 }
 
@@ -953,6 +1060,7 @@ async function startCaseSession() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gestartet werden");
     activeCaseNumber = data.case.case_number;
+    invalidateMediaView();
     activeOperator = operator;
     serverActiveCase = { case_number: activeCaseNumber, operator: activeOperator };
     $("caseNumber").value = activeCaseNumber;
@@ -978,6 +1086,7 @@ async function startCaseSession() {
 
 async function stopCaseSession() {
   if (runningPaths.size) return;
+  invalidateMediaView();
   caseSessionTransition = true;
   clearTimeout(autoStartTimer);
   activeCaseNumber = null;
@@ -1044,6 +1153,7 @@ async function deleteCurrentCase() {
 }
 
 async function ejectDevice(devicePath) {
+  if (deviceDiscoveryError) return;
   setSystemState("DATENTRÄGER WIRD AUSGEWORFEN …", "busy");
   try {
     const response = await fetch("/api/devices/eject", {
@@ -1064,21 +1174,30 @@ async function ejectDevice(devicePath) {
 }
 
 async function openMedia(mediaId) {
+  invalidateMediaView();
+  const revision = mediaViewRevision;
+  $("results").hidden = true;
+  $("dashboardView").hidden = false;
+  setSystemState("SICHTUNG LÄDT …", "busy");
   try {
     const response = await fetch(`/api/media/${mediaId}`);
     const data = await response.json();
+    if (revision !== mediaViewRevision) return;
     if (!response.ok) throw new Error(data.error || "Medienakte nicht verfügbar");
     renderRecord(data);
     renderMediaCards(currentCaseMedia);
     $("dashboardView").hidden = true;
     $("results").hidden = false;
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    setSystemState(activeCaseNumber ? "BEREIT" : "GESPERRT");
   } catch (error) {
-    $("decisionMessage").textContent = `FEHLER: ${error.message}`;
+    if (revision !== mediaViewRevision) return;
+    setSystemState(`FEHLER: ${error.message}`, "error");
   }
 }
 
 function showDashboard() {
+  invalidateMediaView();
   if ($("evidenceModal").open) $("evidenceModal").close();
   if ($("deleteModal").open) $("deleteModal").close();
   if ($("keywordModal").open) $("keywordModal").close();
@@ -1287,7 +1406,7 @@ $("auftragModal").addEventListener("close", () => {
   $("caseArchiveModal").classList.remove("nested-open");
 });
 $("deleteForm").addEventListener("submit", (event) => { event.preventDefault(); deleteCurrentCase(); });
-$("refreshButton").addEventListener("click", refresh);
+$("refreshButton").addEventListener("click", () => refresh(false));
 $("saveDecision").addEventListener("click", saveDecision);
 $("inventoryLoad").addEventListener("click", () => loadInventory());
 $("inventoryReset").addEventListener("click", resetInventoryView);
@@ -1304,7 +1423,6 @@ $("inventoryFiles").addEventListener("click", (event) => {
   detail.hidden = !opening;
   button.setAttribute("aria-expanded", String(opening));
   if (opening && detail.dataset.loaded !== "true") {
-    detail.dataset.loaded = "true";
     loadContainerTree(button.dataset.containerPath, "", detail.querySelector(".tree-children"));
   }
 });
@@ -1339,9 +1457,9 @@ $("keywords").addEventListener("click", (event) => {
   $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("inventoryPanel").addEventListener("toggle", () => {
-  if ($("inventoryPanel").open && currentMediaId && inventoryTreeMediaId !== currentMediaId) loadInventoryTree();
+  if ($("inventoryPanel").open && currentMediaId && !inventoryListState && inventoryTreeMediaId !== currentMediaId) loadInventoryTree();
 });
-$("inventoryTree").addEventListener("click", (event) => {
+function handleInventoryTreeClick(event) {
   const more = event.target.closest("button.tree-more");
   if (more) {
     if (more.dataset.containerPath) {
@@ -1355,8 +1473,7 @@ $("inventoryTree").addEventListener("click", (event) => {
   if (containerSummary) {
     const container = containerSummary.parentElement;
     if (!container.open && container.dataset.loaded !== "true") {
-      container.dataset.loaded = "true";
-      setTimeout(() => loadContainerTree(containerSummary.dataset.containerPath, containerSummary.dataset.containerPrefix, container.querySelector(".tree-children")), 0);
+      loadContainerTree(containerSummary.dataset.containerPath, containerSummary.dataset.containerPrefix, container.querySelector(".tree-children"));
     }
     return;
   }
@@ -1364,10 +1481,11 @@ $("inventoryTree").addEventListener("click", (event) => {
   if (!summary) return;
   const folder = summary.parentElement;
   if (!folder.open && folder.dataset.loaded !== "true") {
-    folder.dataset.loaded = "true";
-    setTimeout(() => loadInventoryTree(summary.dataset.treePrefix, folder.querySelector(".tree-children")), 0);
+    loadInventoryTree(summary.dataset.treePrefix, folder.querySelector(".tree-children"));
   }
-});
+}
+$("inventoryTree").addEventListener("click", handleInventoryTreeClick);
+$("inventoryFiles").addEventListener("click", handleInventoryTreeClick);
 $("caseMedia").addEventListener("click", (event) => {
   const row = event.target.closest("tr[data-media-id]");
   if (row) openMedia(Number(row.dataset.mediaId));

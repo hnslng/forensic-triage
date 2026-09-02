@@ -1,6 +1,6 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.38. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.39. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
 
@@ -40,6 +40,7 @@ Stand: Version 0.2.0-alpha.38. Prioritäten richten sich nach forensischer Siche
 ## Datenträger und Scanunterstützung
 
 - [ ] Implementierten CD/DVD-Scanpfad mit realen intakten und beschädigten Medien im vorgesehenen Laufwerk validieren.
+- [ ] Nach beobachtetem Pi-Komplettstillstand: CD-Laufwerk zunächst mit eigener Stromversorgung/aktivem Hub, ohne eingelegtes Medium und mit ausgeschaltetem Auto-Scan prüfen; erst bei stabilem System Disc einlegen, manuell scannen und zuletzt Auto-Scan testen. Wiederanlauf von Dashboard, SSH und Geräteerkennung nach Fehlern kontrollieren. Bis zur verfügbaren Stromversorgung kein erneuter Anschlussversuch im gleichen Aufbau.
 - [ ] Weitere Dateisysteme und beschädigte Medien systematisch testen.
 - [ ] Klären, ob eine sehr leichte Dateisignatur-/Magic-Byte-Prüfung ohne Vollinhaltsanalyse in den Grobsichtungsumfang aufgenommen wird.
 - [ ] Falls umgesetzt: Abweichung zwischen Dateiendung und Signatur deutlich als Hinweis anzeigen.

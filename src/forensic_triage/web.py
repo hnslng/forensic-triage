@@ -6,11 +6,13 @@ import argparse
 import io
 import json
 import logging
+import math
 import os
 import re
 import shlex
 import subprocess
 import threading
+import time
 import zipfile
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +36,18 @@ ACTIVE_DEVICES: set[str] = set()
 QUARANTINED_DEVICES: set[str] = set()
 CASE_SESSION_LOCK = threading.Lock()
 ACTIVE_CASE_SESSION: dict[str, str] | None = None
+DEVICE_DISCOVERY_LOCK = threading.Lock()
+DEVICE_DISCOVERY_UNHEALTHY_UNTIL = 0.0
+LAST_DEVICE_DISCOVERY: list[dict[str, Any]] = []
+LAST_DEVICE_DISCOVERY_ERROR = ""
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        value = float(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if math.isfinite(value) and value > 0 else default
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -98,7 +112,17 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return devices
 
 
-def list_block_devices() -> list[dict[str, Any]]:
+def device_discovery_timeout_seconds() -> float:
+    """Return the short deadline for dashboard device inventory commands."""
+    return _env_float("FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS", 2.0)
+
+
+def device_discovery_backoff_seconds() -> float:
+    """Return the pause after a timed-out device inventory command."""
+    return _env_float("FORENSIC_TRIAGE_DEVICE_DISCOVERY_BACKOFF_SECONDS", 10.0)
+
+
+def list_block_devices(timeout: float | None = None) -> list[dict[str, Any]]:
     """Read the current kernel block-device inventory."""
     completed = run_command(
         [
@@ -108,6 +132,7 @@ def list_block_devices() -> list[dict[str, Any]]:
         check=True,
         text=True,
         capture_output=True,
+        timeout=timeout if timeout is not None else device_discovery_timeout_seconds(),
     )
     return json.loads(completed.stdout).get("blockdevices", [])
 
@@ -115,6 +140,35 @@ def list_block_devices() -> list[dict[str, Any]]:
 def discover_media_devices() -> list[dict[str, Any]]:
     """Return USB media and visible optical drives without touching their contents."""
     return parse_media_devices(list_block_devices())
+
+
+def cached_media_discovery(*, reactivate: bool = False) -> tuple[list[dict[str, Any]], str, list[str]]:
+    """Return media inventory without hammering a blocked USB/SCSI stack."""
+    global DEVICE_DISCOVERY_UNHEALTHY_UNTIL, LAST_DEVICE_DISCOVERY, LAST_DEVICE_DISCOVERY_ERROR
+    if not DEVICE_DISCOVERY_LOCK.acquire(blocking=False):
+        return [dict(item) for item in LAST_DEVICE_DISCOVERY], "Datenträgererkennung läuft noch; letzter bekannter Stand.", []
+    try:
+        if time.monotonic() < DEVICE_DISCOVERY_UNHEALTHY_UNTIL:
+            return [dict(item) for item in LAST_DEVICE_DISCOVERY], LAST_DEVICE_DISCOVERY_ERROR, []
+        reactivated = []
+        try:
+            if reactivate:
+                for path in ejected_usb_paths(list_block_devices()):
+                    run_command(["/usr/bin/eject", "-t", path], capture_output=True, timeout=2.0)
+                    reactivated.append(path)
+                if reactivated:
+                    run_command(["/usr/bin/udevadm", "settle"], capture_output=True, timeout=2.0)
+            devices = discover_media_devices()
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+            LAST_DEVICE_DISCOVERY_ERROR = f"Datenträgererkennung blockiert oder nicht verfügbar: {exc}"
+            DEVICE_DISCOVERY_UNHEALTHY_UNTIL = time.monotonic() + device_discovery_backoff_seconds()
+            return [dict(item) for item in LAST_DEVICE_DISCOVERY], LAST_DEVICE_DISCOVERY_ERROR, reactivated
+        LAST_DEVICE_DISCOVERY = [dict(item) for item in devices]
+        LAST_DEVICE_DISCOVERY_ERROR = ""
+        DEVICE_DISCOVERY_UNHEALTHY_UNTIL = 0.0
+        return devices, "", reactivated
+    finally:
+        DEVICE_DISCOVERY_LOCK.release()
 
 
 def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
@@ -360,11 +414,13 @@ class TriageHandler(BaseHTTPRequestHandler):
         route = urlsplit(self.path).path
         if route == "/api/status":
             try:
-                devices = discover_media_devices()
-                clear_absent_quarantines(devices)
+                devices, device_error, _ = cached_media_discovery()
+                if not device_error:
+                    clear_absent_quarantines(devices)
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
                 self._json(HTTPStatus.OK, {
                     "devices": devices,
+                    "device_error": device_error,
                     "latest": latest,
                     "cases": self.server.case_store.list_cases(),
                     "active_devices": active_device_paths(),
@@ -648,14 +704,12 @@ class TriageHandler(BaseHTTPRequestHandler):
     def _post_device_refresh(self) -> None:
         """Reactivate software-ejected USB media, then return fresh hardware state."""
         try:
-            paths = ejected_usb_paths(list_block_devices())
-            for path in paths:
-                run_command(["/usr/bin/eject", "-t", path], check=False, capture_output=True)
-            run_command(["/usr/bin/udevadm", "settle"], capture_output=True)
-            devices = discover_media_devices()
-            clear_absent_quarantines(devices)
+            devices, device_error, paths = cached_media_discovery(reactivate=True)
+            if not device_error:
+                clear_absent_quarantines(devices)
             self._json(HTTPStatus.OK, {
                 "devices": devices,
+                "device_error": device_error,
                 "reactivated": paths,
                 "active_devices": active_device_paths(),
                 "quarantined_devices": quarantined_device_paths(),

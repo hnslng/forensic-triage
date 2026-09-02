@@ -2,6 +2,25 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.39] – 2026-09-02
+
+### Behoben
+
+- Explorer und Suchergebnisse bleiben an die ausgewählte Sichtung gebunden. Verspätete Antworten nach Medien-, Filter- oder Dashboardwechsel werden verworfen; alte Dateiverzeichnisse und Entscheidungsantworten erscheinen nicht in einer anderen Medienansicht.
+- Der Verzeichnisbaum wird nach einem Medienwechsel auch nach vorheriger Filterung wieder sichtbar. Archiv-Unterordner und weitere Archivseiten sind sowohl im Explorer als auch in gefilterten Listen bedienbar; fehlgeschlagene Abrufe lassen sich erneut öffnen.
+- Dashboard und tabellarisches Fallprotokoll sortieren Sichtungsnummern numerisch aufsteigend, innerhalb der bestehenden Online-/Offline-Gruppen. Gespeicherte Nummern und Entscheidungen bleiben unverändert.
+- „Status aktualisieren“ wechselt nicht mehr ungewollt zur zuletzt gespeicherten Sichtung. Suchfeld und Filteraktionen umbrechen bei schmalen Explorer-Panels, statt das Suchfeld zusammenzudrücken.
+- Gefilterte Listen zählen ausdrücklich `FUNDSTELLEN` und unterscheiden `AUF DEM MEDIUM` von `IM ZIP`/`IM ISO` usw. Verschachtelte Archive werden als nicht weiter geöffnet gekennzeichnet; die äußeren Dateizahlen bleiben unverändert.
+- Dashboard-Geräteerkennung mit eigenem Zwei-Sekunden-Zeitlimit, nicht wartenden parallelen Abfragen und zehn Sekunden Pause nach einem Fehler; manuelles Aktualisieren berücksichtigt dieselbe Pause.
+- Ein Gerätefehler lässt Fallstatus und Updateinformationen weiter ausliefern, sofern der Systemdatenträger erreichbar bleibt. Veraltete Geräteinformationen werden als unbekannter Verbindungsstatus angezeigt; Medienaktionen pausieren bis zur erfolgreichen Erkennung.
+- Gerätequarantänen bleiben bei fehlgeschlagener Erkennung erhalten. Auto-Scan für geeignete USB- und CD/DVD-Medien bleibt vorgesehen.
+- Neue Erkennungsgrenzen in Installationsvorlage und deutscher Konfigurationsdokumentation beschrieben; bestehende lokale Konfigurationen bleiben erhalten.
+
+### Validierung
+
+- 15 netzwerkisolierte Browser-Regressionsprüfungen erfolgreich: Medienwechsel, A–B–A-Rennen, späte Detail-/Such-/Entscheidungsantworten, Statusaktualisierung, Filterreset, Archiv-Unterordner, Pagination, Fehlerwiederholung, Fundortkennzeichnung, schmale Panels und natürliche Sortierung. Keine Scans oder echten Falländerungen durch die Tests. Zusätzlich mit vorhandenen Scanergebnissen rein lesend im Browser geprüft.
+- 88 automatisierte Python-Tests erfolgreich; zusätzlich JavaScript-Syntax und Scanfreigabe bei Gerätefehler/Wiederanlauf geprüft. Der reale CD-Test bleibt bis zur verfügbaren separaten Laufwerksstromversorgung offen.
+
 ## [0.2.0-alpha.38] – 2026-09-02
 
 ### Geändert

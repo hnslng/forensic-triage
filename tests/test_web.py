@@ -1,11 +1,19 @@
 import json
+import subprocess
+import threading
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from forensic_triage.web import (
     EVIDENCE_PATTERN,
     QUARANTINED_DEVICES,
+    cached_media_discovery,
     _device_ejectable,
     clear_absent_quarantines,
+    device_discovery_backoff_seconds,
+    device_discovery_timeout_seconds,
     ejected_usb_paths,
     latest_result,
     parse_media_devices,
@@ -126,6 +134,103 @@ def test_web_configuration_can_come_from_environment(monkeypatch) -> None:
     assert args.profile == Path("/etc/forensic-triage/default.yaml")
     assert args.scan_timeout == 90
     assert args.command_timeout == 7
+
+
+def test_device_discovery_timeouts_can_come_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv("FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS", "1.5")
+    monkeypatch.setenv("FORENSIC_TRIAGE_DEVICE_DISCOVERY_BACKOFF_SECONDS", "4")
+
+    assert device_discovery_timeout_seconds() == 1.5
+    assert device_discovery_backoff_seconds() == 4
+
+
+def test_cached_media_discovery_returns_stale_state_during_backoff(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    monkeypatch.setattr(web, "DEVICE_DISCOVERY_UNHEALTHY_UNTIL", 0.0)
+    monkeypatch.setattr(web, "LAST_DEVICE_DISCOVERY", [{"path": "/dev/sdb"}])
+    monkeypatch.setattr(web, "LAST_DEVICE_DISCOVERY_ERROR", "")
+    monkeypatch.setattr(web, "device_discovery_backoff_seconds", lambda: 30.0)
+    clock = [100.0]
+    monkeypatch.setattr(web.time, "monotonic", lambda: clock[0])
+    calls = []
+
+    def fail_discovery():
+        calls.append(True)
+        raise subprocess.TimeoutExpired(["lsblk"], 2)
+
+    monkeypatch.setattr(web, "discover_media_devices", fail_discovery)
+
+    devices, error, reactivated = cached_media_discovery()
+
+    assert devices == [{"path": "/dev/sdb"}]
+    assert "Datenträgererkennung" in error
+    assert reactivated == []
+    assert cached_media_discovery(reactivate=True) == (devices, error, [])
+    assert len(calls) == 1  # Neither polling nor manual refresh retries during backoff.
+    devices[0]["path"] = "changed by caller"
+    assert cached_media_discovery()[0] == [{"path": "/dev/sdb"}]
+
+    clock[0] = 131.0
+    monkeypatch.setattr(web, "discover_media_devices", lambda: [])
+    assert cached_media_discovery() == ([], "", [])
+
+
+def test_parallel_status_does_not_wait_for_running_discovery(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    lock = threading.Lock()
+    monkeypatch.setattr(web, "DEVICE_DISCOVERY_LOCK", lock)
+    monkeypatch.setattr(web, "LAST_DEVICE_DISCOVERY", [])
+    lock.acquire()
+    try:
+        devices, error, _ = cached_media_discovery()
+        assert devices == []
+        assert "läuft noch" in error
+    finally:
+        lock.release()
+
+
+def test_failed_discovery_keeps_case_status_and_quarantine(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    monkeypatch.setattr(web, "cached_media_discovery", lambda: ([], "USB antwortet nicht", []))
+    monkeypatch.setattr(web, "QUARANTINED_DEVICES", {"/dev/sr0"})
+    monkeypatch.setattr(web, "read_update_status", lambda: {})
+    monkeypatch.setattr(web, "latest_result", lambda _: None)
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.path = "/api/status"
+    handler.server = SimpleNamespace(
+        results_root=None,
+        case_store=SimpleNamespace(latest_media=lambda: None, list_cases=lambda: [{"case_number": "TEST"}]),
+    )
+    responses = []
+    handler._json = lambda status, body: responses.append((status, body))
+    handler.do_GET()
+    status, body = responses[0]
+    assert status == 200
+    assert body["cases"] == [{"case_number": "TEST"}]
+    assert body["device_error"] == "USB antwortet nicht"
+    assert body["quarantined_devices"] == ["/dev/sr0"]
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-1", "0", "invalid"])
+def test_invalid_discovery_timeout_uses_bounded_default(monkeypatch, value) -> None:
+    monkeypatch.setenv("FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS", value)
+    assert device_discovery_timeout_seconds() == 2.0
+
+
+def test_block_device_inventory_passes_short_timeout(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    seen = []
+    def fake_command(args, **kwargs):
+        seen.append(kwargs["timeout"])
+        return subprocess.CompletedProcess(args, 0, '{"blockdevices": []}')
+    monkeypatch.setattr(web, "run_command", fake_command)
+    monkeypatch.setenv("FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS", "1.5")
+    assert web.list_block_devices() == []
+    assert seen == [1.5]
 
 
 def test_update_status_defaults_without_state_file(monkeypatch, tmp_path) -> None:

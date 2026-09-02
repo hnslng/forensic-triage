@@ -38,6 +38,8 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_PROFILE` | `<Projekt>/profiles/default.yaml` | Start-/Kompatibilitätsprofil |
 | `FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS` | `180` | maximale Gesamtdauer einer Grobsichtung in Sekunden |
 | `FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS` | `15` | maximale Dauer eines einzelnen Gerätebefehls in Sekunden |
+| `FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS` | `2` | Zeitlimit für `lsblk` bei der Geräteerkennung; danach höchstens 0,5 Sekunden Abbruchnachlauf |
+| `FORENSIC_TRIAGE_DEVICE_DISCOVERY_BACKOFF_SECONDS` | `10` | Pause vor einem erneuten Dashboard-Geräteabruf nach einem Fehler |
 | `FORENSIC_TRIAGE_CONTAINER_INDEX_SECONDS` | `3` | gemeinsames maximales Zusatzzeitbudget für ZIP-/ISO-/7Z-/RAR-Verzeichnisse je Medium |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_FILES` | `50` | höchstens katalogisierte ZIP-/ISO-/7Z-/RAR-Dateien je Medium |
 | `FORENSIC_TRIAGE_CONTAINER_MAX_ENTRIES` | `2000` | höchstens Einträge je Container |
@@ -65,7 +67,11 @@ FORENSIC_TRIAGE_CONTAINER_MAX_TOTAL_ENTRIES=10000
 
 ## Beschädigte oder sehr langsame Medien
 
-Jede Grobsichtung läuft in einem eigenen Prozess und – unter Linux – in einem privaten Mount-Namensraum. Ein vollständiger Scan wird standardmäßig nach 180 Sekunden beendet; einzelne Gerätebefehle bereits nach 15 Sekunden. Die Weboberfläche und andere parallele Scans bleiben dabei erreichbar.
+Jede Grobsichtung läuft in einem eigenen Prozess und – unter Linux – in einem privaten Mount-Namensraum. Ein vollständiger Scan wird standardmäßig nach 180 Sekunden beendet; einzelne Gerätebefehle bereits nach 15 Sekunden. Damit wartet der Webdienst nicht unbegrenzt auf den Scanner. Ein blockierter Kernel, USB-Bus oder Systemdatenträger kann trotzdem den gesamten Rechner betreffen; siehe [forensische Sicherheitsgrenzen](forensic-safety.md#beschädigte-medien).
+
+Auch die Geräteerkennung im Dashboard ist begrenzt: `lsblk` erhält standardmäßig zwei Sekunden, danach folgt höchstens eine halbe Sekunde Abbruchnachlauf. Bei einem Fehler pausieren automatische Statusabfragen und manuelles Aktualisieren die erneute Geräteerkennung für zehn Sekunden. Gleichzeitige Dashboard-Abfragen warten nicht hinter einem laufenden Geräteabruf. Fallstatus und Updateinformationen können weiter geliefert werden, solange deren Speicher erreichbar ist. Die Oberfläche zeigt den letzten bekannten Gerätebestand mit unbekanntem Verbindungsstatus; neue Scans und Auswerfen sind dort bis zur erfolgreichen Erkennung gesperrt. Ein fehlgeschlagener Abruf gilt ausdrücklich nicht als Nachweis, dass ein quarantänisiertes Medium abgezogen wurde.
+
+Die beiden zusätzlichen Konfigurationswerte gelten durch Programmvorgaben auch bei bestehenden Installationen; die lokale `triage.env` muss dafür nicht überschrieben werden. Die automatische Sichtung geeigneter CD/DVD-Medien bleibt grundsätzlich vorgesehen. Für Tests mit einem auffällig instabilen Laufwerk Auto-Scan vorher ausschalten und eine eigene Stromversorgung verwenden.
 
 Nach einer Zeitüberschreitung wird nur der betroffene Gerätepfad gesperrt und als `MEDIUM ANTWORTET NICHT` angezeigt. Die Sperre verschwindet erst, nachdem das Medium physisch getrennt wurde und die Oberfläche den Offline-Zustand erkannt hat. Das verhindert automatische Endloswiederholungen. Die Zeitlimits sind bewusst konfigurierbar, dürfen aber erst nach praktischen Tests mit der Zielhardware erhöht werden.
 

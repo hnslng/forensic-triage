@@ -28,6 +28,10 @@ ZIP-, ISO-, 7Z- und RAR-Dateien erscheinen dort wie aufklappbare Ordner mit eine
 
 Unter der Kategorie `ARCHIVE` steht zusätzlich die Anzahl sicher erkannter verschlüsselter ZIP-, 7Z- und RAR-Archive. Archive, deren Verschlüsselungszustand wegen Format, Beschädigung, fehlendem Teilvolume oder Limit nicht zuverlässig feststeht, werden getrennt als `UNGEPRÜFT` ausgewiesen. TRIAGE//BOX versucht keine Passwörter und deutet `UNGEPRÜFT` niemals als unverschlüsselt.
 
+Die gefilterte Liste zählt **Fundstellen**, nicht zusätzliche physische Dateien: Bei zehn Archivdateien auf dem Stick und drei weiteren Archivdateien innerhalb von ZIP-/ISO-Verzeichnissen zeigt sie beispielsweise 13 Fundstellen. Die Spalte **Fundort** unterscheidet `AUF DEM MEDIUM` und etwa `IM ZIP` oder `IM ISO`. Verschachtelte Archive bleiben sichtbare Einträge mit dem Hinweis `NICHT WEITER GEÖFFNET`; sie werden nicht rekursiv entpackt. Sowohl die Ordner im normalen Explorer als auch jene in der gefilterten Archivansicht lassen sich aufklappen.
+
+Beim Wechsel von Sichtung oder Filter verwirft die Oberfläche verspätete Antworten der vorherigen Ansicht. Die Sichtungen im Dashboard und im tabellarischen Fallprotokoll werden numerisch aufsteigend angezeigt; Online- und Offline-Gruppen bleiben getrennt. Navigation und Sortierung ändern weder die gespeicherten Sichtungsnummern noch die Entscheidungen.
+
 Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Scannerlauf erhalten. Ein Datenträger bekommt dabei automatisch eine neutrale Nummer wie `SICHT-001`.
 
 ## Welche Teile gibt es?

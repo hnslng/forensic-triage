@@ -336,6 +336,11 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .inventory-filter-bar { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: rgba(201, 242, 82, .035); }
 .inventory-filter-bar[hidden] { display: none; }
 .inventory-filter-bar strong { min-width: 0; overflow: hidden; color: var(--acid); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.inventory-filter-bar { flex-wrap: wrap; }
+.inventory-filter-bar > span { flex: 1 1 280px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.inventory-location { font-size: 10px; }
+.inventory-entry-note { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.5; white-space: normal; }
+.inventory-inner-file .inventory-location { color: var(--amber); }
 .inventory-table { max-height: 440px; overflow: auto; }
 .inventory-table thead { position: sticky; top: 0; background: var(--panel); }
 .inventory-empty td { padding: 24px 12px; color: var(--muted); text-align: center; }
@@ -347,6 +352,12 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .inventory-container-toggle b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: inherit; }
 .inventory-container-detail td { padding: 0 12px 12px 24px; background: rgba(201, 242, 82, .02); text-align: left !important; }
 .inventory-container-detail .tree-children { margin-left: 0; }
+.inventory-panel { container-type: inline-size; }
+@container (max-width: 640px) {
+  .inventory-tools { grid-template-columns: auto 1fr; }
+  .inventory-tools input { grid-column: 1 / -1; }
+  .inventory-tools > span { grid-column: 1 / -1; text-align: left; }
+}
 .inventory-tree { max-height: 520px; overflow: auto; padding: 8px 12px 14px; }
 .tree-folder { border-left: 1px solid var(--line); margin-left: 8px; }
 .tree-folder > summary, .tree-file { min-height: 40px; display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px dashed var(--line); list-style: none; }
