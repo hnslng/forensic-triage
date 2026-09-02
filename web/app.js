@@ -426,6 +426,9 @@ function renderMediaCards(media) {
       ? `<b>${escapeHtml(medium.evidence_number)}</b>`
       : "";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
+    const ejectLabel = String(medium.device_path || "").startsWith("/dev/sr")
+      ? "⏏ CD/DVD AUSWERFEN"
+      : "⏏ SICHER AUSWERFEN";
     return `<div class="media-card-shell${connected ? " online" : " offline"}"><button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
       <span class="media-card-top">${evidenceLabel}${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
@@ -433,7 +436,7 @@ function renderMediaCards(media) {
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
       <span class="connection-badge ${connected ? "connected" : "disconnected"}">${connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
-    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}">⏏ SICHER AUSWERFEN</button>` : ""}</div>`;
+    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}">${ejectLabel}</button>` : ""}</div>`;
   };
   const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
   const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
@@ -532,7 +535,10 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   const visibleDevices = devices.filter((device) => !(
     device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial)
   ));
-  $("deviceList").innerHTML = activeCaseNumber ? visibleDevices.map((device) => {
+  const dashboardDevices = activeCaseNumber
+    ? visibleDevices
+    : visibleDevices.filter((device) => device.media_type === "optical");
+  $("deviceList").innerHTML = dashboardDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
@@ -541,14 +547,19 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const stateReason = state === "timeout"
       ? "ABZIEHEN UND NEU VERBINDEN"
       : (deviceErrors.get(device.path) || device.unavailable_reason || "");
+    const optical = device.media_type === "optical";
+    const ejectDisabled = ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>NEUES MEDIUM</b><em>● ONLINE</em></span>
+      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>${optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>● ONLINE</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
       <div class="device-state"><b>${stateLabels[state]}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
-      <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
+      <div class="device-card-actions${optical ? " optical" : ""}">
+        <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
+        ${optical ? `<button class="device-eject" type="button" data-eject-device="${escapeHtml(device.path)}" ${ejectDisabled ? "disabled" : ""}>⏏ CD/DVD AUSWERFEN</button>` : ""}
+      </div>
     </article>`;
-  }).join("") : "";
+  }).join("");
   if (!activeCaseNumber) {
     $("mediaCards").innerHTML = "";
     $("offlineMediaPanel").hidden = true;
@@ -1042,7 +1053,10 @@ async function ejectDevice(devicePath) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Auswerfen fehlgeschlagen");
-    setSystemState("DATENTRÄGER KANN ABGEZOGEN WERDEN", "ready");
+    setSystemState(
+      data.media_type === "optical" ? "CD/DVD-LAUFWERK GEÖFFNET" : "DATENTRÄGER KANN ABGEZOGEN WERDEN",
+      "ready",
+    );
     await refresh(false);
   } catch (error) {
     setSystemState(`FEHLER: ${error.message}`, "error");
@@ -1153,6 +1167,8 @@ $("autoScanToggle").addEventListener("change", () => {
 });
 $("deviceRefresh").addEventListener("click", refreshMediaDevices);
 $("deviceList").addEventListener("click", (event) => {
+  const eject = event.target.closest("button[data-eject-device]");
+  if (eject) { ejectDevice(eject.dataset.ejectDevice); return; }
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);
 });

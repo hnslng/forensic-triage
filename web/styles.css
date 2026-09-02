@@ -104,6 +104,10 @@ h1 span { color: var(--acid); }
 @keyframes scan-progress { 0% { width: 10%; transform: translateX(-110%); } 60% { width: 70%; } 100% { width: 25%; transform: translateX(420%); } }
 .device-card button { min-height: 38px; margin-top: 10px; border: 1px solid var(--acid); color: var(--acid); background: transparent; cursor: pointer; font-size: 10px; font-weight: 900; }
 .device-card button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
+.device-card-actions { display: grid; grid-template-columns: 1fr; gap: 7px; margin-top: 10px; }
+.device-card-actions.optical { grid-template-columns: 1fr 1fr; }
+.device-card-actions button { min-width: 0; margin-top: 0; padding: 7px; }
+.device-card-actions .device-eject { border-color: var(--line); color: var(--ink); }
 .device-empty { min-height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; color: var(--muted); text-align: center; }
 .plug { color: var(--line); border: 2px solid var(--line); padding: 7px; }
 .device-empty small { max-width: 320px; }
@@ -459,6 +463,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .case-list-open { margin: 0 0 5px 5px; }
   .case-list-delete { margin: 0 5px 5px 0; }
   .device-list, .media-cards { grid-template-columns: 1fr; padding: 9px; }
+  .device-card-actions.optical { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 28px minmax(82px, 104px) minmax(64px, 1fr); gap: 8px; }
   .decision-buttons { grid-template-columns: 1fr; }
   .decision-headline, .decision-fields { grid-template-columns: 1fr; }

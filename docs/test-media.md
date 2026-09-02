@@ -3,7 +3,7 @@
 Das Skript `scripts/create_field_test_media.py` erzeugt auf macOS zwei harmlose, synthetische Testmedien:
 
 - einen Ordner zum Kopieren auf einen leeren USB-Teststick;
-- ein fertiges ISO-Abbild zum Brennen auf eine CD-R.
+- ein fertiges ISO-Abbild mit rund 620 MiB und mehr als 600 Dateien zum Brennen auf eine 700-MB-CD-R.
 
 Enthalten sind normale Dokument-, Tabellen-, Bild-, Audio-, E-Mail- und Datenbankdateien, versteckte Dateien und Ordner, Stichwörter mit Umlauten und eingebetteten Zeichenfolgen sowie echte ZIP-, 7Z- und RAR-Archive. Die Container umfassen offene Archive, Archive mit verschlüsselten Dateien, Archive mit verschlüsselten Kopfzeilen, ein Archiv im Archiv, ein beschädigtes ZIP und ein unvollständiges mehrteiliges RAR. Zusätzlich enthält ein ISO-Image ein RAR-Archiv, damit die bewusst nicht rekursive Behandlung verschachtelter Container sichtbar wird.
 
@@ -17,7 +17,7 @@ Voraussetzungen auf dem Entwicklungs-Mac:
 
 ```bash
 python scripts/create_field_test_media.py \
-  --output "$HOME/Desktop/TRIAGEBOX-Testmedien-alpha34"
+  --output "$HOME/Documents/Projekte/Triage/Testmedien/TRIAGEBOX-Volltest"
 ```
 
 Das Skript verweigert das Überschreiben eines vorhandenen Zielordners. Das feste Testpasswort lautet `triage-test` und schützt ausschließlich die synthetischen Archive; es darf niemals als Betriebskennwort verwendet werden.
@@ -31,7 +31,7 @@ Den **Inhalt** von `USB-STICK_KOPIEREN/` auf einen leeren, eindeutig als Testmed
 `TRIAGEBOX_CD_TEST.iso` als Abbild auf den Rohling brennen, nicht als gewöhnliche Datei auf eine Daten-CD kopieren. Im Finder kann das ISO über die Brennfunktion für Images geschrieben werden. Alternativ:
 
 ```bash
-hdiutil burn "$HOME/Desktop/TRIAGEBOX-Testmedien-alpha34/TRIAGEBOX_CD_TEST.iso"
+hdiutil burn "$HOME/Documents/Projekte/Triage/Testmedien/TRIAGEBOX-Volltest/TRIAGEBOX_CD_TEST.iso"
 ```
 
 Nach erfolgreichem Brennen die CD neu einlegen und anschließend im externen USB-Laufwerk am Pi prüfen. Das beigefügte `BRENANLEITUNG_MAC.txt` enthält denselben Ablauf.
@@ -43,6 +43,7 @@ Nach erfolgreichem Brennen die CD neu einlegen und anschließend im externen USB
 - Container innerhalb eines ZIP oder ISO erscheinen als Eintrag, werden aber nicht rekursiv geöffnet.
 - Beschädigte oder unvollständige Archive bleiben ausdrücklich `UNGEPRÜFT`, `UNVOLLSTÄNDIG` oder `NICHT LESBAR`.
 - Die Testdateien prüfen Metadaten, Kategorien und Namen/Pfade. Sie stellen keine inhaltliche forensische Validierung dar.
+- Das CD-Abbild enthält 610 Dateien, deutliche Kategorieverteilungen und mehrere 8 bis 120 MiB große Dateien. Mit etwa 621 MiB ISO-Größe bleibt Reserve zur 700-MB-Grenze eines normalen CD-R-Rohlings.
 
 ## English summary
 

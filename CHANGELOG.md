@@ -2,6 +2,22 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.35] – 2026-09-02
+
+### Hinzugefügt
+
+- reproduzierbarer CD-R-Volltestsatz mit 610 Dateien, 22 Ordnern, deutlichen Kategorieverteilungen und mehreren 8 bis 120 MiB großen Dateien; das fertige ISO ist mit 621,4 MiB für einen normalen 700-MB-Rohling ausgelegt.
+- sichtbarer Befehl `CD/DVD AUSWERFEN` direkt an externen optischen Laufwerken, auch ohne aktiven Fall und bei leerer Schublade.
+
+### Sicherheit
+
+- der Software-Auswurf bleibt während eines Scans, bei Fehlerquarantäne oder bei einem noch gemounteten Medium gesperrt; die bisherigen Schutzprüfungen für USB-Datenträger bleiben unverändert.
+- die Testmedien enthalten echte offene, verschlüsselte, verschachtelte, beschädigte und unvollständige ZIP-/7Z-/RAR-/ISO-Fälle, aber ausschließlich harmlose synthetische Daten.
+
+### Tests
+
+- 77 automatisierte Tests erfolgreich; das 621,4-MiB-CD-Abbild, alle SHA-256-Prüflisten und die erwartete Archivstatistik wurden zusätzlich mit der echten Containerlogik validiert.
+
 ## [0.2.0-alpha.34] – 2026-09-02
 
 ### Geändert

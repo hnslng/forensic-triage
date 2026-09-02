@@ -22,6 +22,7 @@ from pathlib import Path
 
 
 DEFAULT_PASSWORD = "triage-test"
+CD_TARGET_BYTES = 620 * 1024 * 1024
 PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
@@ -74,6 +75,14 @@ def write_pdf(path: Path, title: str) -> None:
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(payload)
+
+
+def write_sized_file(path: Path, size: int, prefix: bytes = b"") -> None:
+    """Create a deterministic sparse file with a small recognizable header."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("xb") as handle:
+        handle.write(prefix[:size])
+        handle.truncate(size)
 
 
 def write_normal_files(root: Path, label: str) -> None:
@@ -185,6 +194,11 @@ def write_expectations(root: Path, medium: str, password: str) -> None:
         if medium == "USB"
         else "4 Archive: 2 verschlüsselt, 1 nicht verschlüsselt, 1 ungeprüft"
     )
+    volume_expectation = (
+        "Kompakter Spezialtest"
+        if medium == "USB"
+        else "Volltest mit mindestens 600 Dateien und rund 620 MiB Quelldaten"
+    )
     write_text(
         root / "00_HINWEISE" / "ERWARTETE_BEOBACHTUNGEN.txt",
         f"""
@@ -196,6 +210,7 @@ TRIAGE//BOX – ERWARTETE BEOBACHTUNGEN ({medium})
 - Offene ZIP-/7Z-/RAR-Archive müssen aufklappbare Verzeichnisnamen liefern.
 - Passwortarchive müssen als verschlüsselt erkannt werden; es findet kein Passwortversuch statt.
 - Erwartete Archivstatistik: {archive_expectation}.
+- Umfang: {volume_expectation}.
 - 08_Archiv_in_Archiv.zip zeigt innere Archive nur als Dateien. Sie werden nicht rekursiv geöffnet.
 - Datensicherung_2024_mit_RAR.iso ist aufklappbar; Innen_Offen.rar darin bleibt ein nicht rekursiv geöffnetes Objekt.
 - 09_Beschaedigt.zip und 10_Mehrteilig_Teil2_fehlt.part1.rar müssen als unvollständig, nicht lesbar oder ungeprüft erscheinen.
@@ -203,6 +218,79 @@ TRIAGE//BOX – ERWARTETE BEOBACHTUNGEN ({medium})
 Nur zur manuellen Gegenprüfung lautet das Testpasswort: {password}
 Alle Inhalte sind synthetisch und dürfen niemals mit einer echten Fallakte verwechselt werden.
 """,
+    )
+
+
+def populate_cd_volume(cd_root: Path, target_bytes: int = CD_TARGET_BYTES) -> None:
+    """Fill the CD source with many harmless metadata fixtures and large sparse files."""
+    bulk = cd_root / "05_MENGENTEST"
+    for index in range(1, 241):
+        path = bulk / "Bilder" / f"Urlaub_Familie_{index:04d}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(PNG_1X1)
+    for index in range(1, 121):
+        write_pdf(
+            bulk / "Dokumente" / f"Rechnung_Projekt_{index:04d}.pdf",
+            f"Synthetische Rechnung {index:04d}",
+        )
+    for index in range(1, 81):
+        write_text(
+            bulk / "Tabellen" / f"Kunden_Export_{index:04d}.csv",
+            f"kunde;wert\nTEST-{index:04d};{index * 10}",
+        )
+    for index in range(1, 41):
+        write_text(
+            bulk / "E-Mail" / f"Buchhaltung_Anfrage_{index:04d}.eml",
+            f"From: test@example.invalid\nSubject: Synthetische Buchhaltung {index:04d}\n\nKeine echten Daten.",
+        )
+    for index in range(1, 31):
+        write_text(
+            bulk / "Web" / f"wallet_index_{index:04d}.json",
+            f'{{"synthetic": true, "id": {index}}}',
+        )
+        write_text(
+            bulk / "Logs" / f"Steuerberater_Protokoll_{index:04d}.log",
+            "Synthetischer Metadaten-Testeintrag",
+        )
+    for index in range(1, 26):
+        write_text(
+            bulk / "Unbekannt" / f"artefakt_{index:04d}.daten",
+            "Synthetischer unbekannter Dateityp",
+        )
+    for index in range(1, 11):
+        write_text(
+            bulk / ".cache" / f".versteckt_{index:04d}.txt",
+            "Regulär vorhandene versteckte Testdatei",
+        )
+
+    large = cd_root / "06_GROESSTE_DATEIEN"
+    large_specs = [
+        ("Video_Einsatzort_001.mp4", 120, b"\x00\x00\x00\x18ftypmp42"),
+        ("Video_Einsatzort_002.mp4", 96, b"\x00\x00\x00\x18ftypmp42"),
+        ("Video_Einsatzort_003.mp4", 72, b"\x00\x00\x00\x18ftypmp42"),
+        ("Kamera_Export.mov", 64, b"\x00\x00\x00\x14ftypqt  "),
+        ("Audio_Besprechung_001.wav", 48, b"RIFF\x00\x00\x00\x00WAVE"),
+        ("Audio_Besprechung_002.wav", 40, b"RIFF\x00\x00\x00\x00WAVE"),
+        ("System_Backup_001.bak", 32, b"TRIAGE-SYNTHETIC\n"),
+        ("System_Backup_002.bak", 24, b"TRIAGE-SYNTHETIC\n"),
+        ("Datentraeger_Abbild.img", 16, b"TRIAGE-SYNTHETIC\n"),
+        ("Kunden_Datenbank.db", 12, b"SQLite format 3\x00"),
+        ("Mailarchiv_Export.pst", 8, b"!BDN"),
+        ("Dokumentenstapel.pdf", 8, b"%PDF-1.4\n"),
+        ("Praesentation_Einsatz.pptx", 8, b"PK\x03\x04"),
+        ("Video_Kurzclip.mp4", 8, b"\x00\x00\x00\x18ftypmp42"),
+    ]
+    for name, size_mib, prefix in large_specs:
+        write_sized_file(large / name, size_mib * 1024 * 1024, prefix)
+
+    current_size = sum(item.stat().st_size for item in cd_root.rglob("*") if item.is_file())
+    remaining = target_bytes - current_size
+    if remaining <= 0:
+        raise RuntimeError("CD-Testdaten überschreiten bereits die Zielgröße")
+    write_sized_file(
+        large / "Video_Synthetisch_Restbestand.mp4",
+        remaining,
+        b"\x00\x00\x00\x18ftypmp42",
     )
 
 
@@ -215,6 +303,7 @@ def copy_cd_subset(cd_root: Path, archives: dict[str, Path], password: str) -> N
     cd_iso = cd_root / "04_ISO"
     cd_iso.mkdir(parents=True, exist_ok=True)
     shutil.copy2(archives["iso"], cd_iso / archives["iso"].name)
+    populate_cd_volume(cd_root)
     write_expectations(cd_root, "CD-R", password)
 
 
@@ -254,6 +343,10 @@ def main() -> None:
         tools["hdiutil"], "makehybrid", "-quiet", "-o", str(cd_iso), str(cd_root),
         "-iso", "-joliet", "-iso-volume-name", "TRIAGEBOX_CD", "-joliet-volume-name", "TRIAGEBOX_CD",
     ])
+    if cd_iso.stat().st_size > 690_000_000:
+        raise RuntimeError(
+            f"CD-Abbild ist für einen 700-MB-Rohling zu groß: {cd_iso.stat().st_size} Bytes"
+        )
     write_text(
         output / "BRENANLEITUNG_MAC.txt",
         f"""
@@ -283,6 +376,7 @@ TRIAGE//BOX REALISTISCHE TESTMEDIEN
     )
     print(f"USB-Testdaten: {usb_root}")
     print(f"CD-Abbild: {cd_iso}")
+    print(f"CD-Abbildgröße: {cd_iso.stat().st_size / 1024 / 1024:.1f} MiB")
     print(f"Testpasswort: {args.password}")
 
 

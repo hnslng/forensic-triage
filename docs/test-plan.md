@@ -2,7 +2,7 @@
 
 ## Automatisierte Tests
 
-Der aktuelle Stand umfasst 76 automatisierte Tests. Lokal ausführen:
+Der aktuelle Stand umfasst 77 automatisierte Tests. Lokal ausführen:
 
 ```bash
 .venv/bin/python -m pytest
@@ -75,10 +75,10 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.34` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.35` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Extraktion oder Dekompression, keine Passwortversuche, sichtbare Limitkennzeichnung, höchstens das konfigurierte Zusatzzeitbudget sowie unveränderte äußere Datei-/Ordnerzahlen.
 
 ## English summary
 
-The project currently has 59 automated tests plus a synthetic 960-file physical-media fixture. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.
+The project currently has 77 automated tests plus synthetic USB and 610-file CD-R fixtures. Before any operational release, it still needs real parallel-device, powered-hub, failure, optical-media, Raspberry Pi, recovery, encrypted-storage, and hardware-write-blocker validation.

@@ -4,6 +4,7 @@ from pathlib import Path
 from forensic_triage.web import (
     EVIDENCE_PATTERN,
     QUARANTINED_DEVICES,
+    _device_ejectable,
     clear_absent_quarantines,
     ejected_usb_paths,
     latest_result,
@@ -58,6 +59,13 @@ def test_media_discovery_supports_usb_and_loaded_optical_media() -> None:
     assert "/dev/sde" not in [item["path"] for item in devices]
     assert devices[-1]["media_type"] == "optical"
     assert devices[-1]["serial"] == "OPTICAL:DISC-9:EVIDENCE:4194304"
+    assert devices[3]["mounted"] is False
+
+
+def test_empty_optical_drive_can_open_tray_but_mounted_media_cannot() -> None:
+    assert _device_ejectable({"media_type": "optical", "mounted": False, "scan_supported": False})
+    assert not _device_ejectable({"media_type": "optical", "mounted": True, "scan_supported": False})
+    assert not _device_ejectable({"media_type": "usb", "mounted": False, "scan_supported": False})
 
 
 def test_media_discovery_excludes_actual_root_disk_not_device_name() -> None:
@@ -183,3 +191,4 @@ def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:
     assert "FAST · NUR LESEN" in html
     assert "FAST/RO · NUR LESEN" not in html
     assert '"NUR GESICHTET"' not in script
+    assert "CD/DVD AUSWERFEN" in script

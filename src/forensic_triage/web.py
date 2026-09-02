@@ -90,6 +90,7 @@ def parse_media_devices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "model": (node.get("model") or "").strip(),
             "serial": reported_serial,
             "read_only": bool(node.get("ro")),
+            "mounted": mounted,
             "media_type": "optical" if is_optical else "usb",
             "scan_supported": supported,
             "unavailable_reason": reason,
@@ -132,6 +133,13 @@ def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
         and re.fullmatch(r"/dev/sd[a-z]+", str(node.get("path", "")))
         and str(node.get("path", "")) not in system_device_paths
     ]
+
+
+def _device_ejectable(device: dict[str, Any]) -> bool:
+    """Allow an empty external optical tray to open without weakening USB checks."""
+    if device.get("mounted"):
+        return False
+    return bool(device.get("scan_supported") or device.get("media_type") == "optical")
 
 
 def active_device_paths() -> list[str]:
@@ -622,12 +630,16 @@ class TriageHandler(BaseHTTPRequestHandler):
             if path in quarantined_device_paths():
                 self._json(HTTPStatus.CONFLICT, {"error": "Datenträger reagierte nicht. Vor dem Auswerfen physisch trennen und erneut verbinden."})
                 return
-            if not device.get("scan_supported"):
+            if not _device_ejectable(device):
                 self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist noch eingebunden oder nicht auswerfbar."})
                 return
             run_command(["sync"])
             run_command(["/usr/bin/eject", path], capture_output=True)
-            self._json(HTTPStatus.OK, {"device_path": path, "ejected": True})
+            self._json(HTTPStatus.OK, {
+                "device_path": path,
+                "media_type": device.get("media_type", "usb"),
+                "ejected": True,
+            })
         except (OSError, subprocess.SubprocessError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Auswerfen fehlgeschlagen: {exc}"})
         except (json.JSONDecodeError, ValueError) as exc:

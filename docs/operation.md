@@ -64,6 +64,8 @@ Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Des
 
 TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann dennoch verwendet werden, damit das Betriebssystem das Gerät kontrolliert freigibt. Bei einem softwareseitig ausgeworfenen, weiterhin eingesteckten USB-Gerät versucht „Aktualisieren“, das Medium erneut zu erkennen. Ein physisches Ab- und Anstecken soll normalerweise nicht nötig sein.
 
+Bei einem externen USB-CD/DVD-Laufwerk erscheint direkt in der Laufwerkskachel `CD/DVD AUSWERFEN`. Dieser Befehl ist auch ohne aktiven Fall und bei leerem Laufwerk verfügbar, damit sich eine Schublade ohne physischen Knopf öffnen lässt. Während eines Scans oder solange das Medium anderweitig gemountet ist, bleibt der Auswurf gesperrt. Nach einer protokollierten Sichtung steht derselbe Befehl zusätzlich an der Medienkachel.
+
 ## 7. Fall exportieren
 
 „PDF-Bericht“ lädt eine kurze, druckbare Fallübersicht im A4-Querformat. Pro Datenträger enthält sie eine Zeile mit Seriennummer, technischen Dateikategorien, Entscheidung und gegebenenfalls der Begründung für „Nicht sichern“. „Falldaten ZIP“ erzeugt zusätzlich den vollständigen Export der lokalen Fallakte. Beide Exporte enthalten keine kopierten Dateiinhalte des gesichteten Mediums. Exporte aus echten Fällen müssen wie Fallunterlagen geschützt und dürfen nicht in Git gespeichert werden.
