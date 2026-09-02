@@ -23,6 +23,8 @@ from pathlib import Path
 
 DEFAULT_PASSWORD = "triage-test"
 CD_TARGET_BYTES = 620 * 1024 * 1024
+USB_DEFAULT_TARGET_GIB = 12
+USB_MINIMUM_TARGET_GIB = 12
 PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
@@ -188,14 +190,19 @@ def create_archives(target: Path, work: Path, tools: dict[str, str], password: s
     }
 
 
-def write_expectations(root: Path, medium: str, password: str) -> None:
+def write_expectations(
+    root: Path,
+    medium: str,
+    password: str,
+    usb_size_gib: int = USB_DEFAULT_TARGET_GIB,
+) -> None:
     archive_expectation = (
         "10 Archive: 4 verschlüsselt, 4 nicht verschlüsselt, 2 ungeprüft"
         if medium == "USB"
         else "4 Archive: 2 verschlüsselt, 1 nicht verschlüsselt, 1 ungeprüft"
     )
     volume_expectation = (
-        "Kompakter Spezialtest"
+        f"Volltest mit mindestens 3.800 Dateien und rund {usb_size_gib} GiB logischer Nutzgröße"
         if medium == "USB"
         else "Volltest mit mindestens 600 Dateien und rund 620 MiB Quelldaten"
     )
@@ -218,6 +225,84 @@ TRIAGE//BOX – ERWARTETE BEOBACHTUNGEN ({medium})
 Nur zur manuellen Gegenprüfung lautet das Testpasswort: {password}
 Alle Inhalte sind synthetisch und dürfen niemals mit einer echten Fallakte verwechselt werden.
 """,
+    )
+
+
+def populate_usb_volume(usb_root: Path, target_bytes: int) -> None:
+    """Create a realistic high-capacity USB fixture without wasting local disk space."""
+    bulk = usb_root / "05_MENGENTEST"
+    for index in range(1, 1_601):
+        path = bulk / "Bilder" / f"Foto_Einsatz_{index:05d}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(PNG_1X1)
+    for index in range(1, 701):
+        prefix = "Rechnung" if index % 10 == 0 else "Dokument"
+        write_pdf(
+            bulk / "Dokumente" / f"{prefix}_{index:05d}.pdf",
+            f"Synthetisches Dokument {index:05d}",
+        )
+    for index in range(1, 451):
+        prefix = "Kunden" if index % 15 == 0 else "Export"
+        write_text(
+            bulk / "Tabellen" / f"{prefix}_{index:05d}.csv",
+            f"id;wert\nTEST-{index:05d};{index * 10}",
+        )
+    for index in range(1, 251):
+        prefix = "Buchhaltung" if index % 20 == 0 else "Korrespondenz"
+        write_text(
+            bulk / "E-Mail" / f"{prefix}_{index:05d}.eml",
+            f"From: test@example.invalid\nSubject: Synthetische Nachricht {index:05d}\n\nKeine echten Daten.",
+        )
+    for index in range(1, 301):
+        prefix = "Steuerberater" if index % 25 == 0 else "System"
+        write_text(
+            bulk / "Logs" / f"{prefix}_Protokoll_{index:05d}.log",
+            "Synthetischer Metadaten-Testeintrag",
+        )
+    for index in range(1, 251):
+        prefix = "wallet" if index % 25 == 0 else "web_export"
+        write_text(
+            bulk / "Web" / f"{prefix}_{index:05d}.json",
+            f'{{"synthetic": true, "id": {index}}}',
+        )
+    for index in range(1, 101):
+        prefix = "DATEV" if index % 20 == 0 else "Archiv"
+        write_text(
+            bulk / "Datenbanken" / f"{prefix}_{index:05d}.sqlite",
+            "Synthetischer Dateityp-Test; keine echte Datenbank",
+        )
+        write_text(
+            bulk / "Unbekannt" / f"fragment_{index:05d}.daten",
+            "Synthetischer unbekannter Dateityp",
+        )
+    for index in range(1, 51):
+        write_text(
+            bulk / ".cache" / f".versteckt_{index:05d}.txt",
+            "Regulär vorhandene versteckte Testdatei",
+        )
+
+    large = usb_root / "06_GROESSTE_DATEIEN"
+    large_specs = [
+        ("Video_Einsatzort_001.mp4", 4_608, b"\x00\x00\x00\x18ftypmp42"),
+        ("Video_Einsatzort_002.mp4", 2_048, b"\x00\x00\x00\x18ftypmp42"),
+        ("Kamera_Export.mov", 1_536, b"\x00\x00\x00\x14ftypqt  "),
+        ("Systemabbild.img", 1_024, b"TRIAGE-SYNTHETIC\n"),
+        ("Mailarchiv_Export.pst", 768, b"!BDN"),
+        ("Audio_Besprechung.wav", 512, b"RIFF\x00\x00\x00\x00WAVE"),
+        ("DATEV_Sicherung.bak", 384, b"TRIAGE-SYNTHETIC\n"),
+        ("Kunden_Datenbank.sqlite", 256, b"SQLite format 3\x00"),
+    ]
+    for name, size_mib, prefix in large_specs:
+        write_sized_file(large / name, size_mib * 1024 * 1024, prefix)
+
+    current_size = sum(item.stat().st_size for item in usb_root.rglob("*") if item.is_file())
+    remaining = target_bytes - current_size
+    if remaining <= 0:
+        raise RuntimeError("USB-Testdaten überschreiten bereits die Zielgröße")
+    write_sized_file(
+        large / "Video_Synthetisch_Restbestand.mp4",
+        remaining,
+        b"\x00\x00\x00\x18ftypmp42",
     )
 
 
@@ -311,7 +396,11 @@ def write_checksums(root: Path, output: Path) -> None:
     lines = []
     for item in sorted(root.rglob("*")):
         if item.is_file() and item != output:
-            digest = hashlib.sha256(item.read_bytes()).hexdigest()
+            hasher = hashlib.sha256()
+            with item.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(4 * 1024 * 1024), b""):
+                    hasher.update(chunk)
+            digest = hasher.hexdigest()
             lines.append(f"{digest}  {item.relative_to(root).as_posix()}")
     write_text(output, "\n".join(lines))
 
@@ -320,7 +409,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Erzeugt realistische synthetische USB- und CD-Testmedien.")
     parser.add_argument("--output", type=Path, required=True, help="neues Ausgabeverzeichnis")
     parser.add_argument("--password", default=DEFAULT_PASSWORD, help="ausschließlich synthetisches Archiv-Testpasswort")
+    parser.add_argument(
+        "--usb-size-gib",
+        type=int,
+        default=USB_DEFAULT_TARGET_GIB,
+        help="logische USB-Testgröße in GiB (mindestens 12; Standard: 12)",
+    )
     args = parser.parse_args()
+    if args.usb_size_gib < USB_MINIMUM_TARGET_GIB:
+        parser.error(f"--usb-size-gib muss mindestens {USB_MINIMUM_TARGET_GIB} betragen")
     output = args.output.expanduser().resolve()
     if output.exists():
         parser.error(f"Ausgabe existiert bereits; wird nicht überschrieben: {output}")
@@ -333,7 +430,8 @@ def main() -> None:
         work = Path(temporary)
         write_normal_files(usb_root, "USB")
         archives = create_archives(usb_root / "03_ARCHIVE", work, tools, args.password)
-        write_expectations(usb_root, "USB", args.password)
+        populate_usb_volume(usb_root, args.usb_size_gib * 1024 * 1024 * 1024)
+        write_expectations(usb_root, "USB", args.password, args.usb_size_gib)
         copy_cd_subset(cd_root, archives, args.password)
 
     write_checksums(usb_root, usb_root / "00_HINWEISE" / "SHA256SUMS.txt")
@@ -369,12 +467,16 @@ Nicht den Ordner CD-QUELLE zusätzlich brennen; das ISO enthält ihn bereits vol
 TRIAGE//BOX REALISTISCHE TESTMEDIEN
 
 - Den INHALT von USB-STICK_KOPIEREN auf einen leeren Test-USB-Stick kopieren.
+- Der USB-Satz hat rund {args.usb_size_gib} GiB logische Größe. Große Dateien sind lokal platzsparend angelegt,
+  belegen auf einem üblichen exFAT-Teststick beim Kopieren aber ihre vollständige Größe.
 - TRIAGEBOX_CD_TEST.iso gemäß BRENANLEITUNG_MAC.txt auf einen CD-R-Rohling brennen.
 - Testpasswort für die absichtlich verschlüsselten Archive: {args.password}
 - Die Daten sind ausschließlich synthetisch. Nicht für echte Fälle verwenden.
 """,
     )
     print(f"USB-Testdaten: {usb_root}")
+    print(f"USB-Testgröße: {sum(item.stat().st_size for item in usb_root.rglob('*') if item.is_file()) / 1024 / 1024 / 1024:.1f} GiB")
+    print(f"USB-Dateien: {sum(1 for item in usb_root.rglob('*') if item.is_file())}")
     print(f"CD-Abbild: {cd_iso}")
     print(f"CD-Abbildgröße: {cd_iso.stat().st_size / 1024 / 1024:.1f} MiB")
     print(f"Testpasswort: {args.password}")

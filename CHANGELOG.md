@@ -2,6 +2,21 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.36] – 2026-09-02
+
+### Hinzugefügt
+
+- realistischer USB-Volltestsatz mit 3.835 Dateien und rund 12 GiB logischer Größe; enthalten sind ausgeprägte Kategorieverteilungen, reguläre versteckte Dateien, 173 Referenz-Stichworttreffer und Dateien bis 4,5 GiB.
+- USB-Zielgröße des Testmedien-Generators ist mit `--usb-size-gib` ab 12 GiB einstellbar.
+
+### Geändert
+
+- große synthetische Dateien werden lokal platzsparend angelegt und beim Kopieren auf exFAT vollständig geschrieben; Prüfsummen werden speicherschonend blockweise berechnet.
+
+### Tests
+
+- 77 automatisierte Tests erfolgreich; der neue USB-Bestand wurde zusätzlich mit der echten Inventar-, Stichwort- und Containerlogik geprüft: 3.835 Dateien, 11 erkannte Container und 45 indexierte Container-Einträge in rund 0,3 Sekunden auf dem Entwicklungs-Mac.
+
 ## [0.2.0-alpha.35] – 2026-09-02
 
 ### Hinzugefügt

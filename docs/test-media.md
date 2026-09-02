@@ -2,7 +2,7 @@
 
 Das Skript `scripts/create_field_test_media.py` erzeugt auf macOS zwei harmlose, synthetische Testmedien:
 
-- einen Ordner zum Kopieren auf einen leeren USB-Teststick;
+- einen USB-Volltestsatz mit rund 12 GiB logischer Größe und mehr als 3.800 Dateien zum Kopieren auf einen leeren Teststick;
 - ein fertiges ISO-Abbild mit rund 620 MiB und mehr als 600 Dateien zum Brennen auf eine 700-MB-CD-R.
 
 Enthalten sind normale Dokument-, Tabellen-, Bild-, Audio-, E-Mail- und Datenbankdateien, versteckte Dateien und Ordner, Stichwörter mit Umlauten und eingebetteten Zeichenfolgen sowie echte ZIP-, 7Z- und RAR-Archive. Die Container umfassen offene Archive, Archive mit verschlüsselten Dateien, Archive mit verschlüsselten Kopfzeilen, ein Archiv im Archiv, ein beschädigtes ZIP und ein unvollständiges mehrteiliges RAR. Zusätzlich enthält ein ISO-Image ein RAR-Archiv, damit die bewusst nicht rekursive Behandlung verschachtelter Container sichtbar wird.
@@ -20,11 +20,15 @@ python scripts/create_field_test_media.py \
   --output "$HOME/Documents/Projekte/Triage/Testmedien/TRIAGEBOX-Volltest"
 ```
 
+Mit `--usb-size-gib 32` kann der große Restbestand beispielsweise auf rund 32 GiB erweitert werden. Der Mindestwert ist 12 GiB. Das vollständige Füllen eines als 128 GB beworbenen Sticks ist für die Metadaten-Grobsichtung nicht erforderlich und verlängert nur Erzeugung, Kopieren und Prüfsummenprüfung.
+
 Das Skript verweigert das Überschreiben eines vorhandenen Zielordners. Das feste Testpasswort lautet `triage-test` und schützt ausschließlich die synthetischen Archive; es darf niemals als Betriebskennwort verwendet werden.
 
 ## USB-Test
 
-Den **Inhalt** von `USB-STICK_KOPIEREN/` auf einen leeren, eindeutig als Testmedium markierten USB-Stick kopieren. Danach sauber auswerfen, am Pi anschließen, einen eigenen Testfall starten und die Datei `00_HINWEISE/ERWARTETE_BEOBACHTUNGEN.txt` mit der Anzeige vergleichen.
+Den **Inhalt** von `USB-STICK_KOPIEREN/` auf einen leeren, eindeutig als Testmedium markierten exFAT-Stick kopieren. Danach sauber auswerfen, am Pi anschließen, einen eigenen Testfall starten und die Datei `00_HINWEISE/ERWARTETE_BEOBACHTUNGEN.txt` mit der Anzeige vergleichen. Eine der synthetischen Videodateien ist größer als 4 GiB; FAT32 ist deshalb absichtlich ungeeignet.
+
+Die großen synthetischen Dateien werden auf APFS lokal platzsparend („sparse“) erzeugt. Ihre angezeigte logische Größe beträgt zusammen rund 12 GiB; beim Kopieren auf exFAT werden diese Blöcke tatsächlich geschrieben. Damit bleibt das lokale Testpaket handlich, während der physische USB-Test realistische Kapazitäts- und Kopierbedingungen besitzt. TRIAGE//BOX selbst soll nur die Metadaten lesen und deshalb nicht von den 12 GiB Nutzdaten abhängig langsam werden.
 
 ## CD-R-Test
 
@@ -43,6 +47,7 @@ Nach erfolgreichem Brennen die CD neu einlegen und anschließend im externen USB
 - Container innerhalb eines ZIP oder ISO erscheinen als Eintrag, werden aber nicht rekursiv geöffnet.
 - Beschädigte oder unvollständige Archive bleiben ausdrücklich `UNGEPRÜFT`, `UNVOLLSTÄNDIG` oder `NICHT LESBAR`.
 - Die Testdateien prüfen Metadaten, Kategorien und Namen/Pfade. Sie stellen keine inhaltliche forensische Validierung dar.
+- Der USB-Satz enthält 3.835 Dateien, 173 Treffer über die sieben Referenzbegriffe, zehn Archiv-Sonderfälle, ein zusätzliches ISO und mehrere große Dateien bis 4,5 GiB.
 - Das CD-Abbild enthält 610 Dateien, deutliche Kategorieverteilungen und mehrere 8 bis 120 MiB große Dateien. Mit etwa 621 MiB ISO-Größe bleibt Reserve zur 700-MB-Grenze eines normalen CD-R-Rohlings.
 
 ## English summary
