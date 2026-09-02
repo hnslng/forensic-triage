@@ -2,6 +2,18 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.32] – 2026-09-02
+
+### Behoben
+
+- aktiver Fall wird nach einem Browser-Neuladen aus dem maßgeblichen Gerätestatus vollständig in Fallnummer, Bearbeiter, Fallakte und Bedienfreigaben übernommen.
+- ein in einem anderen Browserfenster beendeter Fall sperrt auch die lokale Ansicht automatisch.
+- Updatebutton zeigt bei einer fachlichen Sperre keinen irreführenden Wartecursor mehr; der Wartecursor erscheint nur während einer tatsächlich laufenden Prüfung oder Installation.
+
+### Sicherheit
+
+- Fallanzeige und serverseitige Update-Sperre können nicht mehr unbemerkt unterschiedliche Sitzungszustände darstellen.
+
 ## [0.2.0-alpha.31] – 2026-09-02
 
 ### Geändert

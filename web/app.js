@@ -31,6 +31,7 @@ let profileEditorId = "default";
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 let updateActionInProgress = null;
 let serverActiveCase = null;
+let caseSessionTransition = false;
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const formatReleaseVersion = (value) => {
   const match = String(value || "").match(/^(\d+\.\d+\.\d+)a(\d+)$/);
@@ -77,6 +78,7 @@ function renderUpdateState(value = {}) {
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   const actionRunning = Boolean(updateActionInProgress) || state === "checking" || state === "installing";
+  $("updateModal").classList.toggle("update-busy", actionRunning);
   $("updateInstall").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning;
   $("updateCheck").disabled = actionRunning;
   if (!updateActionInProgress) {
@@ -567,12 +569,52 @@ function renderCaseHistory(cases) {
   }).join("") || "<p>NOCH KEINE FÄLLE VORHANDEN</p>";
 }
 
+async function syncCaseSessionFromServer(session) {
+  if (caseSessionTransition) return;
+  const serverCaseNumber = String(session?.case_number || "");
+  const serverOperator = String(session?.operator || "");
+  serverActiveCase = session || null;
+  if (!serverCaseNumber) {
+    if (!activeCaseNumber) return;
+    activeCaseNumber = null;
+    activeOperator = "";
+    currentCaseMedia = [];
+    currentMediaId = null;
+    currentDecision = null;
+    inventoryTreeMediaId = null;
+    $("caseNumber").value = "";
+    $("operator").value = "";
+    $("casePanel").hidden = true;
+    $("results").hidden = true;
+    $("dashboardView").hidden = false;
+    setCaseDownloads();
+    caseHistorySignature = "";
+    resetDeviceStatesForCase();
+    updateCaseSessionUi("FALL AUF DEM GERÄT BEENDET · SCANS GESPERRT");
+    setSystemState("GESPERRT", "locked");
+    return;
+  }
+  if (activeCaseNumber === serverCaseNumber && activeOperator === serverOperator) return;
+  activeCaseNumber = serverCaseNumber;
+  activeOperator = serverOperator;
+  $("caseNumber").value = activeCaseNumber;
+  $("operator").value = activeOperator;
+  currentMediaId = null;
+  currentDecision = null;
+  inventoryTreeMediaId = null;
+  caseHistorySignature = "";
+  await loadCase(activeCaseNumber);
+  resetDeviceStatesForCase();
+  updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · GERÄTESTATUS ÜBERNOMMEN`);
+  setSystemState("BEREIT", "ready");
+}
+
 async function refresh(loadLatest = false) {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("offline");
     const data = await response.json();
-    serverActiveCase = data.active_case || null;
+    await syncCaseSessionFromServer(data.active_case || null);
     renderDevices(data.devices || [], data.active_devices || [], data.quarantined_devices || []);
     renderCaseHistory(data.cases || []);
     if (!updateActionInProgress) renderUpdateState(data.update || {});
@@ -867,6 +909,7 @@ async function startCaseSession() {
   }
   $("caseStart").disabled = true;
   $("caseStartMessage").textContent = "FALL WIRD GESTARTET …";
+  caseSessionTransition = true;
   try {
     const response = await fetch("/api/cases/start", {
       method: "POST",
@@ -894,11 +937,14 @@ async function startCaseSession() {
     $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
     $("caseStartMessage").className = "case-start-message warning";
     updateCaseSessionUi($("caseStartMessage").textContent);
+  } finally {
+    caseSessionTransition = false;
   }
 }
 
 async function stopCaseSession() {
   if (runningPaths.size) return;
+  caseSessionTransition = true;
   clearTimeout(autoStartTimer);
   activeCaseNumber = null;
   activeOperator = "";
@@ -926,7 +972,11 @@ async function stopCaseSession() {
     renderUpdateState(updateState);
   } catch (error) {
     $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
+    caseSessionTransition = false;
     await refresh(false);
+    return;
+  } finally {
+    caseSessionTransition = false;
   }
 }
 

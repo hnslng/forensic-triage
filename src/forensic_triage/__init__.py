@@ -1,3 +1,3 @@
 """Forensic Triage Box scanner."""
 
-__version__ = "0.2.0a31"
+__version__ = "0.2.0a32"

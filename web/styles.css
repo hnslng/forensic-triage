@@ -390,7 +390,8 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .update-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 13px; }
 .update-actions button { min-height: 43px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-size: 10px; font-weight: 950; }
 .update-actions button:hover { border-color: var(--acid); color: var(--acid); }
-.update-actions button:disabled { border-color: var(--line); color: var(--muted); cursor: wait; }
+.update-actions button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
+.update-modal.update-busy .update-actions button:disabled { cursor: wait; }
 .update-actions #updateInstall { border-color: var(--acid); background: var(--acid); color: #111; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
