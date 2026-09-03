@@ -2,6 +2,19 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.41] – 2026-09-03
+
+### Geändert
+
+- Archivstatus als kompakte, anklickbare Zeile unter den Dateitypen: „4 verschlüsselt“ und „2 ungeprüft“ filtern direkt die entsprechenden Archivdateien. Aktive Auswahl ist erkennbar; erneuter Klick oder „Filter aufheben“ führt zurück zum Explorer. Zähler mit null Treffern sind deaktiviert.
+- Explorer und Suchergebnisse kennzeichnen verschlüsselte Archive dezent in Amber und ungeprüfte Archive neutral/gepunktet, jeweils mit Klartext. Lesbare, unverschlüsselte Archive erhalten kein Entwarnungssignal.
+- Zähler, Filter und Kennzeichnung verwenden dieselbe konservative Einstufung aus dem gespeicherten Archivindex. Verschachtelte Archivnamen zählen nicht zu diesen Statusfiltern; unbekannte oder unvollständige Prüfungen gelten nicht als unverschlüsselt. Keine zusätzliche Medienprüfung, Extraktion oder Änderung von Fallprotokollen.
+
+### Validierung
+
+- 98 Python-Tests und 21 isolierte Browser-Tests erfolgreich: Trefferzahlen, unbekannte Alt-/nicht unterstützte Archive, Partitionszuordnung, Pagination, aufklappbare Filtertreffer, Filterreset, verspätete Antworten und unveränderte Fallunterlagen.
+- Kompakte Darstellung bei 1440 und 800 Pixeln sowie Explorer-/Listenkennzeichnungen visuell mit synthetischen Beispielen geprüft.
+
 ## [0.2.0-alpha.40] – 2026-09-03
 
 ### Geändert

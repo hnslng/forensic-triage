@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .container_inventory import empty_catalog, virtual_files
+from .container_inventory import archive_encryption_state, archive_encryption_states, empty_catalog, virtual_files
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 
@@ -452,7 +452,10 @@ class CaseStore:
         keyword: str = "",
         offset: int = 0,
         exact_path: str | None = None,
+        archive_status: str = "",
     ) -> dict[str, Any]:
+        if archive_status not in {"", "encrypted", "unknown"}:
+            raise ValueError("Ungültiger Archivstatus.")
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT result_path FROM media WHERE id=?",
@@ -476,14 +479,19 @@ class CaseStore:
         capped = max(1, min(limit, 500))
         catalog = self._load_container_catalog(inventory_path.parent)
         container_records = list(catalog.get("containers", []))
+        encryption_states = archive_encryption_states(catalog)
 
         def inventory_items():
             with inventory_path.open(encoding="utf-8", newline="") as handle:
                 yield from csv.DictReader(handle)
-            yield from virtual_files(catalog)
+            if not archive_status:
+                yield from virtual_files(catalog)
 
         for item in inventory_items():
             path = str(item.get("path", ""))
+            encryption_state = archive_encryption_state(item, encryption_states)
+            if archive_status and encryption_state != archive_status:
+                continue
             if exact_path is not None and path != exact_path:
                 continue
             if needle and needle not in path.casefold():
@@ -506,6 +514,8 @@ class CaseStore:
                     "container_format": item.get("container_format", ""),
                     "size_known": item.get("size_known", True),
                 }
+                if encryption_state is not None:
+                    record["archive_encryption"] = encryption_state
                 if str(item.get("source", "media_inventory")) != "container_index":
                     partition_slot = str(item.get("partition_slot", ""))
                     container = next((
@@ -566,6 +576,7 @@ class CaseStore:
         inventory_path = self.root / str(row["result_path"]) / "files.csv"
         catalog = self._load_container_catalog(inventory_path.parent)
         container_records = list(catalog.get("containers", []))
+        encryption_states = archive_encryption_states(catalog)
         folders: dict[str, dict[str, Any]] = {}
         files: list[dict[str, Any]] = []
         base = f"{normalized_prefix}/" if normalized_prefix else ""
@@ -588,6 +599,7 @@ class CaseStore:
                     folder["file_count"] += 1
                     folder["size"] += size
                 else:
+                    encryption_state = archive_encryption_state(item, encryption_states)
                     partition_slot = str(item.get("partition_slot", ""))
                     container = next((
                         record for record in container_records
@@ -598,6 +610,7 @@ class CaseStore:
                         "kind": "container" if container else "file", "name": first, "path": child_path,
                         "size": size, "extension": item.get("extension", ""),
                         "category": item.get("category", "Unbekannt"),
+                        **({"archive_encryption": encryption_state} if encryption_state is not None else {}),
                         **({
                             "container_format": container.get("format", "container"),
                             "container_id": container.get("id", container.get("path", child_path)),

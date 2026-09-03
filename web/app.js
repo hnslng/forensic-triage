@@ -277,7 +277,9 @@ function renderResults(summary, hits = {}) {
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
   $("archiveEncryptedCount").textContent = Number(archiveEncryption.encrypted || 0).toLocaleString("de-AT");
   $("archiveUnknownCount").textContent = Number(archiveEncryption.unknown || 0).toLocaleString("de-AT");
-  $("archiveUnknownCount").classList.toggle("warning", Number(archiveEncryption.unknown || 0) > 0);
+  for (const button of $("archiveStatus").querySelectorAll("button")) {
+    button.disabled = !Number(archiveEncryption[button.dataset.inventoryArchiveStatus] || 0);
+  }
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
   `).join("");
@@ -823,6 +825,13 @@ async function saveDecision() {
   }
 }
 
+function archiveStatusMark(file) {
+  if (file.source === "container_index") return "";
+  if (file.archive_encryption === "encrypted") return '<span class="archive-mark encrypted">VERSCHLÜSSELT</span>';
+  if (file.archive_encryption === "unknown") return '<span class="archive-mark unknown" title="Verschlüsselungsstatus nicht geklärt; nicht gleichbedeutend mit unverschlüsselt">UNGEPRÜFT</span>';
+  return "";
+}
+
 function treeEntriesHtml(entries, containerPath = "") {
   return entries.map((entry) => {
     if (entry.kind === "directory") {
@@ -836,20 +845,21 @@ function treeEntriesHtml(entries, containerPath = "") {
       const format = String(entry.container_format || "CONTAINER").toUpperCase();
       const stateLabels = {
         invalid_or_unsupported: "NICHT LESBAR",
-        encrypted_headers: "NAMEN VERSCHLÜSSELT",
+        encrypted_headers: "NAMEN NICHT SICHTBAR",
         incomplete: "UNVOLLSTÄNDIG",
         tool_unavailable: "WERKZEUG FEHLT",
       };
       const state = stateLabels[entry.container_status]
         || (entry.truncated ? `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE · LIMIT`
           : `${Number(entry.entry_count).toLocaleString("de-AT")} EINTRÄGE`);
-      const encryptionState = entry.encrypted && entry.container_status !== "encrypted_headers" ? " · VERSCHLÜSSELT" : "";
-      return `<details class="tree-folder tree-container" data-loaded="false">
-        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(state + encryptionState)}</small></summary>
+      const marker = archiveStatusMark(entry);
+      const encryptionState = !marker && entry.encrypted ? " · VERSCHLÜSSELT" : "";
+      return `<details class="tree-folder tree-container" data-loaded="false" data-archive-state="${escapeHtml(entry.archive_encryption || "")}">
+        <summary data-container-path="${escapeHtml(entry.container_id || entry.path)}" data-container-prefix=""><span class="tree-arrow">▶</span><b>${escapeHtml(entry.name)}</b><small>${marker}${escapeHtml(state + encryptionState)}</small></summary>
         <div class="tree-children"><p class="tree-loading">${escapeHtml(format)}-VERZEICHNIS ÖFFNEN …</p></div>
       </details>`;
     }
-    return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${escapeHtml(entry.category)} · ${entry.size_known === false ? "GRÖSSE NICHT INDEXIERT" : formatBytes(entry.size)}</small></div>`;
+    return `<div class="tree-file"><span>·</span><b>${escapeHtml(entry.name)}</b><small>${archiveStatusMark(entry)}${escapeHtml(entry.category)} · ${entry.size_known === false ? "GRÖSSE NICHT INDEXIERT" : formatBytes(entry.size)}</small></div>`;
   }).join("") || '<p class="tree-loading">ORDNER IST LEER</p>';
 }
 
@@ -865,7 +875,9 @@ function inventoryRowsHtml(files) {
     const note = nested ? '<small class="inventory-entry-note">VERSCHACHTELT · NICHT WEITER GEÖFFNET</small>' : "";
     const matchNote = file.match_source && (!inside || !file.match_source.endsWith("-INHALT") || file.match_source.includes(" · "))
       ? `<small class="inventory-entry-note">${escapeHtml(file.match_source)}</small>` : "";
-    const row = `<tr${inside ? ' class="inventory-inner-file"' : ""}><td title="${path}">${pathCell}${note}</td><td><span class="inventory-location">${escapeHtml(location)}</span>${matchNote}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
+    const marker = archiveStatusMark(file);
+    const statusNote = marker ? `<small class="inventory-archive-state">${marker}</small>` : "";
+    const row = `<tr${inside ? ' class="inventory-inner-file"' : ""}><td title="${path}">${pathCell}${statusNote}${note}</td><td><span class="inventory-location">${escapeHtml(location)}</span>${matchNote}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
     if (!file.container_id) return row;
     return `${row}<tr class="inventory-container-detail" hidden><td colspan="5"><div class="tree-children"><p class="tree-loading">ARCHIVVERZEICHNIS ÖFFNEN …</p></div></td></tr>`;
   }).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
@@ -999,26 +1011,29 @@ async function resetInventoryView() {
   await loadInventoryTree();
 }
 
-async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, offset = 0 } = {}) {
+async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, archiveStatus = "", offset = 0 } = {}) {
   if (!currentMediaId) return;
   const searchText = search === null ? $("inventorySearch").value.trim() : search;
-  if (!searchText && !category && !keyword && exactPath === null) {
+  if (!searchText && !category && !keyword && exactPath === null && !archiveStatus) {
     $("inventorySearch").focus();
     return;
   }
-  if (exactPath !== null || (searchText && !category && !keyword)) clearInventoryFilterState();
+  if (exactPath !== null || (searchText && !category && !keyword && !archiveStatus)) clearInventoryFilterState();
   if (offset === 0) {
     inventoryViewRevision += 1;
-    inventoryListState = { category, keyword, search: searchText, exactPath, nextOffset: 0 };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, nextOffset: 0 };
     $("inventoryFiles").innerHTML = '<tr><td colspan="5">FUNDSTELLEN WERDEN GELADEN …</td></tr>';
   }
   const target = $("inventoryFiles");
   const request = beginInventoryRequest(target);
   $("inventoryTree").hidden = true;
   $("inventorySearchResults").hidden = false;
-  const filterLabel = exactPath !== null ? `DATEI: ${exactPath}` : category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`;
+  const filterLabel = archiveStatus ? `ARCHIVE: ${archiveStatus === "encrypted" ? "VERSCHLÜSSELT" : "UNGEPRÜFT"}` : exactPath !== null ? `DATEI: ${exactPath}` : category ? `DATEITYP: ${category}` : keyword ? `STICHWORT: ${keyword}` : `SUCHE: ${searchText}`;
   $("inventoryFilterLabel").textContent = filterLabel.toUpperCase();
   $("inventoryFilterLabel").title = filterLabel;
+  $("inventoryFilterDescription").textContent = archiveStatus
+    ? "Nur Archivdateien auf dem Medium. Ungeprüft = Verschlüsselungsstatus nicht geklärt."
+    : "Auf dem Medium und in lesbaren Archivverzeichnissen. Inhalte werden nicht zusätzlich zur Dateizahl gezählt.";
   $("inventoryFilterBar").hidden = false;
   $("inventoryReset").hidden = false;
   $("inventoryMore").hidden = true;
@@ -1029,6 +1044,7 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     if (category) parameters.set("category", category);
     if (keyword) parameters.set("keyword", keyword);
     if (exactPath !== null) parameters.set("exact_path", exactPath);
+    if (archiveStatus) parameters.set("archive_status", archiveStatus);
     const response = await fetch(`/api/media/${request.mediaId}/files?${parameters}`);
     const data = await response.json();
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -1038,7 +1054,7 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
-    inventoryListState = { category, keyword, search: searchText, exactPath, nextOffset: Number(data.next_offset || visible) };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, nextOffset: Number(data.next_offset || visible) };
     $("inventoryMore").hidden = !data.has_more;
   } catch (error) {
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -1456,6 +1472,21 @@ $("categories").addEventListener("click", (event) => {
   $("inventorySearch").value = "";
   $("inventoryPanel").open = true;
   loadInventory({ category: button.dataset.inventoryCategory });
+  $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("archiveStatus").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-inventory-archive-status]");
+  if (!button || button.disabled) return;
+  if (button.classList.contains("active")) {
+    resetInventoryView();
+    return;
+  }
+  clearInventoryFilterState();
+  button.classList.add("active");
+  button.setAttribute("aria-pressed", "true");
+  $("inventorySearch").value = "";
+  $("inventoryPanel").open = true;
+  loadInventory({ archiveStatus: button.dataset.inventoryArchiveStatus });
   $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("keywords").addEventListener("click", (event) => {

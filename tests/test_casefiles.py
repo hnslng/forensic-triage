@@ -216,6 +216,72 @@ def test_container_inventory_is_expandable_and_searchable_without_changing_count
     assert search["files"][0]["path"] == "Ablage.zip › Dokumente/Rechnung.pdf"
 
 
+def test_archive_status_filters_match_summary_and_annotate_explorer_without_writes(tmp_path) -> None:
+    from forensic_triage.container_inventory import archive_encryption_summary
+
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-ARCHIVE", "SICHT-001")
+    states = [
+        ("01_Offen.zip", "ok", False),
+        ("02_Passwort.zip", "ok", True),
+        ("03_Offen.7z", "ok", False),
+        ("04_Kopf.7z", "encrypted_headers", True),
+        ("05_Offen.rar", "ok", False),
+        ("06_Passwort.rar", "ok", True),
+        ("07_Kopf.rar", "encrypted_headers", True),
+        ("08_Verschachtelt.zip", "ok", False),
+        ("09_Beschaedigt.zip", "invalid_or_unsupported", False),
+        ("10_Mehrteilig.rar", "incomplete", False),
+    ]
+    files = [{"path": name, "category": "Archive", "size": 100, "partition_slot": "001"} for name, _, _ in states]
+    catalog = {"containers": [{
+        "path": name, "format": name.rsplit(".", 1)[-1], "status": status,
+        "encrypted": encrypted, "partition_slot": "001", "truncated": False,
+        "entries": [{"path": "Innen.rar", "kind": "file", "category": "Archive", "size": 42, "encrypted": True}],
+    } for name, status, encrypted in states]}
+    with (result_dir / "files.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(files[0]))
+        writer.writeheader()
+        writer.writerows(files)
+    (result_dir / "container-index.json").write_text(json.dumps(catalog), encoding="utf-8")
+    media_id = store.record_scan("FALL-ARCHIVE", "SICHT-001", "TEST", {"path": "/dev/sdb"}, result_dir)["media"]["id"]
+    # Reading/filtering must not rewrite durable reports, results or audit entries.
+    snapshots = {path: path.read_bytes() for path in store.case_path("FALL-ARCHIVE").rglob("*") if path.is_file()}
+    summary = archive_encryption_summary(files, catalog)
+    assert summary == {"total": 10, "encrypted": 4, "not_encrypted": 4, "unknown": 2}
+    tree = {entry["path"]: entry for entry in store.directory_inventory(media_id)["entries"]}
+    for status in ("encrypted", "unknown"):
+        filtered = store.file_inventory(media_id, archive_status=status)
+        assert filtered["total"] == summary[status]
+        assert all(file["archive_encryption"] == status and file["source"] != "container_index" for file in filtered["files"])
+        assert all(tree[file["path"]]["archive_encryption"] == status for file in filtered["files"])
+        first = store.file_inventory(media_id, archive_status=status, limit=1)
+        rest = store.file_inventory(media_id, archive_status=status, offset=first["next_offset"])
+        assert first["has_more"] is True
+        assert first["files"] + rest["files"] == filtered["files"]
+    all_archives = store.file_inventory(media_id, category="Archive")
+    assert all_archives["total"] == 20  # Existing broad filter still includes nested names.
+    assert all("archive_encryption" not in file for file in all_archives["files"] if file["source"] == "container_index")
+    assert [file["path"] for file in store.file_inventory(media_id, archive_status="unknown", query="09_")["files"]] == ["09_Beschaedigt.zip"]
+    with pytest.raises(ValueError, match="Archivstatus"):
+        store.file_inventory(media_id, archive_status="invented")
+    assert all(path.read_bytes() == data for path, data in snapshots.items())
+
+
+def test_unindexed_archive_is_unknown_in_filters_and_explorer(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-ALT", "SICHT-001")
+    (result_dir / "files.csv").write_text("path,size,category\nAlt.tgz,42,Archive\nNotiz.txt,2,Text/Logs\n", encoding="utf-8")
+    media_id = store.record_scan("FALL-ALT", "SICHT-001", "TEST", {"path": "/dev/sdb"}, result_dir)["media"]["id"]
+    result = store.file_inventory(media_id, archive_status="unknown")
+    assert result["total"] == 1
+    assert result["files"][0]["path"] == "Alt.tgz"
+    assert "container_id" not in result["files"][0]
+    entry = store.directory_inventory(media_id)["entries"][0]
+    assert entry["kind"] == "file" and entry["archive_encryption"] == "unknown"
+    assert store.file_inventory(media_id, archive_status="encrypted")["total"] == 0
+
+
 def test_archive_case_removes_active_record_and_keeps_recoverable_copy(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     result_dir = make_result(store, "FALL-DELETE", "SICHT-001")

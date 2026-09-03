@@ -497,12 +497,13 @@ class TriageHandler(BaseHTTPRequestHandler):
                     str(query.get("keyword", [""])[0]),
                     int(query.get("offset", ["0"])[0]),
                     exact_path=query.get("exact_path", [None])[0],
+                    archive_status=str(query.get("archive_status", [""])[0]),
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:
                 self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
             except ValueError:
-                self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Limit."})
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiger Dateifilter oder ungültiges Limit."})
             return
         tree_match = re.fullmatch(r"/api/media/(\d+)/tree", route)
         if tree_match:

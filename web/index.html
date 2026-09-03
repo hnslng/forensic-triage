@@ -87,11 +87,8 @@
             <div class="panel-title"><span>05</span> DATEITYPEN</div>
             <div id="categories" class="bar-list"></div>
             <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
-              <h3>ARCHIVSTATUS</h3>
-              <dl>
-                <div><dt>Verschlüsselt</dt><dd id="archiveEncryptedCount">0</dd></div>
-                <div title="Verschlüsselungszustand nicht zuverlässig festgestellt, etwa bei beschädigten oder nicht unterstützten Archiven."><dt>Ungeprüft</dt><dd id="archiveUnknownCount">0</dd></div>
-              </dl>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="encrypted" aria-pressed="false" title="Verschlüsselte Archive im Dateiverzeichnis anzeigen"><b id="archiveEncryptedCount">0</b> verschlüsselt</button>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
             </section>
           </article>
           <article class="panel keywords-panel">
@@ -122,7 +119,7 @@
             <div id="inventoryTree" class="inventory-tree"></div>
             <div id="inventoryFilterBar" class="inventory-filter-bar" hidden>
               <strong id="inventoryFilterLabel">FILTER</strong>
-              <span>Auf dem Medium und in lesbaren Archivverzeichnissen. Inhalte werden nicht zusätzlich zur Dateizahl gezählt.</span>
+              <span id="inventoryFilterDescription">Auf dem Medium und in lesbaren Archivverzeichnissen. Inhalte werden nicht zusätzlich zur Dateizahl gezählt.</span>
             </div>
             <div id="inventorySearchResults" class="table-wrap inventory-table" hidden>
               <table>

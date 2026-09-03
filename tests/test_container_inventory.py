@@ -268,3 +268,19 @@ def test_archive_encryption_summary_includes_zip_7z_and_rar() -> None:
     assert archive_encryption_summary(files, catalog) == {
         "total": 6, "encrypted": 3, "not_encrypted": 1, "unknown": 2,
     }
+
+
+def test_archive_states_distinguish_partitions_and_keep_encryption_precedence() -> None:
+    from forensic_triage.container_inventory import archive_encryption_state, archive_encryption_states
+
+    files = [{"path": "same.zip", "category": "Archive", "partition_slot": str(slot)} for slot in range(3)]
+    catalog = {"containers": [
+        {"path": "same.zip", "format": "zip", "partition_slot": "0", "encrypted": True},
+        {"path": "same.zip", "format": "zip", "partition_slot": "0", "status": "ok"},
+        {"path": "same.zip", "format": "zip", "partition_slot": "1", "status": "ok"},
+        {"path": "same.zip", "format": "zip", "partition_slot": "2", "status": "ok", "truncated": True},
+    ]}
+    states = archive_encryption_states(catalog)
+    assert [archive_encryption_state(file, states) for file in files] == ["encrypted", "not_encrypted", "unknown"]
+    assert archive_encryption_state({**files[0], "source": "container_index"}, states) is None
+    assert archive_encryption_summary(files + files, catalog) == {"total": 3, "encrypted": 1, "not_encrypted": 1, "unknown": 1}

@@ -400,31 +400,40 @@ def virtual_files(catalog: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
-def archive_encryption_summary(
-    files: Iterable[dict[str, Any]], catalog: dict[str, Any],
-) -> dict[str, int]:
-    """Count archive encryption states without guessing about unsupported formats."""
-    archive_keys = {
-        (str(item.get("partition_slot", "")), str(item.get("path", "")))
-        for item in files
-        if str(item.get("category", "")).casefold() == "archive"
-    }
-    encrypted: set[tuple[str, str]] = set()
-    clear: set[tuple[str, str]] = set()
+def archive_encryption_states(catalog: dict[str, Any]) -> dict[tuple[str, str], str]:
+    """Shared classification for counters, filters and explorer annotations."""
+    states: dict[tuple[str, str], str] = {}
     for container in catalog.get("containers", []):
         if str(container.get("format", "")).casefold() not in {"zip", "7z", "rar"}:
             continue
         key = (str(container.get("partition_slot", "")), str(container.get("path", "")))
-        if key not in archive_keys:
-            continue
         if container.get("encrypted"):
-            encrypted.add(key)
-        elif container.get("status") == "ok" and not container.get("truncated"):
-            clear.add(key)
-    clear -= encrypted
+            states[key] = "encrypted"
+        elif states.get(key) != "encrypted" and container.get("status") == "ok" and not container.get("truncated"):
+            states[key] = "not_encrypted"
+    return states
+
+
+def archive_encryption_state(item: dict[str, Any], states: dict[tuple[str, str], str]) -> str | None:
+    """Only classify outer archive files; nested names are not inspected."""
+    if item.get("source") == "container_index" or str(item.get("category", "")).casefold() != "archive":
+        return None
+    key = (str(item.get("partition_slot", "")), str(item.get("path", "")))
+    return states.get(key, "unknown")
+
+
+def archive_encryption_summary(
+    files: Iterable[dict[str, Any]], catalog: dict[str, Any],
+) -> dict[str, int]:
+    """Count archive encryption states without guessing about unsupported formats."""
+    states = archive_encryption_states(catalog)
+    archives = {
+        (str(item.get("partition_slot", "")), str(item.get("path", ""))): state
+        for item in files
+        if (state := archive_encryption_state(item, states)) is not None
+    }
     return {
-        "total": len(archive_keys),
-        "encrypted": len(encrypted),
-        "not_encrypted": len(clear),
-        "unknown": max(0, len(archive_keys - encrypted - clear)),
+        "total": len(archives),
+        **{state: sum(value == state for value in archives.values())
+           for state in ("encrypted", "not_encrypted", "unknown")},
     }

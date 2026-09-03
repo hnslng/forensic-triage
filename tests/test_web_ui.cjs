@@ -300,7 +300,98 @@ test('archive counts have their own readable section, without altering bar align
   assert.deepEqual(tracks[0], tracks[1]);
   await page.evaluate(() => renderResults({ archive_encryption: { total: 3, encrypted: 0, unknown: 0 } }));
   assert.equal(await page.locator('#archiveUnknownCount').innerText(), '0');
-  assert.equal(await page.locator('#archiveUnknownCount').getAttribute('class'), '');
+  assert.equal(await page.locator('[data-inventory-archive-status="unknown"]').isDisabled(), true);
+  assert.equal(await page.locator('[data-inventory-archive-status="encrypted"]').isDisabled(), true);
   await open(page, 2);
   assert.equal(await page.locator('#archiveStatus').isVisible(), false);
+});
+
+test('compact archive counts filter the correct status, keep pagination and reset cleanly', async t => {
+  const { page, requests } = await setup(t, url => {
+    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, archive_encryption: { total: 10, encrypted: 4, unknown: 2 } } } };
+    if (url.pathname.endsWith('/files') && url.searchParams.has('archive_status')) {
+      const state = url.searchParams.get('archive_status'), offset = Number(url.searchParams.get('offset'));
+      const count = state === 'encrypted' ? 4 : 2;
+      const files = Array.from({ length: count - offset }, (_, i) => ({ path: `${state}-${i + offset}.zip`, category: 'Archive', source: 'media_inventory', archive_encryption: state, container_id: `${state}-${i + offset}.zip` }));
+      // Exercise the more-results button even with a small fixture.
+      if (!offset) files.splice(1);
+      return { json: { files, total: count, shown: files.length, offset, next_offset: offset + files.length, has_more: offset === 0 } };
+    }
+  });
+  await open(page, 1);
+  for (const width of [1440, 800]) {
+    await page.setViewportSize({ width, height: 1080 });
+    const box = await page.locator('#archiveStatus').boundingBox();
+    assert.ok(box.height <= 48, `Compact status row at ${width}px: ${box.height}`);
+  }
+  const encrypted = page.locator('[data-inventory-archive-status="encrypted"]');
+  const unknown = page.locator('[data-inventory-archive-status="unknown"]');
+  for (const [button, state, count] of [[encrypted, 'encrypted', 4], [unknown, 'unknown', 2]]) {
+    await button.click();
+    await page.waitForFunction(state => inventoryListState?.archiveStatus === state && document.getElementById('inventoryCount').textContent.startsWith('1 /'), state);
+    assert.equal(await button.getAttribute('aria-pressed'), 'true');
+    await page.locator('#inventoryMore').click();
+    await page.waitForFunction(count => document.getElementById('inventoryCount').textContent === `${count} / ${count} FUNDSTELLEN`, count);
+    assert.equal(await page.locator(`#inventoryFiles .archive-mark.${state}`).count(), count);
+    assert.equal(await page.locator('#inventoryMore').isVisible(), false);
+  }
+  assert.equal(await encrypted.getAttribute('aria-pressed'), 'false');
+  assert.match(await page.locator('#inventoryFilterDescription').innerText(), /Nur Archivdateien auf dem Medium/);
+  // Existing expandable archives must also work in the new status filter.
+  await page.locator('.inventory-container-toggle').first().click();
+  await page.waitForFunction(() => document.querySelector('.inventory-container-detail:not([hidden])')?.textContent.includes('Dokumente'));
+  await unknown.click();
+  await page.waitForFunction(() => document.getElementById('inventoryTree').hidden === false);
+  assert.equal(await unknown.getAttribute('aria-pressed'), 'false');
+  await encrypted.click(); await filter(page);
+  assert.equal(await encrypted.getAttribute('aria-pressed'), 'false');
+  assert.match(await page.locator('#inventoryFilterDescription').innerText(), /lesbaren Archivverzeichnissen/);
+  await page.locator('#inventoryReset').click();
+  assert.equal(await page.locator('#inventorySearchResults').isVisible(), false);
+  assert.ok(requests.filter(r => r.path.endsWith('/files')).some(r => r.query.includes('archive_status=unknown') && r.query.includes('offset=1')));
+});
+
+test('explorer and list show subtle text statuses only on inspected outer archives', async t => {
+  const archives = [
+    { ...entry('Verschlüsselt.zip', 'container'), container_id: 'encrypted', archive_encryption: 'encrypted', encrypted: true, container_status: 'ok', entry_count: 3 },
+    { ...entry('Defekt.rar', 'container'), container_id: 'unknown', archive_encryption: 'unknown', container_status: 'incomplete' },
+    { ...entry('Alt.tgz'), archive_encryption: 'unknown' },
+    { ...entry('Offen.zip', 'container'), container_id: 'clear', archive_encryption: 'not_encrypted' },
+  ].map(file => ({ ...file, category: 'Archive' }));
+  const { page } = await setup(t, url => {
+    if (url.pathname.endsWith('/tree')) return { json: pageData(archives) };
+    if (url.pathname.endsWith('/files')) {
+      const files = [...archives, { path: 'Verschlüsselt.zip › Innen.rar', category: 'Archive', source: 'container_index', encrypted: true }];
+      return { json: { files, total: files.length, shown: files.length } };
+    }
+  });
+  await open(page, 1);
+  assert.equal(await page.locator('#inventoryTree .archive-mark.encrypted').count(), 1);
+  assert.equal(await page.locator('#inventoryTree .archive-mark.unknown').count(), 2);
+  assert.equal(await page.locator('#inventoryTree .archive-mark.encrypted').innerText(), 'VERSCHLÜSSELT');
+  assert.notEqual(await page.locator('#inventoryTree .archive-mark.encrypted').evaluate(n => getComputedStyle(n).color), await page.locator('#inventoryTree .archive-mark.unknown').first().evaluate(n => getComputedStyle(n).color));
+  await filter(page);
+  assert.equal(await page.locator('#inventoryFiles .archive-mark.encrypted').count(), 1);
+  assert.equal(await page.locator('#inventoryFiles .archive-mark.unknown').count(), 2);
+  assert.equal(await page.locator('.inventory-inner-file .archive-mark').count(), 0);
+  assert.match(await page.locator('.inventory-inner-file').innerText(), /VERSCHACHTELT/);
+});
+
+test('late archive-status result cannot replace another medium or a different status', async t => {
+  const blocked = gate(); let block = true;
+  const { page } = await setup(t, async url => {
+    if (block && url.pathname.endsWith('/files') && url.searchParams.get('archive_status') === 'encrypted') {
+      block = false; await blocked.wait();
+      return { json: { files: [{ path: 'STALE-ENCRYPTED.zip' }], total: 1, shown: 1 } };
+    }
+  });
+  await open(page, 1);
+  await page.evaluate(() => { window.pendingArchive = loadInventory({ archiveStatus: 'encrypted' }); });
+  await blocked.arrived;
+  await page.evaluate(() => loadInventory({ archiveStatus: 'unknown' }));
+  await open(page, 2);
+  blocked.release(); await page.evaluate(() => window.pendingArchive);
+  assert.equal(await page.locator('#inventoryTree').isVisible(), true);
+  assert.doesNotMatch(await page.locator('#inventoryFiles').innerText(), /STALE/);
+  assert.equal(await page.evaluate(() => inventoryListState), null);
 });
