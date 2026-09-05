@@ -84,10 +84,17 @@ function renderUpdateState(value = {}) {
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   const actionRunning = Boolean(updateActionInProgress) || state === "checking" || state === "installing";
   $("updateModal").classList.toggle("update-busy", actionRunning);
-  $("updateInstall").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning;
+  $("updateInstall").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning || caseSessionTransition;
+  $("updateStopCase").hidden = !activeCase && !caseSessionTransition;
+  $("updateStopCase").disabled = runningPaths.size > 0 || actionRunning || caseSessionTransition;
+  $("updateStopCase").textContent = caseSessionTransition ? "FALL WIRD BEENDET …" : `FALL ${activeCase || ""} BEENDEN`;
   $("updateCheck").disabled = actionRunning;
   if (!updateActionInProgress) {
-    if (state === "available" && activeCase) {
+    if (caseSessionTransition) {
+      $("updateActionMessage").textContent = "FALL WIRD BEENDET …";
+    } else if (activeCase && runningPaths.size > 0) {
+      $("updateActionMessage").textContent = "FALL KANN NACH ABSCHLUSS DES LAUFENDEN SCANS BEENDET WERDEN";
+    } else if (state === "available" && activeCase) {
       $("updateActionMessage").textContent = `FALL ${activeCase} ZUERST BEENDEN`;
     } else if (state === "available" && runningPaths.size > 0) {
       $("updateActionMessage").textContent = "LAUFENDEN SCAN ZUERST ABSCHLIESSEN";
@@ -134,7 +141,7 @@ async function waitForUpdateResult(action) {
 }
 
 async function requestUpdate(action) {
-  if (updateActionInProgress) return;
+  if (updateActionInProgress || caseSessionTransition) return;
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   if (action === "install" && activeCase) {
     $("updateActionMessage").textContent = `FALL ${activeCase} ZUERST BEENDEN`;
@@ -1109,11 +1116,12 @@ async function startCaseSession() {
   }
 }
 
-async function stopCaseSession() {
-  if (runningPaths.size) return;
+async function stopCaseSession({ keepUpdateOpen = false } = {}) {
+  if (runningPaths.size || caseSessionTransition) return false;
   invalidateMediaView();
   caseSessionTransition = true;
   clearTimeout(autoStartTimer);
+  if (activeCaseNumber && !serverActiveCase) serverActiveCase = { case_number: activeCaseNumber, operator: activeOperator };
   activeCaseNumber = null;
   activeOperator = "";
   currentCaseMedia = [];
@@ -1132,7 +1140,7 @@ async function stopCaseSession() {
   renderCaseHistory(knownCases);
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
   setSystemState("GESPERRT", "locked");
-  openAuftrag();
+  if (!keepUpdateOpen) openAuftrag();
   try {
     const response = await fetch("/api/cases/stop", { method: "POST" });
     if (!response.ok) throw new Error("Fall konnte am Gerät nicht beendet werden");
@@ -1142,10 +1150,12 @@ async function stopCaseSession() {
     $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
     caseSessionTransition = false;
     await refresh(false);
-    return;
+    return false;
   } finally {
     caseSessionTransition = false;
+    renderUpdateState(updateState);
   }
+  return true;
 }
 
 async function deleteCurrentCase() {
@@ -1420,6 +1430,13 @@ $("caseList").addEventListener("click", (event) => {
 });
 $("caseStart").addEventListener("click", startCaseSession);
 $("caseStop").addEventListener("click", stopCaseSession);
+$("updateStopCase").addEventListener("click", async () => {
+  if ($("updateStopCase").disabled) return;
+  const stopped = await stopCaseSession({ keepUpdateOpen: true });
+  $("updateActionMessage").textContent = stopped
+    ? "FALL BEENDET · UPDATE KANN JETZT SEPARAT INSTALLIERT WERDEN"
+    : "FALL KONNTE NICHT BEENDET WERDEN · BITTE STATUS PRÜFEN";
+});
 $("cancelDelete").addEventListener("click", () => $("deleteModal").close());
 $("deleteConfirmed").addEventListener("change", () => {
   $("confirmDelete").disabled = !$("deleteConfirmed").checked;

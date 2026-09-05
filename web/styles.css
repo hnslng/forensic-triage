@@ -437,6 +437,8 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .update-actions button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .update-modal.update-busy .update-actions button:disabled { cursor: wait; }
 .update-actions #updateInstall { border-color: var(--acid); background: var(--acid); color: #111; }
+.update-actions #updateStopCase { grid-column: 1 / -1; border-color: var(--amber); color: var(--amber); }
+.update-actions #updateStopCase:disabled { border-color: var(--line); color: var(--muted); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { color: var(--muted); text-align: left; font-size: 10px; letter-spacing: .08em; }

@@ -1,8 +1,10 @@
 # Roadmap und offene Aufgaben / Roadmap and TODOs
 
-Stand: Version 0.2.0-alpha.42. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
+Stand: Version 0.2.0-alpha.43. Prioritäten richten sich nach forensischer Sicherheit und Nachvollziehbarkeit, nicht nach Funktionsmenge.
 
 ## Vor dem ersten realen Einsatz – zwingend
+
+Zurückgestellte Idee: Verschlüsselung bei PDF-/Office-Dateien anhand der Dateistruktur erkennen. Vor einer Umsetzung den zusätzlichen Leseaufwand mit repräsentativen Medien und etwa 1.000 Dokumenten messen; noch keine verlässliche Laufzeitangabe und keine automatische Zusatzprüfung. Öffnungsschutz und bloßer Bearbeitungsschutz müssten getrennt behandelt werden.
 
 - [x] Fallbezogene Doppelbestätigung und wiederherstellbaren Papierkorb ohne Passwort umsetzen.
 - [ ] Das in [security-concept.md](security-concept.md) festgehaltene einfache Zugriffsschutzkonzept vollständig implementieren und abnehmen.

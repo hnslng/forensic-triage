@@ -6,6 +6,8 @@ TRIAGE//BOX unterstützt die Grobsichtung. Es entscheidet nicht, ob ein Medium r
 
 ## 1. System starten
 
+Im Fenster `SYSTEM & UPDATES` kann ein aktiver Fall über `FALL … BEENDEN` direkt beendet werden. Während eines laufenden Scans ist dies gesperrt. Nach bestätigtem Fallende bleibt das Updatefenster offen; eine verfügbare Installation muss anschließend separat gestartet werden. Fallunterlagen bleiben gespeichert.
+
 1. Scanner-System starten.
 2. Webdienststatus prüfen.
 3. Lokalen Bildschirm oder freigegebene Netzwerkverbindung verwenden.

@@ -2,6 +2,12 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.43] – 2026-09-06
+
+- Aktiver Fall lässt sich direkt im Systemupdate-Fenster beenden. Das Fenster bleibt geöffnet; die Installation wird nach bestätigtem Fallende separat freigegeben. Während eines Scans oder des Fallwechsels bleiben die Aktionen gesperrt.
+- Fehlgeschlagenes Fallende gibt die Installation nicht vorzeitig frei; der Gerätestatus wird erneut abgefragt. 23 Browserprüfungen erfolgreich, einschließlich Erfolg, Fehler, laufender Scans und verzögerter Antworten.
+- PDF-/Office-Verschlüsselungserkennung bleibt eine zurückgestellte Idee; Laufzeitmessung vor einer möglichen Umsetzung vorgesehen.
+
 ## [0.2.0-alpha.42] – 2026-09-06
 
 - Sichtbares Label „ARCHIVE“ über den Verschlüsselungszählern ergänzt. Die Zähler beziehen sich ausschließlich auf Archive; eine allgemeine Verschlüsselungserkennung für PDFs, Office-Dokumente oder andere Dateitypen ist bisher nicht implementiert.

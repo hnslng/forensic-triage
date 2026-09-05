@@ -59,6 +59,38 @@ function gate() {
   return { release, arrived, wait: async () => { entered(); await pending; } };
 }
 
+for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 'failure retains lock' : 'success enables deliberate install'}`, async t => {
+  const blocked = gate();
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/cases/stop') {
+      assert.equal(request.method(), 'POST');
+      await blocked.wait();
+      return { status: fails ? 409 : 200, json: fails ? { error: 'Scan läuft' } : { active_case: null } };
+    }
+    if (fails && url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: { case_number: 'TEST', operator: 'HL' }, update: { state: 'available', available_version: 'v0.2.0-alpha.43' } } };
+  });
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' };
+    renderUpdateState({ state: 'available', available_version: 'v0.2.0-alpha.43' });
+    document.getElementById('updateModal').showModal();
+    runningPaths.add('/dev/test'); renderUpdateState();
+  });
+  assert.equal(await page.locator('#updateStopCase').isDisabled(), true);
+  await page.evaluate(() => { runningPaths.clear(); renderUpdateState(); });
+  await page.locator('#updateStopCase').click();
+  await blocked.arrived;
+  assert.equal(await page.locator('#updateStopCase').isDisabled(), true);
+  assert.equal(await page.locator('#updateInstall').isDisabled(), true);
+  assert.match(await page.locator('#updateStopCase').innerText(), /WIRD BEENDET/);
+  blocked.release();
+  await page.waitForFunction(() => !caseSessionTransition && /FALL BEENDET|KONNTE NICHT/.test(document.getElementById('updateActionMessage').textContent));
+  assert.equal(await page.locator('#updateModal').isVisible(), true);
+  assert.equal(await page.locator('#auftragModal').isVisible(), false);
+  assert.equal(await page.locator('#updateInstall').isDisabled(), fails);
+  assert.equal(requests.filter(r => r.path === '/api/cases/stop').length, 1);
+  assert.equal(requests.filter(r => r.path === '/api/updates/install').length, 0);
+});
+
 test('switching media after filtering restores the correct visible explorer', async t => {
   const { page } = await setup(t);
   await open(page, 1); await filter(page); await open(page, 2);
