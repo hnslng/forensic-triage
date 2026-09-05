@@ -2,6 +2,10 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.42] – 2026-09-06
+
+- Sichtbares Label „ARCHIVE“ über den Verschlüsselungszählern ergänzt. Die Zähler beziehen sich ausschließlich auf Archive; eine allgemeine Verschlüsselungserkennung für PDFs, Office-Dokumente oder andere Dateitypen ist bisher nicht implementiert.
+
 ## [0.2.0-alpha.41] – 2026-09-03
 
 ### Geändert

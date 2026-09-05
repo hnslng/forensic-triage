@@ -255,6 +255,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .archive-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 12px 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.archive-status-label { flex-basis: 100%; color: var(--muted); font-size: 10px; letter-spacing: .06em; }
 .archive-status-filter { min-height: 34px; padding: 5px 2px; border: 0; border-bottom: 1px dotted var(--muted); background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .archive-status-filter b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .archive-status-filter:hover { color: var(--ink); border-bottom-color: var(--ink); }

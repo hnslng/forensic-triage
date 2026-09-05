@@ -322,7 +322,7 @@ test('compact archive counts filter the correct status, keep pagination and rese
   for (const width of [1440, 800]) {
     await page.setViewportSize({ width, height: 1080 });
     const box = await page.locator('#archiveStatus').boundingBox();
-    assert.ok(box.height <= 48, `Compact status row at ${width}px: ${box.height}`);
+    assert.ok(box.height <= 70, `Compact labelled status row at ${width}px: ${box.height}`);
   }
   const encrypted = page.locator('[data-inventory-archive-status="encrypted"]');
   const unknown = page.locator('[data-inventory-archive-status="unknown"]');
