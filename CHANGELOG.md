@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## Dokumentationsabgleich – 2026-09-06
+
+Anwendung unverändert: `v0.2.0-alpha.43`. Keine neue Programmversion und keine Änderung an Scans, Fallakten oder Pi-Konfiguration.
+
+- Projektstand mit getrennten Angaben zu Implementierung, automatisierten Prüfungen, Pi-Beobachtungen und ausstehender Abnahme ergänzt.
+- Roadmap auf vollständigen Probeeinsatz, Störungstests, Wiederherstellung und einfachen Zugriffsschutz ausgerichtet; ausführlichen Ablauf mit Abnahmekriterien im Testplan ergänzt.
+- Installation, Netzwerk, Konfiguration, Bedienung und Ablage mit dem aktuellen Code abgeglichen. Browser-Neuladen übernimmt die serverseitige Fallsitzung; eigener Audit-Eintrag für Fallende fehlt noch.
+- Grenzen des Updates, Profil-Erhalt und fehlenden Papierkorb-Rückimport ausdrücklich dokumentiert. Atomarer Codewechsel bedeutet keinen vollständigen Rollback; ZIP-Export ersetzt keine konsistente Sicherung des Fallindexes.
+- Fehlende serverseitige Löschsperre für aktive Fälle/Scans und flüchtige Gerätequarantäne als offene Aufgaben aufgenommen, ohne in diesem Dokumentationsschritt Programmverhalten zu ändern.
+- Pi 3B+ und Router-LAN/Hotspot als vorhandenen Testbetrieb beschrieben; direkte Ethernet-Verbindung ohne Router, Zugriffsschutz, verschlüsselte Ablage und Hardwareabnahme bleiben offen.
+
 ## [0.2.0-alpha.43] – 2026-09-06
 
 - Aktiver Fall lässt sich direkt im Systemupdate-Fenster beenden. Das Fenster bleibt geöffnet; die Installation wird nach bestätigtem Fallende separat freigegeben. Während eines Scans oder des Fallwechsels bleiben die Aktionen gesperrt.

@@ -14,7 +14,7 @@ Dieses Dokument ist kein Bestandteil der Bedienung oder Pi-Installation. Es besc
 
 `TRIAGE-BOX starten.command` ist ausschließlich eine private Hilfsdatei eines Entwicklungsrechners. Sie enthält gerätespezifische Verbindungsangaben, wird von Git ignoriert und gehört nicht zur Raspberry-Pi-Produktinstallation. Eine öffentliche Beispielvorlage wird nicht ausgeliefert.
 
-Diese Datei wird für den späteren Pi-Betrieb voraussichtlich nicht benötigt. Bei direkter Ethernet-Verbindung öffnet der Laptop lediglich die Adresse des Pi im Browser.
+Diese Datei wird für den aktuellen Pi-Betrieb nicht benötigt. Im Hotspot oder gemeinsamen Router-LAN öffnet der Laptop `http://triagebox.local/`. Eine direkte Ethernet-Verbindung ohne Router ist noch separat zu konfigurieren.
 
 ## Manuelle Verbindung
 
@@ -35,7 +35,7 @@ git archive --format=tar HEAD | ssh \
   'mkdir -p /home/triage/forensic-triage && tar -xf - -C /home/triage/forensic-triage'
 ```
 
-Danach den Installer auf der VM erneut ausführen. Vorhandene Konfiguration und Fallordner bleiben erhalten.
+Nur für einen bewusst getrennten Entwicklungsstand verwenden, nicht zum Überschreiben einer laufenden Pi-Releaseinstallation. Danach den Installer auf dem Testsystem erneut ausführen; seine Konfigurationsmigrationen sind in [Installation](installation.md) beschrieben. Ein `git archive` enthält keine Git-Historie und unterstützt deshalb nicht den Git-basierten Web-Updater.
 
 ## English summary
 

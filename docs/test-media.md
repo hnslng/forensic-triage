@@ -32,6 +32,8 @@ Die großen synthetischen Dateien werden auf APFS lokal platzsparend („sparse�
 
 ## CD-R-Test
 
+Der bisherige Pi-Versuch mit dem USB-Laufwerk war instabil. Für den nächsten Versuch ein ausreichend separat versorgtes Laufwerk oder einen aktiven Hub verwenden; zunächst leer bei ausgeschaltetem Auto-Scan prüfen. Danach intakte Test-CD manuell scannen und erst bei stabilem Betrieb Auto-Scan testen. Das möglicherweise vorhandene Laufwerk mit eigenem Netzteil wurde noch nicht abgenommen.
+
 `TRIAGEBOX_CD_TEST.iso` als Abbild auf den Rohling brennen, nicht als gewöhnliche Datei auf eine Daten-CD kopieren. Im Finder kann das ISO über die Brennfunktion für Images geschrieben werden. Alternativ:
 
 ```bash
@@ -45,7 +47,7 @@ Nach erfolgreichem Brennen die CD neu einlegen und anschließend im externen USB
 - Offene Archive liefern aufklappbare Namen und Pfade.
 - Passwortgeschützte Archive werden als verschlüsselt markiert; TRIAGE//BOX versucht kein Passwort.
 - Container innerhalb eines ZIP oder ISO erscheinen als Eintrag, werden aber nicht rekursiv geöffnet.
-- Beschädigte oder unvollständige Archive bleiben ausdrücklich `UNGEPRÜFT`, `UNVOLLSTÄNDIG` oder `NICHT LESBAR`.
+- Nicht zuverlässig prüfbare Archive bleiben ausdrücklich `UNGEPRÜFT`, `UNVOLLSTÄNDIG` oder `NICHT LESBAR`. Bereits eindeutig erkannte Verschlüsselung bleibt auch bei einem unvollständigen Index gekennzeichnet.
 - Die Testdateien prüfen Metadaten, Kategorien und Namen/Pfade. Sie stellen keine inhaltliche forensische Validierung dar.
 - Der USB-Satz enthält 3.835 Dateien, 173 Treffer über die sieben Referenzbegriffe, zehn Archiv-Sonderfälle, ein zusätzliches ISO und mehrere große Dateien bis 4,5 GiB.
 - Das CD-Abbild enthält 610 Dateien, deutliche Kategorieverteilungen und mehrere 8 bis 120 MiB große Dateien. Mit etwa 621 MiB ISO-Größe bleibt Reserve zur 700-MB-Grenze eines normalen CD-R-Rohlings.

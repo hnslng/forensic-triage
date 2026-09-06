@@ -8,12 +8,12 @@ Die bedienende Person muss Berechtigung und physische Identität des Datenträge
 
 1. Übergebenen `/dev`-Pfad auflösen.
 2. Ganzes USB-Blockgerät oder externes optisches USB-Laufwerk verlangen.
-3. Den expliziten Systemdatenträger-Sentinel `/dev/sda` ablehnen.
+3. System-/gemountete Ziele anhand Gerätebaum und Mountpoints aussondern; `/dev/sda` ist kein fest reservierter Systemname und kann ein geeigneter USB-Stick sein.
 4. Mountpoints auf Gerät und Partitionen rekursiv ablehnen.
 5. Gesamtes Blockgerät mit `blockdev --setro` schreibschützen.
 6. Read-only-Zustand mit `blockdev --getro == 1` verifizieren.
 7. USB-Partitionen mit `mmls` und `fsstat` erfassen; das Dateisystem einer CD/DVD direkt am optischen Gerät prüfen.
-8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im garantierten Cleanup wieder unmounten.
+8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im Cleanup wieder unmounten; Hardwarestillstand oder Prozessabbruch können die Aufräumfolge unterbrechen.
 9. ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen nur begrenzt, ohne Extraktion und ohne Rekursion katalogisieren.
 10. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden; dort ist der Containerindex nicht verfügbar.
 
@@ -34,11 +34,11 @@ Trotzdem ist der aktuelle Schutz nur „defense in depth“. Für echte Beweismi
 
 ## Beschädigte Medien
 
-Der Webdienst führt jede Sichtung in einem getrennten Worker-Prozess mit eigenem Linux-Mount-Namensraum aus. Einzelne Gerätebefehle und der gesamte Scan besitzen feste Zeitlimits. Nach einer Überschreitung wird das Medium protokolliert und bis zum erkannten Abziehen gesperrt; andere Medien und die Bedienoberfläche sollen weiterarbeiten.
+Der Webdienst führt jede Sichtung in einem getrennten Worker-Prozess mit eigenem Linux-Mount-Namensraum aus. Einzelne Gerätebefehle und der gesamte Scan besitzen feste Zeitlimits. Nach einer Überschreitung wird das Medium protokolliert und im laufenden Webdienst bis zum erkannten Abziehen gesperrt; andere Medien und die Bedienoberfläche sollen weiterarbeiten. Die Quarantäne ist bisher nicht dauerhaft gespeichert und nach Dienst-/Pi-Neustart leer. Ein instabiles Medium deshalb nicht durch Neustart wiederholt automatisch testen lassen.
 
 Ein Prozess-Zeitlimit kann einen Linux-Prozess im nicht unterbrechbaren Hardware-Wartezustand nicht augenblicklich aus dem Kernel entfernen. Deshalb bleibt das physische Trennen des betroffenen Mediums beziehungsweise das Abschalten seines einzelnen Hub-Ports der letzte Rückfallweg. TRIAGE//BOX unternimmt keine langwierige Datenrettung und wiederholt fehlgeschlagene Leseversuche nicht automatisch.
 
-Auf einem Raspberry Pi 3B+ teilen sich externe USB-Medien den USB-Pfad mit einer von USB gestarteten System-SSD. Ein fehlerhaftes oder stromhungriges Prüfmedium kann dadurch nicht nur seinen isolierten Scanworker, sondern den Systemdatenträger und damit den ganzen Pi blockieren. Für diesen Aufbau ist das System auf einer hochwertigen MicroSD und ein eigenständig versorgter USB-Hub für Prüfmedien die robustere Trennung. Persistente, begrenzte Systemprotokolle sichern die bis zum Ausfall geschriebenen Diagnosemeldungen über einen Neustart hinweg; sie können einen Hardwarestillstand nicht verhindern.
+Auf einem Raspberry Pi 3B+ teilen sich externe USB-Medien den USB-Pfad mit einer von USB gestarteten System-SSD. Ein fehlerhaftes oder stromhungriges Prüfmedium kann dadurch nicht nur seinen isolierten Scanworker, sondern den Systemdatenträger und damit den ganzen Pi blockieren. Als nächster Aufbau ist das System auf MicroSD vorgesehen. Prüfgeräte benötigen ausreichende Versorgung, entweder selbst oder über einen aktiven Hub. Ein ausreichend separat versorgtes CD/DVD-Laufwerk benötigt für sich keinen zusätzlichen aktiven Hub. Diese Maßnahmen müssen praktisch getestet werden. Persistente, begrenzte Systemprotokolle sichern die bis zum Ausfall geschriebenen Diagnosemeldungen über einen Neustart hinweg; sie können einen Hardwarestillstand nicht verhindern.
 
 ## Metadaten und Fehlinterpretationen
 
@@ -50,4 +50,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes prevent one slow medium from owning the web service. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.43 reads bounded ZIP/ISO/7Z/RAR directory metadata but does not inspect signatures or file payloads.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. Time-limited isolated scanner processes bound software waits; kernel, bus or system-storage failures can still affect the entire device. These software controls do not replace a validated hardware write blocker. File extensions and path keywords are indicators only; version 0.2.0-alpha.43 reads bounded ZIP/ISO/7Z/RAR directory metadata but does not inspect signatures or file payloads.

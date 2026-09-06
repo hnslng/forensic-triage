@@ -15,11 +15,11 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 - lokales, klickbares Dashboard im Terminal-/CRT-Stil
 - bewusster Fallstart mit Fallnummer und Bearbeiterkürzel
-- kein aktiver Fall nach Neustart; Scans bleiben bis zur Freigabe gesperrt
+- kein aktiver Fall nach Pi-/Webdienst-Neustart; Browser-Neuladen übernimmt dagegen die noch aktive Gerätesitzung
 - parallele Grobsichtung mehrerer ungemounteter USB-Datenträger
 - schneller Standardmodus mit kurzzeitigem, verifiziert schreibgeschütztem Mount
 - langsamer, mountfreier TSK-Modus für technische Vergleichstests
-- vollständiges Metadaten-Inhaltsverzeichnis als `files.csv`
+- Metadaten-Inhaltsverzeichnis der erfassten aktiven Dateien als `files.csv`
 - sichtbare Datenträger-Metadaten mit Modell, Seriennummer, Kapazität, Gerätepfad und verifiziertem Schreibschutz im Nachweisdialog
 - begrenzter ZIP-/ISO-/7Z-/RAR-Schnellindex: interne Verzeichnisnamen ohne Extraktion im Explorer aufklappbar und durchsuchbar
 - Kategorien nach Dateiendung, Größenstatistik und größte Dateien
@@ -29,13 +29,13 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - zwei eindeutige Entscheidungen: „Sichern“ oder begründet „Nicht sichern“
 - lokale Fallakte mit Audit-Log, Medienregister, Bericht und SHA-256-Manifest
 - ZIP-Export der Falldaten
-- direktes Öffnen und doppelt bestätigtes, wiederherstellbares Entfernen einzelner Fälle im Fallarchiv
+- direktes Öffnen und doppelt bestätigtes Entfernen einzelner Fälle mit Dateierhalt im Papierkorb; Rückimport noch offen
 - sicherer Software-Auswurf und erneute Geräteerkennung
 - softwareseitiges Öffnen externer USB-CD/DVD-Laufwerke auch ohne physischen Auswurfknopf
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.43 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen; Einträge werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.43 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -78,20 +78,20 @@ Anschließend auf einem Debian-basierten Scanner:
 sudo ./scripts/install_debian.sh
 ```
 
-Auf Raspberry Pi OS Bookworm über Ethernet beziehungsweise an der lokalen Konsole:
+Auf Raspberry Pi OS/Debian über Ethernet beziehungsweise an der lokalen Konsole (der Installer prüft die Debian-Familie, keine bestimmte Releaseversion):
 
 ```bash
 sudo ./scripts/install_debian.sh --pi
 ```
 
-Das wiederholbar ausführbare Skript installiert Systempakete, Python-Umgebung, Tests, Konfiguration und systemd-Dienst. Es überschreibt bei Aktualisierungen weder lokale Konfiguration noch Fallakten. Einzelheiten: [Installation und Aktualisierung](docs/installation.md).
+Das wiederholbar ausführbare Skript installiert Systempakete, Python-Umgebung, Tests, Konfiguration und systemd-Dienst. Fallakten bleiben erhalten. Bestehende Einstellungen werden grundsätzlich beibehalten; der Installer ergänzt Updateparameter, migriert passende Codepfade und setzt im Pi-Modus die Backend-Bindung auf Loopback. Einzelheiten: [Installation und Aktualisierung](docs/installation.md).
 
 Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git in `/etc/forensic-triage/triage.env`. Der Pi-Modus trennt WLAN-SSID und Kennwort in `/etc/forensic-triage/pi-network.env`. Siehe [Konfiguration](docs/configuration.md).
 
 ## Bedienablauf
 
-1. Dashboard öffnen. Nach jedem Neustart ist **kein Fall aktiv**.
-2. Links „Fall anlegen / öffnen“ wählen.
+1. Dashboard öffnen. Nach einem Pi-/Webdienst-Neustart ist **kein Fall aktiv**; nach bloßem Browser-Neuladen kann der zuletzt am Gerät gestartete Fall weiter aktiv sein.
+2. Links „Fall verwalten“ wählen.
 3. Neue Fallnummer eingeben oder einen vorhandenen Fall im Archiv öffnen.
 4. Bearbeiterkürzel eintragen und Suchprofile auswählen.
 5. „Fall starten“ ausdrücklich bestätigen.
@@ -99,17 +99,17 @@ Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git 
 7. Ergebnis je Medium prüfen und eine Entscheidung dokumentieren.
 8. Nur bei „Sichern“ eine offizielle Beweismittel-/Asservatennummer vergeben.
 9. Datenträger sicher auswerfen beziehungsweise nach abgeschlossener Sichtung abziehen.
-10. Fall beenden und bei Bedarf die Falldaten als ZIP exportieren.
+10. PDF und bei Bedarf Falldaten als ZIP exportieren, dann Fall beenden.
 
-Ein Fall wird direkt im Fallarchiv über „Löschen“ entfernt. Der aktive Fall ist geschützt und muss zuerst beendet werden. „Löschen“ verschiebt die lokale Fallakte in einen wiederherstellbaren internen Papierkorb; es ist keine sichere Datenvernichtung.
+Ein Fall wird direkt im Fallarchiv über „Löschen“ entfernt. Das Dashboard sperrt diese Aktion beim aktiven Fall; die zusätzliche serverseitige Fall-/Scanprüfung fehlt noch. „Löschen“ erhält die Dateien in einem internen Papierkorb; ein fertiger Rückimport in die Fallliste ist noch nicht vorhanden. Es ist keine sichere Datenvernichtung; Einzelheiten unter [Fallakte](docs/case-archive.md#entfernen-und-wiederherstellung).
 
 Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
 ## Zugriff auf die Oberfläche
 
-Der Scanner selbst lauscht ausschließlich auf `127.0.0.1:8787`. Auf dem Pi liefert der lokale Reverse-Proxy die Oberfläche portfrei unter `http://triagebox.local/`. Er akzeptiert den privaten TRIAGEBOX-Hotspot sowie private LAN-Adressen, damit ein per Ethernet an Router oder Laptop angeschlossener Pi ohne WLAN-Wechsel bedient werden kann. HTTPS und die spätere Web-Entsperrung bleiben vor einem realen Einsatz offen.
+Der Scanner selbst lauscht ausschließlich auf `127.0.0.1:8787`. Auf dem Pi liefert der lokale Reverse-Proxy die Oberfläche portfrei unter `http://triagebox.local/`. Er akzeptiert den privaten TRIAGEBOX-Hotspot sowie private LAN-Adressen, damit ein per Ethernet am gemeinsamen Router-LAN angeschlossener Pi ohne WLAN-Wechsel bedient werden kann. Die direkte Kabelverbindung Pi–Laptop ohne Router benötigt noch die geplante Ethernet-Konfiguration. HTTPS und die spätere Web-Entsperrung bleiben vor einem realen Einsatz offen.
 
-Der Pi prüft beim Start mit Verzögerung und anschließend täglich nur auf neue Git-Tags. Er installiert niemals selbstständig. Im Dashboard kann ein freigegebenes Update bewusst installiert werden; das ist bei aktivem Fall oder laufendem Scan serverseitig gesperrt. Die neue Version wird getrennt getestet, atomar aktiviert und bei einem Startfehler wieder auf die Vorversion zurückgesetzt.
+Der Pi prüft beim Start mit Verzögerung und anschließend täglich nur auf neue Git-Tags. Er installiert niemals selbstständig. Im Dashboard kann ein freigegebenes Update bewusst installiert werden; das ist bei aktivem Fall oder laufendem Scan serverseitig gesperrt. Die neue Version wird getrennt vorbereitet und mit Python-Tests geprüft; der Code wird über einen atomaren Symlinkwechsel aktiviert. Ein begrenzter Rückwechselpfad ist vorhanden. Vollständiger Rollback und Stromausfallverhalten sind noch nicht abgenommen; siehe [Installation](docs/installation.md#5-aktualisieren). Im Updatefenster kann ein aktiver Fall direkt beendet werden; die Installation bleibt ein separater Klick.
 
 Entwicklungs- und Validierungsaufbauten sind interne technische Nachweise und kein Bestandteil der Pi-Bedienung.
 
@@ -134,6 +134,7 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 ## Dokumentation
 
 - [Dokumentationsübersicht](docs/README.md)
+- [Aktueller Projektstand und Nachweise](docs/project-status.md)
 - [So funktioniert TRIAGE//BOX](docs/how-it-works.md)
 - [Installation und Aktualisierung](docs/installation.md)
 - [Konfiguration](docs/configuration.md)
@@ -158,22 +159,24 @@ Das Repository enthält ausschließlich Quellcode, Profile, Tests und Dokumentat
 - echte Kennwörter, Tokens, private SSH-Schlüssel oder `.env`-Dateien; der dokumentierte Alpha-Platzhalter ist kein Betriebsgeheimnis
 - Exporte aus echten Einsätzen
 
-Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen. Der Löschdialog verlangt zwei bewusste Bedienhandlungen für den konkret genannten Fall; entfernte Fälle bleiben im internen Papierkorb wiederherstellbar.
+Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschütztem Speicher liegen. Der Löschdialog verlangt zwei bewusste Bedienhandlungen für den konkret genannten Fall; entfernte Fallordner bleiben im internen Papierkorb erhalten. Für vollständige Wiederherstellung müssen auch Fallindex, Profile und Konfiguration konsistent gesichert werden.
 
 ## Projektstatus
 
 - Paketversion: `0.2.0a43` (Python/PEP 440)
 - Git-/Releasebezeichnung: `v0.2.0-alpha.43`
 - automatisierte Tests: 98 Python-Tests und 23 isolierte Browser-Tests
-- validiert: SanDisk USB, exFAT, Debian-VM, schneller Read-only-Modus
-- noch nicht validiert: Raspberry Pi, mehrere reale USB-Geräte gleichzeitig, CD/DVD, Hardware-LEDs, Einsatzbetrieb
+- dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
+- praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
+- offen: vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
+- Dokumentationsabgleich: 6. September 2026; [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
 
 Siehe [docs/roadmap.md](docs/roadmap.md) für die priorisierten nächsten Schritte.
 
 ## English summary
 
-TRIAGE//BOX is a local field-triage aid for removable media. It starts locked, requires an explicit case and operator session, can scan eligible USB disks in parallel, and stores metadata inventories, keyword hits, decisions, and integrity manifests in a local case archive.
+TRIAGE//BOX is a local field-triage aid for removable media. It starts locked after a service/device restart (a browser reload resumes the active device session), requires an explicit case and operator session, can scan eligible USB disks in parallel, and stores metadata inventories, keyword hits, decisions, and integrity manifests in a local case archive.
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.43 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but are never extracted or decompressed. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.43 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

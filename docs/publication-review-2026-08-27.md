@@ -2,6 +2,8 @@
 
 Stand: 27. August 2026
 
+Historischer Prüfnachweis für den damals geprüften Stand. Der Dokumentationsabgleich vom 6. September 2026 wiederholt weder den Secrets-Scan noch die Prüfung der gesamten Git-Historie; das damalige Ergebnis ist keine Aussage über spätere Commits.
+
 ## Geprüfter Umfang
 
 - aktueller Arbeitsbaum und alle erreichbaren Git-Commits

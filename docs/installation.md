@@ -1,6 +1,6 @@
 # Installation und Aktualisierung / Installation and upgrade
 
-Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi ist das vorgesehene Feldgerät, bleibt aber bis zur praktischen Hardwareabnahme unvalidiert.
+Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät mit Alpha 43. Die Installation und mehrere USB-Sichtungen wurden praktisch verwendet; systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
 
 ## Kurzfassung
 
@@ -12,7 +12,7 @@ Repository kurzzeitig auf öffentlich stellen und auf dem per Ethernet verbunden
 curl -fsSLo /tmp/triagebox-install.sh https://raw.githubusercontent.com/hnslng/forensic-triage/main/scripts/bootstrap_pi.sh && sudo bash /tmp/triagebox-install.sh
 ```
 
-Der Bootstrap prüft Raspberry Pi OS/Debian, installiert Git, lädt das Repository nach `/opt/triagebox` und startet anschließend automatisch `install_debian.sh --pi`. Sobald der Befehl vollständig abgeschlossen ist, kann das Repository wieder privat gestellt werden. Die installierte Anwendung funktioniert danach ohne GitHub-Verbindung weiter. Für ein späteres Update über denselben Befehl muss das Repository erneut erreichbar sein oder der Pi einen eigenen Deploy-Key erhalten.
+Der Bootstrap prüft Raspberry Pi OS/Debian, installiert Git, lädt das Repository nach `/opt/triagebox` und startet anschließend automatisch `install_debian.sh --pi`. Sobald der Befehl vollständig abgeschlossen ist, kann das Repository wieder privat gestellt werden. Die installierte Anwendung funktioniert danach ohne GitHub-Verbindung weiter. Für spätere Updates muss das Repository für den als root laufenden Update-Dienst erreichbar sein oder der Pi einen eigenen Deploy-Key erhalten. Für reguläre Updates den Web-Updater verwenden; erneuter Bootstrap ist eine bewusste Neu-/Wartungsinstallation und kann das Git-Remote wieder auf die Bootstrap-Adresse setzen.
 
 Das Herunterladen und Ausführen eines Root-Skripts setzt Vertrauen in die angegebene Quelle voraus. Deshalb wird die Datei zuerst sichtbar unter `/tmp/triagebox-install.sh` gespeichert und nicht unmittelbar in eine Shell-Pipe geleitet.
 
@@ -31,11 +31,11 @@ Das Skript:
 2. installiert die benötigten Systempakete einschließlich Debian-`7zip` für die reine 7Z-/RAR-Verzeichnisauflistung,
 3. erstellt beziehungsweise aktualisiert `.venv`,
 4. installiert TRIAGE//BOX,
-5. führt alle automatisierten Tests aus,
+5. führt die Python-Tests aus (Browserprüfungen laufen separat auf dem Entwicklungsrechner),
 6. legt die lokale Konfiguration nur beim ersten Lauf an,
-7. installiert und startet den systemd-Dienst.
+7. installiert und startet Webdienst, nginx und Update-Prüftimer; der Pi-Modus richtet zusätzlich das Netzwerk ein.
 
-Es ist idempotent: Eine erneute Ausführung aktualisiert Programm und Dienst, überschreibt aber weder `/etc/forensic-triage/triage.env` noch `casefiles/` oder `results/`.
+Eine erneute Ausführung aktualisiert Programm und Dienste und erhält Fall-/Ergebnisordner. Die Konfiguration wird nicht pauschal ersetzt: passende alte Web-/Profilpfade werden migriert und fehlende Updateparameter ergänzt. `--pi` setzt den Backend-Host auf `127.0.0.1`. Vor einer Wartungsinstallation Fall und Scans beenden; sie ersetzt nicht den geprüften Updateablauf.
 
 Nur Voraussetzungen prüfen, ohne etwas zu installieren:
 
@@ -43,13 +43,13 @@ Nur Voraussetzungen prüfen, ohne etwas zu installieren:
 sudo ./scripts/install_debian.sh --check
 ```
 
-Für den späteren Raspberry Pi gibt es zusätzlich einen ausdrücklich gewählten Pi-Modus:
+Für den Raspberry Pi gibt es zusätzlich einen ausdrücklich gewählten Pi-Modus:
 
 ```bash
 sudo ./scripts/install_debian.sh --pi
 ```
 
-Dieser Modus ist für Raspberry Pi OS Bookworm vorgesehen, muss über Ethernet oder direkt an der Konsole gestartet werden und verweigert die Umschaltung, wenn die laufende SSH-Verbindung über `wlan0` kommt.
+Der Installer prüft die Debian-Familie, keine bestimmte OS-Releaseversion. Raspberry Pi OS Lite/Debian wird im Pi-Testbetrieb verwendet; eine vollständige Versionsmatrix und reproduzierbare Neuinstallation stehen aus. Den Pi-Modus über Ethernet oder direkt an der Konsole starten: Er verweigert die Umschaltung, wenn die erkannte SSH-Verbindung über `wlan0` kommt. Der Hotspot ersetzt die WLAN-Clientverbindung zum Router.
 
 ## 1. Quellcode bereitstellen
 
@@ -63,11 +63,19 @@ git clone git@github.com:hnslng/forensic-triage.git
 cd forensic-triage
 ```
 
-Keine privaten Schlüssel oder Zugriffstokens im Projektordner speichern.
+Keine privaten Schlüssel oder Zugriffstokens im Projektordner speichern. Der per systemd gestartete Updater läuft als **root**. Ein erfolgreicher Git-Zugriff nur als Benutzer `triage` reicht deshalb nicht: Git-Remote, Hostschlüsselvertrauen und nur lesender Deploy-Key müssen auch im Kontext des Update-Dienstes passen. Der Installer richtet diese GitHub-Berechtigung nicht automatisch ein.
+
+Nach entsprechender Einrichtung beim Bootstrap-Pfad rein lesend prüfen:
+
+```bash
+sudo -H git -C /opt/triagebox-current ls-remote origin HEAD
+```
+
+Bei einem anderen Installationspfad dessen konfigurierten Laufzeitlink verwenden. Meldet Git `could not read Username for 'https://github.com'`, benötigt der private HTTPS-Zugriff eine Authentifizierung; für den vorgesehenen Deploy-Key muss das Remote auf SSH zeigen. Das WLAN-Kennwort und der SSH-Zugang zum Pi sind unabhängig vom GitHub-Zugriff.
 
 ### Alternative: freigegebenes Releasepaket übertragen
 
-Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Interne Entwicklungs- und Validierungsaufbauten sind bewusst von dieser Produktinstallation getrennt dokumentiert.
+Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Ein solches Paket enthält kein `.git`; der tagbasierte Web-Updater funktioniert damit nicht. Aktualisierungen müssen dann als neue Pakete bereitgestellt werden. Interne Entwicklungs- und Validierungsaufbauten sind von dieser Produktinstallation getrennt dokumentiert.
 
 ## 2. Installation ausführen
 
@@ -91,28 +99,28 @@ Die Installation legt beim ersten Lauf an:
 /etc/forensic-triage/triage.env
 ```
 
-Vor echtem Einsatz insbesondere den verschlüsselten Fallpfad prüfen:
+Änderungen nur nach beendetem Fall und abgeschlossenen Scans vornehmen. Der Installer aktiviert keine Speicherverschlüsselung; vor echtem Einsatz muss diese separat eingerichtet werden. Konfiguration bearbeiten:
 
 ```bash
 sudoedit /etc/forensic-triage/triage.env
 sudo systemctl restart forensic-triage-web.service
 ```
 
-Alle Werte und Sicherheitsregeln stehen in [configuration.md](configuration.md). Die Standardadresse ist `127.0.0.1`, der Standardport `8787`.
+Alle Werte stehen in [configuration.md](configuration.md). `127.0.0.1:8787` ist die interne Python-Adresse. nginx veröffentlicht die Oberfläche auf Port 80; nach Änderung des internen Ports muss auch sein Upstream angepasst werden.
 
 ## 4. Oberfläche erreichen
 
-Bei `127.0.0.1` ist die Oberfläche nur auf dem Scanner selbst erreichbar. Das ist für lokale Anzeige oder einen abgesicherten SSH-Tunnel geeignet.
+`127.0.0.1` bezeichnet immer den Rechner, auf dem der Browser läuft. Der Python-Dienst ist so nur lokal erreichbar; der Installer stellt zusätzlich nginx bereit, der die Oberfläche im privaten Netz veröffentlicht, auch ohne `--pi`.
 
-Für den Raspberry Pi 3B+ bereitet der Pi-Modus einen privaten WPA2-Hotspot `TRIAGEBOX` als Hauptzugang vor. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend:
+Für den Raspberry Pi 3B+ richtet der Pi-Modus einen privaten WPA2-Hotspot `TRIAGEBOX` als Hauptzugang ein. Der Laptop verbindet sich direkt mit diesem WLAN und öffnet anschließend:
 
 ```text
 http://triagebox.local/
 ```
 
-Ist der Pi gleichzeitig per Ethernet mit demselben privaten LAN wie der Laptop verbunden, funktioniert dieselbe Adresse ohne Wechsel in den Hotspot. Falls mDNS nicht aufgelöst wird, kann ersatzweise die von Router beziehungsweise FRITZ!Box vergebene LAN-IP verwendet werden, zum Beispiel `http://10.0.1.87/`.
+Ist der Pi gleichzeitig per Ethernet mit demselben privaten LAN wie der Laptop verbunden, funktioniert dieselbe Adresse ohne Wechsel in den Hotspot. Falls mDNS nicht aufgelöst wird, kann ersatzweise die von Router beziehungsweise FRITZ!Box vergebene LAN-IP verwendet werden, ohne Portzusatz. Diese LAN-Adresse ist standortabhängig. Im TRIAGEBOX-Hotspot ist bei unveränderter Konfiguration auch `http://10.42.0.1/` erreichbar.
 
-Die derzeitige Alpha-Vorlage verwendet absichtlich das einfache Entwicklungskennwort `triagebox123`. Es ist öffentlich bekannt, kein echtes Geheimnis und muss vor einem realen Einsatz in `/etc/forensic-triage/pi-network.env` geändert werden. Danach den Pi-Modus erneut ausführen oder die NetworkManager-Verbindung aktualisieren.
+Die derzeitige Alpha-Vorlage verwendet absichtlich das einfache Entwicklungskennwort `triagebox123`. Es ist öffentlich bekannt, kein echtes Geheimnis und muss vor einem realen Einsatz in `/etc/forensic-triage/pi-network.env` geändert werden. Danach die Netzwerk-Konfiguration über Ethernet oder Konsole anwenden; siehe [Konfiguration](configuration.md#pi-netzwerk). Ein bloßer Neustart des Webdienstes ändert das NetworkManager-WLAN-Kennwort nicht.
 
 Der Pi-Modus erledigt automatisch:
 
@@ -126,17 +134,19 @@ Der Pi-Modus erledigt automatisch:
 
 Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die geplante Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
 
-Die portfreie HTTP-Adresse ist für den privaten WPA2-Hotspot und private LANs vorbereitet. Portloses HTTPS, das gemeinsame Gerätepasswort und eine feste Ethernet-Rückfalladresse folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall müssen vor einem echten Einsatz weiter validiert werden.
+Die portfreie HTTP-Adresse wurde auf dem Test-Pi bereits erfolgreich verwendet. Portloses HTTPS, das gemeinsame Gerätepasswort und eine feste Ethernet-Rückfalladresse folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall müssen vor einem echten Einsatz weiter validiert werden.
 
 ## 5. Aktualisieren
 
 Der Pi prüft fünf Minuten nach dem Start und danach täglich auf den neuesten Git-Release-Tag. Ohne erreichbares Repository wird nichts verändert. Das Prüfen lädt keinen Code in die laufende Anwendung und installiert nichts.
 
-Eine gefundene Version erscheint im Dashboard. Die Installation wird bewusst dort gestartet und ist gesperrt, solange ein Fall aktiv ist oder ein Scan läuft. Sie läuft getrennt ab: neuer Release-Checkout, Python-Abhängigkeiten und Tests, atomarer Wechsel auf die neue Version, Neustart. Startet die neue Version nicht, stellt das Skript automatisch den vorherigen Release wieder her.
+Eine gefundene Version erscheint im Dashboard. Die Installation wird bewusst dort gestartet und ist gesperrt, solange ein Fall aktiv ist oder ein Scan läuft. Seit Alpha 43 kann der Fall direkt im Updatefenster beendet werden; Installation bleibt eine separate Aktion. Die Vorbereitung erstellt einen neuen Release-Checkout, installiert Python-Abhängigkeiten und führt Python-Tests aus. Anschließend wird der Code-Laufzeitlink atomar gewechselt und der Dienst neu gestartet.
+
+**Der Rückwechsel ist noch begrenzt:** Dienst- und nginx-Vorlagen werden bereits vor dem Linkwechsel installiert. Nach dem Neustart prüft das Skript den Dienststatus und enthält einen Rückwechselpfad für den Code. Ein fehlgeschlagener Neustartbefehl kann das Skript aber schon davor beenden; Vorlagen, Pakete und andere Änderungen werden nicht vollständig zurückgesetzt. Das ist keine bestätigte Stromausfallsicherheit. Fehlerbehandlung, Wiederaufnahme und vollständige Wiederherstellung sind offene Tests und Entwicklungsaufgaben.
 
 Für Wartung ohne Dashboard bleibt möglich:
 
-Nur ohne laufenden Scan und nach beendetem Fall:
+Nur ohne laufenden Scan und nach beendetem Fall. Der direkte systemd-Aufruf durch den Administrator umgeht die Fall-/Scanprüfung des HTTP-Handlers; diese Voraussetzung muss hier selbst geprüft werden:
 
 ```bash
 sudo systemctl start forensic-triage-update@check.service
@@ -168,7 +178,7 @@ Versionen:
 ## 7. Raspberry Pi – vor Freigabe prüfen
 
 - Betriebssystem und Paketverfügbarkeit
-- aktiver USB-Hub und ausreichende Stromversorgung
+- ausreichende Stromversorgung; eigener Laufwerksstrom kann einen aktiven Hub für dieses Laufwerk ersetzen, weitere USB-Geräte gesondert betrachten
 - Systemlaufwerk nicht am selben störanfälligen USB-Pfad wie Prüfmedien; beim Pi 3B+ bevorzugt hochwertige MicroSD für das System
 - mehrere USB-Geräte gleichzeitig
 - reales CD/DVD-Laufwerk
@@ -177,7 +187,7 @@ Versionen:
 - kontrolliertes Herunterfahren und Stromverlust
 - Temperatur und Dauerlast
 
-Bis diese Punkte praktisch validiert sind, ist die Pi-Installation vorbereitet, aber noch keine freigegebene Einsatzinstallation.
+Der vorhandene Pi-Testbetrieb ersetzt diese Abnahme nicht; die Einsatzinstallation ist noch nicht freigegeben.
 
 ## English quick install
 

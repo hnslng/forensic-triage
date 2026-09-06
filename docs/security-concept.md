@@ -1,5 +1,13 @@
 # Geplantes Zugriffsschutzkonzept / Planned access protection
 
+## Iststand der Alpha 43
+
+Der Installer konfiguriert bereits einen WPA2-Hotspot mit lokalem Kennwort sowie den Zugriff über `http://triagebox.local/` ohne sichtbare Portnummer. Das einfache Alpha-Testkennwort muss vor realem Einsatz durch ein gerätespezifisches Kennwort ersetzt werden; Änderung und Übernahme stehen in [configuration.md](configuration.md).
+
+**Noch nicht vorhanden:** Web-Anmeldung, Inaktivitätssperre, HTTPS und automatisch verschlüsselte Fallablage. nginx macht die Oberfläche auch im erlaubten privaten LAN erreichbar, obwohl der Python-Dienst an `127.0.0.1` gebunden ist. Wer dort Netzwerkzugang hat, ist derzeit nicht durch eine zusätzliche Web-Anmeldung eingeschränkt. Bearbeiterkürzel und Fallfreigabe ersetzen diesen Schutz nicht.
+
+Die folgenden Abschnitte beschreiben das Ziel, nicht den bereits erreichten Schutz. Netzwerk-/Firewall-Konfiguration und Offline-Verhalten benötigen noch die praktische Abnahme; siehe [Projektstand](project-status.md) und [Roadmap](roadmap.md).
+
 ## Zielbild
 
 TRIAGE//BOX soll am Einsatzort ohne Benutzerverwaltungsaufwand bedienbar bleiben:
@@ -28,7 +36,7 @@ Für die erste einsatzfähige Pi-Version ist keine zentrale Benutzer- oder Rolle
 6. **Verschlüsselter Fallspeicher:** `casefiles/`, `results/`, Berichte, Exporte und interner Papierkorb liegen vor realem Einsatz auf verschlüsseltem Speicher. Das Entsperrverfahren muss mit einem kopflosen Pi-Start vereinbar sein und darf den Schlüssel nicht ungeschützt auf derselben SD-Karte ablegen.
 7. **Geheimnisse bleiben lokal:** WLAN- und Gerätepasswort, Zertifikatsschlüssel und Speicherentsperrung gehören in root-geschützte lokale Konfiguration beziehungsweise einen geeigneten Schlüsselspeicher, niemals in Git, Bericht oder Audit-Log.
 
-## Bewusst nicht vorgesehen
+## Im Zielbetrieb bewusst nicht vorgesehen
 
 - keine zentrale Benutzerverwaltung
 - kein Active Directory oder Cloud-Zwang
@@ -40,6 +48,7 @@ Einzelne Benutzerkonten werden erst neu bewertet, wenn mehrere Organisationen od
 
 ## Noch zu entscheiden und zu testen
 
+- [x] WPA2-Hotspot und lokale Netzwerkkonfiguration im Pi-Installer vorbereiten
 - [ ] tatsächliche WPA2-/WPA3-Fähigkeit des Raspberry Pi 3B+ im Access-Point-Betrieb validieren
 - [ ] Verfahren für Ersteinrichtung, Wechsel und Wiederherstellung von WLAN- und Gerätepasswort festlegen
 - [ ] sichere Sitzung, Zeitlimit, Abmeldung und Sperre nach Neustart implementieren und testen
@@ -58,4 +67,4 @@ Einzelne Benutzerkonten werden erst neu bewertet, wenn mehrere Organisationen od
 
 ## English summary
 
-The planned field appliance uses a password-protected private hotspot, one shared device unlock per work session, short server-side sessions, local HTTPS, a restricted network, and encrypted case storage. Operator initials remain audit metadata rather than authentication. Central user management is intentionally deferred unless a real multi-user requirement emerges.
+The alpha already configures a WPA2 hotspot and port-free HTTP access. Web authentication, HTTPS and encrypted case storage are not implemented by the installer. The planned field appliance adds one shared device unlock per work session, short server-side sessions, local HTTPS, a restricted network, and encrypted case storage. Operator initials remain audit metadata rather than authentication. Central user management is intentionally deferred unless a real multi-user requirement emerges.

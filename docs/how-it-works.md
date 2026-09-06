@@ -9,14 +9,14 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 ## Was passiert beim Anschließen?
 
 1. Linux meldet die vorhandenen Laufwerke.
-2. TRIAGE//BOX filtert daraus ganze USB-Datenträger heraus.
+2. TRIAGE//BOX filtert daraus geeignete ganze USB-Datenträger und externe optische USB-Laufwerke heraus.
 3. Gemountete, ungeeignete oder gefährliche Ziele werden abgelehnt.
 4. Ohne ausdrücklich gestarteten Fall passiert kein Scan.
 5. Der Scanner setzt das Blockgerät softwareseitig auf read-only und kontrolliert diesen Zustand.
 6. Im schnellen Modus werden vorhandene Verzeichnis-Metadaten kurzzeitig über einen zusätzlichen Read-only-Mount gelesen.
 7. Dateinamen, Pfade, Endungen, Größen und Zeitstempel werden in eine Tabelle geschrieben.
-8. ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archive erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex; es wird nichts extrahiert oder dekomprimiert.
-9. Aus den äußeren Metadaten und den zusätzlichen virtuellen Containerpfaden entstehen Kategorien, Größenstatistik und Stichworttreffer. Die normalen Datei-/Ordnerzahlen zählen Containerinhalte bewusst nicht doppelt.
+8. ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archive erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex. Nutzdateien werden nicht extrahiert oder dekomprimiert; komprimierte Archivverzeichnisse können intern dekodiert werden.
+9. Kategorien, Größenstatistik und größte Dateien entstehen aus den äußeren Dateimetadaten. Für Namens-/Pfadsuche und Stichworttreffer kommen die katalogisierten virtuellen Containerpfade hinzu. Die normalen Datei-/Ordnerzahlen zählen Containerinhalte bewusst nicht doppelt.
 10. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
 11. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
@@ -24,11 +24,11 @@ Normale versteckte Dateien und Ordner werden dabei wie andere aktive Dateisystem
 
 In der Ergebnisansicht sind Dateikategorien und Stichworttreffer direkt mit dem gespeicherten Metadatenverzeichnis verknüpft. Ein Klick auf beispielsweise „Bilder“ filtert die Dateiliste nach dieser Kategorie. Archive bleiben auch in dieser gefilterten Tabelle über einen Pfeil aufklappbar. Ein Klick auf ein Stichwort zeigt die konkreten Trefferpfade und kennzeichnet, ob der Treffer im Dateinamen oder in einem übergeordneten Ordnerpfad vorkommt. Der aktive Filter steht in einer eigenen schmalen Statusleiste; zugleich erscheint „Filter aufheben“ direkt neben der Suche und stellt den vollständigen Verzeichnisbaum wieder her. Die freie Namens- und Pfadsuche bleibt eine davon getrennte Funktion. Große Treffermengen werden seitenweise nachgeladen.
 
-ZIP-, ISO-, 7Z- und RAR-Dateien erscheinen dort wie aufklappbare Ordner mit einem Formatkennzeichen. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird direkt über das Zentralverzeichnis gelesen, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen. Für 7Z und RAR ruft der Scanner das vom Debian-Installer bereitgestellte Werkzeug `7z` ausschließlich im Listenmodus `l -slt` auf. Die Standardeingabe ist dabei geschlossen: TRIAGE//BOX gibt kein Passwort ein und startet keinen interaktiven Passwortversuch. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte, unvollständige, kopfverschlüsselte Container und erreichte Limits werden sichtbar unterschieden.
+ZIP-, ISO-, 7Z- und RAR-Dateien erscheinen dort als aufklappbare Verzeichniseinträge; der Fundort in Suchlisten benennt beispielsweise `IM ZIP` oder `IM ISO`. Der virtuelle Baum stammt aus `container-index.json`. ZIP wird direkt über das Zentralverzeichnis gelesen, ISO über ISO9660 beziehungsweise vorhandene Rock-Ridge-, Joliet- oder UDF-Verzeichnisstrukturen. Für 7Z und RAR ruft der Scanner das vom Debian-Installer bereitgestellte Werkzeug `7z` ausschließlich im Listenmodus `l -slt` auf. Die Standardeingabe ist dabei geschlossen: TRIAGE//BOX gibt kein Passwort ein und startet keinen interaktiven Passwortversuch. Interne Dateinamen fließen in die Pfadsuche und Stichwortsuche ein; sie verändern aber weder die Anzahl noch das Datenvolumen der tatsächlich auf dem Medium erfassten äußeren Dateien. Beschädigte, unvollständige, kopfverschlüsselte Container und erreichte Limits werden sichtbar unterschieden.
 
-Unter der Dateitypenliste stehen kompakte, anklickbare Statuszähler für sicher erkannte verschlüsselte ZIP-, 7Z- und RAR-Archive und für `Ungeprüft`. Die Auswahl zeigt die zugehörigen äußeren Archivdateien; verschachtelte Archivnamen werden nicht mitgezählt. Zähler, Filter und Explorerkennzeichnung verwenden dieselbe Einstufung aus dem gespeicherten Archivindex, zugeordnet nach Partition und Pfad. Es wird dafür nicht erneut auf den Datenträger zugegriffen.
+Unter dem sichtbaren Label `ARCHIVE` unter der Dateitypenliste stehen kompakte, anklickbare Statuszähler für sicher erkannte verschlüsselte ZIP-, 7Z- und RAR-Archive und für `Ungeprüft`. Die Auswahl zeigt die zugehörigen äußeren Archivdateien; verschachtelte Archivnamen werden nicht mitgezählt. Zähler, Filter und Explorerkennzeichnung verwenden dieselbe Einstufung aus dem gespeicherten Archivindex, zugeordnet nach Partition und Pfad. Es wird dafür nicht erneut auf den Datenträger zugegriffen.
 
-Archive, deren Verschlüsselungszustand wegen Format, Beschädigung, fehlendem Teilvolume oder Limit nicht zuverlässig feststeht, bleiben `Ungeprüft`. TRIAGE//BOX versucht keine Passwörter und deutet `Ungeprüft` niemals als unverschlüsselt. Eine positiv erkannte Verschlüsselung bleibt auch bei einem unvollständigen Inhaltsverzeichnis als solche markiert. Innere Archivdateien erhalten keine ungeprüfte oder verschlüsselte Einstufung aus dem Zustand ihres äußeren Archivs.
+Archive, deren Verschlüsselungszustand wegen Format, Beschädigung, fehlendem Teilvolume oder Limit nicht zuverlässig feststeht, bleiben `Ungeprüft`. TRIAGE//BOX versucht keine Passwörter und deutet `Ungeprüft` niemals als unverschlüsselt oder sicher defekt. Ein konkreter Grund wird nur soweit im gespeicherten Index vorhanden angezeigt. Die Zähler betreffen Archive, keine PDFs, Office-Dokumente oder verschlüsselten Volumes. Eine positiv erkannte Verschlüsselung bleibt auch bei einem unvollständigen Inhaltsverzeichnis als solche markiert. Innere Archivdateien erhalten keine ungeprüfte oder verschlüsselte Einstufung aus dem Zustand ihres äußeren Archivs.
 
 Die Liste der größten Dateien zeigt Größen in einer festen linken Spalte sowie Dateiname und Ordner daneben. Ein Klick fragt über `exact_path` exakt den gespeicherten Metadatenpfad des ausgewählten Mediums ab; ähnlich benannte Dateien werden nicht mit ausgewählt. Dabei werden weder Nutzdateien geöffnet noch zusätzliche Daten vom Medium gelesen.
 
@@ -64,9 +64,9 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `/etc/forensic-triage/triage.env` | lokale Ports, Pfade und Profileinstellung | nein |
 | `casefiles/` oder konfigurierter Fallpfad | Fallakten, SQLite-Index, Audit, Berichte und Manifeste | niemals |
 | `results/` oder konfigurierter Ergebnispfad | technische Scannergebnisse | niemals |
-| `casefiles/.trash/` | entfernte, wiederherstellbare Fallordner | niemals |
+| `casefiles/.trash/` | entfernte Fallordner; Rückimport in den Index noch offen | niemals |
 | systemd-Journal | Start-, Dienst- und Fehlermeldungen | nein |
-| Browser/Laptop | nur Darstellung und gegebenenfalls SSH-Verbindung | keine dauerhafte Fallakte |
+| Browser/Laptop | Darstellung und heruntergeladene PDF-/ZIP-Exporte | Exporte niemals |
 
 Der kompakte PDF-Bericht wird bei jeder Änderung der Fallakte aktualisiert und dort mitgeführt. PDF und ZIP werden beim Download zusätzlich im verwendeten Browser gespeichert; dieser Speicherort hängt vom Browser ab.
 
@@ -74,13 +74,13 @@ Die beim Scan gelesenen Gerätedaten liegen pro Sichtung in `device.json`; die z
 
 ## Was ist die Konfiguration?
 
-Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch kann dasselbe Programm auf unterschiedlichen Debian-Zielsystemen laufen, ohne Quellcode oder Git-Dateien ändern zu müssen. Ein Portwechsel oder ein anderer verschlüsselter Fallspeicher wird in `/etc/forensic-triage/triage.env` eingetragen und der Dienst anschließend neu gestartet.
+Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch kann dasselbe Programm auf unterschiedlichen Debian-Zielsystemen laufen, ohne Quellcode oder Git-Dateien ändern zu müssen. Ein anderer Fallspeicher wird in `/etc/forensic-triage/triage.env` eingetragen; vorhandene Daten müssen separat übertragen werden. Bei einem internen Portwechsel muss zusätzlich nginx angepasst werden, damit `http://triagebox.local/` weiter funktioniert. Einzelheiten stehen in [Konfiguration](configuration.md#port-und-netzwerk).
 
 Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt versioniert, Passwörter und gerätespezifische Pfade bleiben lokal.
 
 ## Was passiert ausdrücklich nicht?
 
-TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Einträge werden nicht extrahiert, dekomprimiert oder rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
+TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Nutzdateien werden nicht extrahiert oder dekomprimiert, verschachtelte Archive nicht rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
 
 ## English summary
 

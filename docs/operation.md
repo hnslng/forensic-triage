@@ -2,7 +2,7 @@
 
 ## Grundsatz
 
-TRIAGE//BOX unterstützt die Grobsichtung. Es entscheidet nicht, ob ein Medium rechtlich oder fachlich sicherzustellen ist. Alle relevanten Bedienhandlungen werden der lokalen Fallakte zugeordnet. Besonders Entscheidungen dürfen nur bewusst und mit dem richtigen Bearbeiterkürzel gespeichert werden.
+TRIAGE//BOX unterstützt die Grobsichtung. Es entscheidet nicht, ob ein Medium rechtlich oder fachlich sicherzustellen ist. Fallstart, Sichtungsreservierung, Scanergebnisse/-fehler und Entscheidungen werden der lokalen Fallakte zugeordnet. Fallende ist derzeit kein eigenes Audit-Ereignis; Navigation und Filter erzeugen ebenfalls keines. Besonders Entscheidungen dürfen nur bewusst und mit dem richtigen Bearbeiterkürzel gespeichert werden.
 
 ## 1. System starten
 
@@ -13,11 +13,11 @@ Im Fenster `SYSTEM & UPDATES` kann ein aktiver Fall über `FALL … BEENDEN` dir
 3. Lokalen Bildschirm oder freigegebene Netzwerkverbindung verwenden.
 4. Dashboard öffnen.
 
-Nach jedem Seiten- oder Dienstneustart ist **kein Fall aktiv**. Der Systemstatus zeigt „Gesperrt“ und es darf kein Scan beginnen.
+Nach einem Pi-/Webdienst-Neustart ist **kein Fall aktiv**. Der Systemstatus zeigt „Gesperrt“ und es darf kein Scan beginnen. Beim Neuladen oder erneuten Öffnen des Browsers wird dagegen die noch aktive Sitzung des Geräts übernommen. Browser schließen oder WLAN trennen ersetzt deshalb nicht „Fall beenden“.
 
 ## 2. Neuen Fall vorbereiten
 
-1. Links „Fall anlegen / öffnen“ wählen.
+1. Links „Fall verwalten“ wählen.
 2. Neue Fallnummer eingeben.
 3. Bearbeiter-/Kürzel eintragen.
 4. Mindestens ein Suchprofil auswählen. Mehrere Profile werden zusammengeführt; doppelte Begriffe werden nur einmal gesucht.
@@ -28,7 +28,7 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 
 ## 3. Vorhandenen Fall öffnen
 
-1. „Fall anlegen / öffnen“ und anschließend „Fallarchiv öffnen“ wählen.
+1. „Fall verwalten“ und anschließend „Fallarchiv öffnen“ wählen.
 2. Beim gewünschten Fall „Öffnen“ wählen.
 3. Bearbeiterkürzel eintragen beziehungsweise prüfen.
 4. Suchprofile prüfen.
@@ -89,11 +89,11 @@ Bei `GRÖSSTE DATEIEN` steht die Größe fest links, daneben der Dateiname und d
 5. Die fallbezogene Bestätigung aktivieren.
 6. „Diesen Fall aus dem Archiv entfernen“ bewusst auslösen.
 
-Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bleibt während des Vorgangs geöffnet. Der aktive Fall kann nicht entfernt werden. Die lokale Fallakte wird in einen internen Papierkorb verschoben und bleibt administrativ wiederherstellbar; dies ist keine sichere Datenlöschung.
+Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bleibt während des Vorgangs geöffnet. Das Dashboard sperrt das Entfernen des aktiven Falls; der DELETE-Endpunkt hat diese zusätzliche Fall-/Scanprüfung noch nicht. Die lokale Fallakte wird in einen internen Papierkorb verschoben. Die Dateien bleiben erhalten; ein fertiger Wiederimport in die Fallliste fehlt noch. Das Zurückverschieben des Ordners allein stellt den SQLite-Eintrag nicht wieder her. Dies ist keine sichere Datenlöschung.
 
 ## 9. Fall beenden
 
-„Fall beenden“ sperrt neue Scans und entfernt die aktive Zuordnung aus der Oberfläche. Vor Standort- oder Fallwechsel immer den alten Fall beenden. Ein Fall kann nicht beendet werden, solange ein Scan läuft.
+„Fall beenden“ sperrt neue Scans und entfernt die aktive Sitzung aus dem Webdienst sowie der Oberfläche. Die gespeicherte Fallakte bleibt im Archiv. Auch im Fenster „System & Updates“ ist Fallende möglich; die Updateinstallation wird danach separat gestartet. Vor Standort- oder Fallwechsel immer den alten Fall beenden. Ein Fall kann nicht beendet werden, solange ein Scan läuft.
 
 ## Störungen
 
@@ -105,4 +105,4 @@ Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bl
 
 ## English workflow summary
 
-The system always starts without an active case. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record either “Secure” or reasoned “Do not secure”. An evidence number is required only for “Secure”. End the case before changing locations or deleting it. Cases can be opened or removed directly from the archive; the active case is protected.
+A service/device restart clears the active case; a browser reload resumes the active device session. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record either “Secure” or reasoned “Do not secure”. An evidence number is required only for “Secure”. End the case before changing locations or deleting it. Cases can be opened or removed directly from the archive; active-case deletion is blocked in the dashboard, while the additional server-side deletion guard is still pending.
