@@ -288,9 +288,30 @@
         <p id="catalogMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsUpdatesPane" class="settings-pane settings-updates-pane" aria-labelledby="settingsUpdatesTab" hidden>
-        <p>Programmversion prüfen und signierte Offline-Updates einspielen. Installationen erfolgen niemals automatisch.</p>
-        <div class="settings-system-card"><span>INSTALLIERTE VERSION</span><strong id="settingsSystemVersion">—</strong><small id="settingsUpdateStatus">STATUS NOCH NICHT GELADEN</small></div>
-        <button id="openUpdateModal" class="settings-update-open" type="button">SYSTEM &amp; UPDATES ÖFFNEN →</button>
+        <div id="updateModal" class="update-modal update-embedded">
+          <div class="update-modal-body">
+            <div class="update-version-grid">
+              <div><span>INSTALLIERTE VERSION</span><strong id="updateCurrentVersion">—</strong></div>
+              <div><span>UPDATE-STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
+              <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
+            </div>
+            <p>TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
+            <p id="updateActionMessage" class="update-action-message"></p>
+            <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
+            <div class="update-actions">
+              <button id="updateStopCase" type="button" hidden>FALL BEENDEN</button>
+              <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>
+              <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
+            </div>
+            <section class="offline-update">
+              <div><strong>OFFLINE ÜBER TRIAGEBOX-WLAN</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt dabei kein Internet.</small></div>
+              <label for="offlineUpdateFile">UPDATEPAKET AUSWÄHLEN</label>
+              <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" />
+              <button id="offlineUpdateInstall" type="button" disabled>PAKET HOCHLADEN &amp; INSTALLIEREN</button>
+              <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
+            </section>
+          </div>
+        </div>
       </section>
     </dialog>
     <dialog id="keywordModal" class="evidence-modal keyword-modal">
@@ -311,31 +332,6 @@
           <button id="saveKeywordSettings" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
           <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
         </div>
-      </div>
-    </dialog>
-    <dialog id="updateModal" class="evidence-modal update-modal">
-      <div class="modal-head"><div><span>SYS</span> SYSTEM &amp; UPDATES</div><button id="closeUpdateModal" type="button">SCHLIESSEN ×</button></div>
-      <div class="update-modal-body">
-        <div class="update-version-grid">
-          <div><span>INSTALLIERTE VERSION</span><strong id="updateCurrentVersion">—</strong></div>
-          <div><span>UPDATE-STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
-          <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
-        </div>
-        <p>TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
-        <p id="updateActionMessage" class="update-action-message"></p>
-        <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
-        <div class="update-actions">
-          <button id="updateStopCase" type="button" hidden>FALL BEENDEN</button>
-          <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>
-          <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
-        </div>
-        <section class="offline-update">
-          <div><strong>OFFLINE ÜBER TRIAGEBOX-WLAN</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt dabei kein Internet.</small></div>
-          <label for="offlineUpdateFile">UPDATEPAKET AUSWÄHLEN</label>
-          <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" />
-          <button id="offlineUpdateInstall" type="button" disabled>PAKET HOCHLADEN &amp; INSTALLIEREN</button>
-          <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
-        </section>
       </div>
     </dialog>
     <dialog id="powerModal" class="evidence-modal power-modal" aria-labelledby="powerModalTitle">

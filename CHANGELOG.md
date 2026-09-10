@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.51] – 2026-09-10
+
+- `SYSTEM & UPDATES` ist vollständig in die dritte Registerkarte der Einstellungen integriert; der unnötige zweite Öffnungsschritt entfällt.
+- Das Einstellungsfenster behält beim Wechsel zwischen Stichwortprofilen, Dateitypen und Updates dieselbe Größe und scrollt seinen jeweiligen Inhalt kontrolliert.
+- Die Updateansicht bleibt während Prüfung oder Installation gesperrt sichtbar und wird nach einem Dienstneustart direkt in der richtigen Registerkarte wiederhergestellt.
+- Das nur im Warnfall sichtbare Stromsymbol verwendet einen Hinweis-Cursor und kann nicht mehr versehentlich wie Text markiert werden.
+- 133 Python-Tests und 30 isolierte Browserprüfungen erfolgreich.
+
 ## [0.2.0-alpha.50] – 2026-09-10
 
 - Versionsanzeige aus der Statusleiste direkt neben die TRIAGE//BOX-Marke verschoben; der Update-Einstieg liegt als dritter verständlicher Bereich neben Stichwortprofilen und Dateitypen in den Einstellungen.

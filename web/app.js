@@ -49,6 +49,7 @@ let caseSessionTransition = false;
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const rememberUpdateDialog = () => sessionStorage.setItem(UPDATE_DIALOG_RESTORE_KEY, "1");
 const forgetUpdateDialog = () => sessionStorage.removeItem(UPDATE_DIALOG_RESTORE_KEY);
+const isUpdateBusy = () => Boolean(updateActionInProgress) || ["checking", "installing"].includes(updateState.state);
 const formatReleaseVersion = (value) => {
   const match = String(value || "").match(/^(\d+\.\d+\.\d+)a(\d+)$/);
   return match ? `v${match[1]}-alpha.${match[2]}` : String(value || "—");
@@ -167,19 +168,16 @@ function renderUpdateState(value = {}) {
   $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("systemVersion").textContent = formatReleaseVersion(updateState.current_version);
-  $("settingsSystemVersion").textContent = formatReleaseVersion(updateState.current_version);
-  $("settingsUpdateStatus").textContent = statusLabels[state] || updateState.message || "STATUS UNBEKANNT";
-  $("openUpdateModal").title = `System und Updates · ${formatReleaseVersion(updateState.current_version)} · ${statusLabels[state] || updateState.message || "Status unbekannt"}`;
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
-  $("openUpdateModal").classList.toggle("update-available", state === "available");
+  $("settingsUpdatesTab").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
-  const actionRunning = Boolean(updateActionInProgress) || state === "checking" || state === "installing";
+  const actionRunning = isUpdateBusy();
   $("updateModal").classList.toggle("update-busy", actionRunning);
-  $("closeUpdateModal").disabled = actionRunning;
+  $("closeSettings").disabled = actionRunning || catalogBusy;
   $("updateProgress").hidden = !actionRunning;
   $("updateProgress").classList.toggle("checking", state === "checking");
   $("updateProgressLabel").textContent = state === "checking" ? "FREIGEGEBENE VERSION WIRD GEPRÜFT …"
@@ -413,10 +411,10 @@ function selectSettingsPane(pane = "profiles") {
   }
 }
 
-async function openSettings() {
+async function openSettings(initialPane = "profiles") {
   if ($("auftragModal").open) $("auftragModal").close();
   if (!$("settingsModal").open) $("settingsModal").showModal();
-  selectSettingsPane("profiles");
+  selectSettingsPane(initialPane);
   const revision = ++settingsRevision;
   catalogState = null; catalogDirty = false;
   $("catalogRows").innerHTML = "";
@@ -489,14 +487,14 @@ async function saveCatalog() {
     $("catalogMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     catalogBusy = false;
-    $("closeSettings").disabled = false;
+    $("closeSettings").disabled = isUpdateBusy();
     for (const element of $("settingsFiletypesPane").querySelectorAll("input, textarea, button")) element.disabled = false;
     $("catalogSave").disabled = !catalogDirty;
   }
 }
 
 function closeSettings() {
-  if (catalogBusy) return;
+  if (catalogBusy || isUpdateBusy()) return;
   if (catalogDirty && !window.confirm("Ungespeicherte Änderungen am Dateityp-Katalog verwerfen?")) return;
   ++settingsRevision;
   $("settingsModal").close();
@@ -1635,7 +1633,7 @@ $("cancelPowerAction").addEventListener("click", () => {
 });
 $("confirmPowerAction").addEventListener("click", confirmPowerAction);
 $("openAuftragModal").addEventListener("click", openAuftrag);
-$("openSettings").addEventListener("click", openSettings);
+$("openSettings").addEventListener("click", () => openSettings());
 $("closeSettings").addEventListener("click", closeSettings);
 $("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(); closeSettings(); });
 $("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
@@ -1687,19 +1685,6 @@ $("openEvidenceModal").addEventListener("click", () => $("evidenceModal").showMo
 $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close());
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
-});
-$("openUpdateModal").addEventListener("click", () => {
-  closeSettings();
-  if (!$("settingsModal").open && !$("updateModal").open) $("updateModal").showModal();
-});
-$("closeUpdateModal").addEventListener("click", () => {
-  if (!updateActionInProgress && !["checking", "installing"].includes(updateState.state)) $("updateModal").close();
-});
-$("updateModal").addEventListener("click", (event) => {
-  if (event.target === $("updateModal") && !updateActionInProgress && !["checking", "installing"].includes(updateState.state)) $("updateModal").close();
-});
-$("updateModal").addEventListener("cancel", (event) => {
-  if (updateActionInProgress || ["checking", "installing"].includes(updateState.state)) event.preventDefault();
 });
 $("createProfile").addEventListener("click", () => openProfileEditor(null));
 $("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());
@@ -1937,8 +1922,7 @@ updateCaseSessionUi();
 loadProfiles();
 refresh().finally(() => {
   if (sessionStorage.getItem(UPDATE_DIALOG_RESTORE_KEY) === "1") {
-    if (!$("updateModal").open) $("updateModal").showModal();
-    forgetUpdateDialog();
+    openSettings("updates").finally(forgetUpdateDialog);
   }
 });
 setInterval(() => refresh(false), 2500);

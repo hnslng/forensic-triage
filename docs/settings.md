@@ -26,7 +26,7 @@ Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordn
 
 ## System & Updates
 
-Der dritte Einstellungsbereich zeigt die installierte Programmversion und den zuletzt bekannten Updatestatus. **System & Updates öffnen** führt in das ausführliche Updatefenster für Online-Prüfung und signierte `.tbu`-Pakete. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Fenster geöffnet beziehungsweise wird nach dem Neuladen automatisch wiederhergestellt. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben.
+Der dritte Einstellungsbereich enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird nach dem Neuladen direkt in dieser Registerkarte wiederhergestellt. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben.
 
 ## Nachvollziehbarkeit
 

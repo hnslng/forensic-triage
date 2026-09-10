@@ -127,6 +127,13 @@ test('catalog filters, reports invalid saves, preserves draft and saves future-s
 test('settings remain readable on laptop and small screens', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.locator('#openSettings').click();
+  await page.setViewportSize({ width: 800, height: 900 });
+  const heights = [];
+  for (const tab of ['#settingsProfilesTab', '#settingsFiletypesTab', '#settingsUpdatesTab']) {
+    await page.locator(tab).click();
+    heights.push(await page.locator('#settingsModal').evaluate(node => node.getBoundingClientRect().height));
+  }
+  assert.equal(new Set(heights).size, 1, 'Settings dialog height must stay stable between tabs');
   await page.locator('#settingsFiletypesTab').click();
   await page.locator('[data-category="Bilder"] textarea').waitFor();
   for (const width of [1440, 800, 470]) {
@@ -151,7 +158,7 @@ for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 
   await page.evaluate(() => {
     activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' };
     renderUpdateState({ state: 'available', available_version: 'v0.2.0-alpha.43' });
-    document.getElementById('updateModal').showModal();
+    document.getElementById('settingsModal').showModal(); selectSettingsPane('updates');
     runningPaths.add('/dev/test'); renderUpdateState();
   });
   assert.equal(await page.locator('#updateStopCase').isDisabled(), true);
@@ -188,9 +195,8 @@ test('signed offline package uploads through the update dialog and observes comp
   });
   await page.locator('#openSettings').click();
   await page.locator('#settingsUpdatesTab').click();
-  await page.locator('#openUpdateModal').click();
   await page.setViewportSize({ width: 470, height: 900 });
-  const modalSize = await page.locator('#updateModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+  const modalSize = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
   assert.ok(modalSize.scroll <= modalSize.client + 1, 'Offline update controls must not overflow a small screen');
   await page.locator('#offlineUpdateFile').setInputFiles({ name: 'triagebox-v0.2.0-alpha.45.tbu', mimeType: 'application/octet-stream', buffer: body });
   assert.equal(await page.locator('#offlineUpdateInstall').isEnabled(), true);
@@ -258,9 +264,10 @@ test('update dialog reopens after the service reload and keeps progress visible 
   });
   await page.evaluate(() => sessionStorage.setItem('triagebox-update-dialog', '1'));
   await page.reload({ waitUntil: 'networkidle' });
-  await page.locator('#updateModal').waitFor({ state: 'visible' });
+  await page.locator('#settingsModal').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#settingsUpdatesPane').isVisible(), true);
   assert.equal(await page.locator('#updateProgress').isVisible(), true);
-  assert.equal(await page.locator('#closeUpdateModal').isDisabled(), true);
+  assert.equal(await page.locator('#closeSettings').isDisabled(), true);
   assert.match(await page.locator('#updateProgressLabel').innerText(), /VORBEREITET|GEPRÜFT/);
   assert.equal(await page.evaluate(() => sessionStorage.getItem('triagebox-update-dialog')), null);
 });
