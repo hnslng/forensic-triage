@@ -19,10 +19,33 @@ from forensic_triage.web import (
     ejected_usb_paths,
     latest_result,
     parse_media_devices,
+    parse_throttled_status,
     parser,
+    read_power_status,
     read_update_status,
     update_job_states,
 )
+
+
+@pytest.mark.parametrize(("raw", "state", "label"), [
+    ("throttled=0x0\n", "ok", "STROM OK"),
+    ("throttled=0x1\n", "danger", "UNTERSPANNUNG AKTIV"),
+    ("throttled=0x10000\n", "warning", "UNTERSPANNUNG AUFGETRETEN"),
+    ("throttled=0x40004\n", "danger", "LEISTUNG GEDROSSELT"),
+])
+def test_raspberry_power_flags_are_distinguished(raw, state, label) -> None:
+    status = parse_throttled_status(raw)
+    assert status["state"] == state
+    assert status["label"] == label
+
+
+def test_power_status_is_unknown_when_vcgencmd_is_unavailable(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    monkeypatch.setattr(web.subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError()))
+    status = read_power_status(force=True)
+    assert status["state"] == "unknown"
+    assert status["current_undervoltage"] is None
 
 
 @pytest.mark.parametrize("exact_path", [None, "Ordner/Übergabe ' & # % <Test>.bin"])
@@ -310,6 +333,50 @@ def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
         "forensic-triage-update@install.service",
         "forensic-triage-update@offline.service",
     ]
+
+
+def test_power_action_schedules_only_a_valid_delayed_systemd_action(monkeypatch, tmp_path) -> None:
+    import forensic_triage.web as web
+
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.server = SimpleNamespace(update_guard_file=tmp_path / "update-requested")
+    handler._read_payload = lambda: {"action": "poweroff"}
+    responses = []
+    commands = []
+    handler._json = lambda status, body: responses.append((status, body))
+    monkeypatch.setattr(web, "POWER_ACTION_REQUESTED", "")
+    monkeypatch.setattr(web, "active_device_paths", lambda: [])
+    monkeypatch.setattr(web, "active_case_session", lambda: None)
+    monkeypatch.setattr(web, "update_job_states", lambda: {"check": False, "install": False, "offline": False})
+    monkeypatch.setattr(web.subprocess, "run", lambda command, **kwargs: commands.append(command))
+
+    handler._post_power()
+
+    assert responses == [(202, {"action": "poweroff", "scheduled_in_seconds": 3})]
+    assert commands == [[
+        "/usr/bin/systemd-run", "--quiet", "--collect", "--unit=triagebox-power-action", "--on-active=3s",
+        "/usr/bin/systemctl", "--no-wall", "poweroff",
+    ]]
+
+
+@pytest.mark.parametrize("blocker", ["scan", "case", "update"])
+def test_power_action_is_server_side_blocked_during_work(monkeypatch, tmp_path, blocker) -> None:
+    import forensic_triage.web as web
+
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.server = SimpleNamespace(update_guard_file=tmp_path / "update-requested")
+    handler._read_payload = lambda: {"action": "reboot"}
+    responses = []
+    handler._json = lambda status, body: responses.append((status, body))
+    monkeypatch.setattr(web, "POWER_ACTION_REQUESTED", "")
+    monkeypatch.setattr(web, "active_device_paths", lambda: ["/dev/test"] if blocker == "scan" else [])
+    monkeypatch.setattr(web, "active_case_session", lambda: {"case_number": "TEST"} if blocker == "case" else None)
+    monkeypatch.setattr(web, "update_job_states", lambda: {"check": blocker == "update"})
+    monkeypatch.setattr(web.subprocess, "run", lambda *args, **kwargs: pytest.fail("power action was scheduled"))
+
+    handler._post_power()
+
+    assert responses[0][0] == 409
 
 
 def test_offline_update_upload_is_streamed_then_starts_worker(monkeypatch, tmp_path) -> None:

@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.46] – 2026-09-10
+
+- Kompakte Blitzanzeige in der Systemleiste unterscheidet `STROM OK`, aktuell aktive Unterspannung/Drosselung, seit dem Boot aufgetretene Ereignisse und einen unbekannten Status. Zustandsänderungen werden im Systemjournal protokolliert.
+- Eigenes Systemfenster zeigt aktuellen und seit dem Systemstart gespeicherten Raspberry-Pi-Stromstatus. Ein Klick auf Blitz oder Power-Symbol öffnet dieselbe übersichtliche Ansicht.
+- Neustart und Herunterfahren benötigen Auswahl und ausdrückliche zweite Bestätigung. Die Ausführung wird um drei Sekunden verzögert, damit die Browserantwort sichtbar ankommt.
+- Fall, Scan, Update und bereits angeforderte Systemaktion sperren Neustart und Herunterfahren zusätzlich serverseitig. Die API akzeptiert ausschließlich `reboot` oder `poweroff` und startet dafür eine kurzlebige systemd-Aktion.
+- 132 Python-Tests und 28 isolierte Browserprüfungen erfolgreich; Statusbits, fehlendes Pi-Werkzeug, serverseitige Sperren, Befehlsbegrenzung, Bestätigung und schmale Darstellung sind abgedeckt.
+
 ## [0.2.0-alpha.45] – 2026-09-10
 
 - Signierte `.tbu`-Pakete lassen sich ohne Internetzugang über den TRIAGEBOX-Hotspot hochladen und bewusst installieren; Uploadfortschritt und anschließender Prüfstatus erscheinen im bestehenden Systemfenster.

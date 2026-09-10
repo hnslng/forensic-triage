@@ -25,6 +25,10 @@
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <button id="openUpdateModal" class="system-button" type="button">SYSTEM <small id="systemVersion">v—</small><span id="updateSummary"></span></button>
         <button id="openSettings" class="system-button" type="button">EINSTELLUNGEN</button>
+        <div class="power-controls">
+          <button id="powerHealth" class="power-health unknown" type="button" title="Stromversorgung prüfen"><span aria-hidden="true">⚡</span><b id="powerHealthText">STROMSTATUS</b></button>
+          <button id="openPowerModal" class="power-open" type="button" title="Neustart oder Herunterfahren" aria-label="Systemsteuerung öffnen">⏻</button>
+        </div>
         <span id="clock">LOKAL --:--:--</span>
       </section>
 
@@ -323,6 +327,30 @@
           <button id="offlineUpdateInstall" type="button" disabled>PAKET HOCHLADEN &amp; INSTALLIEREN</button>
           <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
         </section>
+      </div>
+    </dialog>
+    <dialog id="powerModal" class="evidence-modal power-modal" aria-labelledby="powerModalTitle">
+      <div class="modal-head"><div><span>SYS</span> <b id="powerModalTitle">STROM &amp; SYSTEM</b></div><button id="closePowerModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="power-modal-body">
+        <div class="power-readout">
+          <span aria-hidden="true">⚡</span>
+          <div><small>STROMVERSORGUNG</small><strong id="powerStatusLabel">STATUS UNBEKANNT</strong></div>
+        </div>
+        <div class="power-facts">
+          <div><span>JETZT</span><strong id="powerCurrentState">—</strong></div>
+          <div><span>SEIT SYSTEMSTART</span><strong id="powerBootState">—</strong></div>
+        </div>
+        <p>Unterspannung kann USB-Geräte, SSD und Scans beeinträchtigen. Ein vergangener Einbruch bleibt bis zum nächsten Neustart sichtbar.</p>
+        <p id="powerMessage" class="power-message" role="status" aria-live="polite"></p>
+        <div id="powerActions" class="power-actions">
+          <button type="button" data-power-action="reboot">↻ NEUSTART</button>
+          <button type="button" data-power-action="poweroff">⏻ HERUNTERFAHREN</button>
+        </div>
+        <div id="powerConfirmation" class="power-confirmation" hidden>
+          <strong id="powerConfirmationText">SYSTEMAKTION BESTÄTIGEN</strong>
+          <small>Die Weboberfläche wird kurz darauf nicht mehr erreichbar sein.</small>
+          <div><button id="cancelPowerAction" type="button">ABBRECHEN</button><button id="confirmPowerAction" type="button">BESTÄTIGEN</button></div>
+        </div>
       </div>
     </dialog>
     <script src="/app.js" defer></script>

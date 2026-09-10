@@ -42,6 +42,12 @@ DEVICE_DISCOVERY_LOCK = threading.Lock()
 DEVICE_DISCOVERY_UNHEALTHY_UNTIL = 0.0
 LAST_DEVICE_DISCOVERY: list[dict[str, Any]] = []
 LAST_DEVICE_DISCOVERY_ERROR = ""
+POWER_STATUS_LOCK = threading.Lock()
+LAST_POWER_STATUS: dict[str, Any] = {}
+LAST_POWER_STATUS_AT = 0.0
+LAST_LOGGED_POWER_STATE = ""
+POWER_ACTION_LOCK = threading.Lock()
+POWER_ACTION_REQUESTED = ""
 
 
 def _env_float(name: str, default: float) -> float:
@@ -58,6 +64,67 @@ def _env_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def parse_throttled_status(output: str) -> dict[str, Any]:
+    """Turn Raspberry Pi's get_throttled bitmask into an honest UI state."""
+    match = re.fullmatch(r"\s*throttled=(0x[0-9a-fA-F]+)\s*", output)
+    if not match:
+        raise ValueError("Ungültige Spannungsstatus-Antwort.")
+    mask = int(match.group(1), 16)
+    current = bool(mask & 1)
+    occurred = bool(mask & (1 << 16))
+    throttled = bool(mask & (1 << 2))
+    throttled_before = bool(mask & (1 << 18))
+    state = "danger" if current or throttled else "warning" if occurred or throttled_before else "ok"
+    if current:
+        label = "UNTERSPANNUNG AKTIV"
+    elif throttled:
+        label = "LEISTUNG GEDROSSELT"
+    elif occurred:
+        label = "UNTERSPANNUNG AUFGETRETEN"
+    elif throttled_before:
+        label = "DROSSELUNG AUFGETRETEN"
+    else:
+        label = "STROM OK"
+    return {
+        "state": state,
+        "label": label,
+        "current_undervoltage": current,
+        "undervoltage_since_boot": occurred,
+        "current_throttling": throttled,
+        "throttling_since_boot": throttled_before,
+        "raw": match.group(1).lower(),
+    }
+
+
+def read_power_status(force: bool = False) -> dict[str, Any]:
+    """Read and briefly cache Pi power health without delaying every status poll."""
+    global LAST_POWER_STATUS, LAST_POWER_STATUS_AT, LAST_LOGGED_POWER_STATE
+    now = time.monotonic()
+    with POWER_STATUS_LOCK:
+        if not force and LAST_POWER_STATUS and now - LAST_POWER_STATUS_AT < 5:
+            return dict(LAST_POWER_STATUS)
+        try:
+            completed = subprocess.run(
+                ["/usr/bin/vcgencmd", "get_throttled"], check=True,
+                capture_output=True, text=True, timeout=2,
+            )
+            status = parse_throttled_status(completed.stdout)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            status = {
+                "state": "unknown", "label": "STROMSTATUS UNBEKANNT",
+                "current_undervoltage": None, "undervoltage_since_boot": None,
+                "current_throttling": None, "throttling_since_boot": None, "raw": "",
+            }
+        state_key = f"{status['state']}:{status.get('raw', '')}"
+        if state_key != LAST_LOGGED_POWER_STATE:
+            log = logging.warning if status["state"] in {"danger", "warning"} else logging.info
+            log("power health changed: %s (%s)", status["label"], status.get("raw") or "unavailable")
+            LAST_LOGGED_POWER_STATE = state_key
+        LAST_POWER_STATUS = status
+        LAST_POWER_STATUS_AT = now
+        return dict(status)
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -479,6 +546,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     "scan_running": bool(active_device_paths()),
                     "active_case": active_case_session(),
                     "update": read_update_status(),
+                    "power": read_power_status(),
                 })
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Systemstatus nicht verfügbar: {exc}"})
@@ -636,6 +704,9 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/updates/offline":
             self._post_offline_update()
             return
+        if route == "/api/system/power":
+            self._post_power()
+            return
         if route == "/api/scans":
             self._post_scan()
             return
@@ -718,6 +789,49 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         clear_active_case_session()
         self._json(HTTPStatus.OK, {"active_case": None})
+
+    def _post_power(self) -> None:
+        global POWER_ACTION_REQUESTED
+        try:
+            payload = self._read_payload()
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        action = str(payload.get("action", ""))
+        if action not in {"reboot", "poweroff"}:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "UNGÜLTIGE SYSTEMAKTION"})
+            return
+        if active_device_paths():
+            self._json(HTTPStatus.CONFLICT, {"error": "SYSTEMAKTION WÄHREND EINES SCANS GESPERRT"})
+            return
+        if active_case_session():
+            self._json(HTTPStatus.CONFLICT, {"error": "FALL ZUERST BEENDEN"})
+            return
+        if self.server.update_guard_file.exists() or any(update_job_states().values()):
+            self._json(HTTPStatus.CONFLICT, {"error": "SYSTEMAKTION WÄHREND EINES UPDATES GESPERRT"})
+            return
+        with POWER_ACTION_LOCK:
+            if POWER_ACTION_REQUESTED:
+                self._json(HTTPStatus.CONFLICT, {"error": "SYSTEMAKTION WURDE BEREITS ANGEFORDERT"})
+                return
+            POWER_ACTION_REQUESTED = action
+        try:
+            # The transient root unit survives the web process and gives the
+            # accepted response time to reach the browser before shutdown.
+            subprocess.run(
+                [
+                    "/usr/bin/systemd-run", "--quiet", "--collect",
+                    "--unit=triagebox-power-action", "--on-active=3s",
+                    "/usr/bin/systemctl", "--no-wall", action,
+                ],
+                check=True, capture_output=True, text=True, timeout=5,
+            )
+            logging.warning("operator requested system power action: %s", action)
+            self._json(HTTPStatus.ACCEPTED, {"action": action, "scheduled_in_seconds": 3})
+        except (OSError, subprocess.SubprocessError) as exc:
+            with POWER_ACTION_LOCK:
+                POWER_ACTION_REQUESTED = ""
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": f"SYSTEMAKTION NICHT VERFÜGBAR: {exc}"})
 
     def _post_update(self, action: str) -> None:
         guard_claimed = False

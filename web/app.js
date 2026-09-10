@@ -40,6 +40,9 @@ let catalogDirty = false;
 let settingsRevision = 0;
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 let updateActionInProgress = null;
+let powerState = { state: "unknown", label: "STROMSTATUS UNBEKANNT" };
+let pendingPowerAction = null;
+let powerActionInProgress = false;
 let serverActiveCase = null;
 let caseSessionTransition = false;
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -61,6 +64,97 @@ function setSystemState(text, state = activeCaseNumber ? "ready" : "locked") {
   $("systemState").textContent = text;
   $("systemStatus").classList.remove("locked", "error", "busy");
   if (state !== "ready") $("systemStatus").classList.add(state);
+}
+
+function powerBlockedReason() {
+  const activeCase = activeCaseNumber || serverActiveCase?.case_number;
+  if (runningPaths.size) return "LAUFENDEN SCAN ZUERST ABSCHLIESSEN";
+  if (updateActionInProgress || ["checking", "installing"].includes(updateState.state)) return "LAUFENDES UPDATE ZUERST ABSCHLIESSEN";
+  if (activeCase) return `FALL ${activeCase} ZUERST BEENDEN`;
+  return "";
+}
+
+function renderPowerState(value = {}) {
+  powerState = { ...powerState, ...value };
+  const state = ["ok", "warning", "danger"].includes(powerState.state) ? powerState.state : "unknown";
+  const label = powerState.label || "STROMSTATUS UNBEKANNT";
+  const health = $("powerHealth");
+  health.className = `power-health ${state}`;
+  health.title = label;
+  health.setAttribute("aria-label", `Stromversorgung: ${label}`);
+  $("powerHealthText").textContent = label;
+  $("powerModal").dataset.powerState = state;
+  $("powerStatusLabel").textContent = label;
+  $("powerCurrentState").textContent = powerState.current_undervoltage === true
+    ? "UNTERSPANNUNG"
+    : powerState.current_throttling === true ? "LEISTUNG GEDROSSELT"
+      : powerState.current_undervoltage === false ? "NORMAL" : "NICHT VERFÜGBAR";
+  $("powerBootState").textContent = powerState.undervoltage_since_boot === true
+    ? "UNTERSPANNUNG REGISTRIERT"
+    : powerState.throttling_since_boot === true ? "DROSSELUNG REGISTRIERT"
+      : powerState.undervoltage_since_boot === false ? "KEIN EINBRUCH REGISTRIERT" : "NICHT VERFÜGBAR";
+  const blocked = powerBlockedReason();
+  for (const button of $("powerActions").querySelectorAll("button")) button.disabled = Boolean(blocked) || powerActionInProgress;
+  if (!pendingPowerAction && !powerActionInProgress) $("powerMessage").textContent = blocked;
+}
+
+function openPowerDialog() {
+  pendingPowerAction = null;
+  $("powerConfirmation").hidden = true;
+  $("powerActions").hidden = false;
+  renderPowerState(powerState);
+  if (!$("powerModal").open) $("powerModal").showModal();
+}
+
+function choosePowerAction(action) {
+  const blocked = powerBlockedReason();
+  if (blocked || powerActionInProgress) {
+    $("powerMessage").textContent = blocked;
+    return;
+  }
+  pendingPowerAction = action;
+  const shutdown = action === "poweroff";
+  $("powerConfirmation").classList.toggle("shutdown", shutdown);
+  $("powerConfirmationText").textContent = shutdown
+    ? "TRIAGE//BOX WIRKLICH HERUNTERFAHREN?"
+    : "TRIAGE//BOX WIRKLICH NEU STARTEN?";
+  $("confirmPowerAction").textContent = shutdown ? "JA, HERUNTERFAHREN" : "JA, NEU STARTEN";
+  $("powerActions").hidden = true;
+  $("powerConfirmation").hidden = false;
+  $("powerMessage").textContent = "";
+}
+
+async function confirmPowerAction() {
+  if (!pendingPowerAction || powerActionInProgress) return;
+  const action = pendingPowerAction;
+  powerActionInProgress = true;
+  $("confirmPowerAction").disabled = true;
+  $("cancelPowerAction").disabled = true;
+  $("powerMessage").textContent = action === "poweroff"
+    ? "SYSTEM WIRD SICHER HERUNTERGEFAHREN …"
+    : "SYSTEM WIRD NEU GESTARTET …";
+  try {
+    const response = await fetch("/api/system/power", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Systemaktion nicht möglich");
+    $("powerConfirmation").hidden = true;
+    $("powerMessage").textContent = action === "poweroff"
+      ? "HERUNTERFAHREN GESTARTET · NACH DEM ABSCHALTEN KANN DIE STROMVERSORGUNG GETRENNT WERDEN"
+      : "NEUSTART GESTARTET · OBERFLÄCHE IST GLEICH KURZ NICHT ERREICHBAR";
+  } catch (error) {
+    powerActionInProgress = false;
+    pendingPowerAction = null;
+    $("confirmPowerAction").disabled = false;
+    $("cancelPowerAction").disabled = false;
+    $("powerConfirmation").hidden = true;
+    $("powerActions").hidden = false;
+    $("powerMessage").textContent = `FEHLER: ${error.message}`;
+    renderPowerState(powerState);
+  }
 }
 
 function renderUpdateState(value = {}) {
@@ -862,6 +956,7 @@ async function refresh(loadLatest = false) {
     if (data.device_error) setSystemState("DATENTRÄGERERKENNUNG PRÜFEN", "error");
     else if (previousDeviceError) setSystemState(activeCaseNumber ? "BEREIT" : "GESPERRT");
     if (!updateActionInProgress) renderUpdateState(data.update || {});
+    renderPowerState(data.power || {});
     if (loadLatest && data.latest) renderRecord(data.latest);
   } catch (_) {
     deviceDiscoveryError = "Verbindung zur Geräteerkennung unterbrochen";
@@ -1507,6 +1602,29 @@ $("offlineMediaCards").addEventListener("click", (event) => {
   if (card) openMedia(Number(card.dataset.mediaId));
 });
 $("homeLogo").addEventListener("click", showDashboard);
+$("powerHealth").addEventListener("click", openPowerDialog);
+$("openPowerModal").addEventListener("click", openPowerDialog);
+$("closePowerModal").addEventListener("click", () => $("powerModal").close());
+$("powerModal").addEventListener("cancel", (event) => {
+  if (powerActionInProgress) event.preventDefault();
+});
+$("powerModal").addEventListener("close", () => {
+  if (powerActionInProgress) return;
+  pendingPowerAction = null;
+  $("powerConfirmation").hidden = true;
+  $("powerActions").hidden = false;
+});
+$("powerActions").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-power-action]");
+  if (button) choosePowerAction(button.dataset.powerAction);
+});
+$("cancelPowerAction").addEventListener("click", () => {
+  pendingPowerAction = null;
+  $("powerConfirmation").hidden = true;
+  $("powerActions").hidden = false;
+  renderPowerState(powerState);
+});
+$("confirmPowerAction").addEventListener("click", confirmPowerAction);
 $("openAuftragModal").addEventListener("click", openAuftrag);
 $("openSettings").addEventListener("click", openSettings);
 $("closeSettings").addEventListener("click", closeSettings);

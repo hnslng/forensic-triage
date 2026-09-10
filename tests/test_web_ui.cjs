@@ -201,6 +201,40 @@ test('signed offline package uploads through the update dialog and observes comp
   assert.ok(polls >= 2);
 });
 
+test('power health is readable and shutdown needs a deliberate second confirmation', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/status') return {
+      json: {
+        devices: [], cases: [], active_case: null, update: {},
+        power: { state: 'warning', label: 'UNTERSPANNUNG AUFGETRETEN', current_undervoltage: false, undervoltage_since_boot: true },
+      },
+    };
+    if (url.pathname === '/api/system/power') {
+      assert.equal(request.method(), 'POST');
+      assert.deepEqual(request.postDataJSON(), { action: 'poweroff' });
+      return { status: 202, json: { action: 'poweroff', scheduled_in_seconds: 3 } };
+    }
+  });
+  await page.waitForFunction(() => document.getElementById('powerHealthText').textContent.includes('UNTERSPANNUNG'));
+  assert.match(await page.locator('#powerHealth').getAttribute('class'), /warning/);
+  await page.setViewportSize({ width: 470, height: 900 });
+  await page.locator('#powerHealth').click();
+  assert.match(await page.locator('#powerBootState').innerText(), /REGISTRIERT/);
+  const modalSize = await page.locator('#powerModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+  assert.ok(modalSize.scroll <= modalSize.client + 1);
+  await page.evaluate(() => { activeCaseNumber = 'TEST'; renderPowerState(); });
+  assert.equal(await page.locator('[data-power-action="poweroff"]').isDisabled(), true);
+  await page.evaluate(() => { activeCaseNumber = ''; serverActiveCase = null; renderPowerState(); });
+  await page.locator('[data-power-action="poweroff"]').click();
+  assert.equal(await page.locator('#powerConfirmation').isVisible(), true);
+  assert.equal(requests.filter(item => item.path === '/api/system/power').length, 0);
+  await page.locator('#cancelPowerAction').click();
+  await page.locator('[data-power-action="poweroff"]').click();
+  await page.locator('#confirmPowerAction').click();
+  await page.waitForFunction(() => document.getElementById('powerMessage').textContent.includes('HERUNTERFAHREN GESTARTET'));
+  assert.equal(requests.filter(item => item.path === '/api/system/power').length, 1);
+});
+
 test('switching media after filtering restores the correct visible explorer', async t => {
   const { page } = await setup(t);
   await open(page, 1); await filter(page); await open(page, 2);

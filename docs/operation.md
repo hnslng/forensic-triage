@@ -15,6 +15,10 @@ Im Fenster `SYSTEM & UPDATES` kann ein aktiver Fall über `FALL … BEENDEN` dir
 
 Nach einem Pi-/Webdienst-Neustart ist **kein Fall aktiv**. Der Systemstatus zeigt „Gesperrt“ und es darf kein Scan beginnen. Beim Neuladen oder erneuten Öffnen des Browsers wird dagegen die noch aktive Sitzung des Geräts übernommen. Browser schließen oder WLAN trennen ersetzt deshalb nicht „Fall beenden“.
 
+Der Blitz in der oberen Systemleiste zeigt `STROM OK`, eine aktuell aktive Unterspannung/Drosselung, ein seit dem Start registriertes Ereignis oder `STROMSTATUS UNBEKANNT`. Ein Klick öffnet die Einzelanzeige. Ein vergangenes Ereignis bleibt entsprechend der Raspberry-Pi-Firmware bis zum nächsten Neustart sichtbar; es ist nicht mit einer aktuell anliegenden Unterspannung gleichzusetzen.
+
+Das benachbarte Power-Symbol öffnet dasselbe Fenster. `NEUSTART` und `HERUNTERFAHREN` benötigen dort immer eine zweite ausdrückliche Bestätigung. Beide Aktionen sind bei aktivem Fall, laufendem Scan oder Update serverseitig gesperrt. Herunterfahren beendet das Betriebssystem sicher, trennt beim Raspberry Pi 3B+ aber nicht physisch die Stromversorgung. Erst nach beendetem System die Versorgung abziehen.
+
 ## 2. Neuen Fall vorbereiten
 
 1. Links „Fall verwalten“ wählen.
@@ -109,4 +113,4 @@ Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bl
 
 ## English workflow summary
 
-A service/device restart clears the active case; a browser reload resumes the active device session. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record either “Secure” or reasoned “Do not secure”. An evidence number is required only for “Secure”. End the case before changing locations or deleting it. Cases can be opened or removed directly from the archive; active-case deletion is blocked in the dashboard, while the additional server-side deletion guard is still pending.
+A service/device restart clears the active case; a browser reload resumes the active device session. Enter or select a case, provide operator initials, select at least one search profile, and explicitly start the case. Eligible USB media may then scan automatically and in parallel. Review the metadata-only result and record either “Secure” or reasoned “Do not secure”. An evidence number is required only for “Secure”. End the case before changing locations or deleting it. The top bar distinguishes current and since-boot Pi undervoltage; reboot and poweroff require a second confirmation and are server-side blocked during a case, scan or update. Cases can be opened or removed directly from the archive; active-case deletion is blocked in the dashboard, while the additional server-side deletion guard is still pending.
