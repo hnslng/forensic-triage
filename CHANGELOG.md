@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.44] – 2026-09-10
+
+- Eigener Einstellungen-Bereich außerhalb des Fallfensters mit „Stichwortprofile“ und „Dateitypen“. Profile bearbeiten, erstellen und duplizieren; im Fallfenster bleibt die Einsatz-Auswahl.
+- Erweiterter Standardkatalog für Kamera-, Office-, Audio-/Video-, Archiv-, Image- und Systemformate. `.raw` und `.key` neutral als mehrdeutig, `.bak` als Sicherungskopie eingeordnet. Kategorien bleiben Hinweise aus Endungen.
+- Dateitypen durchsuchbar und bearbeitbar: Kategorien ergänzen/entfernen, Endungen verschieben, Standard als Entwurf laden. Doppelte Endungen, ungültige Kataloge und veraltete parallele Speicheranfragen werden abgelehnt.
+- Jeder neue Scan übernimmt einen Katalog-Snapshot für äußere Dateien und Archiv-Inneneinträge; vollständiger Katalog, Version und SHA-256 werden mitgespeichert. Laufende Scans und historische Ergebnisse behalten ihren Stand.
+- Eigene Einstellungen und Profile liegen dauerhaft außerhalb der Release-Checkouts. Profilübernahme ohne Überschreiben lokaler Kopien, atomare Speicherung und Migrationsschritt im neuen Updater. Der erste Start übernimmt zusätzlich Profile aus dem neuesten bisherigen Release, auch wenn noch der alte Updater den Wechsel ausgeführt hat.
+- Vorhandene Profilnamen mit Schrägstrich sind speicherbar. Backend- und Browserprüfungen decken Katalogfehler, paralleles Speichern, Migration, unveränderte Historie, Dialogwechsel und schmale Ansichten ab.
+
 ## Dokumentationsabgleich – 2026-09-06
 
 Anwendung unverändert: `v0.2.0-alpha.43`. Keine neue Programmversion und keine Änderung an Scans, Fallakten oder Pi-Konfiguration.

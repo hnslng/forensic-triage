@@ -36,6 +36,7 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_CASEFILES_ROOT` | `<Projekt>/casefiles` | dauerhafte lokale Fallakten |
 | `FORENSIC_TRIAGE_WEB_ROOT` | `<Projekt>/web` | statische Oberfläche; für Releasewechsel an den Laufzeitlink binden |
 | `FORENSIC_TRIAGE_PROFILE` | `<Projekt>/profiles/default.yaml` | Start-/Kompatibilitätsprofil |
+| `FORENSIC_TRIAGE_SETTINGS_ROOT` | `<Projekt>/settings` beim Installer; sonst `settings` neben dem Fallordner | dauerhafte Profile und Dateityp-Katalog außerhalb von Release-Checkouts |
 | `FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS` | `180` | Frist bis zum Scan-Abbruchversuch in Sekunden; Kernel-/Aufräumgrenzen siehe unten |
 | `FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS` | `15` | Zeitlimit eines einzelnen Gerätebefehls in Sekunden |
 | `FORENSIC_TRIAGE_DEVICE_DISCOVERY_TIMEOUT_SECONDS` | `2` | Zeitlimit für `lsblk` bei der Geräteerkennung; danach höchstens 0,5 Sekunden Abbruchnachlauf |
@@ -59,6 +60,7 @@ FORENSIC_TRIAGE_RESULTS_ROOT=/srv/triage/results
 FORENSIC_TRIAGE_CASEFILES_ROOT=/srv/triage/casefiles
 FORENSIC_TRIAGE_WEB_ROOT=/opt/triagebox-current/web
 FORENSIC_TRIAGE_PROFILE=/opt/triagebox-current/profiles/default.yaml
+FORENSIC_TRIAGE_SETTINGS_ROOT=/opt/triagebox/settings
 FORENSIC_TRIAGE_SCAN_TIMEOUT_SECONDS=180
 FORENSIC_TRIAGE_COMMAND_TIMEOUT_SECONDS=15
 FORENSIC_TRIAGE_CONTAINER_INDEX_SECONDS=3
@@ -129,11 +131,11 @@ Der Fallpfad muss vor realem Einsatz auf verschlüsseltem und zugriffsgeschützt
 
 Das bloße Ändern des Pfades verschiebt keine bestehenden Daten.
 
-## Stichwortprofile
+## Stichwortprofile und Dateitypen
 
-Profile werden im Dashboard bearbeitet und als YAML-Dateien im Elternordner von `FORENSIC_TRIAGE_PROFILE` gespeichert. Mitgelieferte Profile dürfen versioniert werden, sofern sie keine echten Fallinformationen enthalten. Die tatsächliche Auswahl für einen Scan wird mit dem Ergebnis protokolliert.
+Seit Alpha 44 werden beide unter **Einstellungen** außerhalb des Fallfensters verwaltet. Der Webdienst übernimmt vorhandene Profile nach `FORENSIC_TRIAGE_SETTINGS_ROOT/profiles` und bearbeitet dort die lokalen Kopien. Der Dateityp-Katalog liegt daneben in `filetypes.json`. Die tatsächliche Stichwortauswahl sowie der Katalogstand werden mit jedem neuen Scan gespeichert.
 
-Der Standard liegt derzeit im Code-/Releaseverzeichnis. Änderungen an mitgelieferten Profilen können den Updater wegen lokaler Änderungen sperren; neu angelegte Profile werden nicht automatisch in einen neuen Checkout übertragen. Eine automatisch eingerichtete releaseunabhängige Profilablage fehlt. Ein separater Profilpfad ist konfigurierbar, aber Bestandsübernahme und Updateverhalten müssen noch geprüft werden.
+Die lokale Ablage bleibt bei Releasewechseln erhalten. Neue Programmstandards ersetzen keine eigenen Einstellungen automatisch. Bedienung, Migrationsgrenzen beim ersten Wechsel von einem älteren Updater und das Verhalten der CLI stehen in [Einstellungen](settings.md). Vorhandene Sichtungen werden durch Änderungen nicht umklassifiziert.
 
 ## Priorität
 

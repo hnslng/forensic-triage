@@ -25,6 +25,7 @@ from .casefiles import CaseStore
 from .commands import run_command
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .scan_process import ScanTimeoutError, run_isolated_scan
+from .settings import SettingsConflict, atomic_write, default_catalog, load_catalog, prepare_profiles, save_catalog
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -332,7 +333,39 @@ class TriageHTTPServer(ThreadingHTTPServer):
         super().__init__(address, TriageHandler)
         self.web_root = web_root
         self.results_root = results_root
-        self.profile_path = profile_path
+        self.settings_root = Path(os.environ.get("FORENSIC_TRIAGE_SETTINGS_ROOT", str(casefiles_root.parent / "settings")))
+        # The updater before Alpha 44 cannot run the new migration helper. On
+        # first start, therefore, prefer profiles from the newest prior release
+        # before falling back to the original checkout and bundled defaults.
+        configured_profile_dir = profile_path.parent.resolve()
+        current_release_profile_dir = (PROJECT_ROOT / "profiles").resolve()
+        releases_value = os.environ.get("FORENSIC_TRIAGE_RELEASES_ROOT", "").strip()
+        if releases_value:
+            releases_root = Path(releases_value)
+            if releases_root.is_dir() and releases_root != Path("/"):
+                release_profile_dirs = sorted(
+                    (
+                        path
+                        for path in releases_root.glob("*/profiles")
+                        if path.is_dir()
+                        and path.resolve() not in {configured_profile_dir, current_release_profile_dir}
+                    ),
+                    key=lambda path: path.stat().st_mtime_ns,
+                    reverse=True,
+                )
+                for release_profile_dir in release_profile_dirs:
+                    candidate = release_profile_dir / profile_path.name
+                    if candidate.is_file():
+                        prepare_profiles(self.settings_root, candidate)
+        original = casefiles_root.parent / "profiles" / profile_path.name
+        if (original.is_file() and original.parent != profile_path.parent
+                and configured_profile_dir == current_release_profile_dir):
+            prepare_profiles(self.settings_root, original)
+        self.profile_path = prepare_profiles(self.settings_root, profile_path)
+        self.catalog_path = self.settings_root / "filetypes.json"
+        if not self.catalog_path.exists():
+            atomic_write(self.catalog_path, json.dumps(default_catalog(), ensure_ascii=False, indent=2).encode())
+        self.settings_lock = threading.Lock()
         self.case_store = CaseStore(casefiles_root)
         self.scan_timeout_seconds = scan_timeout_seconds
         self.command_timeout_seconds = command_timeout_seconds
@@ -440,6 +473,14 @@ class TriageHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.OK, {"profiles": list_profiles(self.server.profile_path.parent)})
             except (OSError, ValueError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Profile nicht verfügbar: {exc}"})
+            return
+        if route == "/api/settings/filetypes":
+            try:
+                with self.server.settings_lock:
+                    catalog = load_catalog(self.server.catalog_path)
+                self._json(HTTPStatus.OK, {"catalog": catalog, "defaults": default_catalog()})
+            except (OSError, ValueError) as exc:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
             return
         if route == "/api/updates":
             self._json(HTTPStatus.OK, {"update": read_update_status(), "jobs": update_job_states()})
@@ -559,6 +600,9 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if route == "/api/settings/filetypes":
+            self._post_filetypes()
+            return
         if route == "/api/profiles":
             self._post_profile()
             return
@@ -586,9 +630,20 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
+    def _post_filetypes(self) -> None:
+        try:
+            payload = self._read_payload(max_bytes=65536)
+            with self.server.settings_lock:
+                catalog = save_catalog(self.server.catalog_path, payload.get("categories"), str(payload.get("base_sha256", "")))
+            self._json(HTTPStatus.OK, {"catalog": catalog})
+        except SettingsConflict as exc:
+            self._json(HTTPStatus.CONFLICT, {"error": str(exc)})
+        except (OSError, ValueError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
     def _post_profile(self) -> None:
         try:
-            payload = self._read_payload()
+            payload = self._read_payload(max_bytes=65536)
             profile_id = payload.get("id")
             if profile_id is not None and not isinstance(profile_id, str):
                 raise ValueError("Ungültiges Profil.")
@@ -596,7 +651,8 @@ class TriageHandler(BaseHTTPRequestHandler):
             keywords = payload.get("keywords", [])
             if not isinstance(keywords, list):
                 raise ValueError("Stichwörter müssen als Liste übergeben werden.")
-            profile = save_profile(self.server.profile_path.parent, profile_id, name, keywords)
+            with self.server.settings_lock:
+                profile = save_profile(self.server.profile_path.parent, profile_id, name, keywords)
             self._json(HTTPStatus.CREATED, {
                 "profile": {
                     "id": profile["id"], "name": profile["name"],
@@ -719,8 +775,11 @@ class TriageHandler(BaseHTTPRequestHandler):
         except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträger konnten nicht aktualisiert werden: {exc}"})
 
-    def _read_payload(self) -> dict[str, Any]:
-        length = min(int(self.headers.get("Content-Length", "0")), 8192)
+    def _read_payload(self, max_bytes: int = 8192) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0"))
+        if not 0 <= length <= max_bytes:
+            self.close_connection = True
+            raise ValueError("Anfrage ist zu groß.")
         payload = json.loads(self.rfile.read(length) or b"{}")
         if not isinstance(payload, dict):
             raise ValueError("Ungültige Anfrage.")
@@ -788,8 +847,10 @@ class TriageHandler(BaseHTTPRequestHandler):
         else:
             selected_keywords = requested_keywords
         try:
+            with self.server.settings_lock:
+                filetype_catalog = load_catalog(self.server.catalog_path)
             devices = discover_media_devices()
-        except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträgerstatus nicht verfügbar: {exc}"})
             return
         device = next(
@@ -820,6 +881,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 "results_root": str(self.server.case_store.scan_root(case_number, sighting_number)),
                 "mode": "fast",
                 "keywords": selected_keywords,
+                "filetype_catalog": filetype_catalog,
                 "profile_sources": [{
                     "id": profile["id"], "name": profile["name"],
                     "version": profile["version"], "sha256": profile["sha256"],

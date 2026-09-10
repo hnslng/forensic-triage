@@ -55,6 +55,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
 | `src/forensic_triage/pdf_report.py` | kompakter druckbarer Fallbericht |
 | `profiles/*.yaml` | mitgelieferte Stichwortprofile |
+| `src/forensic_triage/settings.py` | lokale Einstellungen, Katalogprüfung, Migration und Scan-Snapshots |
 
 ## Wo wird was gespeichert?
 
@@ -77,6 +78,8 @@ Die beim Scan gelesenen Gerätedaten liegen pro Sichtung in `device.json`; die z
 Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch kann dasselbe Programm auf unterschiedlichen Debian-Zielsystemen laufen, ohne Quellcode oder Git-Dateien ändern zu müssen. Ein anderer Fallspeicher wird in `/etc/forensic-triage/triage.env` eingetragen; vorhandene Daten müssen separat übertragen werden. Bei einem internen Portwechsel muss zusätzlich nginx angepasst werden, damit `http://triagebox.local/` weiter funktioniert. Einzelheiten stehen in [Konfiguration](configuration.md#port-und-netzwerk).
 
 Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt versioniert, Passwörter und gerätespezifische Pfade bleiben lokal.
+
+Seit Alpha 44 sind Stichwortprofile und Dateitypen über einen eigenen [Einstellungen-Bereich](settings.md) bearbeitbar. Lokale Kopien liegen im konfigurierten Einstellungen-Ordner. Der Scanner speichert seinen vollständigen Endungskatalog mit Prüfsumme, damit spätere Katalogänderungen alte Auswertungen nicht verändern. Das Standardverzeichnis enthält nun auch weitere Kamera-, Office-, Image- und Systemformate; mehrdeutige Endungen werden neutral zugeordnet.
 
 ## Was passiert ausdrücklich nicht?
 

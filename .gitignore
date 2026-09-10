@@ -9,6 +9,7 @@ build/
 *.egg-info/
 results/
 casefiles/
+settings/
 output/
 .DS_Store
 TRIAGE-BOX starten.command

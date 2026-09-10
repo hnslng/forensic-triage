@@ -104,6 +104,12 @@ fi
 "$candidate/.venv/bin/python" -m pytest "$candidate/tests" -q
 
 # Apply deployment templates from the tested candidate before switching code.
+# Preserve profiles from the currently running release before its path changes.
+settings_root="${FORENSIC_TRIAGE_SETTINGS_ROOT:-$(dirname "${FORENSIC_TRIAGE_CASEFILES_ROOT:-$CURRENT_ROOT/casefiles}")/settings}"
+profile_source="${FORENSIC_TRIAGE_PROFILE:-$CURRENT_ROOT/profiles/default.yaml}"
+if [[ -f "$candidate/scripts/migrate_settings.py" ]]; then
+  "$candidate/.venv/bin/python" "$candidate/scripts/migrate_settings.py" "$profile_source" "$settings_root"
+fi
 # This lets later releases update nginx and systemd without touching case data.
 web_port="${FORENSIC_TRIAGE_WEB_PORT:-8787}"
 nginx_site="/etc/nginx/sites-available/forensic-triage"

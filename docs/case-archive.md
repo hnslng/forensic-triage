@@ -29,6 +29,7 @@ casefiles/
                     ├── summary.json
                     ├── hits.json
                     ├── container-index.json
+                    ├── filetype-catalog.json
                     ├── scan.log
                     └── raw/
 ```
@@ -38,6 +39,7 @@ casefiles/
 - `files.csv`: vollständiges Verzeichnis der beobachteten aktiven Dateien mit Pfad, Endung, Kategorie, Größe und Dateisystem-Zeitstempeln; keine Dateiinhalte
 - `device.json`: beim Scan gespeicherte Geräteangaben einschließlich Modell, Seriennummer, Kapazität, Transport und verifiziertem Read-only-Zustand
 - `container-index.json`: begrenztes Inhaltsverzeichnis erkannter ZIP-, ISO-, 7Z- und RAR-Dateien; keine extrahierten oder dekomprimierten Nutzdaten
+- `filetype-catalog.json`: seit Alpha 44 vollständiger Dateityp-Katalog des Scans mit Version und SHA-256; bei früheren Sichtungen nicht nachträglich ergänzt
 - `media-register.csv`: Übersicht aller Sichtungen und Entscheidungen im Fall
 - `case-report.pdf`: kompakter, druckbarer Querformat-Bericht mit einer Zeile je Datenträger
 - `case-report.txt`: menschenlesbare Fallzusammenfassung

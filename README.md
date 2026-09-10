@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.43 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.44 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -22,6 +22,8 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - Metadaten-Inhaltsverzeichnis der erfassten aktiven Dateien als `files.csv`
 - sichtbare Datenträger-Metadaten mit Modell, Seriennummer, Kapazität, Gerätepfad und verifiziertem Schreibschutz im Nachweisdialog
 - begrenzter ZIP-/ISO-/7Z-/RAR-Schnellindex: interne Verzeichnisnamen ohne Extraktion im Explorer aufklappbar und durchsuchbar
+- bearbeitbarer Dateityp-Katalog mit erweitertem Standard und je Scan gespeichertem Katalogstand
+- eigene Einstellungen für Stichwortprofile und Dateitypen außerhalb des Fallfensters
 - Kategorien nach Dateiendung, Größenstatistik und größte Dateien
 - kombinierbare und lokal bearbeitbare Stichwortprofile
 - Stichwortsuche ohne Beachtung der Groß-/Kleinschreibung in Namen und Pfaden
@@ -35,7 +37,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.43 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.44 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -138,6 +140,7 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [So funktioniert TRIAGE//BOX](docs/how-it-works.md)
 - [Installation und Aktualisierung](docs/installation.md)
 - [Konfiguration](docs/configuration.md)
+- [Einstellungen: Stichwortprofile und Dateitypen](docs/settings.md)
 - [Bedienung und Fallworkflow](docs/operation.md)
 - [Forensische Sicherheitsgrenzen](docs/forensic-safety.md)
 - [Architektur](docs/architecture.md)
@@ -163,13 +166,13 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a43` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.43`
-- automatisierte Tests: 98 Python-Tests und 23 isolierte Browser-Tests
+- Paketversion: `0.2.0a44` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.44`
+- automatisierte Tests: 111 Python-Tests und 26 isolierte Browser-Tests
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
-- Dokumentationsabgleich: 6. September 2026; [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
+- Dokumentationsstand: 10. September 2026; der [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
 
 Siehe [docs/roadmap.md](docs/roadmap.md) für die priorisierten nächsten Schritte.
 
@@ -179,4 +182,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.43 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.44 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

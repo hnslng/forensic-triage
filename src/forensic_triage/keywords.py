@@ -51,8 +51,8 @@ def list_profiles(directory: Path) -> list[dict[str, Any]]:
 def save_profile(directory: Path, profile_id: str | None, name: str, keywords: list[str]) -> dict[str, Any]:
     """Create or update a small local keyword profile."""
     clean_name = name.strip()
-    if not clean_name or len(clean_name) > 40 or not re.fullmatch(r"[A-Za-z0-9ÄÖÜäöüß _-]+", clean_name):
-        raise ValueError("Profilname: 1–40 Zeichen; erlaubt sind Buchstaben, Ziffern, Leerzeichen, Minus und Unterstrich.")
+    if not clean_name or len(clean_name) > 40 or not re.fullmatch(r"[A-Za-z0-9ÄÖÜäöüß /_-]+", clean_name):
+        raise ValueError("Profilname: 1–40 Zeichen; erlaubt sind Buchstaben, Ziffern, Leerzeichen, /, Minus und Unterstrich.")
     normalized = [word.strip() for word in keywords if isinstance(word, str) and word.strip()]
     if not normalized:
         raise ValueError("Ein Profil benötigt mindestens ein Stichwort.")
@@ -91,7 +91,8 @@ def save_profile(directory: Path, profile_id: str | None, name: str, keywords: l
         allow_unicode=True,
         sort_keys=False,
     )
-    path.write_text(raw, encoding="utf-8")
+    from .settings import atomic_write
+    atomic_write(path, raw.encode("utf-8"))
     return load_profile(path)
 
 

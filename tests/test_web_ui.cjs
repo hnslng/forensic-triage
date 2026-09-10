@@ -59,6 +59,84 @@ function gate() {
   return { release, arrived, wait: async () => { entered(); await pending; } };
 }
 
+const settingsCatalog = { version: 1, sha256: 'first', categories: { Bilder: ['jpg', 'png'], Dokumente: ['pdf'] } };
+function settingsFixture(url) {
+  if (url.pathname === '/api/settings/filetypes') return { json: { catalog: settingsCatalog, defaults: settingsCatalog } };
+  if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein', version: '1.0', keyword_count: 2 }] } };
+  if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
+}
+
+test('settings are outside the case dialog and profile editor uses only one backdrop', async t => {
+  const { page, requests } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  assert.equal(await page.locator('#auftragModal').isVisible(), false);
+  assert.equal(await page.locator('#settingsProfilesPane').isVisible(), true);
+  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  assert.equal(await page.locator('#keywordProfileName').inputValue(), 'Allgemein');
+  assert.equal(await page.locator('#keywordOptions input').count(), 2);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('settingsModal'), '::backdrop').backdropFilter), 'none');
+  await page.locator('#closeKeywordSettings').click();
+  await page.waitForFunction(() => !document.getElementById('settingsModal').classList.contains('nested-open'));
+  assert.equal(await page.locator('#settingsModal').evaluate(node => node.classList.contains('nested-open')), false);
+  await page.locator('#settingsProfilesList [data-copy-profile]').click();
+  assert.equal(await page.locator('#keywordProfileName').inputValue(), 'Allgemein Kopie');
+  assert.equal(await page.evaluate(() => profileEditorId), null);
+  assert.equal(await page.locator('#keywordOptions input').count(), 2);
+  await page.locator('#closeKeywordSettings').click();
+  await page.locator('#closeSettings').click();
+  await page.locator('#openAuftragModal').click();
+  assert.equal(await page.locator('#auftragModal [data-edit-profile]').count(), 0);
+  assert.equal(await page.locator('#profileList input').count(), 1);
+  assert.equal(requests.some(item => item.method !== 'GET'), false);
+});
+
+test('catalog filters, reports invalid saves, preserves draft and saves future-scan changes', async t => {
+  const { page, requests } = await setup(t, (url, request) => {
+    if (url.pathname === '/api/settings/filetypes' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      assert.equal(payload.base_sha256, 'first');
+      if (payload.categories.Dokumente.includes('jpg')) return { status: 400, json: { error: '.jpg ist doppelt zugeordnet' } };
+      return { json: { catalog: { categories: payload.categories, version: 2, sha256: 'second' } } };
+    }
+    return settingsFixture(url);
+  });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('[data-category="Dokumente"] textarea').fill('pdf, jpg');
+  await page.locator('#catalogSave').click();
+  await page.waitForFunction(() => document.getElementById('catalogMessage').textContent.includes('doppelt'));
+  assert.equal(await page.locator('[data-category="Dokumente"] textarea').inputValue(), 'pdf, jpg');
+  await page.locator('[data-category="Dokumente"] textarea').fill('pdf, docm');
+  await page.locator('#catalogSearch').fill('.docm');
+  assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), false);
+  assert.equal(await page.locator('[data-category="Dokumente"]').isVisible(), true);
+  await page.locator('#catalogSave').click();
+  await page.waitForFunction(() => document.getElementById('catalogMessage').textContent.startsWith('GESPEICHERT ·'));
+  assert.equal(await page.locator('#catalogVersion').innerText(), 'KATALOG V2');
+  assert.equal(await page.locator('#catalogSave').isDisabled(), true);
+  await page.locator('#catalogReset').click();
+  assert.equal(await page.locator('[data-category="Dokumente"] textarea').inputValue(), 'pdf');
+  assert.equal(await page.locator('#catalogSave').isEnabled(), true);
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.locator('#closeSettings').click();
+  assert.equal(await page.locator('#settingsModal').isVisible(), true);
+  assert.deepEqual(requests.filter(item => item.method !== 'GET').map(item => item.path), ['/api/settings/filetypes', '/api/settings/filetypes']);
+});
+
+test('settings remain readable on laptop and small screens', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('[data-category="Bilder"] textarea').waitFor();
+  for (const width of [1440, 800, 470]) {
+    await page.setViewportSize({ width, height: 900 });
+    const sizes = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth, width: node.getBoundingClientRect().width }));
+    assert.ok(sizes.scroll <= sizes.client + 1, `No horizontal scrolling at ${width}`);
+    assert.ok(sizes.width < width);
+    assert.ok(await page.locator('#catalogSave').isVisible());
+  }
+});
+
 for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 'failure retains lock' : 'success enables deliberate install'}`, async t => {
   const blocked = gate();
   const { page, requests } = await setup(t, async (url, request) => {

@@ -1,6 +1,8 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 6. September 2026 · Anwendung: `v0.2.0-alpha.43`.
+Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.44`.
+
+Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 
 Das Ziel bleibt eine schnelle Grobsichtung vor Ort: Fall starten, Medien anschließen, Metadaten und Hinweise prüfen, Entscheidung begründen und Bericht exportieren. Die nächste Etappe ist ein nachvollziehbarer vollständiger Probeeinsatz. Zusätzliche Analysefunktionen werden vorerst zurückgestellt.
 
@@ -46,7 +48,8 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 
 - [ ] Konsistente Sicherung von Fallindex, Fallordnern, Papierkorb, Profilen und lokaler Konfiguration erstellen und auf einem getrennten Teststand zurückspielen.
 - [ ] Wiederherstellung eines entfernten Falls in den SQLite-Index implementieren und testen. Der Papierkorb bewahrt Dateien auf; ein Restore-Knopf oder fertiger Import fehlt.
-- [ ] Bearbeitete Profile dauerhaft außerhalb des Release-Verzeichnisses ablegen; Erhalt bei Update und Rückwechsel testen.
+- [x] Bearbeitete Profile und Dateityp-Katalog dauerhaft außerhalb des Release-Verzeichnisses ablegen; Übernahme ohne Überschreiben lokal prüfen (Alpha 44).
+- [ ] Erhalt der Einstellungen bei realem Pi-Update und Rückwechsel prüfen, einschließlich der automatischen Erstübernahme aus Alpha 43; Einzelheiten in `settings.md` beachten.
 - [ ] Protokollumfang abschließen: Fallende ist derzeit kein eigenes Audit-Ereignis; Navigation und Filter erzeugen ebenfalls keines.
 - [ ] PDF-Formulierungen und Grobinhalt fachlich prüfen; Aufbewahrung, Export und endgültige Entfernung festlegen.
 - [ ] Privaten Git-Lesezugriff des Update-Dienstes reproduzierbar einrichten und nach Neustart testen.

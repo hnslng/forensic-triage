@@ -24,6 +24,7 @@
         <span class="system-state locked" id="systemStatus"><span id="systemState">GESPERRT</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <button id="openUpdateModal" class="system-button" type="button">SYSTEM <small id="systemVersion">v—</small><span id="updateSummary"></span></button>
+        <button id="openSettings" class="system-button" type="button">EINSTELLUNGEN</button>
         <span id="clock">LOKAL --:--:--</span>
       </section>
 
@@ -195,7 +196,7 @@
           <div class="subhead"><span>3 · SUCHPROFILE</span><small>MEHRFACHAUSWAHL</small></div>
           <div id="profileList" class="profile-list"></div>
           <div class="profile-summary"><span>KOMBINIERT</span><strong id="keywordSelectionCount">—</strong></div>
-          <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+          <p class="case-profile-hint">Profile hier für den Einsatz auswählen. Bearbeiten unter Einstellungen.</p>
         </section>
         <div class="case-session-footer">
           <p id="caseStartMessage" class="case-start-message">VORAUSSETZUNGEN WERDEN GEPRÜFT</p>
@@ -237,6 +238,7 @@
           <div><dt>FALLORDNER</dt><dd id="archiveCasePath">—</dd></div>
           <div><dt>DATEILISTE</dt><dd id="archiveInventory">files.csv</dd></div>
           <div><dt>CONTAINER-INDEX</dt><dd id="archiveContainerIndex">container-index.json</dd></div>
+          <div><dt>DATEITYP-KATALOG</dt><dd id="archiveFiletypeCatalog">—</dd></div>
           <div><dt>FALLPROTOKOLL</dt><dd id="archiveRegister">media-register.csv</dd></div>
           <div><dt>PDF-BERICHT</dt><dd id="archivePdfReport">case-report.pdf</dd></div>
           <div><dt>TEXTBERICHT</dt><dd id="archiveReport">case-report.txt</dd></div>
@@ -258,6 +260,27 @@
         </div>
       </form>
     </dialog>
+    <dialog id="settingsModal" class="evidence-modal settings-modal" aria-labelledby="settingsTitle">
+      <div class="modal-head"><div><span>CFG</span> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
+      <nav class="settings-tabs" aria-label="Einstellungsbereich">
+        <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
+        <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
+      </nav>
+      <section id="settingsProfilesPane" class="settings-pane" aria-labelledby="settingsProfilesTab">
+        <p>Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
+        <div id="settingsProfilesList" class="settings-profiles"></div>
+        <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+      </section>
+      <section id="settingsFiletypesPane" class="settings-pane" aria-labelledby="settingsFiletypesTab" hidden>
+        <p>Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
+        <div class="catalog-toolbar"><label for="catalogSearch">KATEGORIE / ENDUNG<input id="catalogSearch" type="search" placeholder="Z. B. BILDER ODER HEIC …" /></label><span id="catalogVersion"></span></div>
+        <div id="catalogRows" class="catalog-rows"></div>
+        <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“. „Mehrdeutig“ und „Schutz-/Schlüsseldateien“ beschreiben die Endung, keine bestätigten Inhalte oder Verschlüsselung. Zusätzliche Archivendungen erweitern nur die Zuordnung, nicht den Archivleser.</p>
+        <div class="catalog-add"><input id="catalogNewCategory" maxlength="50" aria-label="Neue Kategorie" placeholder="NEUE KATEGORIE …" /><button id="catalogAddCategory" type="button">+ HINZUFÜGEN</button></div>
+        <div class="catalog-actions"><button id="catalogReset" type="button">STANDARD LADEN</button><button id="catalogSave" type="button" disabled>ÄNDERUNGEN SPEICHERN</button></div>
+        <p id="catalogMessage" role="status" aria-live="polite"></p>
+      </section>
+    </dialog>
     <dialog id="keywordModal" class="evidence-modal keyword-modal">
       <div class="modal-head"><div><span>CFG</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
       <div class="keyword-modal-body">
@@ -273,7 +296,7 @@
         <div id="keywordOptions" class="keyword-options"></div>
         <p id="keywordMessage" class="keyword-message"></p>
         <div class="keyword-save-actions">
-          <button id="saveKeywordSettings" class="apply-keywords" type="button">NUR FÜR DIESEN SCAN ÜBERNEHMEN</button>
+          <button id="saveKeywordSettings" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
           <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # Installation und Aktualisierung / Installation and upgrade
 
-Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät mit Alpha 43. Die Installation und mehrere USB-Sichtungen wurden praktisch verwendet; systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
+Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät; vor Alpha 44 wurden Installation, Updates und mehrere USB-Sichtungen praktisch verwendet. Der Alpha-44-Praxistest, systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
 
 ## Kurzfassung
 
@@ -107,6 +107,8 @@ sudo systemctl restart forensic-triage-web.service
 ```
 
 Alle Werte stehen in [configuration.md](configuration.md). `127.0.0.1:8787` ist die interne Python-Adresse. nginx veröffentlicht die Oberfläche auf Port 80; nach Änderung des internen Ports muss auch sein Upstream angepasst werden.
+
+Ab Alpha 44 verwaltet `FORENSIC_TRIAGE_SETTINGS_ROOT` die lokale Profil- und Dateityp-Ablage. Der Webdienst übernimmt vorhandene Profile beim Start; spätere Updater übernehmen Profile aus dem laufenden Release vor dem Umschalten. Vor dem ersten Wechsel von älteren Updatern eigene Profile separat sichern, insbesondere nur in bisherigen Release-Verzeichnissen vorhandene Dateien. Details und Grenzen: [Einstellungen](settings.md#lokale-ablage-und-updates).
 
 ## 4. Oberfläche erreichen
 

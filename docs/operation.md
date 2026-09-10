@@ -62,6 +62,10 @@ Einen eigenen Zustand „Weitere Prüfung“ gibt es nicht mehr. Bestehen nach d
 
 Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Deshalb Auswahl, Fall, Medium und Bearbeiter vor dem Speichern kontrollieren.
 
+## Einstellungen verwalten
+
+**Einstellungen** in der oberen Leiste öffnet die beiden Bereiche **Stichwortprofile** und **Dateitypen** außerhalb des Fallfensters. Dort Profile bearbeiten/duplizieren oder Endungen einer Kategorie zuordnen. Im Fallfenster bleibt die Auswahl der Profile für den Einsatz. Katalogänderungen gelten für neue Scans; alte Ergebnisse behalten ihre Zuordnung. Siehe [ausführliche Bedienung](settings.md).
+
 ## 6. Auswerfen und Aktualisieren
 
 TRIAGE//BOX schreibt keine Nutzdaten auf das Medium. Der Software-Auswurf kann dennoch verwendet werden, damit das Betriebssystem das Gerät kontrolliert freigibt. Bei einem softwareseitig ausgeworfenen, weiterhin eingesteckten USB-Gerät versucht „Aktualisieren“, das Medium erneut zu erkennen. Ein physisches Ab- und Anstecken soll normalerweise nicht nötig sein.

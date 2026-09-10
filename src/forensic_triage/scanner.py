@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -27,6 +28,7 @@ from .partitions import parse_mmls
 from .reporting import write_files_csv, write_json
 from .statistics import summarize
 from .validation import compare_expected
+from .settings import apply_catalog, catalog_snapshot, load_catalog
 
 
 def _command(args: list[str]) -> str:
@@ -87,8 +89,13 @@ def scan(
     mode: str = "fast",
     keywords: list[str] | None = None,
     profile_sources: list[dict[str, str]] | None = None,
+    filetype_catalog: dict[str, Any] | None = None,
 ) -> Path:
     started = time.monotonic()
+    catalog = (catalog_snapshot(filetype_catalog.get("categories"), filetype_catalog.get("version"))
+               if filetype_catalog is not None else load_catalog(
+                   Path(os.environ["FORENSIC_TRIAGE_SETTINGS_ROOT"]) / "filetypes.json"
+                   if os.environ.get("FORENSIC_TRIAGE_SETTINGS_ROOT") else None))
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
     safe_evidence = "".join(char if char.isalnum() or char in "-_" else "_" for char in evidence)
     result_dir = results_root / f"{timestamp}_{safe_evidence}"
@@ -101,6 +108,7 @@ def scan(
     scan_logger.addHandler(handler)
     try:
         scan_logger.info("scan start evidence=%s device=%s", evidence, device)
+        write_json(result_dir / "filetype-catalog.json", catalog)
 
         device_info = inspect_device(device)
         enforce_read_only(device)
@@ -168,7 +176,10 @@ def scan(
                     scan_logger.warning("partition %s skipped: %s", slot, exc)
             container_catalog = merge_catalogs(container_catalogs)
 
-        profile = load_profile(profile_path)
+        apply_catalog(all_files, container_catalog, catalog)
+        # Web requests already froze keywords and profile provenance before I/O.
+        profile = (load_profile(profile_path) if keywords is None or not profile_sources
+                   else {**profile_sources[0], "keywords": keywords})
         selected_keywords = profile["keywords"] if keywords is None else keywords
         hits = build_hits([*all_files, *virtual_files(container_catalog)], selected_keywords)
         sources = profile_sources or [{
@@ -193,6 +204,7 @@ def scan(
                 "scan_started_utc": timestamp,
                 "duration_seconds": round(time.monotonic() - started, 3),
                 "scan_mode": mode,
+                "filetype_catalog": {"version": catalog["version"], "sha256": catalog["sha256"]},
                 "keyword_matches": hits["total_matches"],
                 "container_index": {
                     "status": container_catalog.get("status", "ok"),

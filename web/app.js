@@ -33,6 +33,11 @@ let profilesInitialized = false;
 let keywordDraft = [];
 let draftSelectedKeywords = new Set();
 let profileEditorId = "default";
+let catalogState = null;
+let catalogDefaults = null;
+let catalogBusy = false;
+let catalogDirty = false;
+let settingsRevision = 0;
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 let updateActionInProgress = null;
 let serverActiveCase = null;
@@ -190,6 +195,7 @@ function syncAuftragBackdrop() {
   const nestedOpen = nestedAuftragDialogs.some((id) => $(id).open);
   $("auftragModal").classList.toggle("nested-open", $("auftragModal").open && nestedOpen);
   $("caseArchiveModal").classList.toggle("nested-open", $("caseArchiveModal").open && $("deleteModal").open);
+  $("settingsModal").classList.toggle("nested-open", $("settingsModal").open && $("keywordModal").open);
 }
 
 function openNestedAuftragDialog(id) {
@@ -228,8 +234,108 @@ function renderProfileList() {
   $("profileList").innerHTML = availableProfiles.map((profile) => `<label class="profile-list-item">
     <input type="checkbox" value="${escapeHtml(profile.id)}" ${activeProfileIds.has(profile.id) ? "checked" : ""} />
     <span class="profile-list-copy"><strong>${escapeHtml(profile.name.toUpperCase())}</strong><small>V${escapeHtml(profile.version)} · ${Number(profile.keyword_count)} STICHWÖRTER</small></span>
-    <button class="profile-edit" type="button" data-edit-profile="${escapeHtml(profile.id)}">BEARBEITEN</button>
   </label>`).join("");
+  $("settingsProfilesList").innerHTML = availableProfiles.map((profile) => `<article class="settings-profile">
+    <div><strong>${escapeHtml(profile.name)}</strong><small>${Number(profile.keyword_count)} Stichwörter · Version ${escapeHtml(profile.version)}</small></div>
+    <button type="button" data-edit-profile="${escapeHtml(profile.id)}">BEARBEITEN</button>
+    <button type="button" data-copy-profile="${escapeHtml(profile.id)}">DUPLIZIEREN</button>
+  </article>`).join("") || '<p>Noch keine Profile vorhanden.</p>';
+}
+
+function selectSettingsPane(filetypes) {
+  $("settingsProfilesPane").hidden = filetypes;
+  $("settingsFiletypesPane").hidden = !filetypes;
+  $("settingsProfilesTab").setAttribute("aria-pressed", String(!filetypes));
+  $("settingsFiletypesTab").setAttribute("aria-pressed", String(filetypes));
+}
+
+async function openSettings() {
+  if ($("auftragModal").open) $("auftragModal").close();
+  if (!$("settingsModal").open) $("settingsModal").showModal();
+  selectSettingsPane(false);
+  const revision = ++settingsRevision;
+  catalogState = null; catalogDirty = false;
+  $("catalogRows").innerHTML = "";
+  $("catalogSave").disabled = true;
+  $("catalogReset").disabled = true;
+  $("catalogAddCategory").disabled = true;
+  $("catalogMessage").textContent = "DATEITYPEN WERDEN GELADEN …";
+  loadProfiles();
+  try {
+    const response = await fetch("/api/settings/filetypes");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Katalog nicht verfügbar");
+    if (revision !== settingsRevision || !$("settingsModal").open) return;
+    catalogState = data.catalog; catalogDefaults = data.defaults;
+    $("catalogSearch").value = "";
+    renderCatalog(catalogState.categories);
+    $("catalogVersion").textContent = `KATALOG V${catalogState.version}`;
+    $("catalogMessage").textContent = "";
+    $("catalogReset").disabled = false;
+    $("catalogAddCategory").disabled = false;
+  } catch (error) {
+    if (revision === settingsRevision) $("catalogMessage").textContent = `FEHLER: ${error.message}`;
+  }
+}
+
+function renderCatalog(categories) {
+  $("catalogRows").innerHTML = Object.entries(categories).map(([name, extensions], index) => `<div class="catalog-row" data-category="${escapeHtml(name)}">
+    <div class="catalog-category"><label for="catalogExtensions${index}">${escapeHtml(name)}<small>${extensions.length} Endungen</small></label><button type="button" class="catalog-remove" aria-label="Kategorie ${escapeHtml(name)} entfernen">×</button></div>
+    <textarea id="catalogExtensions${index}" aria-label="Endungen für ${escapeHtml(name)}" rows="2" spellcheck="false">${escapeHtml(extensions.join(", "))}</textarea>
+  </div>`).join("");
+  filterCatalog();
+}
+
+function catalogDraft() {
+  return Object.fromEntries([...$("catalogRows").querySelectorAll(".catalog-row")].map(row => [row.dataset.category,
+    row.querySelector("textarea").value.split(/[,;\s]+/).map(value => value.replace(/^\./, "").toLowerCase()).filter(Boolean)]));
+}
+
+function filterCatalog() {
+  const search = $("catalogSearch").value.trim().toLocaleLowerCase("de").replace(/^\./, "");
+  for (const row of $("catalogRows").children) {
+    row.hidden = !`${row.dataset.category} ${row.querySelector("textarea").value}`.toLocaleLowerCase("de").includes(search);
+  }
+}
+
+function markCatalogDirty() {
+  catalogDirty = true;
+  $("catalogSave").disabled = catalogBusy || !catalogState;
+  $("catalogMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
+}
+
+async function saveCatalog() {
+  if (!catalogState || catalogBusy) return;
+  const categories = catalogDraft();
+  catalogBusy = true;
+  $("catalogSave").disabled = true;
+  $("closeSettings").disabled = true;
+  for (const element of $("settingsFiletypesPane").querySelectorAll("input, textarea, button")) element.disabled = true;
+  $("catalogMessage").textContent = "KATALOG WIRD GESPEICHERT …";
+  try {
+    const response = await fetch("/api/settings/filetypes", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categories, base_sha256: catalogState.sha256 }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Speichern fehlgeschlagen");
+    catalogState = data.catalog; catalogDirty = false;
+    renderCatalog(catalogState.categories);
+    $("catalogVersion").textContent = `KATALOG V${catalogState.version}`;
+    $("catalogMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SCANS";
+  } catch (error) {
+    $("catalogMessage").textContent = `FEHLER: ${error.message}`;
+  } finally {
+    catalogBusy = false;
+    $("closeSettings").disabled = false;
+    for (const element of $("settingsFiletypesPane").querySelectorAll("input, textarea, button")) element.disabled = false;
+    $("catalogSave").disabled = !catalogDirty;
+  }
+}
+
+function closeSettings() {
+  if (catalogBusy) return;
+  if (catalogDirty && !window.confirm("Ungespeicherte Änderungen am Dateityp-Katalog verwerfen?")) return;
+  ++settingsRevision;
+  $("settingsModal").close();
 }
 
 async function loadProfiles(preferredIds = activeProfileIds) {
@@ -257,6 +363,7 @@ async function loadProfiles(preferredIds = activeProfileIds) {
     if (!activeProfileIds.size && availableProfiles[0]) activeProfileIds.add(availableProfiles[0].id);
     profileReady = activeProfileIds.size > 0;
     renderProfileList();
+    $("createProfile").disabled = false;
     updateKeywordSummary();
     updateCaseSessionUi();
   } catch (error) {
@@ -269,6 +376,10 @@ async function loadProfiles(preferredIds = activeProfileIds) {
 }
 
 function renderResults(summary, hits = {}) {
+  const catalog = summary.filetype_catalog;
+  $("archiveFiletypeCatalog").textContent = catalog
+    ? `V${catalog.version} · SHA-256 ${catalog.sha256} · filetype-catalog.json`
+    : "Bei dieser älteren Sichtung noch nicht separat gespeichert";
   $("resultEvidence").textContent = summary.evidence || "SICHTUNG";
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
   $("fileCount").textContent = Number(summary.file_count || 0).toLocaleString("de-AT");
@@ -1245,13 +1356,13 @@ function showDashboard() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function openProfileEditor(profileId = null) {
-  const createNew = profileId === null;
-  const detail = createNew ? null : profileDetails.get(profileId);
-  profileEditorId = profileId;
-  keywordDraft = createNew ? [] : [...(detail?.keywords || [])];
-  draftSelectedKeywords = createNew ? new Set() : new Set(selectedByProfile.get(profileId) || detail?.keywords || []);
-  $("keywordProfileName").value = createNew ? "" : detail?.name || "";
+function openProfileEditor(profileId = null, duplicate = false) {
+  const createNew = profileId === null || duplicate;
+  const detail = profileDetails.get(profileId);
+  profileEditorId = createNew ? null : profileId;
+  keywordDraft = [...(detail?.keywords || [])];
+  draftSelectedKeywords = new Set(duplicate ? keywordDraft : selectedByProfile.get(profileId) || keywordDraft);
+  $("keywordProfileName").value = duplicate ? `${(detail?.name || "Profil").slice(0, 34)} Kopie` : detail?.name || "";
   $("keywordModalTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
   $("keywordNewInput").value = "";
   $("keywordMessage").textContent = "";
@@ -1296,7 +1407,6 @@ async function saveProfileEditor() {
     if (!response.ok) throw new Error(data.error || "Profil konnte nicht gespeichert werden");
     const savedSelection = new Set([...draftSelectedKeywords].filter((word) => data.profile.keywords.includes(word)));
     selectedByProfile.set(data.profile.id, savedSelection.size ? savedSelection : new Set(data.profile.keywords));
-    activeProfileIds.add(data.profile.id);
     await loadProfiles(activeProfileIds);
     updateKeywordSummary();
     $("keywordModal").close();
@@ -1338,6 +1448,48 @@ $("offlineMediaCards").addEventListener("click", (event) => {
 });
 $("homeLogo").addEventListener("click", showDashboard);
 $("openAuftragModal").addEventListener("click", openAuftrag);
+$("openSettings").addEventListener("click", openSettings);
+$("closeSettings").addEventListener("click", closeSettings);
+$("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(); closeSettings(); });
+$("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
+$("settingsProfilesTab").addEventListener("click", () => selectSettingsPane(false));
+$("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane(true));
+$("settingsProfilesList").addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-profile]");
+  const copy = event.target.closest("[data-copy-profile]");
+  if (edit) openProfileEditor(edit.dataset.editProfile);
+  if (copy) openProfileEditor(copy.dataset.copyProfile, true);
+});
+$("catalogSearch").addEventListener("input", filterCatalog);
+$("catalogRows").addEventListener("click", (event) => {
+  const remove = event.target.closest(".catalog-remove");
+  if (!remove || catalogBusy) return;
+  remove.closest(".catalog-row").remove(); markCatalogDirty();
+});
+$("catalogRows").addEventListener("input", (event) => {
+  const row = event.target.closest(".catalog-row");
+  if (row) row.querySelector("small").textContent = `${catalogDraft()[row.dataset.category].length} Endungen`;
+  markCatalogDirty();
+});
+$("catalogAddCategory").addEventListener("click", () => {
+  const name = $("catalogNewCategory").value.trim();
+  const draft = catalogDraft();
+  if (!name || name.toLocaleLowerCase("de") === "unbekannt" || Object.keys(draft).some(value => value.toLocaleLowerCase("de") === name.toLocaleLowerCase("de"))) {
+    $("catalogMessage").textContent = "BITTE EINEN NEUEN, EINDEUTIGEN KATEGORIENAMEN EINGEBEN"; return;
+  }
+  $("catalogSearch").value = "";
+  renderCatalog({ ...draft, [name]: [] });
+  $("catalogNewCategory").value = "";
+  markCatalogDirty();
+  $("catalogRows").lastElementChild.querySelector("textarea").focus();
+});
+$("catalogReset").addEventListener("click", () => {
+  if (!catalogDefaults || catalogBusy) return;
+  $("catalogSearch").value = "";
+  renderCatalog(catalogDefaults.categories); markCatalogDirty();
+  $("catalogMessage").textContent = "STANDARD GELADEN · ZUM ÜBERNEHMEN SPEICHERN";
+});
+$("catalogSave").addEventListener("click", saveCatalog);
 $("closeAuftragModal").addEventListener("click", () => $("auftragModal").close());
 $("auftragModal").addEventListener("click", (event) => { if (event.target === $("auftragModal")) $("auftragModal").close(); });
 $("openCaseArchive").addEventListener("click", () => openNestedAuftragDialog("caseArchiveModal"));

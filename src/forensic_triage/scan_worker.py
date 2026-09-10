@@ -26,6 +26,7 @@ def execute(request: dict[str, Any]) -> Path:
         mode=str(request.get("mode", "fast")),
         keywords=list(request.get("keywords") or []),
         profile_sources=list(request.get("profile_sources") or []),
+        filetype_catalog=request.get("filetype_catalog"),
     )
 
 
