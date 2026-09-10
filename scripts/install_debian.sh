@@ -15,6 +15,7 @@ NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/forensic-triage"
 PI_FIREWALL_SERVICE_FILE="/etc/systemd/system/forensic-triage-pi-firewall.service"
 JOURNAL_CONFIG_DIR="/etc/systemd/journald.conf.d"
 JOURNAL_CONFIG_FILE="$JOURNAL_CONFIG_DIR/forensic-triage.conf"
+OFFLINE_ALLOWED_SIGNERS_FILE="$CONFIG_DIR/offline-update-allowed-signers"
 SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-web.service.in"
 UPDATE_SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-update@.service.in"
 UPDATE_TIMER_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-update-check.timer"
@@ -23,6 +24,7 @@ CONFIG_TEMPLATE="$PROJECT_ROOT/deploy/triage.env.example"
 PI_NETWORK_TEMPLATE="$PROJECT_ROOT/deploy/pi-network.env.example"
 PI_FIREWALL_SERVICE_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-pi-firewall.service.in"
 JOURNAL_CONFIG_TEMPLATE="$PROJECT_ROOT/deploy/forensic-triage-journald.conf"
+OFFLINE_ALLOWED_SIGNERS_TEMPLATE="$PROJECT_ROOT/deploy/offline-update-allowed-signers"
 CHECK_ONLY=false
 PI_MODE=false
 
@@ -59,8 +61,9 @@ if [[ ! "$PROJECT_ROOT" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
   exit 1
 fi
 
-REQUIRED_FILES=("$PROJECT_ROOT/pyproject.toml" "$SERVICE_TEMPLATE" "$CONFIG_TEMPLATE" "$JOURNAL_CONFIG_TEMPLATE")
+REQUIRED_FILES=("$PROJECT_ROOT/pyproject.toml" "$SERVICE_TEMPLATE" "$CONFIG_TEMPLATE" "$JOURNAL_CONFIG_TEMPLATE" "$OFFLINE_ALLOWED_SIGNERS_TEMPLATE")
 REQUIRED_FILES+=("$UPDATE_SERVICE_TEMPLATE" "$UPDATE_TIMER_TEMPLATE" "$NGINX_TEMPLATE" "$PROJECT_ROOT/scripts/update_triagebox.sh")
+REQUIRED_FILES+=("$PROJECT_ROOT/scripts/prepare_offline_update.py")
 if $PI_MODE; then
   REQUIRED_FILES+=(
     "$PI_NETWORK_TEMPLATE"
@@ -101,7 +104,7 @@ run_as_owner() {
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-PACKAGES=(git python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx)
+PACKAGES=(git openssh-client python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx)
 if $PI_MODE; then
   PACKAGES+=(network-manager avahi-daemon libnss-mdns nftables)
 fi
@@ -152,8 +155,15 @@ else
   grep -q '^FORENSIC_TRIAGE_RELEASES_ROOT=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_RELEASES_ROOT=%s\n' "$RELEASES_ROOT" >>"$CONFIG_FILE"
   grep -q '^FORENSIC_TRIAGE_UPDATE_ENABLED=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_UPDATE_ENABLED=true\n' >>"$CONFIG_FILE"
   grep -q '^FORENSIC_TRIAGE_UPDATE_REMOTE=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_UPDATE_REMOTE=origin\n' >>"$CONFIG_FILE"
+  grep -q '^FORENSIC_TRIAGE_UPDATE_GIT_ROOT=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_UPDATE_GIT_ROOT=%s\n' "$PROJECT_ROOT" >>"$CONFIG_FILE"
   grep -q '^FORENSIC_TRIAGE_UPDATE_STATE_FILE=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_UPDATE_STATE_FILE=/var/lib/forensic-triage/update-status.env\n' >>"$CONFIG_FILE"
+  grep -q '^FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE=/var/lib/forensic-triage/offline-update.tbu\n' >>"$CONFIG_FILE"
+  grep -q '^FORENSIC_TRIAGE_OFFLINE_UPDATE_MAX_BYTES=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_OFFLINE_UPDATE_MAX_BYTES=268435456\n' >>"$CONFIG_FILE"
+  grep -q '^FORENSIC_TRIAGE_OFFLINE_UPDATE_ALLOWED_SIGNERS=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_OFFLINE_UPDATE_ALLOWED_SIGNERS=%s\n' "$OFFLINE_ALLOWED_SIGNERS_FILE" >>"$CONFIG_FILE"
+  grep -q '^FORENSIC_TRIAGE_UPDATE_GUARD_FILE=' "$CONFIG_FILE" || printf 'FORENSIC_TRIAGE_UPDATE_GUARD_FILE=/run/forensic-triage-update-requested\n' >>"$CONFIG_FILE"
 fi
+
+install -o root -g root -m 0644 "$OFFLINE_ALLOWED_SIGNERS_TEMPLATE" "$OFFLINE_ALLOWED_SIGNERS_FILE"
 
 if $PI_MODE; then
   if [[ ! -f "$PI_NETWORK_CONFIG" ]]; then

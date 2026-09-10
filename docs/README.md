@@ -4,9 +4,10 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 ## Einstieg
 
-Stand: 10. September 2026, Anwendung Alpha 44. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
+Stand: 10. September 2026, Anwendung Alpha 45. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
 
 1. [Installation und Aktualisierung](installation.md)
+   - [Signierte Offline-Updates](offline-updates.md)
 2. [So funktioniert TRIAGE//BOX](how-it-works.md)
 3. [Konfiguration](configuration.md)
 4. [Bedienung und Fallworkflow](operation.md)
@@ -35,7 +36,7 @@ Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Ras
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.44. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a44`; der Git-Tag lautet `v0.2.0-alpha.44`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.45. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a45`; der Git-Tag lautet `v0.2.0-alpha.45`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

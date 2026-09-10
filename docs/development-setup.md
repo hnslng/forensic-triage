@@ -35,7 +35,7 @@ git archive --format=tar HEAD | ssh \
   'mkdir -p /home/triage/forensic-triage && tar -xf - -C /home/triage/forensic-triage'
 ```
 
-Nur für einen bewusst getrennten Entwicklungsstand verwenden, nicht zum Überschreiben einer laufenden Pi-Releaseinstallation. Danach den Installer auf dem Testsystem erneut ausführen; seine Konfigurationsmigrationen sind in [Installation](installation.md) beschrieben. Ein `git archive` enthält keine Git-Historie und unterstützt deshalb nicht den Git-basierten Web-Updater.
+Nur für einen bewusst getrennten Entwicklungsstand verwenden, nicht zum Überschreiben einer laufenden Pi-Releaseinstallation. Danach den Installer auf dem Testsystem erneut ausführen; seine Konfigurationsmigrationen sind in [Installation](installation.md) beschrieben. Ein gewöhnliches `git archive` enthält keine Git-Historie und unterstützt deshalb nicht den Git-basierten Web-Updater. Für freigegebene Offline-Updates gibt es stattdessen das signierte [`.tbu`-Verfahren](offline-updates.md).
 
 ## English summary
 

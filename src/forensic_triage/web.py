@@ -11,6 +11,7 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 import threading
 import time
 import zipfile
@@ -49,6 +50,14 @@ def _env_float(name: str, default: float) -> float:
     except ValueError:
         return default
     return value if math.isfinite(value) and value > 0 else default
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        value = int(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if value > 0 else default
 
 
 def _mountpoints(node: dict[str, Any]) -> list[str]:
@@ -282,7 +291,7 @@ def read_update_status() -> dict[str, str]:
 def update_job_states() -> dict[str, bool]:
     """Return whether a deliberate update worker is currently active."""
     states: dict[str, bool] = {}
-    for action in ("check", "install"):
+    for action in ("check", "install", "offline"):
         try:
             completed = subprocess.run(
                 ["/usr/bin/systemctl", "is-active", "--quiet", f"forensic-triage-update@{action}.service"],
@@ -366,6 +375,15 @@ class TriageHTTPServer(ThreadingHTTPServer):
         if not self.catalog_path.exists():
             atomic_write(self.catalog_path, json.dumps(default_catalog(), ensure_ascii=False, indent=2).encode())
         self.settings_lock = threading.Lock()
+        self.offline_update_file = Path(os.environ.get(
+            "FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE", "/var/lib/forensic-triage/offline-update.tbu",
+        ))
+        self.offline_update_max_bytes = _env_int(
+            "FORENSIC_TRIAGE_OFFLINE_UPDATE_MAX_BYTES", 256 * 1024 * 1024,
+        )
+        self.update_guard_file = Path(os.environ.get(
+            "FORENSIC_TRIAGE_UPDATE_GUARD_FILE", "/run/forensic-triage-update-requested",
+        ))
         self.case_store = CaseStore(casefiles_root)
         self.scan_timeout_seconds = scan_timeout_seconds
         self.command_timeout_seconds = command_timeout_seconds
@@ -615,6 +633,9 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route in {"/api/updates/check", "/api/updates/install"}:
             self._post_update(route.rsplit("/", 1)[-1])
             return
+        if route == "/api/updates/offline":
+            self._post_offline_update()
+            return
         if route == "/api/scans":
             self._post_scan()
             return
@@ -664,6 +685,10 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def _post_case_start(self) -> None:
+        if self.server.update_guard_file.exists():
+            self.close_connection = True
+            self._json(HTTPStatus.CONFLICT, {"error": "FALLSTART WÄHREND EINER UPDATE-INSTALLATION GESPERRT"})
+            return
         try:
             payload = self._read_payload()
             case_number = str(payload.get("case_number", "")).strip()
@@ -695,12 +720,24 @@ class TriageHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.OK, {"active_case": None})
 
     def _post_update(self, action: str) -> None:
+        guard_claimed = False
         if action == "install":
             if active_device_paths():
                 self._json(HTTPStatus.CONFLICT, {"error": "UPDATE WÄHREND EINES SCANS GESPERRT"})
                 return
             if active_case_session():
                 self._json(HTTPStatus.CONFLICT, {"error": "FALL ZUERST BEENDEN, DANN UPDATE INSTALLIEREN"})
+                return
+            try:
+                self.server.update_guard_file.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
+                descriptor = os.open(self.server.update_guard_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(descriptor)
+                guard_claimed = True
+            except FileExistsError:
+                self._json(HTTPStatus.CONFLICT, {"error": "EINE UPDATE-INSTALLATION WURDE BEREITS ANGEFORDERT"})
+                return
+            except OSError as exc:
+                self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": f"UPDATE-SPERRE NICHT VERFÜGBAR: {exc}"})
                 return
         try:
             subprocess.run(
@@ -709,7 +746,81 @@ class TriageHandler(BaseHTTPRequestHandler):
             )
             self._json(HTTPStatus.ACCEPTED, {"update": read_update_status(), "action": action})
         except (OSError, subprocess.SubprocessError) as exc:
+            if guard_claimed:
+                self.server.update_guard_file.unlink(missing_ok=True)
             self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": f"UPDATE-DIENST NICHT VERFÜGBAR: {exc}"})
+
+    def _post_offline_update(self) -> None:
+        if active_device_paths():
+            self.close_connection = True
+            self._json(HTTPStatus.CONFLICT, {"error": "UPDATE WÄHREND EINES SCANS GESPERRT"})
+            return
+        if active_case_session():
+            self.close_connection = True
+            self._json(HTTPStatus.CONFLICT, {"error": "FALL ZUERST BEENDEN, DANN UPDATE INSTALLIEREN"})
+            return
+        if any(update_job_states().values()):
+            self.close_connection = True
+            self._json(HTTPStatus.CONFLICT, {"error": "EINE UPDATE-AKTION LÄUFT BEREITS"})
+            return
+        temporary: Path | None = None
+        worker_started = False
+        guard_claimed = False
+        try:
+            try:
+                self.server.update_guard_file.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
+                descriptor = os.open(self.server.update_guard_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(descriptor)
+                guard_claimed = True
+            except FileExistsError:
+                self.close_connection = True
+                self._json(HTTPStatus.CONFLICT, {"error": "EINE UPDATE-INSTALLATION WURDE BEREITS ANGEFORDERT"})
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 1 <= length <= self.server.offline_update_max_bytes:
+                self.close_connection = True
+                maximum = self.server.offline_update_max_bytes // (1024 * 1024)
+                raise ValueError(f"OFFLINE-PAKET IST LEER ODER GRÖSSER ALS {maximum} MB")
+            target = self.server.offline_update_file
+            target.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
+            descriptor, name = tempfile.mkstemp(prefix=".offline-update-", dir=target.parent)
+            temporary = Path(name)
+            remaining = length
+            with os.fdopen(descriptor, "wb") as stream:
+                while remaining:
+                    chunk = self.rfile.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        raise ValueError("UPLOAD WURDE VORZEITIG UNTERBROCHEN")
+                    stream.write(chunk)
+                    remaining -= len(chunk)
+                stream.flush()
+                os.fsync(stream.fileno())
+            with temporary.open("rb") as stream:
+                signature = stream.read(4)
+            if signature != b"PK\x03\x04":
+                raise ValueError("DATEI IST KEIN TRIAGE//BOX-UPDATEPAKET")
+            temporary.chmod(0o600)
+            os.replace(temporary, target)
+            temporary = None
+            try:
+                subprocess.run(
+                    ["/usr/bin/systemctl", "start", "--no-block", "forensic-triage-update@offline.service"],
+                    check=True, capture_output=True, text=True, timeout=5,
+                )
+            except (OSError, subprocess.SubprocessError):
+                target.unlink(missing_ok=True)
+                raise
+            worker_started = True
+            self._json(HTTPStatus.ACCEPTED, {"update": read_update_status(), "action": "offline"})
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+        except (OSError, subprocess.SubprocessError) as exc:
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": f"OFFLINE-UPDATE NICHT VERFÜGBAR: {exc}"})
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            if guard_claimed and not worker_started:
+                self.server.update_guard_file.unlink(missing_ok=True)
 
     def do_DELETE(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
@@ -786,6 +897,10 @@ class TriageHandler(BaseHTTPRequestHandler):
         return payload
 
     def _post_scan(self) -> None:
+        if self.server.update_guard_file.exists():
+            self.close_connection = True
+            self._json(HTTPStatus.CONFLICT, {"error": "SCANSTART WÄHREND EINER UPDATE-INSTALLATION GESPERRT"})
+            return
         try:
             payload = self._read_payload()
             case_number = str(payload.get("case_number", "")).strip()

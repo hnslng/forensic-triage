@@ -1,3 +1,4 @@
+import io
 import json
 import subprocess
 import threading
@@ -303,11 +304,64 @@ def test_update_job_states_reports_each_systemd_worker(monkeypatch) -> None:
 
     monkeypatch.setattr("forensic_triage.web.subprocess.run", fake_run)
 
-    assert update_job_states() == {"check": True, "install": False}
+    assert update_job_states() == {"check": True, "install": False, "offline": False}
     assert calls == [
         "forensic-triage-update@check.service",
         "forensic-triage-update@install.service",
+        "forensic-triage-update@offline.service",
     ]
+
+
+def test_offline_update_upload_is_streamed_then_starts_worker(monkeypatch, tmp_path) -> None:
+    import forensic_triage.web as web
+
+    package = b"PK\x03\x04signed-test-package"
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.headers = {"Content-Length": str(len(package))}
+    handler.rfile = io.BytesIO(package)
+    handler.server = SimpleNamespace(
+        offline_update_file=tmp_path / "state/offline-update.tbu",
+        offline_update_max_bytes=1024,
+        update_guard_file=tmp_path / "run/update-requested",
+    )
+    responses = []
+    commands = []
+    handler._json = lambda status, body: responses.append((status, body))
+    monkeypatch.setattr(web, "active_device_paths", lambda: [])
+    monkeypatch.setattr(web, "active_case_session", lambda: None)
+    monkeypatch.setattr(web, "update_job_states", lambda: {"check": False, "install": False, "offline": False})
+    monkeypatch.setattr(web, "read_update_status", lambda: {"state": "unknown"})
+    monkeypatch.setattr(web.subprocess, "run", lambda command, **kwargs: commands.append(command))
+
+    handler._post_offline_update()
+
+    assert handler.server.offline_update_file.read_bytes() == package
+    assert commands[0][-1] == "forensic-triage-update@offline.service"
+    assert responses == [(202, {"update": {"state": "unknown"}, "action": "offline"})]
+
+
+def test_offline_update_rejects_invalid_package_without_starting_worker(monkeypatch, tmp_path) -> None:
+    import forensic_triage.web as web
+
+    handler = web.TriageHandler.__new__(web.TriageHandler)
+    handler.headers = {"Content-Length": "4"}
+    handler.rfile = io.BytesIO(b"NOPE")
+    handler.server = SimpleNamespace(
+        offline_update_file=tmp_path / "offline-update.tbu",
+        offline_update_max_bytes=1024,
+        update_guard_file=tmp_path / "run/update-requested",
+    )
+    responses = []
+    handler._json = lambda status, body: responses.append((status, body))
+    monkeypatch.setattr(web, "active_device_paths", lambda: [])
+    monkeypatch.setattr(web, "active_case_session", lambda: None)
+    monkeypatch.setattr(web, "update_job_states", lambda: {"offline": False})
+    monkeypatch.setattr(web.subprocess, "run", lambda *args, **kwargs: pytest.fail("worker started"))
+
+    handler._post_offline_update()
+
+    assert responses[0][0] == 400
+    assert not handler.server.offline_update_file.exists()
 
 
 def test_dashboard_offers_only_secure_or_not_secure_decisions() -> None:

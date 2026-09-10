@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
     "scripts/bootstrap_pi.sh",
     "scripts/configure_pi_network.sh",
     "scripts/apply_pi_firewall.sh",
+    "scripts/update_triagebox.sh",
 ])
 def test_installation_shell_scripts_have_valid_syntax(script: str) -> None:
     subprocess.run(["bash", "-n", str(ROOT / script)], check=True)
@@ -80,7 +81,7 @@ def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
     updater = updater_path.read_text(encoding="utf-8")
     assert updater_path.stat().st_mode & 0o111
     assert "tag --list 'v[0-9]*'" in updater
-    assert "git -C \"$CURRENT_ROOT\" worktree add --detach" in updater
+    assert "git -C \"$UPDATE_GIT_ROOT\" worktree add --detach" in updater
     assert 'mv -Tf "${RUNTIME_LINK}.next" "$RUNTIME_LINK"' in updater
     assert "VORVERSION WIEDERHERGESTELLT" in updater
     assert "forensic-triage-nginx.conf.in" in updater
@@ -98,3 +99,19 @@ def test_update_timer_checks_only_and_never_installs() -> None:
     assert "OnUnitActiveSec=1d" in timer
     assert "forensic-triage-update@check.service" in timer
     assert "forensic-triage-update@install.service" not in timer
+
+
+def test_installer_and_proxy_enable_bounded_signed_offline_updates() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")
+    nginx = (ROOT / "deploy/forensic-triage-nginx.conf.in").read_text(encoding="utf-8")
+    environment = (ROOT / "deploy/triage.env.example").read_text(encoding="utf-8")
+    allowed = (ROOT / "deploy/offline-update-allowed-signers").read_text(encoding="utf-8")
+    assert "openssh-client" in installer
+    assert "prepare_offline_update.py" in updater
+    assert "--no-index --no-deps --no-build-isolation" in updater
+    assert "forensic-triage-update@offline.service" not in (ROOT / "deploy/forensic-triage-update-check.timer").read_text()
+    assert "client_max_body_size 256m" in nginx
+    assert "FORENSIC_TRIAGE_OFFLINE_UPDATE_MAX_BYTES=268435456" in environment
+    assert allowed.startswith("triagebox-updates ssh-ed25519 ")
+    assert "PRIVATE" not in allowed

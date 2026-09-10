@@ -1,6 +1,6 @@
 # Projektstand und Nachweise
 
-Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.44**. Einstellungen für Stichwortprofile und Dateitypen sind implementiert. Eigene Profile und Kataloge liegen außerhalb der Release-Verzeichnisse; jeder neue Scan speichert den verwendeten Katalogstand. Der Alpha-44-Update- und Praxistest auf dem Pi steht noch aus. Einzelheiten: [Einstellungen](settings.md).
+Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.45**. Einstellungen für Stichwortprofile und Dateitypen sowie signierte Offline-Updates über den eigenen Hotspot sind implementiert. Der Alpha-45-Update- und Praxistest auf dem Pi steht noch aus. Einzelheiten: [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
 
 ## Was „funktioniert“ hier bedeutet
 
@@ -11,14 +11,14 @@ Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.44**. Einstellungen für
 
 | Bereich | Aktueller Stand | Noch nachzuweisen / zu verbessern |
 |---|---|---|
-| Raspberry Pi 3B+ | Installiert und im Testbetrieb; Alpha 43 wurde zuletzt praktisch auf dem Pi verwendet. | Alpha 44 aktualisieren und prüfen; reproduzierbare Neuinstallation, finaler Speicher-/Stromaufbau und Dauerbetrieb. |
+| Raspberry Pi 3B+ | Installiert und im Testbetrieb; Alpha 43 wurde zuletzt praktisch auf dem Pi verwendet. | Alpha 45 zunächst online aktualisieren und prüfen; reproduzierbare Neuinstallation, finaler Speicher-/Stromaufbau und Dauerbetrieb. |
 | Netzwerk | Hotspot und Router-LAN verwendet; `http://triagebox.local/` erfolgreich ohne Port aufgerufen. | Direkte Ethernet-Verbindung ohne Router, Offline-Betrieb, gerätespezifisches Passwort und Firewall-Abnahme. |
 | USB-Grobsichtung | Reale Testmedien, darunter drei gleichzeitig angeschlossene Sticks, bereits gesichtet. | Vollständiger Soll-/Ist-Vergleich, systematische Parallel- und Störungstests. |
 | Fallworkflow | Start/Ende, Sichtungsnummern, zwei Entscheidungen, Geräte-/Dateimetadaten, PDF und ZIP implementiert. | Vollständiger Probeeinsatz einschließlich Wiederöffnung, konsistentem Bericht und Pflichtangaben. |
 | Explorer und Archivfilter | Medienwechsel, verspätete Antworten, Filter, Archiv-Unterordner und Pagination automatisch geprüft. | Wiederholung mit bekannten Beständen auf dem Pi; Grenzen bei großen und unvollständigen Katalogen. |
 | Archivverschlüsselung | ZIP/7Z/RAR-Merkmale, ungeklärter Status und lesbare Verzeichnisse implementiert. | Keine allgemeine PDF-/Office-/Volume-Verschlüsselungserkennung; Gründe nur soweit der gespeicherte Index sie liefert. |
 | Schreibschutz und Isolation | Software-Read-only, getrennte Prozesse, Zeitlimits und begrenzte Diagnoseprotokolle vorhanden. | Physische Schreibschutzprüfung; Hardware-/Kernelstillstand wird dadurch nicht ausgeschlossen. |
-| Updates | Prüfung und bewusste Installation praktisch verwendet; Fallende im Updatefenster seit Alpha 43. Alpha 44 trennt Einstellungen vom Release und übernimmt ältere Profile beim ersten Start. | Erhalt eigener Einstellungen beim realen Pi-Update/Rückwechsel sowie vollständige Fehler-/Stromausfallprüfung und Wiederherstellung aller veränderten Komponenten. |
+| Updates | Online-Prüfung und bewusste Installation praktisch verwendet. Alpha 45 ergänzt signierte Offline-Pakete, Uploadfortschritt, Abhängigkeitsgrenze und eine gemeinsame Installationssperre. | Alpha 45 einmal online einspielen; danach erstes echtes Offline-Update, Fehler-/Stromausfallprüfung und Wiederherstellung aller veränderten Komponenten. |
 | Einstellungen | Gemeinsamer Bereich für Profile und Dateitypen, atomare lokale Speicherung, Konflikterkennung und unveränderlicher Scan-Snapshot implementiert. | Bedienung und Erstübernahme auf dem Pi mit vorhandenen Profilen praktisch prüfen. |
 | Entfernte Fälle | Ordner bleiben im Papierkorb; Entfernen automatisch geprüft. | Kein fertiger Import zurück in den aktiven Fallindex; kein geprüfter Restore-Ablauf. |
 | Zugriff und Ablage | Lokaler HTTP-Zugang, konfigurierte Fallablage, keine Web-Anmeldung. | Gemeinsame Entsperrung, HTTPS und verschlüsselte Fallablage gemäß Schutzkonzept. |
@@ -26,12 +26,12 @@ Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.44**. Einstellungen für
 
 ## Vorhandene Prüfnachweise
 
-- **111 Python-Tests:** für Alpha 44 erfolgreich; decken Scannerbausteine, Fallablage, Zählung, Archivstatus sowie Validierung, Migration, Konflikterkennung und Scan-Snapshots der Einstellungen ab.
-- **26 isolierte Browsertests:** für Alpha 44 erfolgreich. Sie nutzen synthetische API-Antworten und prüfen zusätzlich Einstellungen, Dialogwechsel und schmale Ansichten.
+- **123 Python-Tests:** für Alpha 45 erfolgreich; zusätzlich sind signierte/manipulierte Pakete, Versions- und Abhängigkeitsgrenzen sowie gestreamte Uploads abgedeckt.
+- **27 isolierte Browsertests:** für Alpha 45 erfolgreich. Sie prüfen zusätzlich Auswahl, Sperrung, Upload und sichtbaren Abschluss eines Offline-Updates.
 - **26. August 2026:** dokumentierter Sollvergleich mit 960 Dateien auf exFAT; schneller Lauf 0,732 Sekunden auf der beschriebenen VM. Dies ist ein historischer Einzeltest, kein Geschwindigkeitsversprechen für den Pi oder beliebige Medien: [Nachweis](validation-2026-08-26.md).
 - **Bisheriger Pi-Testbetrieb:** Installation, Hotspot/LAN, mehrere USB-Sticks, Archivbeispiele und Updates im Entwicklungsverlauf beobachtet. Die Feldtestserie mit vollständigem Prüfprotokoll steht noch aus.
 
-Für Alpha 44 wurden keine neuen realen Scans, Stromunterbrechungen oder Wiederherstellungen ausgeführt. Neue Messwerte gehören mit Version, Aufbau, Testbestand und Abweichungen in einen datierten Nachweis; echte Falldaten bleiben außerhalb von Git.
+Für Alpha 45 wurden keine neuen realen Scans, Offline-Updates am Pi, Stromunterbrechungen oder Wiederherstellungen ausgeführt. Neue Messwerte gehören mit Version, Aufbau, Testbestand und Abweichungen in einen datierten Nachweis; echte Falldaten bleiben außerhalb von Git.
 
 ## Bekannte Abweichungen vom Zielablauf
 

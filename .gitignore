@@ -5,6 +5,7 @@ __pycache__/
 .coverage
 htmlcov/
 dist/
+*.tbu
 build/
 *.egg-info/
 results/

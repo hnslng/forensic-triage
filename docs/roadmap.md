@@ -1,6 +1,6 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.44`.
+Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.45`.
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 
@@ -16,6 +16,7 @@ Der [Projektstand](project-status.md) trennt implementierte Funktionen, bisherig
 - Archivstatusfilter, zwei Entscheidungen, Geräteangaben, Audit, PDF-Bericht und ZIP-Export.
 - Doppelbestätigung beim Entfernen, Dateierhalt im Papierkorb, Prozesszeitlimits und persistente Diagnoseprotokolle.
 - Reine Updateprüfung und bewusste Installation; Fallende direkt im Updatefenster seit Alpha 43.
+- Signierte Offline-Updates über den eigenen Hotspot, ohne Internetzugang des Pi; Abhängigkeitsänderungen bleiben bewusst online.
 
 Diese Punkte sind implementiert; damit sind noch nicht alle Störfälle auf dem Pi abgenommen.
 
@@ -38,7 +39,7 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 - [ ] Gewünschte Wiederfreigabe nach Verbindungs-/Browserverlust festlegen und gegebenenfalls implementieren; vor Standortwechsel bleibt ausdrückliches Fallende Pflicht.
 - [ ] Langsamen/blockierten Worker, Zeitüberschreitung und Abziehen ausschließlich mit Testmedien prüfen; andere Scans und gespeicherte Akten müssen bedienbar bleiben.
 - [ ] Umgang mit gesperrten Geräten nach Neustart absichern; die bisherige Quarantäne liegt nur im Arbeitsspeicher und ist danach leer.
-- [ ] Gleichzeitige Fallwechsel, Scanstarts und Updateanforderungen auf Serverebene testen, nicht nur über deaktivierte UI-Knöpfe.
+- [x] Neue Fall- und Scanstarts während einer Updateinstallation zusätzlich serverseitig über eine gemeinsame Laufzeitsperre verhindern (Alpha 45).
 - [ ] Große Verzeichnisbäume, viele kleine Dateien, weitere Dateisysteme und volle Ergebnisablage testen.
 - [ ] Archivbudgets mit vielen, großen, defekten, verschlüsselten und mehrteiligen Archiven messen; Grenzen und unvollständige Ergebnisse prüfen.
 - [ ] Pi-Systemmedium von Prüfmedien trennen; MicroSD statt USB-System-SSD für den Zielaufbau praktisch testen.
@@ -54,6 +55,7 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 - [ ] PDF-Formulierungen und Grobinhalt fachlich prüfen; Aufbewahrung, Export und endgültige Entfernung festlegen.
 - [ ] Privaten Git-Lesezugriff des Update-Dienstes reproduzierbar einrichten und nach Neustart testen.
 - [ ] Updatefehler und Stromunterbrechung testen. Das vorhandene Umschalten des Code-Symlinks ist noch kein vollständiger Rollback von Dienstkonfiguration, Paketen und Daten.
+- [ ] Offline-Update von Alpha 45 auf die folgende Version praktisch über den Pi-Hotspot testen; Signaturfehler und Verbindungsabbruch am Pi nachvollziehen.
 - [ ] Startprüfung, Rollback und Wiederaufnahme eines fehlgeschlagenen Updates vervollständigen; unabhängige Sicherung beibehalten.
 
 ## 4. Einfachen Schutz vor echtem Einsatz fertigstellen

@@ -94,6 +94,8 @@ function renderUpdateState(value = {}) {
   $("updateStopCase").disabled = runningPaths.size > 0 || actionRunning || caseSessionTransition;
   $("updateStopCase").textContent = caseSessionTransition ? "FALL WIRD BEENDET …" : `FALL ${activeCase || ""} BEENDEN`;
   $("updateCheck").disabled = actionRunning;
+  $("offlineUpdateFile").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning || caseSessionTransition;
+  $("offlineUpdateInstall").disabled = $("offlineUpdateFile").disabled || !$("offlineUpdateFile").files.length;
   if (!updateActionInProgress) {
     if (caseSessionTransition) {
       $("updateActionMessage").textContent = "FALL WIRD BEENDET …";
@@ -179,6 +181,64 @@ async function requestUpdate(action) {
   } catch (error) {
     renderUpdateState(previousUpdateState);
     $("updateActionMessage").textContent = `FEHLER: ${error.message}`;
+  } finally {
+    updateActionInProgress = null;
+    renderUpdateState(updateState);
+  }
+}
+
+function uploadOfflinePackage(file) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", "/api/updates/offline");
+    request.setRequestHeader("Content-Type", "application/octet-stream");
+    request.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return;
+      const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      $("offlineUpdateMessage").textContent = `PAKET WIRD ÜBERTRAGEN · ${percent} %`;
+    });
+    request.addEventListener("load", () => {
+      let data = {};
+      try { data = JSON.parse(request.responseText || "{}"); } catch (_) { /* handled below */ }
+      if (request.status < 200 || request.status >= 300) {
+        reject(new Error(data.error || `UPLOAD FEHLGESCHLAGEN (${request.status})`));
+      } else {
+        resolve(data);
+      }
+    });
+    request.addEventListener("error", () => reject(new Error("VERBINDUNG BEIM UPLOAD UNTERBROCHEN")));
+    request.addEventListener("abort", () => reject(new Error("UPLOAD ABGEBROCHEN")));
+    request.send(file);
+  });
+}
+
+async function installOfflineUpdate() {
+  if (updateActionInProgress || caseSessionTransition) return;
+  const file = $("offlineUpdateFile").files[0];
+  const activeCase = activeCaseNumber || serverActiveCase?.case_number;
+  if (!file) return;
+  if (activeCase) { $("offlineUpdateMessage").textContent = `FALL ${activeCase} ZUERST BEENDEN`; return; }
+  if (runningPaths.size) { $("offlineUpdateMessage").textContent = "LAUFENDEN SCAN ZUERST ABSCHLIESSEN"; return; }
+  if (!file.name.toLowerCase().endsWith(".tbu")) {
+    $("offlineUpdateMessage").textContent = "BITTE EIN .TBU-UPDATEPAKET AUSWÄHLEN";
+    return;
+  }
+  if (!window.confirm("Signiertes Offline-Update hochladen und installieren? Der Dienst wird kurz neu gestartet.")) return;
+  const previousUpdateState = { ...updateState };
+  updateActionInProgress = "offline";
+  renderUpdateState({ state: "installing", message: "OFFLINE-UPDATE WIRD ÜBERTRAGEN" });
+  $("offlineUpdateMessage").textContent = "PAKET WIRD ÜBERTRAGEN · 0 %";
+  try {
+    await uploadOfflinePackage(file);
+    $("offlineUpdateMessage").textContent = "SIGNATUR, VERSION UND SELBSTTEST WERDEN GEPRÜFT …";
+    const result = await waitForUpdateResult("offline");
+    if (result !== "installed") throw new Error(updateState.message || "OFFLINE-UPDATE NICHT INSTALLIERT");
+    $("offlineUpdateMessage").textContent = "OFFLINE-UPDATE INSTALLIERT · OBERFLÄCHE WIRD NEU GELADEN …";
+    await wait(1000);
+    window.location.reload();
+  } catch (error) {
+    renderUpdateState(previousUpdateState);
+    $("offlineUpdateMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     updateActionInProgress = null;
     renderUpdateState(updateState);
@@ -1710,6 +1770,13 @@ $("caseMedia").addEventListener("click", (event) => {
 $("decisionReason").addEventListener("change", updateDecisionAvailability);
 $("updateCheck").addEventListener("click", () => requestUpdate("check"));
 $("updateInstall").addEventListener("click", () => requestUpdate("install"));
+$("offlineUpdateFile").addEventListener("change", () => {
+  $("offlineUpdateMessage").textContent = $("offlineUpdateFile").files[0]
+    ? `${$("offlineUpdateFile").files[0].name.toUpperCase()} · ${formatBytes($("offlineUpdateFile").files[0].size)}`
+    : "";
+  renderUpdateState(updateState);
+});
+$("offlineUpdateInstall").addEventListener("click", installOfflineUpdate);
 $("decisionEvidence").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {

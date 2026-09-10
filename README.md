@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.44 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.45 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -37,7 +37,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.44 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.45 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -111,7 +111,7 @@ Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
 Der Scanner selbst lauscht ausschließlich auf `127.0.0.1:8787`. Auf dem Pi liefert der lokale Reverse-Proxy die Oberfläche portfrei unter `http://triagebox.local/`. Er akzeptiert den privaten TRIAGEBOX-Hotspot sowie private LAN-Adressen, damit ein per Ethernet am gemeinsamen Router-LAN angeschlossener Pi ohne WLAN-Wechsel bedient werden kann. Die direkte Kabelverbindung Pi–Laptop ohne Router benötigt noch die geplante Ethernet-Konfiguration. HTTPS und die spätere Web-Entsperrung bleiben vor einem realen Einsatz offen.
 
-Der Pi prüft beim Start mit Verzögerung und anschließend täglich nur auf neue Git-Tags. Er installiert niemals selbstständig. Im Dashboard kann ein freigegebenes Update bewusst installiert werden; das ist bei aktivem Fall oder laufendem Scan serverseitig gesperrt. Die neue Version wird getrennt vorbereitet und mit Python-Tests geprüft; der Code wird über einen atomaren Symlinkwechsel aktiviert. Ein begrenzter Rückwechselpfad ist vorhanden. Vollständiger Rollback und Stromausfallverhalten sind noch nicht abgenommen; siehe [Installation](docs/installation.md#5-aktualisieren). Im Updatefenster kann ein aktiver Fall direkt beendet werden; die Installation bleibt ein separater Klick.
+Der Pi prüft beim Start mit Verzögerung und anschließend täglich nur auf neue Git-Tags. Er installiert niemals selbstständig. Im Dashboard kann ein freigegebenes Online-Update bewusst installiert oder ein signiertes `.tbu`-Paket vollständig offline über den TRIAGEBOX-Hotspot hochgeladen werden. Beides ist bei aktivem Fall oder laufendem Scan serverseitig gesperrt. Die neue Version wird getrennt vorbereitet und mit Python-Tests geprüft; der Code wird über einen atomaren Symlinkwechsel aktiviert. Offline-Pakete werden zusätzlich anhand ihrer Signatur, vollständigen Dateiliste und SHA-256-Prüfsummen geprüft. Einzelheiten und Grenzen: [Offline-Updates](docs/offline-updates.md) und [Installation](docs/installation.md#5-aktualisieren).
 
 Entwicklungs- und Validierungsaufbauten sind interne technische Nachweise und kein Bestandteil der Pi-Bedienung.
 
@@ -139,6 +139,7 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Aktueller Projektstand und Nachweise](docs/project-status.md)
 - [So funktioniert TRIAGE//BOX](docs/how-it-works.md)
 - [Installation und Aktualisierung](docs/installation.md)
+- [Signierte Offline-Updates](docs/offline-updates.md)
 - [Konfiguration](docs/configuration.md)
 - [Einstellungen: Stichwortprofile und Dateitypen](docs/settings.md)
 - [Bedienung und Fallworkflow](docs/operation.md)
@@ -166,9 +167,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a44` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.44`
-- automatisierte Tests: 111 Python-Tests und 26 isolierte Browser-Tests
+- Paketversion: `0.2.0a45` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.45`
+- automatisierte Tests: 123 Python-Tests und 27 isolierte Browser-Tests
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
@@ -182,4 +183,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.44 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.45 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure” and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Signed offline application updates can be uploaded through the private hotspot without giving the Pi internet access; releases that change dependencies still require the online path. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.45] – 2026-09-10
+
+- Signierte `.tbu`-Pakete lassen sich ohne Internetzugang über den TRIAGEBOX-Hotspot hochladen und bewusst installieren; Uploadfortschritt und anschließender Prüfstatus erscheinen im bestehenden Systemfenster.
+- Der Pi prüft SSH-Signatur, Versionssprung, vollständiges Dateimanifest, Größen und SHA-256 jedes Eintrags. Unsichere Pfade, Symlinks, Zusatzdateien, manipulierte Pakete und Downgrades werden vor der Aktivierung abgelehnt.
+- Offline-Releases übernehmen die vorhandene Python-Umgebung und werden bei geänderten Laufzeit-/Build-/Testabhängigkeiten bewusst abgelehnt. Kandidat und vollständige Python-Tests bleiben vom aktiven Release getrennt.
+- Gemeinsame Installationssperre verhindert neue Fall- und Scanstarts während Upload und Installation, auch aus anderen Browserfenstern. Online-Updates können nach einem Offline-Release weiterhin den ursprünglichen Git-Checkout verwenden.
+- Öffentlicher Freigabeschlüssel wird mit Installer und Release gepflegt; der private Signaturschlüssel bleibt ausschließlich auf dem Freigaberechner. Nginx und Backend begrenzen Uploads auf standardmäßig 256 MB.
+- 123 Python-Tests und 27 isolierte Browserprüfungen erfolgreich; manipulierte Pakete, Versions-/Abhängigkeitsgrenzen, Uploadfehler und die sichtbare Offline-Installation sind abgedeckt.
+
 ## [0.2.0-alpha.44] – 2026-09-10
 
 - Eigener Einstellungen-Bereich außerhalb des Fallfensters mit „Stichwortprofile“ und „Dateitypen“. Profile bearbeiten, erstellen und duplizieren; im Fallfenster bleibt die Einsatz-Auswahl.

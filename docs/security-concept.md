@@ -1,10 +1,12 @@
 # Geplantes Zugriffsschutzkonzept / Planned access protection
 
-## Iststand der Alpha 44
+## Iststand der Alpha 45
 
 Der Installer konfiguriert bereits einen WPA2-Hotspot mit lokalem Kennwort sowie den Zugriff über `http://triagebox.local/` ohne sichtbare Portnummer. Das einfache Alpha-Testkennwort muss vor realem Einsatz durch ein gerätespezifisches Kennwort ersetzt werden; Änderung und Übernahme stehen in [configuration.md](configuration.md).
 
 **Noch nicht vorhanden:** Web-Anmeldung, Inaktivitätssperre, HTTPS und automatisch verschlüsselte Fallablage. nginx macht die Oberfläche auch im erlaubten privaten LAN erreichbar, obwohl der Python-Dienst an `127.0.0.1` gebunden ist. Wer dort Netzwerkzugang hat, ist derzeit nicht durch eine zusätzliche Web-Anmeldung eingeschränkt. Bearbeiterkürzel und Fallfreigabe ersetzen diesen Schutz nicht.
+
+Das Offline-Update ab Alpha 45 akzeptiert deshalb nicht einfach beliebigen hochgeladenen Code: Vor der Aktivierung müssen SSH-Signatur, vollständiges Manifest, Einzelprüfsummen und Versionssprung stimmen. Die Uploadgröße ist begrenzt. Ein Netzteilnehmer kann ohne die noch fehlende Web-Anmeldung dennoch Uploadversuche auslösen oder vorübergehend Ressourcen belegen; die Signaturprüfung ersetzt keinen Zugriffsschutz.
 
 Die folgenden Abschnitte beschreiben das Ziel, nicht den bereits erreichten Schutz. Netzwerk-/Firewall-Konfiguration und Offline-Verhalten benötigen noch die praktische Abnahme; siehe [Projektstand](project-status.md) und [Roadmap](roadmap.md).
 

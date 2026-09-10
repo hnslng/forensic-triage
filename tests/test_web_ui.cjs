@@ -169,6 +169,38 @@ for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 
   assert.equal(requests.filter(r => r.path === '/api/updates/install').length, 0);
 });
 
+test('signed offline package uploads through the update dialog and observes completion', async t => {
+  let polls = 0;
+  const body = Buffer.from('PK\x03\x04TEST-OFFLINE');
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/updates/offline') {
+      assert.equal(request.method(), 'POST');
+      assert.deepEqual(request.postDataBuffer(), body);
+      return { status: 202, json: { action: 'offline', update: { state: 'unknown', current_version: '0.2.0a44' } } };
+    }
+    if (url.pathname === '/api/updates') {
+      polls += 1;
+      return polls === 1
+        ? { json: { jobs: { offline: true }, update: { state: 'installing', current_version: '0.2.0a44' } } }
+        : { json: { jobs: { offline: false }, update: { state: 'installed', current_version: '0.2.0a45' } } };
+    }
+  });
+  await page.locator('#openUpdateModal').click();
+  await page.setViewportSize({ width: 470, height: 900 });
+  const modalSize = await page.locator('#updateModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+  assert.ok(modalSize.scroll <= modalSize.client + 1, 'Offline update controls must not overflow a small screen');
+  await page.locator('#offlineUpdateFile').setInputFiles({ name: 'triagebox-v0.2.0-alpha.45.tbu', mimeType: 'application/octet-stream', buffer: body });
+  assert.equal(await page.locator('#offlineUpdateInstall').isEnabled(), true);
+  await page.evaluate(() => { activeCaseNumber = 'TEST'; renderUpdateState(); });
+  assert.equal(await page.locator('#offlineUpdateInstall').isDisabled(), true);
+  await page.evaluate(() => { activeCaseNumber = ''; serverActiveCase = null; renderUpdateState(); });
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#offlineUpdateInstall').click();
+  await page.waitForFunction(() => document.getElementById('offlineUpdateMessage').textContent.includes('OFFLINE-UPDATE INSTALLIERT'));
+  assert.equal(requests.filter(item => item.path === '/api/updates/offline').length, 1);
+  assert.ok(polls >= 2);
+});
+
 test('switching media after filtering restores the correct visible explorer', async t => {
   const { page } = await setup(t);
   await open(page, 1); await filter(page); await open(page, 2);

@@ -47,7 +47,12 @@ sudo systemctl restart forensic-triage-web.service
 | `FORENSIC_TRIAGE_CONTAINER_MAX_TOTAL_ENTRIES` | `10000` | höchstens interne Einträge insgesamt je Medium |
 | `FORENSIC_TRIAGE_UPDATE_ENABLED` | `true` | aktiviert Update-Prüfung und bewusst angeforderte Installation; keine automatische Installation |
 | `FORENSIC_TRIAGE_UPDATE_REMOTE` | `origin` | Git-Remote für die Release-Prüfung |
+| `FORENSIC_TRIAGE_UPDATE_GIT_ROOT` | `<Projekt>` | dauerhafter Git-Checkout für spätere Online-Updates nach einem Offline-Release |
 | `FORENSIC_TRIAGE_UPDATE_STATE_FILE` | `/var/lib/forensic-triage/update-status.env` | lokaler, root-geschützter Update-Status für das Dashboard |
+| `FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE` | `/var/lib/forensic-triage/offline-update.tbu` | kurzlebiger Übergabepfad eines vollständig empfangenen Offline-Pakets |
+| `FORENSIC_TRIAGE_OFFLINE_UPDATE_MAX_BYTES` | `268435456` | maximale Uploadgröße; nginx begrenzt zusätzlich auf 256 MB |
+| `FORENSIC_TRIAGE_OFFLINE_UPDATE_ALLOWED_SIGNERS` | `/etc/forensic-triage/offline-update-allowed-signers` | öffentlicher SSH-Prüfschlüssel, niemals der private Signaturschlüssel |
+| `FORENSIC_TRIAGE_UPDATE_GUARD_FILE` | `/run/forensic-triage-update-requested` | flüchtige Sperre gegen neue Fall-/Scanstarts während einer Installation |
 | `FORENSIC_TRIAGE_RUNTIME_LINK` | `<Projekt>-current` | Laufzeitlink zum aktiven Code, beim Bootstrap `/opt/triagebox-current` |
 | `FORENSIC_TRIAGE_RELEASES_ROOT` | `<Projekt>-releases` | Ablage vorbereiteter Release-Checkouts |
 
@@ -117,7 +122,7 @@ Auf einem Pi wird dieser interne Port durch nginx als portfreie Adresse `http://
 
 Beim Booten mit Verzögerung und anschließend täglich startet ein `systemd`-Timer ausschließlich die Prüfung auf einen neuen Git-Release-Tag. Das Update wird niemals selbstständig installiert. Das Dashboard zeigt den Status und kann die Installation bewusst anfordern. Serverseitig wird sie verweigert, solange ein Fall aktiv oder ein Scan aktiv ist.
 
-Die Installation erzeugt einen separaten Release-Checkout, erstellt die Python-Umgebung und führt die Tests aus. Der Code-Laufzeitlink wird anschließend atomar gewechselt; Deploymentvorlagen werden allerdings schon davor geschrieben. Es existiert ein begrenzter Rückwechselpfad, aber noch keine vollständige Wiederherstellung aller Komponenten bei Start-/Stromfehlern; siehe [Updategrenzen](installation.md#5-aktualisieren). Fallakten und Ergebnisse sollen außerhalb der Release-Ordner liegen. Ihre tatsächlichen konfigurierten Pfade sowie eigene Profile müssen vor Updates geprüft und gesichert werden.
+Die Online-Installation erzeugt einen separaten Release-Checkout, erstellt die Python-Umgebung und führt die Tests aus. Alternativ übernimmt der Webdienst ein signiertes Offline-Paket. Der Code-Laufzeitlink wird anschließend atomar gewechselt; Deploymentvorlagen werden allerdings schon davor geschrieben. Es existiert ein begrenzter Rückwechselpfad, aber noch keine vollständige Wiederherstellung aller Komponenten bei Start-/Stromfehlern; siehe [Updategrenzen](installation.md#5-aktualisieren) und [Offline-Updates](offline-updates.md). Fallakten und Ergebnisse sollen außerhalb der Release-Ordner liegen. Ihre tatsächlichen konfigurierten Pfade sowie eigene Profile müssen vor Updates geprüft und gesichert werden.
 
 ## Speicherpfade
 

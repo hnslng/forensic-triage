@@ -482,6 +482,17 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .update-actions #updateInstall { border-color: var(--acid); background: var(--acid); color: #111; }
 .update-actions #updateStopCase { grid-column: 1 / -1; border-color: var(--amber); color: var(--amber); }
 .update-actions #updateStopCase:disabled { border-color: var(--line); color: var(--muted); }
+.offline-update { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
+.offline-update > div { grid-column: 1 / -1; }
+.offline-update strong, .offline-update small { display: block; }
+.offline-update strong { color: var(--acid); font-size: 12px; }
+.offline-update small { margin-top: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.offline-update label { grid-column: 1 / -1; color: var(--muted); font-size: 10px; font-weight: 900; }
+.offline-update input { min-width: 0; padding: 10px; border: 1px solid var(--line); background: #090b08; color: var(--ink); font: 11px/1.2 "SFMono-Regular", "Courier New", monospace; }
+.offline-update input::file-selector-button { margin-right: 10px; padding: 8px 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-weight: 900; }
+.offline-update button { min-height: 43px; padding: 9px 13px; border: 1px solid var(--acid); background: transparent; color: var(--acid); cursor: pointer; font-size: 10px; font-weight: 950; }
+.offline-update button:disabled, .offline-update input:disabled { opacity: .45; cursor: not-allowed; }
+.offline-update p { grid-column: 1 / -1; min-height: 14px; margin: 0; color: var(--amber); font-size: 10px; font-weight: 900; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { color: var(--muted); text-align: left; font-size: 10px; letter-spacing: .08em; }
@@ -533,6 +544,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .keyword-add-row { grid-template-columns: 1fr; }
   .case-actions { grid-template-columns: 1fr; }
   .update-actions { grid-template-columns: 1fr; }
+  .offline-update { grid-template-columns: 1fr; }
   .case-list-item { grid-template-columns: 1fr 1fr; }
   .case-list-copy { grid-column: 1 / -1; }
   .case-list-open { margin: 0 0 5px 5px; }

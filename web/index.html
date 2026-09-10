@@ -316,6 +316,13 @@
           <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>
           <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
         </div>
+        <section class="offline-update">
+          <div><strong>OFFLINE ÜBER TRIAGEBOX-WLAN</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt dabei kein Internet.</small></div>
+          <label for="offlineUpdateFile">UPDATEPAKET AUSWÄHLEN</label>
+          <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" />
+          <button id="offlineUpdateInstall" type="button" disabled>PAKET HOCHLADEN &amp; INSTALLIEREN</button>
+          <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
+        </section>
       </div>
     </dialog>
     <script src="/app.js" defer></script>

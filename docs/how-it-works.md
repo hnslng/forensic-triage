@@ -81,6 +81,8 @@ Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt version
 
 Seit Alpha 44 sind Stichwortprofile und Dateitypen über einen eigenen [Einstellungen-Bereich](settings.md) bearbeitbar. Lokale Kopien liegen im konfigurierten Einstellungen-Ordner. Der Scanner speichert seinen vollständigen Endungskatalog mit Prüfsumme, damit spätere Katalogänderungen alte Auswertungen nicht verändern. Das Standardverzeichnis enthält nun auch weitere Kamera-, Office-, Image- und Systemformate; mehrdeutige Endungen werden neutral zugeordnet.
 
+Seit Alpha 45 kann der Laptop ein signiertes Anwendungsupdate direkt über den TRIAGEBOX-Hotspot übertragen. Dieses Verfahren betrifft ausschließlich Programmcode: Es liest oder verändert keine angeschlossenen Prüfmedien und keine Fallakten. Vor der Aktivierung werden Signatur, Manifest, Einzelprüfsummen, Versionssprung, unveränderte Abhängigkeiten und die Python-Tests geprüft. Details: [Offline-Updates](offline-updates.md).
+
 ## Was passiert ausdrücklich nicht?
 
 TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Nutzdateien werden nicht extrahiert oder dekomprimiert, verschachtelte Archive nicht rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.

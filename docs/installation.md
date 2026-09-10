@@ -1,6 +1,6 @@
 # Installation und Aktualisierung / Installation and upgrade
 
-Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät; vor Alpha 44 wurden Installation, Updates und mehrere USB-Sichtungen praktisch verwendet. Der Alpha-44-Praxistest, systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
+Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät; Installation, Online-Updates und mehrere USB-Sichtungen wurden praktisch verwendet. Der Alpha-45- und Offline-Update-Praxistest, systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
 
 ## Kurzfassung
 
@@ -75,7 +75,7 @@ Bei einem anderen Installationspfad dessen konfigurierten Laufzeitlink verwenden
 
 ### Alternative: freigegebenes Releasepaket übertragen
 
-Wenn der Scanner keinen GitHub-Zugang erhalten soll, kann ein versioniertes `git archive` von einem Verwaltungsrechner übertragen werden. Das konkrete Verfahren ist von der Betriebsumgebung abhängig. Ein solches Paket enthält kein `.git`; der tagbasierte Web-Updater funktioniert damit nicht. Aktualisierungen müssen dann als neue Pakete bereitgestellt werden. Interne Entwicklungs- und Validierungsaufbauten sind von dieser Produktinstallation getrennt dokumentiert.
+Wenn der Scanner keinen GitHub-Zugang erhalten soll, steht ab Alpha 45 ein signiertes `.tbu`-Paket zur Verfügung. Es wird am Laptop ausgewählt und über den eigenen TRIAGEBOX-Hotspot hochgeladen. Der Pi benötigt dafür kein Internet. Details: [Signierte Offline-Updates](offline-updates.md).
 
 ## 2. Installation ausführen
 
@@ -142,7 +142,9 @@ Die portfreie HTTP-Adresse wurde auf dem Test-Pi bereits erfolgreich verwendet. 
 
 Der Pi prüft fünf Minuten nach dem Start und danach täglich auf den neuesten Git-Release-Tag. Ohne erreichbares Repository wird nichts verändert. Das Prüfen lädt keinen Code in die laufende Anwendung und installiert nichts.
 
-Eine gefundene Version erscheint im Dashboard. Die Installation wird bewusst dort gestartet und ist gesperrt, solange ein Fall aktiv ist oder ein Scan läuft. Seit Alpha 43 kann der Fall direkt im Updatefenster beendet werden; Installation bleibt eine separate Aktion. Die Vorbereitung erstellt einen neuen Release-Checkout, installiert Python-Abhängigkeiten und führt Python-Tests aus. Anschließend wird der Code-Laufzeitlink atomar gewechselt und der Dienst neu gestartet.
+Eine gefundene Version erscheint im Dashboard. Die Installation wird bewusst dort gestartet und ist gesperrt, solange ein Fall aktiv ist oder ein Scan läuft. Seit Alpha 43 kann der Fall direkt im Updatefenster beendet werden; Installation bleibt eine separate Aktion. Die Online-Vorbereitung erstellt einen neuen Release-Checkout, installiert Python-Abhängigkeiten und führt Python-Tests aus. Anschließend wird der Code-Laufzeitlink atomar gewechselt und der Dienst neu gestartet.
+
+Alternativ nimmt derselbe Dialog ab Alpha 45 ein signiertes `.tbu`-Paket vom Laptop entgegen. Der Upload funktioniert über den eigenen Hotspot ohne Internet am Pi. Signatur, Version, vollständiges Manifest, Einzelprüfsummen und unveränderte Abhängigkeiten werden vor dem Testlauf geprüft. Ein Release mit neuen Abhängigkeiten verlangt bewusst den Online-Weg. Ein vorhandenes Alpha-44-Gerät benötigt daher noch ein letztes Online-Update auf Alpha 45; die darauf folgende Version kann erstmals offline eingespielt werden.
 
 **Der Rückwechsel ist noch begrenzt:** Dienst- und nginx-Vorlagen werden bereits vor dem Linkwechsel installiert. Nach dem Neustart prüft das Skript den Dienststatus und enthält einen Rückwechselpfad für den Code. Ein fehlgeschlagener Neustartbefehl kann das Skript aber schon davor beenden; Vorlagen, Pakete und andere Änderungen werden nicht vollständig zurückgesetzt. Das ist keine bestätigte Stromausfallsicherheit. Fehlerbehandlung, Wiederaufnahme und vollständige Wiederherstellung sind offene Tests und Entwicklungsaufgaben.
 
@@ -153,9 +155,10 @@ Nur ohne laufenden Scan und nach beendetem Fall. Der direkte systemd-Aufruf durc
 ```bash
 sudo systemctl start forensic-triage-update@check.service
 sudo systemctl start forensic-triage-update@install.service
+sudo systemctl start forensic-triage-update@offline.service  # nur nach zuvor geprüftem Web-Upload
 ```
 
-Die bewusste Installation benötigt ein erreichbares Git-Repository und einen freigegebenen Git-Tag. Bei einer Installation aus einem Releasepaket zuerst den neuen freigegebenen Code übertragen und anschließend dasselbe Installationsskript erneut ausführen.
+Die bewusste Online-Installation benötigt ein erreichbares Git-Repository und einen freigegebenen Git-Tag. Der Offline-Dienst erwartet dagegen das ausschließlich vom Webdienst gestreamte, root-geschützte Paket am konfigurierten Übergabepfad; die Oberfläche ist der vorgesehene Bedienweg.
 
 Vor größeren Aktualisierungen ist eine verschlüsselte Sicherung der Fallakten vorzusehen. Das Installationsskript verschiebt keine bestehenden Speicherpfade und löscht keine Fallakten.
 
