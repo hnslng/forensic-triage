@@ -11,6 +11,11 @@ let autoStartTimer = null;
 let currentCaseMedia = [];
 let currentMediaId = null;
 let currentDecision = null;
+let confirmedOnlineSerials = new Set();
+let devicePresenceInitialized = false;
+let decisionQueueTimer = null;
+let decisionQueueDeferred = false;
+let returnToDecisionQueue = false;
 let inventoryTreeMediaId = null;
 let inventoryListState = null;
 let mediaViewRevision = 0;
@@ -171,6 +176,8 @@ function renderUpdateState(value = {}) {
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
+  $("updateSuccessNotice").hidden = state !== "installed";
+  $("updateSuccessNotice").textContent = `✓ UPDATE ERFOLGREICH ABGESCHLOSSEN · ${formatReleaseVersion(updateState.current_version)}`;
   $("settingsUpdatesTab").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
@@ -708,6 +715,74 @@ function sortedSightings(media) {
     || Number(left.id) - Number(right.id));
 }
 
+function decisionIsOpen(medium) {
+  return !["secure", "not_selected"].includes(medium?.decision);
+}
+
+function pendingOfflineMedia() {
+  const onlineSerials = new Set(devices.map((device) => device.serial).filter(Boolean));
+  return sortedSightings(currentCaseMedia.filter((medium) => decisionIsOpen(medium) && (!medium.serial || !onlineSerials.has(medium.serial))));
+}
+
+function renderPendingDecisionState(pending = pendingOfflineMedia()) {
+  const count = pending.length;
+  $("pendingDecisionBanner").hidden = count === 0;
+  $("pendingDecisionCount").textContent = `${count} ${count === 1 ? "ENTSCHEIDUNG" : "ENTSCHEIDUNGEN"} OFFEN`;
+  if (!count) {
+    returnToDecisionQueue = false;
+    if ($("decisionQueueModal").open) $("decisionQueueModal").close();
+    return;
+  }
+  $("decisionQueueTitle").textContent = `${count} ${count === 1 ? "ENTSCHEIDUNG" : "ENTSCHEIDUNGEN"} OFFEN`;
+  $("decisionQueueSummary").textContent = `${count} ABGEZOGENE ${count === 1 ? "SICHTUNG" : "SICHTUNGEN"} OHNE ENTSCHEIDUNG`;
+  $("decisionQueueList").innerHTML = pending.map((medium, index) => {
+    const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || "USB-DATENTRÄGER";
+    const serial = medium.serial || "NICHT GEMELDET";
+    const capacity = Number(medium.size || 0) > 0 ? formatBytes(medium.size) : "GRÖSSE NICHT GEMELDET";
+    return `<button type="button" class="decision-queue-item" data-queue-media-id="${Number(medium.id)}">
+      <span class="decision-queue-position">${index + 1} / ${count}</span>
+      <strong>${escapeHtml(medium.sighting_number || `SICHT-${medium.id}`)}</strong>
+      <span class="decision-queue-model">${escapeHtml(model)}</span>
+      <code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial)}</code>
+      <small>${escapeHtml(capacity)} · ${Number(medium.file_count || 0).toLocaleString("de-AT")} DATEIEN · ${Number(medium.keyword_matches || 0).toLocaleString("de-AT")} TREFFER</small>
+      <em>SICHTUNG &amp; ENTSCHEIDUNG ÖFFNEN →</em>
+    </button>`;
+  }).join("");
+}
+
+function otherDialogIsOpen() {
+  return [...document.querySelectorAll("dialog[open]")].some((dialog) => dialog.id !== "decisionQueueModal");
+}
+
+function openDecisionQueue() {
+  renderPendingDecisionState();
+  if (!pendingOfflineMedia().length || decisionQueueDeferred || otherDialogIsOpen()) return false;
+  if (!$("decisionQueueModal").open) $("decisionQueueModal").showModal();
+  return true;
+}
+
+function scheduleDecisionQueue(delay = 1200) {
+  clearTimeout(decisionQueueTimer);
+  decisionQueueTimer = setTimeout(() => {
+    if (!openDecisionQueue() && !decisionQueueDeferred && pendingOfflineMedia().length) scheduleDecisionQueue(700);
+  }, delay);
+}
+
+function observeConfirmedDevicePresence(items) {
+  if (deviceDiscoveryError) return;
+  const nextSerials = new Set((items || []).map((device) => device.serial).filter(Boolean));
+  if (devicePresenceInitialized) {
+    const removed = [...confirmedOnlineSerials].filter((serial) => !nextSerials.has(serial));
+    const requiresDecision = removed.some((serial) => currentCaseMedia.some((medium) => medium.serial === serial && decisionIsOpen(medium)));
+    if (requiresDecision) {
+      decisionQueueDeferred = false;
+      scheduleDecisionQueue();
+    }
+  }
+  confirmedOnlineSerials = nextSerials;
+  devicePresenceInitialized = true;
+}
+
 function renderMediaCards(media) {
   media = sortedSightings(media);
   for (const device of devices) {
@@ -733,10 +808,13 @@ function renderMediaCards(media) {
   };
   const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
   const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
+  const pendingOffline = offlineMedia.filter(decisionIsOpen);
+  const offlineHistory = offlineMedia.filter((medium) => !decisionIsOpen(medium));
   $("mediaCards").innerHTML = onlineMedia.map((medium) => renderCard(medium, true)).join("");
-  $("offlineMediaCards").innerHTML = offlineMedia.map((medium) => renderCard(medium, false)).join("");
-  $("offlineMediaPanel").hidden = offlineMedia.length === 0;
-  $("offlineMediaCount").textContent = `${offlineMedia.length} ${offlineMedia.length === 1 ? "MEDIUM" : "MEDIEN"}`;
+  $("offlineMediaCards").innerHTML = offlineHistory.map((medium) => renderCard(medium, false)).join("");
+  $("offlineMediaPanel").hidden = offlineHistory.length === 0;
+  $("offlineMediaCount").textContent = `${offlineHistory.length} ${offlineHistory.length === 1 ? "MEDIUM" : "MEDIEN"}`;
+  renderPendingDecisionState(pendingOffline);
   updateDashboardState();
 }
 
@@ -756,8 +834,9 @@ function updateDashboardState() {
     $("deviceEmpty").hidden = false;
     return;
   }
-  const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial)).length;
-  $("deviceCount").textContent = `${online} ONLINE · ${offline} OFFLINE`;
+  const pending = pendingOfflineMedia().length;
+  const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial) && !decisionIsOpen(medium)).length;
+  $("deviceCount").textContent = `${online} ONLINE · ${pending} OFFEN · ${offline} OFFLINE`;
   $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM FALL";
   $("deviceEmptyCopy").textContent = "USB-Medium einstecken. Auto-Scan übernimmt die geschützte Grobsichtung.";
   $("deviceEmpty").hidden = online > 0;
@@ -819,6 +898,7 @@ function resetDeviceStatesForCase() {
 }
 
 function renderDevices(items, activePaths = [], blockedPaths = null) {
+  observeConfirmedDevicePresence(items);
   devices = items || [];
   if (blockedPaths !== null) quarantinedPaths = new Set(blockedPaths);
   const active = new Set(activePaths);
@@ -1096,8 +1176,17 @@ async function saveDecision() {
     const data = await response.json();
     if (revision !== mediaViewRevision || mediaId !== currentMediaId) return;
     if (!response.ok) throw new Error(data.error || "Entscheidung konnte nicht gespeichert werden");
+    if (data.media) currentCaseMedia = currentCaseMedia.map((medium) => Number(medium.id) === Number(data.media.id) ? data.media : medium);
+    const continueQueue = returnToDecisionQueue;
     renderRecord(data);
     $("decisionMessage").textContent = "ENTSCHEIDUNG MIT ZEITSTEMPEL PROTOKOLLIERT";
+    if (continueQueue) {
+      returnToDecisionQueue = false;
+      decisionQueueDeferred = false;
+      showDashboard();
+      if (pendingOfflineMedia().length) openDecisionQueue();
+      else setSystemState("ALLE ENTSCHEIDUNGEN DOKUMENTIERT", "ready");
+    }
   } catch (error) {
     if (revision !== mediaViewRevision || mediaId !== currentMediaId) return;
     $("decisionMessage").textContent = `FEHLER: ${error.message}`;
@@ -1506,6 +1595,8 @@ async function openMedia(mediaId) {
 }
 
 function showDashboard() {
+  const reopenDecisionQueue = returnToDecisionQueue;
+  returnToDecisionQueue = false;
   invalidateMediaView();
   if ($("evidenceModal").open) $("evidenceModal").close();
   if ($("deleteModal").open) $("deleteModal").close();
@@ -1517,6 +1608,10 @@ function showDashboard() {
   currentMediaId = null;
   renderMediaCards(currentCaseMedia);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (reopenDecisionQueue) {
+    decisionQueueDeferred = false;
+    openDecisionQueue();
+  }
 }
 
 function openProfileEditor(profileId = null, duplicate = false) {
@@ -1608,6 +1703,34 @@ $("mediaCards").addEventListener("click", (event) => {
 $("offlineMediaCards").addEventListener("click", (event) => {
   const card = event.target.closest("button[data-media-id]");
   if (card) openMedia(Number(card.dataset.mediaId));
+});
+$("pendingDecisionBanner").addEventListener("click", () => {
+  decisionQueueDeferred = false;
+  openDecisionQueue();
+});
+$("decisionQueueList").addEventListener("click", (event) => {
+  const item = event.target.closest("button[data-queue-media-id]");
+  if (!item) return;
+  returnToDecisionQueue = true;
+  $("decisionQueueModal").close();
+  openMedia(Number(item.dataset.queueMediaId));
+});
+$("closeDecisionQueue").addEventListener("click", () => {
+  decisionQueueDeferred = true;
+  returnToDecisionQueue = false;
+  $("decisionQueueModal").close();
+});
+$("decisionQueueModal").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  decisionQueueDeferred = true;
+  returnToDecisionQueue = false;
+  $("decisionQueueModal").close();
+});
+$("decisionQueueModal").addEventListener("click", (event) => {
+  if (event.target !== $("decisionQueueModal")) return;
+  decisionQueueDeferred = true;
+  returnToDecisionQueue = false;
+  $("decisionQueueModal").close();
 });
 $("homeLogo").addEventListener("click", showDashboard);
 $("openPowerModal").addEventListener("click", openPowerDialog);
@@ -1920,9 +2043,7 @@ for (const input of [$("caseNumber"), $("operator")]) {
 }
 updateCaseSessionUi();
 loadProfiles();
-refresh().finally(() => {
-  if (sessionStorage.getItem(UPDATE_DIALOG_RESTORE_KEY) === "1") {
-    openSettings("updates").finally(forgetUpdateDialog);
-  }
-});
+const restoreUpdateView = sessionStorage.getItem(UPDATE_DIALOG_RESTORE_KEY) === "1";
+if (restoreUpdateView) openSettings("updates");
+refresh().finally(() => { if (restoreUpdateView) forgetUpdateDialog(); });
 setInterval(() => refresh(false), 2500);

@@ -254,18 +254,32 @@ test('normal power stays hidden and a successful update clears a stale offline e
   });
   assert.equal(await page.locator('#powerHealth').isHidden(), true);
   assert.equal(await page.locator('#offlineUpdateMessage').innerText(), '');
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsUpdatesTab').click();
+  assert.equal(await page.locator('#updateSuccessNotice').isVisible(), true);
+  assert.match(await page.locator('#updateSuccessNotice').innerText(), /ERFOLGREICH ABGESCHLOSSEN/);
   const widths = await page.locator('.utility-controls button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
   assert.equal(new Set(widths).size, 1);
 });
 
 test('update dialog reopens after the service reload and keeps progress visible while running', async t => {
+  const blocked = gate();
+  let delayReload = false;
   const { page } = await setup(t, async url => {
-    if (url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: null, update: { state: 'installing', current_version: '0.2.0a49' } } };
+    if (url.pathname === '/api/status') {
+      if (delayReload) await blocked.wait();
+      return { json: { devices: [], cases: [], active_case: null, update: { state: 'installing', current_version: '0.2.0a49' } } };
+    }
   });
   await page.evaluate(() => sessionStorage.setItem('triagebox-update-dialog', '1'));
-  await page.reload({ waitUntil: 'networkidle' });
+  delayReload = true;
+  const reload = page.reload({ waitUntil: 'domcontentloaded' });
+  await blocked.arrived;
+  await reload;
   await page.locator('#settingsModal').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#settingsUpdatesPane').isVisible(), true);
+  blocked.release();
+  await page.locator('#updateProgress').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#updateProgress').isVisible(), true);
   assert.equal(await page.locator('#closeSettings').isDisabled(), true);
   assert.match(await page.locator('#updateProgressLabel').innerText(), /VORBEREITET|GEPRÜFT/);
@@ -450,11 +464,41 @@ test('dashboard and case table sort sightings numerically, preserving online/off
   const { page } = await setup(t);
   await page.evaluate(() => loadCase('TEST'));
   const labels = () => page.locator('#offlineMediaCards .media-card > strong').allTextContents();
+  const caseLabels = await page.locator('#caseMedia tr td:first-child').allTextContents();
+  assert.deepEqual(caseLabels, ['SICHT-1', 'SICHT-2', 'SICHT-3', 'SICHT-8', 'SICHT-10']);
+  await page.evaluate(() => { currentCaseMedia = currentCaseMedia.map(item => ({ ...item, decision: 'not_selected' })); renderMediaCards(currentCaseMedia); });
   assert.deepEqual(await labels(), ['SICHT-1', 'SICHT-2', 'SICHT-3', 'SICHT-8', 'SICHT-10']);
-  assert.deepEqual(await page.locator('#caseMedia tr td:first-child').allTextContents(), await labels());
   await page.evaluate(() => { devices = [{ serial: 'TEST-10' }, { serial: 'TEST-2' }]; renderMediaCards(currentCaseMedia); });
   assert.deepEqual(await page.locator('#mediaCards .media-card > strong').allTextContents(), ['SICHT-2', 'SICHT-10']);
   assert.deepEqual(await labels(), ['SICHT-1', 'SICHT-3', 'SICHT-8']);
+});
+
+test('multiple removed undecided media use one queue and return there from details', async t => {
+  const { page } = await setup(t, url => {
+    if (url.pathname === '/api/status') return { json: { devices: [], cases: [{ case_number: 'TEST' }], active_case: { case_number: 'TEST', operator: 'HL' }, update: {} } };
+    return settingsFixture(url);
+  });
+  const pending = media.slice(0, 3);
+  await page.evaluate(items => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL'; currentCaseMedia = items;
+    renderDevices(items.map((item, index) => ({ path: `/dev/test${index}`, serial: item.serial, model: item.model, size: 1024 * (index + 1), scan_supported: true })));
+  }, pending);
+  await page.locator('#openSettings').click();
+  await page.evaluate(() => renderDevices([]));
+  await page.waitForTimeout(1400);
+  assert.equal(await page.locator('#decisionQueueModal').isVisible(), false, 'Queue must not stack over another dialog');
+  await page.locator('#closeSettings').click();
+  await page.locator('#decisionQueueModal').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('dialog[open]').count(), 1);
+  assert.equal(await page.locator('#decisionQueueList .decision-queue-item').count(), 3);
+  assert.match(await page.locator('#decisionQueueList').innerText(), /TEST-10|TEST-3|TEST-1/);
+  assert.equal(await page.locator('#offlineMediaPanel').isHidden(), true);
+  await page.locator('#decisionQueueList [data-queue-media-id="1"]').click();
+  await page.locator('#results').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#decisionQueueModal').isVisible(), false);
+  await page.locator('#homeLogo').click();
+  await page.locator('#decisionQueueModal').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#pendingDecisionBanner').isVisible(), true);
 });
 
 test('largest-file sizes remain visible without horizontal scrolling for long paths', async t => {

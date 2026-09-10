@@ -36,7 +36,7 @@ Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Ras
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.51. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a51`; der Git-Tag lautet `v0.2.0-alpha.51`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.52. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a52`; der Git-Tag lautet `v0.2.0-alpha.52`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

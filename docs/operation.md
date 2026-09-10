@@ -55,7 +55,9 @@ Die freie Suche ist davon getrennt: Suchbegriff in „Dateiname oder Pfad filter
 
 Regulär vorhandene versteckte Dateien und Ordner erscheinen im Metadateninventar ebenfalls. Gelöschte Dateien, bewusst ausgefilterte interne Dateisystemeinträge und wegen Beschädigung nicht lesbare Einträge gehören nicht zu dieser Grobsichtung.
 
-„Online“ bedeutet, dass das Medium gegenwärtig erkannt wird. Nach Entfernen bleibt ein bereits protokolliertes Medium als „Offline“ in der Fallhistorie sichtbar. Ein offener Entscheidungsstatus muss weiterhin erkennbar bleiben.
+„Online“ bedeutet, dass das Medium gegenwärtig erkannt wird. Wird ein vollständig gesichtetes Medium ohne Entscheidung abgezogen, öffnet sich nach bestätigter Geräteerkennung eine gemeinsame **Entscheidungszentrale**. Sie ordnet jede offene Sichtung anhand von Sichtungsnummer, Modell, vollständiger Seriennummer, Kapazität sowie Datei- und Trefferzahl zu. Werden mehrere Medien gleichzeitig oder kurz nacheinander entfernt, entstehen keine gestapelten Fenster; alle offenen Sichtungen stehen in derselben Liste.
+
+„Sichtung & Entscheidung öffnen“ führt in die zugehörige Detailansicht. Nach dem Speichern wird die nächste offene Sichtung angeboten. Führt das TRIAGE//BOX-Logo vorher zurück zum Dashboard, erscheint die noch offene Liste erneut. Mit „Später“ kann sie bewusst geschlossen werden; ein amberfarbener Dashboard-Hinweis bleibt bis zur Abarbeitung sichtbar. Bereits entschiedene Offline-Medien bleiben getrennt in der Fallhistorie. Ein fehlgeschlagener Geräteabruf gilt ausdrücklich nicht als Abziehen und löst die Entscheidungszentrale nicht aus.
 
 ## 5. Entscheidung dokumentieren
 

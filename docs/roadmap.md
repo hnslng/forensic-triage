@@ -1,6 +1,6 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.51`.
+Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.52`.
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 
@@ -11,7 +11,7 @@ Das Ziel bleibt eine schnelle Grobsichtung vor Ort: Fall starten, Medien anschli
 Der [Projektstand](project-status.md) trennt implementierte Funktionen, bisherige Beobachtungen und noch ausstehende Abnahmen.
 
 - Pi-Installation, WPA2-Hotspot, mDNS und portfreier HTTP-Zugang über Hotspot und privates Router-LAN.
-- Fallstart und Fallende, parallele USB-Scans, neutrale Sichtungsnummern und Online-/Offline-Dashboard.
+- Fallstart und Fallende, parallele USB-Scans, neutrale Sichtungsnummern, Online-/Offline-Dashboard und gemeinsame Warteschlange für abgezogene Medien mit offener Entscheidung.
 - Metadatenverzeichnis, Suchprofile, Kategorien, größte Dateien und begrenzte ZIP-/ISO-/7Z-/RAR-Verzeichnisse.
 - Archivstatusfilter, zwei Entscheidungen, Geräteangaben, Audit, PDF-Bericht und ZIP-Export.
 - Doppelbestätigung beim Entfernen, Dateierhalt im Papierkorb, Prozesszeitlimits und persistente Diagnoseprotokolle.
@@ -28,6 +28,7 @@ Diese Punkte sind implementiert; damit sind noch nicht alle Störfälle auf dem 
 - [ ] Kategorien, Stichworttreffer, Archivzustände und Dateizahlen gegen das zum Testmedium gehörende Manifest prüfen.
 - [ ] Zwischen Sichtungen, Archivstatus und Explorer wechseln; keine fremden oder veralteten Ergebnisse zulassen.
 - [ ] Beide Entscheidungen mit passenden Pflichtangaben speichern und PDF, ZIP, Medienregister und Audit vergleichen.
+- [ ] Drei noch unentschiedene Medien gemeinsam abziehen und Zuordnung, einmalige Entscheidungszentrale, „Später“-Hinweis sowie Rückkehr nach jeder Entscheidung praktisch auf dem Pi prüfen.
 - [ ] Fall beenden, erneut öffnen und nach einem Dienst-/Pi-Neustart prüfen.
 - [ ] Ergebnis nach [Testplan](test-plan.md#vollständiger-probeeinsatz) dokumentieren, Abweichungen mit reproduzierbaren Schritten festhalten.
 

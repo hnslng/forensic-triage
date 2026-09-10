@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.52] – 2026-09-10
+
+- Werden vollständig gesichtete Medien ohne Entscheidung abgezogen, fasst eine einzige Entscheidungszentrale alle offenen Sichtungen zusammen. Modell, vollständige Seriennummer, Kapazität, Datei- und Trefferzahl bleiben direkt vergleichbar; mehrere Dialoge werden nicht gestapelt.
+- Eine Sichtung lässt sich aus der Entscheidungszentrale öffnen. Nach Rückkehr über TRIAGE//BOX oder nach gespeicherter Entscheidung erscheint die verbleibende Warteschlange erneut. `SPÄTER` schließt sie bewusst; ein dauerhafter Hinweis im Dashboard erhält die offenen Entscheidungen sichtbar.
+- Nur eine bestätigte erfolgreiche Geräteerkennung löst die Abzugserkennung aus. Ein Geräteabruf- oder Verbindungsfehler wird nicht fälschlich als Entfernen aller Medien gewertet.
+- Die Updateansicht wird nach dem notwendigen Neuladen bereits vor dem ersten Statusabruf geöffnet und flackert deshalb nicht kurz zum Dashboard zurück. Ein erfolgreicher Abschluss erscheint zusätzlich als klarer, zurückhaltender Erfolgsstatus im geöffneten Fenster.
+- 133 Python-Tests und 31 isolierte Browserprüfungen erfolgreich.
+
 ## [0.2.0-alpha.51] – 2026-09-10
 
 - `SYSTEM & UPDATES` ist vollständig in die dritte Registerkarte der Einstellungen integriert; der unnötige zweite Öffnungsschritt entfällt.
