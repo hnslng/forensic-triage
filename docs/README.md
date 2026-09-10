@@ -4,7 +4,7 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 ## Einstieg
 
-Stand: 10. September 2026, Anwendung Alpha 51. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
+Stand: 10. September 2026, Anwendung Alpha 52. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
 
 1. [Installation und Aktualisierung](installation.md)
    - [Signierte Offline-Updates](offline-updates.md)

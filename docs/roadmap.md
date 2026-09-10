@@ -68,6 +68,9 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 - [ ] Lokales HTTPS mit einem für die verwendeten Laptops geeigneten Zertifikatsverfahren umsetzen.
 - [ ] Verschlüsselte Fallablage mit praktisch geprüftem Entsperr- und Wiederherstellungsablauf einrichten.
 - [ ] Firewall und erlaubte Zugriffe über Hotspot/LAN prüfen; direkte Ethernet-Rückfallebene ohne Router konfigurieren.
+- [ ] Optionalen **temporären WLAN-Wartungsmodus** erst nach der Geräteentsperrung umsetzen: SSID/Kennwort bewusst eingeben, Hotspot ohne Neustart in den Clientbetrieb umschalten und die Oberfläche anschließend im selben WLAN wieder unter `http://triagebox.local/` erreichen.
+- [ ] Beim WLAN-Wartungsmodus Aussperren verhindern: nur ohne aktiven Fall, Scan oder Update starten; Zugangsdaten nicht protokollieren und nicht dauerhaft speichern; bei fehlgeschlagener Verbindung automatisch zum Hotspot zurückkehren; nach Zeitlimit sowie nach jedem Neustart wieder den Hotspot aktivieren.
+- [ ] WLAN-Wartungsmodus mit erfolgreicher Verbindung, falschem Kennwort, nicht erreichbarer SSID, Stromausfall und fehlender mDNS-Auflösung testen. Captive-Portale beziehungsweise WLANs mit Browser-Anmeldung bleiben zunächst ausdrücklich nicht unterstützt.
 - [ ] Hardware-Schreibblocker und tatsächlichen Schreibschutz mit den vorgesehenen Medien validieren.
 - [ ] Sicherheitsreview, Betriebsablauf und dokumentierte Freigabe durchführen; Bearbeiterkürzel allein ist keine Anmeldung.
 
@@ -82,6 +85,7 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 
 - PDF-/Office-Verschlüsselung: vor einer Entscheidung den zusätzlichen Aufwand mit etwa 1.000 Dokumenten messen; Öffnungsschutz und Bearbeitungsschutz unterscheiden. Noch keine Umsetzung oder verlässliche Laufzeitangabe.
 - Dateisignaturen zur Erkennung umbenannter Dateien, verschlüsselte Volumes und TAR-Unterstützung erst nach Stabilitätsmessungen bewerten.
+- Gleichzeitiger Hotspot- und WLAN-Clientbetrieb über einen zweiten WLAN-Adapter nur bei belegtem Bedarf; der geplante Wartungsmodus verwendet bewusst das einzelne Funkmodul des Pi 3B+ abwechselnd.
 - Englische Vollübersetzung, weitere Rollen und digitale Signaturen nur bei belegtem Bedarf.
 - Abhängigkeiten und unterstützte OS-Versionen nach reproduzierbarer Neuinstallation festlegen; Release- und Integrationsprüfungen erweitern.
 

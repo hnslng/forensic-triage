@@ -110,6 +110,14 @@ sudo /opt/triagebox-current/scripts/configure_pi_network.sh
 
 Bei anderer Installation den zugehörigen Laufzeitpfad verwenden. Der Befehl wendet die Netzwerkdatei auf NetworkManager an und kann die Verbindung kurz unterbrechen. Alternativ ist eine bewusste erneute Pi-Installation möglich; der bloße Webdienst-Neustart reicht für WLAN-Änderungen nicht.
 
+### Geplanter temporärer WLAN-Wartungsmodus
+
+Diese Funktion ist in `v0.2.0-alpha.52` **noch nicht implementiert**. Sie soll den Pi für eine bewusst gestartete Wartung vorübergehend mit einem normalen WPA2-/WPA3-WLAN verbinden, beispielsweise für ein Online-Update. Der Raspberry Pi 3B+ verwendet dabei sein einziges integriertes Funkmodul abwechselnd als Access Point oder Client. Beim Wechsel endet deshalb die Verbindung zum TRIAGEBOX-Hotspot. Ein Neustart ist technisch nicht erforderlich; NetworkManager kann die Profile im laufenden Betrieb wechseln.
+
+Der vorgesehene Ablauf ist: Im Hotspot SSID und Kennwort eingeben, Umschaltung bestätigen, Laptop in dasselbe Ziel-WLAN wechseln und `http://triagebox.local/` erneut öffnen. Das Zielprofil darf nicht dauerhaft automatisch verbunden werden. Kennwort und Profil sollen nur für die Wartung existieren, niemals in Audit-/Systemmeldungen erscheinen und beim Rückwechsel sicher entfernt werden. Nach Neustart startet immer der TRIAGEBOX-Hotspot.
+
+Vor einer Umsetzung sind zwingend: Sperre bei aktivem Fall, Scan oder Update; kurzer Verbindungsversuch mit automatischem Hotspot-Fallback; ein Wartungszeitlimit; manuelle Rückkehr; Zustandsanzeige vor dem Verbindungsabbruch sowie Tests mit falschem Kennwort, Stromverlust und fehlendem mDNS. WLANs mit vorgeschalteter Browser-Anmeldung werden zunächst nicht unterstützt. Der signierte Offline-Upload bleibt der zuverlässige Weg ohne Internet und macht diesen Komfortmodus nicht zur Betriebsabhängigkeit.
+
 ## Port und Netzwerk
 
 `127.0.0.1` ist die sichere Voreinstellung für Entwicklung oder Zugriff über SSH. Der Raspberry Pi 3B+ stellt im Pi-Modus den WLAN-Hotspot `TRIAGEBOX` bereit. Ethernet am gemeinsamen Router-LAN funktioniert ebenfalls; die direkte Laptop-Kabelverbindung ohne Router ist noch vorzubereiten. Eine andere Bindeadresse darf erst nach festgelegten privaten IP-Adressen und Firewallregeln aktiviert werden. `0.0.0.0` würde auf allen Netzwerkschnittstellen lauschen und soll nicht unüberlegt verwendet werden.

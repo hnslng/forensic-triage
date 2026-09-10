@@ -1,6 +1,6 @@
 # Geplantes Zugriffsschutzkonzept / Planned access protection
 
-## Iststand der Alpha 51
+## Iststand der Alpha 52
 
 Der Installer konfiguriert bereits einen WPA2-Hotspot mit lokalem Kennwort sowie den Zugriff über `http://triagebox.local/` ohne sichtbare Portnummer. Das einfache Alpha-Testkennwort muss vor realem Einsatz durch ein gerätespezifisches Kennwort ersetzt werden; Änderung und Übernahme stehen in [configuration.md](configuration.md).
 
@@ -38,6 +38,8 @@ Für die erste einsatzfähige Pi-Version ist keine zentrale Benutzer- oder Rolle
 6. **Verschlüsselter Fallspeicher:** `casefiles/`, `results/`, Berichte, Exporte und interner Papierkorb liegen vor realem Einsatz auf verschlüsseltem Speicher. Das Entsperrverfahren muss mit einem kopflosen Pi-Start vereinbar sein und darf den Schlüssel nicht ungeschützt auf derselben SD-Karte ablegen.
 7. **Geheimnisse bleiben lokal:** WLAN- und Gerätepasswort, Zertifikatsschlüssel und Speicherentsperrung gehören in root-geschützte lokale Konfiguration beziehungsweise einen geeigneten Schlüsselspeicher, niemals in Git, Bericht oder Audit-Log.
 
+Ein optionaler **WLAN-Wartungsmodus** darf diese Grundsätze nicht umgehen. Er soll den Hotspot nur vorübergehend durch eine Clientverbindung ersetzen, keine Zugangsdaten dauerhaft speichern und ausschließlich ohne aktiven Fall, Scan oder Update starten. Scheitert die Verbindung oder läuft die Wartungszeit ab, muss das Gerät automatisch zum Hotspot zurückkehren; nach jedem Neustart gilt ebenfalls wieder der Hotspot. Da die Oberfläche im Ziel-WLAN für andere Netzteilnehmer erreichbar sein kann, soll dieser Modus erst zusammen mit Geräteentsperrung und geprüften Firewallregeln umgesetzt werden. WLANs mit Captive Portal sind zunächst nicht Bestandteil des Zielbilds.
+
 ## Im Zielbetrieb bewusst nicht vorgesehen
 
 - keine zentrale Benutzerverwaltung
@@ -56,6 +58,7 @@ Einzelne Benutzerkonten werden erst neu bewertet, wenn mehrere Organisationen od
 - [ ] sichere Sitzung, Zeitlimit, Abmeldung und Sperre nach Neustart implementieren und testen
 - [ ] lokales HTTPS-Zertifikatsverfahren für die vorgesehenen Laptops festlegen
 - [ ] Firewall, Ethernet-Fallback und Verhalten ohne Internetverbindung praktisch prüfen
+- [ ] temporären WLAN-Wartungsmodus einschließlich flüchtiger Zugangsdaten, automatischem Hotspot-Fallback und Zeitlimit implementieren und gegen Aussperren sowie unerwünschte LAN-Freigabe testen
 - [ ] verschlüsselten Fall-/Ergebnisspeicher einschließlich Entsperren, Stromausfall und Wiederherstellung validieren
 - [ ] festlegen, wann exportierte Berichte vom Bedienlaptop entfernt oder in die genehmigte Fallablage übernommen werden
 - [ ] Sicherheitsreview und dokumentierte Freigabe vor echtem Einsatz durchführen

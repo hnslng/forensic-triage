@@ -136,6 +136,8 @@ Der Pi-Modus erledigt automatisch:
 
 Eine direkte Ethernet-Verbindung mit fester privater Adresse bleibt die geplante Rückfallebene. USB-Gadget-Netzwerk ist für den 3B+ nicht vorgesehen.
 
+Ein temporärer Wechsel des integrierten WLANs vom Hotspot in ein vorhandenes WLAN ist als optionaler Wartungsmodus geplant, aber noch nicht implementiert. Weil der Pi 3B+ nur ein integriertes WLAN-Modul verwendet, wird der Hotspot dabei abgeschaltet und die aktuelle Browserverbindung getrennt. Nach erfolgreichem Wechsel müssen Pi und Bedienlaptop im selben Ziel-WLAN sein; dann soll `http://triagebox.local/` wieder gelten. Nach Neustart, Zeitablauf oder fehlgeschlagenem Verbindungsversuch muss automatisch der Hotspot zurückkehren. Zugangsdaten sollen nicht dauerhaft gespeichert werden. Bis diese Rückfallebene praktisch geprüft ist, bleiben Ethernet oder das signierte Offline-Update die dokumentierten Wartungswege.
+
 Die portfreie HTTP-Adresse wurde auf dem Test-Pi bereits erfolgreich verwendet. Portloses HTTPS, das gemeinsame Gerätepasswort und eine feste Ethernet-Rückfalladresse folgen getrennt. Hotspot, mDNS, Reverse-Proxy und Firewall müssen vor einem echten Einsatz weiter validiert werden.
 
 ## 5. Aktualisieren
