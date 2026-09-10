@@ -1,6 +1,6 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.48`.
+Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.49`.
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 
@@ -43,8 +43,8 @@ Erledigt ist diese Etappe erst, wenn jede Sichtung in Oberfläche, Bericht und A
 - [ ] Große Verzeichnisbäume, viele kleine Dateien, weitere Dateisysteme und volle Ergebnisablage testen.
 - [ ] Archivbudgets mit vielen, großen, defekten, verschlüsselten und mehrteiligen Archiven messen; Grenzen und unvollständige Ergebnisse prüfen.
 - [ ] Pi-Systemmedium von Prüfmedien trennen; MicroSD statt USB-System-SSD für den Zielaufbau praktisch testen.
-- [x] Pi-Unterspannung/Drosselung aktuell und seit Boot sichtbar machen; Zustandsänderungen im Systemjournal protokollieren (Alpha 48).
-- [x] Neustart und Herunterfahren zweistufig bestätigen und während Fall, Scan oder Update serverseitig sperren (Alpha 48).
+- [x] Pi-Unterspannung/Drosselung aktuell und seit Boot erfassen; nur bei einem Ereignis als kompakte farbige Warnung anzeigen und Zustandsänderungen im Systemjournal protokollieren (Alpha 49).
+- [x] Neustart und Herunterfahren in einem getrennten Power-Menü zweistufig bestätigen und während Fall, Scan oder Update serverseitig sperren (Alpha 49).
 - [ ] Kontrolliertes Herunterfahren und Neustart praktisch prüfen; Stromverlust, Temperatur und zuverlässige Offline-Zeit bleiben getrennte Tests.
 
 ## 3. Daten, Profile und Updates wiederherstellbar machen

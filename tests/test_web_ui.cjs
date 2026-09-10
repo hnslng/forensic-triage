@@ -201,7 +201,7 @@ test('signed offline package uploads through the update dialog and observes comp
   assert.ok(polls >= 2);
 });
 
-test('power health is readable and shutdown needs a deliberate second confirmation', async t => {
+test('power warning is compact and shutdown needs a deliberate second confirmation', async t => {
   const { page, requests } = await setup(t, async (url, request) => {
     if (url.pathname === '/api/status') return {
       json: {
@@ -215,11 +215,12 @@ test('power health is readable and shutdown needs a deliberate second confirmati
       return { status: 202, json: { action: 'poweroff', scheduled_in_seconds: 3 } };
     }
   });
-  await page.waitForFunction(() => document.getElementById('powerHealthText').textContent.includes('UNTERSPANNUNG'));
+  await page.waitForFunction(() => !document.getElementById('powerHealth').hidden);
   assert.match(await page.locator('#powerHealth').getAttribute('class'), /warning/);
+  assert.match(await page.locator('#powerHealth').getAttribute('title'), /UNTERSPANNUNG AUFGETRETEN/);
   await page.setViewportSize({ width: 470, height: 900 });
-  await page.locator('#powerHealth').click();
-  assert.match(await page.locator('#powerBootState').innerText(), /REGISTRIERT/);
+  await page.locator('#openPowerModal').click();
+  assert.match(await page.locator('#powerModalTitle').innerText(), /NEUSTART/);
   const modalSize = await page.locator('#powerModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
   assert.ok(modalSize.scroll <= modalSize.client + 1);
   await page.evaluate(() => { activeCaseNumber = 'TEST'; renderPowerState(); });
@@ -233,6 +234,19 @@ test('power health is readable and shutdown needs a deliberate second confirmati
   await page.locator('#confirmPowerAction').click();
   await page.waitForFunction(() => document.getElementById('powerMessage').textContent.includes('HERUNTERFAHREN GESTARTET'));
   assert.equal(requests.filter(item => item.path === '/api/system/power').length, 1);
+});
+
+test('normal power stays hidden and a successful update clears a stale offline error', async t => {
+  const { page } = await setup(t);
+  await page.evaluate(() => {
+    renderPowerState({ state: 'ok', label: 'STROM OK' });
+    document.getElementById('offlineUpdateMessage').textContent = 'FEHLER: ALTER FEHLER';
+    renderUpdateState({ state: 'installed', current_version: '0.2.0a49' });
+  });
+  assert.equal(await page.locator('#powerHealth').isHidden(), true);
+  assert.equal(await page.locator('#offlineUpdateMessage').innerText(), '');
+  const widths = await page.locator('.utility-controls button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+  assert.equal(new Set(widths).size, 1);
 });
 
 test('switching media after filtering restores the correct visible explorer', async t => {

@@ -14,6 +14,8 @@ Alpha 45 selbst muss auf einem vorhandenen Alpha-44-Gerät noch einmal über den
 
 Der erste praktische Alpha-45→Alpha-46-Versuch zeigte, dass eine schlanke kopierte Python-Umgebung kein `setuptools` enthalten muss. Alpha 48 bringt deshalb ein signiertes, eng auf dieses Projekt begrenztes Build-Backend mit. Ein in Alpha 47 noch vom systemd-Arbeitsordner abhängiger Selbsttest wurde ebenfalls korrigiert. Damit benötigt die Offline-Installation kein nachzuladendes Python-Buildpaket.
 
+Der anschließende Sprung Alpha 45 → Alpha 48 wurde am Raspberry Pi erfolgreich über die Weboberfläche abgeschlossen. Eine während des Neustarts stehen gebliebene alte Fehlermeldung wurde für Alpha 49 bereinigt.
+
 ## Was der Pi prüft
 
 - festes Paketformat und eine maximale Uploadgröße von standardmäßig 256 MB
@@ -38,7 +40,7 @@ Der Codewechsel ist atomar und ein fehlgeschlagener Dienststart wechselt auf den
 Das Paket wird ausschließlich aus dem angegebenen, bereits committed Git-Tag gebaut – niemals aus ungespeicherten Arbeitsdateien:
 
 ```bash
-.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.48
+.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.49
 ```
 
 Die Ausgabe liegt standardmäßig unter `dist/` und wird durch `.gitignore` ausgeschlossen. Das Skript erwartet den privaten Signaturschlüssel standardmäßig unter:

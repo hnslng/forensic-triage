@@ -80,19 +80,11 @@ function renderPowerState(value = {}) {
   const label = powerState.label || "STROMSTATUS UNBEKANNT";
   const health = $("powerHealth");
   health.className = `power-health ${state}`;
-  health.title = label;
-  health.setAttribute("aria-label", `Stromversorgung: ${label}`);
-  $("powerHealthText").textContent = label;
-  $("powerModal").dataset.powerState = state;
-  $("powerStatusLabel").textContent = label;
-  $("powerCurrentState").textContent = powerState.current_undervoltage === true
-    ? "UNTERSPANNUNG"
-    : powerState.current_throttling === true ? "LEISTUNG GEDROSSELT"
-      : powerState.current_undervoltage === false ? "NORMAL" : "NICHT VERFÜGBAR";
-  $("powerBootState").textContent = powerState.undervoltage_since_boot === true
-    ? "UNTERSPANNUNG REGISTRIERT"
-    : powerState.throttling_since_boot === true ? "DROSSELUNG REGISTRIERT"
-      : powerState.undervoltage_since_boot === false ? "KEIN EINBRUCH REGISTRIERT" : "NICHT VERFÜGBAR";
+  health.hidden = !["warning", "danger"].includes(state);
+  health.title = state === "danger"
+    ? `${label} · Stromversorgung jetzt prüfen`
+    : `${label} · seit dem letzten Systemstart gespeichert`;
+  health.setAttribute("aria-label", `Warnung Stromversorgung: ${health.title}`);
   const blocked = powerBlockedReason();
   for (const button of $("powerActions").querySelectorAll("button")) button.disabled = Boolean(blocked) || powerActionInProgress;
   if (!pendingPowerAction && !powerActionInProgress) $("powerMessage").textContent = blocked;
@@ -173,6 +165,7 @@ function renderUpdateState(value = {}) {
   $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("systemVersion").textContent = formatReleaseVersion(updateState.current_version);
+  $("openUpdateModal").title = `System und Updates · ${formatReleaseVersion(updateState.current_version)} · ${statusLabels[state] || updateState.message || "Status unbekannt"}`;
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
@@ -190,6 +183,9 @@ function renderUpdateState(value = {}) {
   $("updateCheck").disabled = actionRunning;
   $("offlineUpdateFile").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning || caseSessionTransition;
   $("offlineUpdateInstall").disabled = $("offlineUpdateFile").disabled || !$("offlineUpdateFile").files.length;
+  if (["installed", "current"].includes(state) && $("offlineUpdateMessage").textContent.startsWith("FEHLER:")) {
+    $("offlineUpdateMessage").textContent = "";
+  }
   if (!updateActionInProgress) {
     if (caseSessionTransition) {
       $("updateActionMessage").textContent = "FALL WIRD BEENDET …";
@@ -1602,7 +1598,6 @@ $("offlineMediaCards").addEventListener("click", (event) => {
   if (card) openMedia(Number(card.dataset.mediaId));
 });
 $("homeLogo").addEventListener("click", showDashboard);
-$("powerHealth").addEventListener("click", openPowerDialog);
 $("openPowerModal").addEventListener("click", openPowerDialog);
 $("closePowerModal").addEventListener("click", () => $("powerModal").close());
 $("powerModal").addEventListener("cancel", (event) => {

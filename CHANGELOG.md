@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.49] – 2026-09-10
+
+- Erfolgreiche Offline-Installation löscht eine zuvor angezeigte Fehlermeldung zuverlässig, statt den alten Text unter dem Dateifeld stehen zu lassen.
+- Update, Einstellungen und Power sind als drei gleich große, kompakte Symbolschaltflächen in einer gemeinsamen Gruppe angeordnet; die Version bleibt daneben sichtbar.
+- Die Stromanzeige ist kein zweiter Systemknopf mehr: Der Blitz erscheint ausschließlich bei aktueller oder seit dem Boot gespeicherter Unterspannung/Drosselung, rot beziehungsweise amber und mit erklärendem Tooltip.
+- Das Power-Fenster enthält nur noch Neustart und Herunterfahren samt Arbeitssperre und zweiter Bestätigung.
+- 133 Python-Tests und 29 isolierte Browserprüfungen erfolgreich.
+
 ## [0.2.0-alpha.48] – 2026-09-10
 
 - Der neue Offline-Build-Selbsttest verwendet den tatsächlichen Releasepfad statt des aktuellen Prozessordners. Der Alpha-47-Test scheiterte unter systemd fälschlich, weil dessen Arbeitsverzeichnis `/` ist.
