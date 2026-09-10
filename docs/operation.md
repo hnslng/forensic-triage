@@ -15,9 +15,9 @@ Im Fenster `SYSTEM & UPDATES` kann ein aktiver Fall über `FALL … BEENDEN` dir
 
 Nach einem Pi-/Webdienst-Neustart ist **kein Fall aktiv**. Der Systemstatus zeigt „Gesperrt“ und es darf kein Scan beginnen. Beim Neuladen oder erneuten Öffnen des Browsers wird dagegen die noch aktive Sitzung des Geräts übernommen. Browser schließen oder WLAN trennen ersetzt deshalb nicht „Fall beenden“.
 
-Der Blitz in der oberen Systemleiste zeigt `STROM OK`, eine aktuell aktive Unterspannung/Drosselung, ein seit dem Start registriertes Ereignis oder `STROMSTATUS UNBEKANNT`. Ein Klick öffnet die Einzelanzeige. Ein vergangenes Ereignis bleibt entsprechend der Raspberry-Pi-Firmware bis zum nächsten Neustart sichtbar; es ist nicht mit einer aktuell anliegenden Unterspannung gleichzusetzen.
+Der Blitz wird links in der oberen Werkzeuggruppe nur eingeblendet, wenn aktuell eine Unterspannung/Drosselung anliegt oder seit dem Systemstart ein entsprechendes Ereignis registriert wurde. Farbe und Tooltip unterscheiden den aktuellen Warnzustand vom bloß gespeicherten Ereignis. Ein vergangenes Ereignis bleibt entsprechend der Raspberry-Pi-Firmware bis zum nächsten Neustart sichtbar; es ist nicht mit einer aktuell anliegenden Unterspannung gleichzusetzen. Bei unauffälliger oder nicht unterstützter Stromüberwachung bleibt das Symbol ausgeblendet.
 
-Das benachbarte Power-Symbol öffnet dasselbe Fenster. `NEUSTART` und `HERUNTERFAHREN` benötigen dort immer eine zweite ausdrückliche Bestätigung. Beide Aktionen sind bei aktivem Fall, laufendem Scan oder Update serverseitig gesperrt. Herunterfahren beendet das Betriebssystem sicher, trennt beim Raspberry Pi 3B+ aber nicht physisch die Stromversorgung. Erst nach beendetem System die Versorgung abziehen.
+Das separate Power-Symbol öffnet ausschließlich `NEUSTART` und `HERUNTERFAHREN`. Beide Aktionen benötigen immer eine zweite ausdrückliche Bestätigung und sind bei aktivem Fall, laufendem Scan oder Update serverseitig gesperrt. Herunterfahren beendet das Betriebssystem sicher, trennt beim Raspberry Pi 3B+ aber nicht physisch die Stromversorgung. Erst nach beendetem System die Versorgung abziehen.
 
 ## 2. Neuen Fall vorbereiten
 
@@ -68,7 +68,7 @@ Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Des
 
 ## Einstellungen verwalten
 
-**Einstellungen** in der oberen Leiste öffnet die beiden Bereiche **Stichwortprofile** und **Dateitypen** außerhalb des Fallfensters. Dort Profile bearbeiten/duplizieren oder Endungen einer Kategorie zuordnen. Im Fallfenster bleibt die Auswahl der Profile für den Einsatz. Katalogänderungen gelten für neue Scans; alte Ergebnisse behalten ihre Zuordnung. Siehe [ausführliche Bedienung](settings.md).
+**Einstellungen** in der oberen Leiste öffnet die drei Bereiche **Stichwortprofile**, **Dateitypen** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen oder die Updateverwaltung öffnen. Im Fallfenster bleibt die Auswahl der Profile für den Einsatz. Katalogänderungen gelten für neue Scans; alte Ergebnisse behalten ihre Zuordnung. Siehe [ausführliche Bedienung](settings.md).
 
 ## 6. Auswerfen und Aktualisieren
 

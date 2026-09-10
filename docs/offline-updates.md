@@ -40,7 +40,7 @@ Der Codewechsel ist atomar und ein fehlgeschlagener Dienststart wechselt auf den
 Das Paket wird ausschließlich aus dem angegebenen, bereits committed Git-Tag gebaut – niemals aus ungespeicherten Arbeitsdateien:
 
 ```bash
-.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.49
+.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.50
 ```
 
 Die Ausgabe liegt standardmäßig unter `dist/` und wird durch `.gitignore` ausgeschlossen. Das Skript erwartet den privaten Signaturschlüssel standardmäßig unter:

@@ -13,6 +13,7 @@
       <header class="masthead">
         <div class="brand-block">
           <h1><button id="homeLogo" class="brand-home" type="button" aria-label="Zum Hauptdashboard">TRIAGE<span>//</span>BOX</button></h1>
+          <small id="systemVersion" class="brand-version">v—</small>
         </div>
         <div id="activeCaseDisplay" class="active-case-display locked">
           <strong><span id="activeCaseNumber">KEIN FALL</span><em id="activeCaseOperator"></em></strong>
@@ -24,11 +25,9 @@
         <span class="system-state locked" id="systemStatus"><span id="systemState">GESPERRT</span></span>
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <div class="utility-zone">
-          <small id="systemVersion" class="version-readout">v—</small>
           <div class="utility-controls">
-            <button id="openUpdateModal" class="system-button" type="button" title="System und Updates" aria-label="System und Updates öffnen"><span aria-hidden="true">↻</span><b id="updateSummary"></b></button>
-            <button id="openSettings" class="system-button" type="button" title="Einstellungen" aria-label="Einstellungen öffnen"><span aria-hidden="true">⚙</span></button>
             <span id="powerHealth" class="power-health unknown" title="" aria-label="" role="status" hidden>⚡</span>
+            <button id="openSettings" class="system-button" type="button" title="Einstellungen" aria-label="Einstellungen öffnen"><span aria-hidden="true">⚙</span></button>
             <button id="openPowerModal" class="system-button power-open" type="button" title="Neustart oder Herunterfahren" aria-label="Neustart oder Herunterfahren öffnen"><span aria-hidden="true">⏻</span></button>
           </div>
         </div>
@@ -268,10 +267,11 @@
       </form>
     </dialog>
     <dialog id="settingsModal" class="evidence-modal settings-modal" aria-labelledby="settingsTitle">
-      <div class="modal-head"><div><span>CFG</span> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><span aria-hidden="true">⚙</span> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
       <nav class="settings-tabs" aria-label="Einstellungsbereich">
         <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
+        <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">SYSTEM &amp; UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane" aria-labelledby="settingsProfilesTab">
         <p>Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
@@ -287,9 +287,14 @@
         <div class="catalog-actions"><button id="catalogReset" type="button">STANDARD LADEN</button><button id="catalogSave" type="button" disabled>ÄNDERUNGEN SPEICHERN</button></div>
         <p id="catalogMessage" role="status" aria-live="polite"></p>
       </section>
+      <section id="settingsUpdatesPane" class="settings-pane settings-updates-pane" aria-labelledby="settingsUpdatesTab" hidden>
+        <p>Programmversion prüfen und signierte Offline-Updates einspielen. Installationen erfolgen niemals automatisch.</p>
+        <div class="settings-system-card"><span>INSTALLIERTE VERSION</span><strong id="settingsSystemVersion">—</strong><small id="settingsUpdateStatus">STATUS NOCH NICHT GELADEN</small></div>
+        <button id="openUpdateModal" class="settings-update-open" type="button">SYSTEM &amp; UPDATES ÖFFNEN →</button>
+      </section>
     </dialog>
     <dialog id="keywordModal" class="evidence-modal keyword-modal">
-      <div class="modal-head"><div><span>CFG</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><span aria-hidden="true">⚙</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
       <div class="keyword-modal-body">
         <p>Profile bündeln Suchbegriffe für einen Einsatz. Die aktive Auswahl wird bei jedem neuen Scan im Nachweis mitprotokolliert.</p>
         <label class="profile-name-field" for="keywordProfileName">PROFILNAME
@@ -318,6 +323,7 @@
         </div>
         <p>TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
         <p id="updateActionMessage" class="update-action-message"></p>
+        <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
         <div class="update-actions">
           <button id="updateStopCase" type="button" hidden>FALL BEENDEN</button>
           <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>

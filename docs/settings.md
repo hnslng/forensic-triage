@@ -1,4 +1,4 @@
-# Einstellungen: Stichwortprofile und Dateitypen
+# Einstellungen: Stichwortprofile, Dateitypen und Updates
 
 Seit `v0.2.0-alpha.44` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall.
 
@@ -23,6 +23,10 @@ Endungen können ergänzt, entfernt oder zwischen Kategorien verschoben werden. 
 Der erweiterte Standard enthält unter anderem Kameraformate, makrofähige Office-Dateien, Audio/Video, Archivendungen, forensische Images, Systemartefakte und Kontakte/Kalender. `.raw` und `.key` stehen wegen ihrer unterschiedlichen Verwendungen unter **Mehrdeutig**, `.bak` unter **Sicherungskopien**. **Schutz-/Schlüsseldateien** ist ausschließlich eine Endungskategorie: Sie bestätigt weder Verschlüsselung noch Relevanz. Eine Datei kann durch Umbenennen weiterhin falsch eingeordnet werden.
 
 Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordnet. Mehrteilige Sondernamen werden nicht als eigener Dateitypnachweis interpretiert. Zusätzliche Archivendungen erweitern nur die Kategoriezuordnung; der Verzeichnisleser unterstützt weiterhin ZIP, ISO, 7Z und RAR. Die Verschlüsselungszähler beziehen sich auf die der Kategorie **Archive** zugeordneten äußeren Dateien. Beim Verschieben einer Endung in eine andere Kategorie verändert sich deshalb auch der Umfang dieser Zähler.
+
+## System & Updates
+
+Der dritte Einstellungsbereich zeigt die installierte Programmversion und den zuletzt bekannten Updatestatus. **System & Updates öffnen** führt in das ausführliche Updatefenster für Online-Prüfung und signierte `.tbu`-Pakete. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Fenster geöffnet beziehungsweise wird nach dem Neuladen automatisch wiederhergestellt. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben.
 
 ## Nachvollziehbarkeit
 
@@ -50,4 +54,4 @@ Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT
 
 ## English summary
 
-Settings has separate keyword-profile and file-type sections outside the case dialog. Operators can edit or duplicate profiles and maintain an extension catalog. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores its immutable catalog and hash; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Extension categories do not confirm file contents or encryption.
+Settings has separate keyword-profile, file-type, and system-update sections outside the case dialog. Operators can edit or duplicate profiles, maintain an extension catalog, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores its immutable catalog and hash; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Extension categories do not confirm file contents or encryption.

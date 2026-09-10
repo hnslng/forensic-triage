@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.50] – 2026-09-10
+
+- Versionsanzeige aus der Statusleiste direkt neben die TRIAGE//BOX-Marke verschoben; der Update-Einstieg liegt als dritter verständlicher Bereich neben Stichwortprofilen und Dateitypen in den Einstellungen.
+- Das unklare Kürzel `CFG` im Einstellungsfenster wurde durch ein Zahnrad ersetzt. In der Statusleiste stehen Stromwarnung, Einstellungen und Power geordnet nebeneinander; der Blitz bleibt ganz links und erscheint nur im Warnfall.
+- Geräteerkennungsfehler werden in der leeren Dashboardfläche kurz und handlungsorientiert angezeigt.
+- Updatefenster bleibt während einer Aktion gesperrt offen, zeigt eine sichtbare Phasen-/Fortschrittsanzeige und öffnet sich nach dem notwendigen Dienstneustart automatisch wieder.
+- 133 Python-Tests und 30 isolierte Browserprüfungen erfolgreich.
+
 ## [0.2.0-alpha.49] – 2026-09-10
 
 - Erfolgreiche Offline-Installation löscht eine zuvor angezeigte Fehlermeldung zuverlässig, statt den alten Text unter dem Dateifeld stehen zu lassen.

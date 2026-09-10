@@ -71,6 +71,7 @@ test('settings are outside the case dialog and profile editor uses only one back
   await page.locator('#openSettings').click();
   assert.equal(await page.locator('#auftragModal').isVisible(), false);
   assert.equal(await page.locator('#settingsProfilesPane').isVisible(), true);
+  assert.equal((await page.locator('#settingsTitle').locator('..').innerText()).includes('CFG'), false);
   await page.locator('#settingsProfilesList [data-edit-profile]').click();
   assert.equal(await page.locator('#keywordProfileName').inputValue(), 'Allgemein');
   assert.equal(await page.locator('#keywordOptions input').count(), 2);
@@ -185,6 +186,8 @@ test('signed offline package uploads through the update dialog and observes comp
         : { json: { jobs: { offline: false }, update: { state: 'installed', current_version: '0.2.0a45' } } };
     }
   });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsUpdatesTab').click();
   await page.locator('#openUpdateModal').click();
   await page.setViewportSize({ width: 470, height: 900 });
   const modalSize = await page.locator('#updateModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
@@ -247,6 +250,19 @@ test('normal power stays hidden and a successful update clears a stale offline e
   assert.equal(await page.locator('#offlineUpdateMessage').innerText(), '');
   const widths = await page.locator('.utility-controls button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
   assert.equal(new Set(widths).size, 1);
+});
+
+test('update dialog reopens after the service reload and keeps progress visible while running', async t => {
+  const { page } = await setup(t, async url => {
+    if (url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: null, update: { state: 'installing', current_version: '0.2.0a49' } } };
+  });
+  await page.evaluate(() => sessionStorage.setItem('triagebox-update-dialog', '1'));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('#updateModal').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#updateProgress').isVisible(), true);
+  assert.equal(await page.locator('#closeUpdateModal').isDisabled(), true);
+  assert.match(await page.locator('#updateProgressLabel').innerText(), /VORBEREITET|GEPRÜFT/);
+  assert.equal(await page.evaluate(() => sessionStorage.getItem('triagebox-update-dialog')), null);
 });
 
 test('switching media after filtering restores the correct visible explorer', async t => {

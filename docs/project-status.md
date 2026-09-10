@@ -1,6 +1,6 @@
 # Projektstand und Nachweise
 
-Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.49**. Einstellungen für Stichwortprofile und Dateitypen, signierte Offline-Updates sowie kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Nach zwei ausgewerteten Bootstrap-/Selbsttestfehlern wurde Alpha 48 erfolgreich über ein signiertes `.tbu` auf dem Pi installiert. Alpha 49 räumt die zugehörige Statusanzeige und die Systemleiste auf. Einzelheiten: [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
+Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.50**. Einstellungen für Stichwortprofile, Dateitypen und Updates, signierte Offline-Updates sowie kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Nach zwei ausgewerteten Bootstrap-/Selbsttestfehlern wurde Alpha 48 erfolgreich über ein signiertes `.tbu` auf dem Pi installiert. Alpha 50 räumt Statusleiste, Updatefortschritt und Wiederöffnung nach dem Dienstneustart auf. Einzelheiten: [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
 
 ## Was „funktioniert“ hier bedeutet
 
@@ -11,7 +11,7 @@ Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.49**. Einstellungen für
 
 | Bereich | Aktueller Stand | Noch nachzuweisen / zu verbessern |
 |---|---|---|
-| Raspberry Pi 3B+ | Installiert und im Testbetrieb; Alpha 48 wurde am 10. September erfolgreich als erstes signiertes Offline-Update installiert. | Alpha 49 per `.tbu` aktualisieren; reproduzierbare Neuinstallation, finaler Speicher-/Stromaufbau und Dauerbetrieb. |
+| Raspberry Pi 3B+ | Installiert und im Testbetrieb; Alpha 48 wurde am 10. September erfolgreich als erstes signiertes Offline-Update installiert. | Alpha 50 per `.tbu` aktualisieren; reproduzierbare Neuinstallation, finaler Speicher-/Stromaufbau und Dauerbetrieb. |
 | Netzwerk | Hotspot und Router-LAN verwendet; `http://triagebox.local/` erfolgreich ohne Port aufgerufen. Direkte Pi–Mac-Ethernet-Verbindung mit macOS-Internetfreigabe funktionierte über `192.168.2.2`. | Reiner Direktbetrieb ohne Internetfreigabe, gerätespezifisches Passwort und Firewall-Abnahme. |
 | USB-Grobsichtung | Reale Testmedien, darunter drei gleichzeitig angeschlossene Sticks, bereits gesichtet. | Vollständiger Soll-/Ist-Vergleich, systematische Parallel- und Störungstests. |
 | Fallworkflow | Start/Ende, Sichtungsnummern, zwei Entscheidungen, Geräte-/Dateimetadaten, PDF und ZIP implementiert. | Vollständiger Probeeinsatz einschließlich Wiederöffnung, konsistentem Bericht und Pflichtangaben. |
@@ -20,19 +20,19 @@ Stand: **10. September 2026**, Anwendung **v0.2.0-alpha.49**. Einstellungen für
 | Schreibschutz und Isolation | Software-Read-only, getrennte Prozesse, Zeitlimits und begrenzte Diagnoseprotokolle vorhanden. | Physische Schreibschutzprüfung; Hardware-/Kernelstillstand wird dadurch nicht ausgeschlossen. |
 | Updates | Online-Prüfung und bewusste Installation praktisch verwendet. Alpha 45 wurde von Alpha 43 online installiert; Alpha 48 wurde nach ausgewerteten Fehlversuchen erfolgreich offline von Alpha 45 installiert. | Weitere reguläre `.tbu`-Sprünge, Fehler-/Stromausfallprüfung und Wiederherstellung aller veränderten Komponenten. |
 | Strom und System | Pi-Firmwarestatus, vier sichtbare Zustände sowie doppelt bestätigter Neustart/Shutdown mit serverseitigen Arbeitssperren implementiert und synthetisch geprüft. | Echten Pi-Wert auslesen; Neustart und Herunterfahren praktisch ohne angeschlossene Prüfmedien testen; Stromausfall bleibt getrennt offen. |
-| Einstellungen | Gemeinsamer Bereich für Profile und Dateitypen, atomare lokale Speicherung, Konflikterkennung und unveränderlicher Scan-Snapshot implementiert. | Bedienung und Erstübernahme auf dem Pi mit vorhandenen Profilen praktisch prüfen. |
+| Einstellungen | Gemeinsamer Bereich für Profile, Dateitypen und Systemupdates; atomare lokale Speicherung, Konflikterkennung und unveränderlicher Scan-Snapshot implementiert. | Bedienung und Erstübernahme auf dem Pi mit vorhandenen Profilen praktisch prüfen. |
 | Entfernte Fälle | Ordner bleiben im Papierkorb; Entfernen automatisch geprüft. | Kein fertiger Import zurück in den aktiven Fallindex; kein geprüfter Restore-Ablauf. |
 | Zugriff und Ablage | Lokaler HTTP-Zugang, konfigurierte Fallablage, keine Web-Anmeldung. | Gemeinsame Entsperrung, HTTPS und verschlüsselte Fallablage gemäß Schutzkonzept. |
 | CD/DVD | Scan-/Auswurfpfad implementiert; bisher instabiler Hardwareversuch. | Test mit separat versorgtem Laufwerk. Ein solches wurde als möglicherweise vorhanden gemeldet, noch nicht geprüft. |
 
 ## Vorhandene Prüfnachweise
 
-- **133 Python-Tests:** für Alpha 49 erfolgreich; zusätzlich sind Stromstatusbits, fehlende Pi-Werkzeuge, feste Systemaktionen und serverseitige Arbeitssperren abgedeckt.
-- **29 isolierte Browsertests:** für Alpha 49 erfolgreich. Sie prüfen zusätzlich kompakte Stromwarnung, bereinigten Updatestatus, zweistufige Bestätigung und schmale Darstellung.
+- **133 Python-Tests:** für Alpha 50 erfolgreich; zusätzlich sind Stromstatusbits, fehlende Pi-Werkzeuge, feste Systemaktionen und serverseitige Arbeitssperren abgedeckt.
+- **30 isolierte Browsertests:** für Alpha 50 erfolgreich. Sie prüfen zusätzlich kompakte Stromwarnung, bereinigten Updatestatus, Fortschrittsanzeige, Wiederöffnung nach Reload und schmale Darstellung.
 - **26. August 2026:** dokumentierter Sollvergleich mit 960 Dateien auf exFAT; schneller Lauf 0,732 Sekunden auf der beschriebenen VM. Dies ist ein historischer Einzeltest, kein Geschwindigkeitsversprechen für den Pi oder beliebige Medien: [Nachweis](validation-2026-08-26.md).
 - **Bisheriger Pi-Testbetrieb:** Installation, Hotspot/LAN, mehrere USB-Sticks, Archivbeispiele und Updates im Entwicklungsverlauf beobachtet. Die Feldtestserie mit vollständigem Prüfprotokoll steht noch aus.
 
-Für Alpha 49 wurden noch keine neuen realen Scans, Stromunterbrechungen oder Wiederherstellungen ausgeführt. Neue Messwerte gehören mit Version, Aufbau, Testbestand und Abweichungen in einen datierten Nachweis; echte Falldaten bleiben außerhalb von Git.
+Für Alpha 50 wurden noch keine neuen realen Scans, Stromunterbrechungen oder Wiederherstellungen ausgeführt. Neue Messwerte gehören mit Version, Aufbau, Testbestand und Abweichungen in einen datierten Nachweis; echte Falldaten bleiben außerhalb von Git.
 
 ## Bekannte Abweichungen vom Zielablauf
 

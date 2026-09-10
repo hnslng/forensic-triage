@@ -40,12 +40,15 @@ let catalogDirty = false;
 let settingsRevision = 0;
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 let updateActionInProgress = null;
+const UPDATE_DIALOG_RESTORE_KEY = "triagebox-update-dialog";
 let powerState = { state: "unknown", label: "STROMSTATUS UNBEKANNT" };
 let pendingPowerAction = null;
 let powerActionInProgress = false;
 let serverActiveCase = null;
 let caseSessionTransition = false;
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+const rememberUpdateDialog = () => sessionStorage.setItem(UPDATE_DIALOG_RESTORE_KEY, "1");
+const forgetUpdateDialog = () => sessionStorage.removeItem(UPDATE_DIALOG_RESTORE_KEY);
 const formatReleaseVersion = (value) => {
   const match = String(value || "").match(/^(\d+\.\d+\.\d+)a(\d+)$/);
   return match ? `v${match[1]}-alpha.${match[2]}` : String(value || "—");
@@ -161,21 +164,26 @@ function renderUpdateState(value = {}) {
     installing: "INSTALLATION LÄUFT …",
     unknown: "NOCH NICHT GEPRÜFT",
   };
-  const summaryLabels = { current: "", installed: "", available: "UPDATE", checking: "PRÜFT", installing: "LÄUFT", error: "UPDATE-FEHLER" };
   $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("systemVersion").textContent = formatReleaseVersion(updateState.current_version);
+  $("settingsSystemVersion").textContent = formatReleaseVersion(updateState.current_version);
+  $("settingsUpdateStatus").textContent = statusLabels[state] || updateState.message || "STATUS UNBEKANNT";
   $("openUpdateModal").title = `System und Updates · ${formatReleaseVersion(updateState.current_version)} · ${statusLabels[state] || updateState.message || "Status unbekannt"}`;
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
-  $("updateSummary").textContent = summaryLabels[state] ?? "STATUS";
   $("openUpdateModal").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   const actionRunning = Boolean(updateActionInProgress) || state === "checking" || state === "installing";
   $("updateModal").classList.toggle("update-busy", actionRunning);
+  $("closeUpdateModal").disabled = actionRunning;
+  $("updateProgress").hidden = !actionRunning;
+  $("updateProgress").classList.toggle("checking", state === "checking");
+  $("updateProgressLabel").textContent = state === "checking" ? "FREIGEGEBENE VERSION WIRD GEPRÜFT …"
+    : updateActionInProgress === "offline" ? "PAKET WIRD ÜBERTRAGEN UND GEPRÜFT …" : "UPDATE WIRD VORBEREITET UND GETESTET …";
   $("updateInstall").disabled = Boolean(activeCase) || runningPaths.size > 0 || actionRunning || caseSessionTransition;
   $("updateStopCase").hidden = !activeCase && !caseSessionTransition;
   $("updateStopCase").disabled = runningPaths.size > 0 || actionRunning || caseSessionTransition;
@@ -249,6 +257,7 @@ async function requestUpdate(action) {
     return;
   }
   if (action === "install" && !window.confirm("Update jetzt installieren? Der Dienst wird kurz neu gestartet.")) return;
+  if (action === "install") rememberUpdateDialog();
   const previousUpdateState = { ...updateState };
   updateActionInProgress = action;
   renderUpdateState({
@@ -269,6 +278,7 @@ async function requestUpdate(action) {
       window.location.reload();
     }
   } catch (error) {
+    if (action === "install") forgetUpdateDialog();
     renderUpdateState(previousUpdateState);
     $("updateActionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
@@ -286,6 +296,7 @@ function uploadOfflinePackage(file) {
       if (!event.lengthComputable) return;
       const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
       $("offlineUpdateMessage").textContent = `PAKET WIRD ÜBERTRAGEN · ${percent} %`;
+      $("updateProgressLabel").textContent = `PAKET WIRD ÜBERTRAGEN · ${percent} %`;
     });
     request.addEventListener("load", () => {
       let data = {};
@@ -314,6 +325,7 @@ async function installOfflineUpdate() {
     return;
   }
   if (!window.confirm("Signiertes Offline-Update hochladen und installieren? Der Dienst wird kurz neu gestartet.")) return;
+  rememberUpdateDialog();
   const previousUpdateState = { ...updateState };
   updateActionInProgress = "offline";
   renderUpdateState({ state: "installing", message: "OFFLINE-UPDATE WIRD ÜBERTRAGEN" });
@@ -327,6 +339,7 @@ async function installOfflineUpdate() {
     await wait(1000);
     window.location.reload();
   } catch (error) {
+    forgetUpdateDialog();
     renderUpdateState(previousUpdateState);
     $("offlineUpdateMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
@@ -392,17 +405,18 @@ function renderProfileList() {
   </article>`).join("") || '<p>Noch keine Profile vorhanden.</p>';
 }
 
-function selectSettingsPane(filetypes) {
-  $("settingsProfilesPane").hidden = filetypes;
-  $("settingsFiletypesPane").hidden = !filetypes;
-  $("settingsProfilesTab").setAttribute("aria-pressed", String(!filetypes));
-  $("settingsFiletypesTab").setAttribute("aria-pressed", String(filetypes));
+function selectSettingsPane(pane = "profiles") {
+  for (const name of ["Profiles", "Filetypes", "Updates"]) {
+    const active = name.toLowerCase() === pane.toLowerCase();
+    $(`settings${name}Pane`).hidden = !active;
+    $(`settings${name}Tab`).setAttribute("aria-pressed", String(active));
+  }
 }
 
 async function openSettings() {
   if ($("auftragModal").open) $("auftragModal").close();
   if (!$("settingsModal").open) $("settingsModal").showModal();
-  selectSettingsPane(false);
+  selectSettingsPane("profiles");
   const revision = ++settingsRevision;
   catalogState = null; catalogDirty = false;
   $("catalogRows").innerHTML = "";
@@ -732,8 +746,8 @@ function updateDashboardState() {
   const online = devices.length;
   if (deviceDiscoveryError) {
     $("deviceCount").textContent = "ERKENNUNG GESTÖRT · LETZTER STAND";
-    $("deviceEmptyTitle").textContent = "DATENTRÄGERERKENNUNG PRÜFEN";
-    $("deviceEmptyCopy").textContent = "Ein Geräteabruf ist noch offen oder fehlgeschlagen. Der Verbindungsstatus ist derzeit unbekannt; neue Scans warten auf eine erfolgreiche Erkennung.";
+    $("deviceEmptyTitle").textContent = "VERBINDUNG PRÜFEN";
+    $("deviceEmptyCopy").textContent = "Geräteerkennung derzeit nicht verfügbar. Bitte aktualisieren.";
     $("deviceEmpty").hidden = online > 0;
     return;
   }
@@ -1625,8 +1639,9 @@ $("openSettings").addEventListener("click", openSettings);
 $("closeSettings").addEventListener("click", closeSettings);
 $("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(); closeSettings(); });
 $("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
-$("settingsProfilesTab").addEventListener("click", () => selectSettingsPane(false));
-$("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane(true));
+$("settingsProfilesTab").addEventListener("click", () => selectSettingsPane("profiles"));
+$("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane("filetypes"));
+$("settingsUpdatesTab").addEventListener("click", () => selectSettingsPane("updates"));
 $("settingsProfilesList").addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-profile]");
   const copy = event.target.closest("[data-copy-profile]");
@@ -1673,10 +1688,18 @@ $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
 });
-$("openUpdateModal").addEventListener("click", () => $("updateModal").showModal());
-$("closeUpdateModal").addEventListener("click", () => $("updateModal").close());
+$("openUpdateModal").addEventListener("click", () => {
+  closeSettings();
+  if (!$("settingsModal").open && !$("updateModal").open) $("updateModal").showModal();
+});
+$("closeUpdateModal").addEventListener("click", () => {
+  if (!updateActionInProgress && !["checking", "installing"].includes(updateState.state)) $("updateModal").close();
+});
 $("updateModal").addEventListener("click", (event) => {
-  if (event.target === $("updateModal")) $("updateModal").close();
+  if (event.target === $("updateModal") && !updateActionInProgress && !["checking", "installing"].includes(updateState.state)) $("updateModal").close();
+});
+$("updateModal").addEventListener("cancel", (event) => {
+  if (updateActionInProgress || ["checking", "installing"].includes(updateState.state)) event.preventDefault();
 });
 $("createProfile").addEventListener("click", () => openProfileEditor(null));
 $("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());
@@ -1912,5 +1935,10 @@ for (const input of [$("caseNumber"), $("operator")]) {
 }
 updateCaseSessionUi();
 loadProfiles();
-refresh();
+refresh().finally(() => {
+  if (sessionStorage.getItem(UPDATE_DIALOG_RESTORE_KEY) === "1") {
+    if (!$("updateModal").open) $("updateModal").showModal();
+    forgetUpdateDialog();
+  }
+});
 setInterval(() => refresh(false), 2500);

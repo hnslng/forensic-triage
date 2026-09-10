@@ -1,6 +1,6 @@
 # Geplantes Zugriffsschutzkonzept / Planned access protection
 
-## Iststand der Alpha 49
+## Iststand der Alpha 50
 
 Der Installer konfiguriert bereits einen WPA2-Hotspot mit lokalem Kennwort sowie den Zugriff über `http://triagebox.local/` ohne sichtbare Portnummer. Das einfache Alpha-Testkennwort muss vor realem Einsatz durch ein gerätespezifisches Kennwort ersetzt werden; Änderung und Übernahme stehen in [configuration.md](configuration.md).
 
