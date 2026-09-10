@@ -1,6 +1,6 @@
 # Testplan / Test plan
 
-Stand: 10. September 2026 · Anwendung: `v0.2.0-alpha.46`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md).
+Stand: 10. September 2026 · Anwendung: `v0.2.0-alpha.47`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md).
 
 ## Automatisierte Tests
 
@@ -36,7 +36,7 @@ Bei vorhandenem Google Chrome kann `TRIAGE_BROWSER_CHANNEL=chrome` gesetzt werde
 
 Geprüft werden Medien- und Filterwechsel mit absichtlich verspäteten Antworten, Rückkehr zum Dashboard, A–B–A-Wechsel, Archiv-Unterordner und Pagination in beiden Ansichten, Wiederholung fehlgeschlagener Archivabrufe sowie numerische Sichtungssortierung. Dazu kommen Archivstatusfilter, exakte Dateiauswahl, Fallende im Updatefenster, der signierte Offline-Upload und die Strom-/Systemansicht einschließlich Sperr- und Bestätigungszustand. Eine reine Navigation darf keine schreibenden API-Aufrufe auslösen.
 
-Für Alpha 46 sind 28 Browserprüfungen und 132 Python-Tests erfolgreich. Installer und Updater führen Python-Tests aus, nicht diese Browser- oder Hardwareprüfungen.
+Für Alpha 47 sind 28 Browserprüfungen und 133 Python-Tests erfolgreich. Installer und Updater führen Python-Tests aus, nicht diese Browser- oder Hardwareprüfungen.
 
 ## Vollständiger Probeeinsatz
 
@@ -148,7 +148,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.46` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.47` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Nutzdatei-Extraktion oder Inhaltsanalyse, keine Passwortversuche, sichtbare Limitkennzeichnung und unveränderte äußere Datei-/Ordnerzahlen. Komprimierte Archivverzeichnisse können intern dekodiert werden. Das Zusatzzeitbudget ist zu messen; es ist keine harte Garantie gegen blockierte Bibliotheks-/Kernelzugriffe. Überschreitungen und nicht beendete Prozesse müssen als Abweichung protokolliert werden.
 

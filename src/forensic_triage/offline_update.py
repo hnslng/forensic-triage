@@ -25,6 +25,8 @@ SIGNATURE_NAMESPACE = "triagebox-update"
 TAG_PATTERN = re.compile(r"^v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$")
 PEP_PATTERN = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?$")
 REQUIRED_FILES = {
+    "build_support/setuptools/__init__.py",
+    "build_support/setuptools/build_meta.py",
     "pyproject.toml",
     "src/forensic_triage/__init__.py",
     "scripts/update_triagebox.sh",

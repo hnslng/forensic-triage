@@ -12,6 +12,8 @@ Seit `v0.2.0-alpha.45` kann TRIAGE//BOX ein freigegebenes Anwendungspaket über 
 
 Alpha 45 selbst muss auf einem vorhandenen Alpha-44-Gerät noch einmal über den bisherigen Online-Weg installiert werden. Ab der danach folgenden Version kann der Offline-Weg verwendet werden.
 
+Der erste praktische Alpha-45→Alpha-46-Versuch zeigte, dass eine schlanke kopierte Python-Umgebung kein `setuptools` enthalten muss. Alpha 47 bringt deshalb ein signiertes, eng auf dieses Projekt begrenztes Build-Backend mit. Damit benötigt die Offline-Installation kein nachzuladendes Python-Buildpaket.
+
 ## Was der Pi prüft
 
 - festes Paketformat und eine maximale Uploadgröße von standardmäßig 256 MB
@@ -36,7 +38,7 @@ Der Codewechsel ist atomar und ein fehlgeschlagener Dienststart wechselt auf den
 Das Paket wird ausschließlich aus dem angegebenen, bereits committed Git-Tag gebaut – niemals aus ungespeicherten Arbeitsdateien:
 
 ```bash
-.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.46
+.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.47
 ```
 
 Die Ausgabe liegt standardmäßig unter `dist/` und wird durch `.gitignore` ausgeschlossen. Das Skript erwartet den privaten Signaturschlüssel standardmäßig unter:

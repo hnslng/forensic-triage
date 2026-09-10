@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from build_support.setuptools import build_meta
 from forensic_triage.offline_update import REQUIRED_FILES, build_bundle, prepare_bundle, tag_to_pep440
 
 
@@ -53,6 +54,16 @@ def test_signed_bundle_is_verified_and_staged_atomically(tmp_path):
     assert (release / ".triagebox-release").read_text().strip() == version
     assert (release / "scripts/update_triagebox.sh").stat().st_mode & 0o111
     assert not list((tmp_path / "releases").glob(".v0.2.0-alpha.45-*"))
+
+
+def test_dependency_free_backend_builds_editable_wheel(tmp_path):
+    filename = build_meta.build_editable(tmp_path)
+
+    with zipfile.ZipFile(tmp_path / filename) as wheel:
+        names = wheel.namelist()
+        editable = next(name for name in names if name.startswith("__editable__.") and name.endswith(".pth"))
+        assert wheel.read(editable).decode().strip() == str((Path.cwd() / "src").resolve())
+        assert any(name.endswith(".dist-info/entry_points.txt") for name in names)
 
 
 def test_previously_staged_bundle_is_rechecked_before_retry(tmp_path):

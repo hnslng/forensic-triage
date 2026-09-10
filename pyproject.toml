@@ -1,10 +1,11 @@
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
+backend-path = ["build_support"]
 
 [project]
 name = "forensic-triage"
-version = "0.2.0a46"
+version = "0.2.0a47"
 description = "Read-only field-triage inventory for removable media"
 readme = "README.md"
 requires-python = ">=3.11"

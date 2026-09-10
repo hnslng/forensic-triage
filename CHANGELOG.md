@@ -2,6 +2,13 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.47] – 2026-09-10
+
+- Erster praktischer Alpha-45→Alpha-46-Offlineversuch ausgewertet: Signaturprüfung und Staging funktionierten, die getrennte Installation scheiterte jedoch reproduzierbar, weil die kopierte virtuelle Umgebung kein `setuptools` enthielt.
+- Ein eng begrenztes, standardbibliotheksbasiertes PEP-517/660-Build-Backend liegt nun signiert im Release. Damit kann Alpha 45 die nächste Version ohne Internet und ohne nachzuladendes Build-Paket installieren.
+- Das lokale Backend ist jetzt Pflichtbestandteil jedes `.tbu`; der Abhängigkeits-Fingerprint bleibt gegenüber Alpha 45 unverändert.
+- 133 Python-Tests und 28 isolierte Browserprüfungen erfolgreich; zusätzlich wurde der vollständige Offline-Pip-/Selbsttestpfad ohne installiertes `setuptools` reproduziert.
+
 ## [0.2.0-alpha.46] – 2026-09-10
 
 - Kompakte Blitzanzeige in der Systemleiste unterscheidet `STROM OK`, aktuell aktive Unterspannung/Drosselung, seit dem Boot aufgetretene Ereignisse und einen unbekannten Status. Zustandsänderungen werden im Systemjournal protokolliert.
