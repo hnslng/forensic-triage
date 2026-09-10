@@ -1,11 +1,18 @@
+import importlib.util
 import subprocess
 import zipfile
 from pathlib import Path
 
 import pytest
 
-from build_support.setuptools import build_meta
 from forensic_triage.offline_update import REQUIRED_FILES, build_bundle, prepare_bundle, tag_to_pep440
+
+
+BACKEND_PATH = Path(__file__).resolve().parents[1] / "build_support" / "setuptools" / "build_meta.py"
+BACKEND_SPEC = importlib.util.spec_from_file_location("triagebox_test_build_backend", BACKEND_PATH)
+assert BACKEND_SPEC and BACKEND_SPEC.loader
+build_meta = importlib.util.module_from_spec(BACKEND_SPEC)
+BACKEND_SPEC.loader.exec_module(build_meta)
 
 
 def make_signing_key(tmp_path: Path) -> tuple[Path, Path]:
@@ -62,7 +69,7 @@ def test_dependency_free_backend_builds_editable_wheel(tmp_path):
     with zipfile.ZipFile(tmp_path / filename) as wheel:
         names = wheel.namelist()
         editable = next(name for name in names if name.startswith("__editable__.") and name.endswith(".pth"))
-        assert wheel.read(editable).decode().strip() == str((Path.cwd() / "src").resolve())
+        assert wheel.read(editable).decode().strip() == str((build_meta.ROOT / "src").resolve())
         assert any(name.endswith(".dist-info/entry_points.txt") for name in names)
 
 

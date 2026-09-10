@@ -2,6 +2,11 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.48] – 2026-09-10
+
+- Der neue Offline-Build-Selbsttest verwendet den tatsächlichen Releasepfad statt des aktuellen Prozessordners. Der Alpha-47-Test scheiterte unter systemd fälschlich, weil dessen Arbeitsverzeichnis `/` ist.
+- Der vollständige Alpha-45→Alpha-48-Paketweg wird zusätzlich mit Arbeitsverzeichnis `/` ausgeführt, bevor das Paket freigegeben wird.
+
 ## [0.2.0-alpha.47] – 2026-09-10
 
 - Erster praktischer Alpha-45→Alpha-46-Offlineversuch ausgewertet: Signaturprüfung und Staging funktionierten, die getrennte Installation scheiterte jedoch reproduzierbar, weil die kopierte virtuelle Umgebung kein `setuptools` enthielt.
