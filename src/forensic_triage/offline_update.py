@@ -70,6 +70,13 @@ def _version_order(value: str) -> tuple[int, int, int, int, int]:
     return int(major), int(minor), int(patch), stage_order, int(number or 0)
 
 
+def compare_release_to_installed(tag: str, installed_version: str) -> int:
+    """Return -1, 0 or 1 when *tag* is older, equal or newer than installed."""
+    candidate = _version_order(tag_to_pep440(tag))
+    installed = _version_order(installed_version)
+    return (candidate > installed) - (candidate < installed)
+
+
 def dependency_fingerprint(raw_pyproject: bytes) -> str:
     data = tomllib.loads(raw_pyproject.decode("utf-8"))
     relevant = {

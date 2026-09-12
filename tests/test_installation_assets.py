@@ -86,6 +86,8 @@ def test_deliberate_update_uses_release_tags_and_atomic_runtime_link() -> None:
     assert "VORVERSION WIEDERHERGESTELLT" in updater
     assert "forensic-triage-nginx.conf.in" in updater
     assert "systemctl daemon-reload" in updater
+    assert "compare_release_to_installed" in updater
+    assert "target_relation <= 0" in updater
 
 
 def test_deliberate_update_accepts_linked_git_worktree_releases() -> None:

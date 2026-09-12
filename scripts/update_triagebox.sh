@@ -85,13 +85,6 @@ if [[ -z "$CURRENT_ROOT" || ! -x "$CURRENT_ROOT/.venv/bin/forensic-triage-web" ]
   exit 1
 fi
 current_version="$("$CURRENT_ROOT/.venv/bin/forensic-triage-web" --version 2>/dev/null | awk '{print $NF}' || printf 'unbekannt')"
-current_tag=""
-if [[ -r "$CURRENT_ROOT/.triagebox-release" ]]; then
-  current_tag="$(head -n 1 "$CURRENT_ROOT/.triagebox-release")"
-elif git -C "$CURRENT_ROOT" rev-parse --is-inside-work-tree 2>/dev/null | grep -qx true; then
-  current_tag="$(git -C "$CURRENT_ROOT" describe --tags --exact-match HEAD 2>/dev/null || true)"
-fi
-
 candidate=""
 if [[ "$ACTION" == "offline" ]]; then
   write_status "installing" "OFFLINE-PAKET WIRD SIGNATURGEPRÜFT" "" "$current_version"
@@ -144,17 +137,32 @@ else
     failure_message="KEINE FREIGEGEBENE VERSION GEFUNDEN"
     exit 1
   fi
+  failure_message="INSTALLIERTE UND FREIGEGEBENE VERSION SIND NICHT VERGLEICHBAR"
+  if ! target_relation="$("$CURRENT_ROOT/.venv/bin/python" -c \
+      'import sys; from forensic_triage.offline_update import compare_release_to_installed; print(compare_release_to_installed(sys.argv[1], sys.argv[2]))' \
+      "$target" "$current_version")"; then
+    exit 1
+  fi
+  if [[ ! "$target_relation" =~ ^-?[01]$ ]]; then
+    exit 1
+  fi
   if [[ "$ACTION" == "check" ]]; then
-    if [[ "$target" == "$current_tag" ]]; then
+    if (( target_relation == 0 )); then
       write_status "current" "AKTUELLE VERSION IST BEREITS INSTALLIERT" "$target" "$current_version"
+    elif (( target_relation < 0 )); then
+      write_status "current" "KEINE NEUERE FREIGEGEBENE VERSION VERFÜGBAR" "$target" "$current_version"
     else
       write_status "available" "UPDATE IST BEREIT ZUR INSTALLATION" "$target" "$current_version"
     fi
     finished=true
     exit 0
   fi
-  if [[ "$target" == "$current_tag" ]]; then
-    write_status "current" "AKTUELLE VERSION IST BEREITS INSTALLIERT" "$target" "$current_version"
+  if (( target_relation <= 0 )); then
+    if (( target_relation == 0 )); then
+      write_status "current" "AKTUELLE VERSION IST BEREITS INSTALLIERT" "$target" "$current_version"
+    else
+      write_status "current" "KEINE NEUERE FREIGEGEBENE VERSION VERFÜGBAR" "$target" "$current_version"
+    fi
     finished=true
     exit 0
   fi

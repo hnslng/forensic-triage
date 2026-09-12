@@ -1,6 +1,6 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 10. September 2026 · Anwendung: `v0.2.0-alpha.52`.
+Dokumentationsstand: 12. September 2026 · Anwendung: `v0.2.0-alpha.53`.
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 

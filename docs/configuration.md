@@ -112,7 +112,7 @@ Bei anderer Installation den zugehörigen Laufzeitpfad verwenden. Der Befehl wen
 
 ### Geplanter temporärer WLAN-Wartungsmodus
 
-Diese Funktion ist in `v0.2.0-alpha.52` **noch nicht implementiert**. Sie soll den Pi für eine bewusst gestartete Wartung vorübergehend mit einem normalen WPA2-/WPA3-WLAN verbinden, beispielsweise für ein Online-Update. Der Raspberry Pi 3B+ verwendet dabei sein einziges integriertes Funkmodul abwechselnd als Access Point oder Client. Beim Wechsel endet deshalb die Verbindung zum TRIAGEBOX-Hotspot. Ein Neustart ist technisch nicht erforderlich; NetworkManager kann die Profile im laufenden Betrieb wechseln.
+Diese Funktion ist in `v0.2.0-alpha.53` **noch nicht implementiert**. Sie soll den Pi für eine bewusst gestartete Wartung vorübergehend mit einem normalen WPA2-/WPA3-WLAN verbinden, beispielsweise für ein Online-Update. Der Raspberry Pi 3B+ verwendet dabei sein einziges integriertes Funkmodul abwechselnd als Access Point oder Client. Beim Wechsel endet deshalb die Verbindung zum TRIAGEBOX-Hotspot. Ein Neustart ist technisch nicht erforderlich; NetworkManager kann die Profile im laufenden Betrieb wechseln.
 
 Der vorgesehene Ablauf ist: Im Hotspot SSID und Kennwort eingeben, Umschaltung bestätigen, Laptop in dasselbe Ziel-WLAN wechseln und `http://triagebox.local/` erneut öffnen. Das Zielprofil darf nicht dauerhaft automatisch verbunden werden. Kennwort und Profil sollen nur für die Wartung existieren, niemals in Audit-/Systemmeldungen erscheinen und beim Rückwechsel sicher entfernt werden. Nach Neustart startet immer der TRIAGEBOX-Hotspot.
 

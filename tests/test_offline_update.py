@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from forensic_triage.offline_update import REQUIRED_FILES, build_bundle, prepare_bundle, tag_to_pep440
+from forensic_triage.offline_update import (
+    REQUIRED_FILES,
+    build_bundle,
+    compare_release_to_installed,
+    prepare_bundle,
+    tag_to_pep440,
+)
 
 
 BACKEND_PATH = Path(__file__).resolve().parents[1] / "build_support" / "setuptools" / "build_meta.py"
@@ -71,6 +77,16 @@ def test_dependency_free_backend_builds_editable_wheel(tmp_path):
         editable = next(name for name in names if name.startswith("__editable__.") and name.endswith(".pth"))
         assert wheel.read(editable).decode().strip() == str((build_meta.ROOT / "src").resolve())
         assert any(name.endswith(".dist-info/entry_points.txt") for name in names)
+
+
+@pytest.mark.parametrize(("tag", "installed", "expected"), [
+    ("v0.2.0-alpha.51", "0.2.0a52", -1),
+    ("v0.2.0-alpha.52", "0.2.0a52", 0),
+    ("v0.2.0-alpha.53", "0.2.0a52", 1),
+    ("v0.2.0", "0.2.0rc9", 1),
+])
+def test_release_comparison_uses_package_version_not_git_position(tag, installed, expected):
+    assert compare_release_to_installed(tag, installed) == expected
 
 
 def test_previously_staged_bundle_is_rechecked_before_retry(tmp_path):

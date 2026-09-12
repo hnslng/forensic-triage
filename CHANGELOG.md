@@ -2,6 +2,13 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.53] – 2026-09-12
+
+- Die Online-Updateprüfung vergleicht eine freigegebene Version nun mit der tatsächlich installierten Paketversion und nicht nur mit dem exakten Git-Tag des Checkouts.
+- Eine Neuinstallation vom aktuellen `main`-Stand bietet deshalb nicht mehr dieselbe Alpha-Version erneut zur Installation an, wenn nach dem Release lediglich weitere Commits hinzugekommen sind.
+- Eine ältere freigegebene Version wird ebenfalls nicht mehr als Update angeboten oder installiert. Nicht vergleichbare Versionsangaben führen sicher zu einem Fehler statt zu einer unklaren Installation.
+- 137 Python-Tests und 31 isolierte Browserprüfungen erfolgreich.
+
 ## [0.2.0-alpha.52] – 2026-09-10
 
 - Werden vollständig gesichtete Medien ohne Entscheidung abgezogen, fasst eine einzige Entscheidungszentrale alle offenen Sichtungen zusammen. Modell, vollständige Seriennummer, Kapazität, Datei- und Trefferzahl bleiben direkt vergleichbar; mehrere Dialoge werden nicht gestapelt.
