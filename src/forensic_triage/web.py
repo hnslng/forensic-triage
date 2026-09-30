@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from importlib.resources import files as package_files
 import io
 import json
 import logging
@@ -31,7 +32,6 @@ from .settings import SettingsConflict, atomic_write, default_catalog, load_cata
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-BUNDLED_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WEB_ROOT = PROJECT_ROOT / "web"
 EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
@@ -466,7 +466,8 @@ class TriageHTTPServer(ThreadingHTTPServer):
             atomic_write(self.catalog_path, json.dumps(default_catalog(), ensure_ascii=False, indent=2).encode())
         self.iphone_rules_path = self.settings_root / "iphone-triage.json"
         if not self.iphone_rules_path.exists():
-            atomic_write(self.iphone_rules_path, (BUNDLED_PROJECT_ROOT / "rules" / "iphone-triage.json").read_bytes())
+            bundled_rules = package_files("forensic_triage").joinpath("data/iphone-triage.json").read_bytes()
+            atomic_write(self.iphone_rules_path, bundled_rules)
         self.iphone_rules_error = ""
         try:
             load_iphone_rules(self.iphone_rules_path)

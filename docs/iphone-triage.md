@@ -22,7 +22,7 @@ Der allgemeine Bereich „Auf meinem iPhone“ ist nicht als vollständiger glob
 
 ## Erkennungsregeln
 
-Die mitgelieferte Ausgangsliste liegt in `rules/iphone-triage.json`. Beim ersten Start wird eine dauerhafte lokale Kopie als `iphone-triage.json` im konfigurierten `FORENSIC_TRIAGE_SETTINGS_ROOT` angelegt. Updates überschreiben diese lokale Kopie nicht.
+Die mitgelieferte Ausgangsliste liegt paketiert in `src/forensic_triage/data/iphone-triage.json`. Beim ersten Start wird eine dauerhafte lokale Kopie als `iphone-triage.json` im konfigurierten `FORENSIC_TRIAGE_SETTINGS_ROOT` angelegt. Updates überschreiben diese lokale Kopie nicht.
 
 App-Regeln verwenden exakte Bundle-IDs, Bundle-Präfixe und neutrale Namensfragmente. Enthalten sind zunächst Wallet-/Krypto-, Kryptobörsen-, Messenger-, Cloud- und Banking-Hinweise, unter anderem Ledger Live, MetaMask, Trust Wallet, Coinbase, Binance, Kraken, Crypto.com, Phantom, Exodus, OKX, Bitpanda und BlueWallet. Dateiregeln kombinieren Pfadfragmente und Endungen, damit etwa `wallet-backup.json` als möglicher Hinweis markiert wird, nicht aber jede beliebige JSON-Datei.
 

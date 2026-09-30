@@ -127,7 +127,8 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
 
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None) -> str:
     files = _base_files()
-    for source in sorted((ROOT / "src" / "forensic_triage").rglob("*.py")):
+    package_root = ROOT / "src" / "forensic_triage"
+    for source in sorted(path for path in package_root.rglob("*") if path.suffix in {".py", ".json"}):
         relative = source.relative_to(ROOT / "src").as_posix()
         files[relative] = source.read_bytes()
     return _write_wheel(wheel_directory, files)

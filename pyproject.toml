@@ -21,6 +21,9 @@ forensic-triage-web = "forensic_triage.web:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+forensic_triage = ["data/*.json"]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]

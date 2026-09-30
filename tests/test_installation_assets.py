@@ -1,4 +1,5 @@
 import subprocess
+from importlib.resources import files as package_files
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,12 @@ def test_debian_installer_includes_iphone_usb_tools() -> None:
     environment = (ROOT / "deploy/triage.env.example").read_text(encoding="utf-8")
     assert "FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS=45" in environment
     assert "FORENSIC_TRIAGE_IPHONE_MAX_FILES=20000" in environment
+
+
+def test_installed_package_contains_default_iphone_rules() -> None:
+    rules = package_files("forensic_triage").joinpath("data/iphone-triage.json")
+    assert rules.is_file()
+    assert '"app_rules"' in rules.read_text(encoding="utf-8")
 
 
 def test_install_and_update_enable_bounded_persistent_journal() -> None:
