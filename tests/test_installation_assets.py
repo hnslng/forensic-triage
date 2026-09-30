@@ -43,6 +43,15 @@ def test_debian_installer_includes_archive_directory_tool() -> None:
     assert "7zip nginx" in installer
 
 
+def test_debian_installer_includes_iphone_usb_tools() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    for package in ("usbmuxd", "libimobiledevice-utils", "ideviceinstaller", "ifuse"):
+        assert package in installer
+    environment = (ROOT / "deploy/triage.env.example").read_text(encoding="utf-8")
+    assert "FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS=45" in environment
+    assert "FORENSIC_TRIAGE_IPHONE_MAX_FILES=20000" in environment
+
+
 def test_install_and_update_enable_bounded_persistent_journal() -> None:
     installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
     updater = (ROOT / "scripts/update_triagebox.sh").read_text(encoding="utf-8")

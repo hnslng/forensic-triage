@@ -1,0 +1,132 @@
+import plistlib
+import subprocess
+import json
+from contextlib import contextmanager
+from pathlib import Path
+
+from forensic_triage import iphone
+
+
+RULES = {
+    "app_rules": [
+        {"id": "wallet", "category": "Kryptowährung / Wallet", "bundle_ids": ["io.test.wallet"], "name_contains": ["wallet"]},
+    ],
+    "file_rules": [
+        {"id": "backup", "label": "Mögliches Wallet-Backup", "path_contains": ["wallet"], "extensions": ["json"]},
+    ],
+}
+
+
+def completed(args, stdout="", stderr="", returncode=0):
+    return subprocess.CompletedProcess(args, returncode, stdout, stderr)
+
+
+def test_probe_iphone_reports_paired_metadata(monkeypatch):
+    info = plistlib.dumps({
+        "DeviceName": "Testtelefon", "ProductType": "iPhone15,4", "ProductVersion": "18.6",
+    }).decode()
+
+    def fake_run(args, **_kwargs):
+        if "validate" in args:
+            return completed(args, "SUCCESS: Validated pairing")
+        return completed(args, info)
+
+    monkeypatch.setattr(iphone, "_run", fake_run)
+    monkeypatch.setattr(iphone, "tools_available", lambda: True)
+    device = iphone.probe_iphone("000-test")
+    assert device["connection_state"] == "paired"
+    assert device["device_name"] == "Testtelefon"
+    assert device["ios_version"] == "18.6"
+    assert device["path"] == "iphone:000-test"
+
+
+def test_probe_iphone_explains_missing_trust(monkeypatch):
+    monkeypatch.setattr(iphone, "_run", lambda args, **kwargs: completed(args, stderr="ERROR: Please trust this computer", returncode=1))
+    monkeypatch.setattr(iphone, "tools_available", lambda: True)
+    device = iphone.probe_iphone("000-test")
+    assert device["connection_state"] == "trust_required"
+    assert "vertrauen" in device["unavailable_reason"].casefold()
+
+
+def test_app_and_file_rules_are_metadata_only():
+    apps = iphone.normalize_apps([{
+        "CFBundleDisplayName": "Test Wallet", "CFBundleIdentifier": "io.test.wallet",
+        "CFBundleShortVersionString": "1.2", "UIFileSharingEnabled": True,
+    }], RULES)
+    assert apps[0]["matches"] == [{"id": "wallet", "category": "Kryptowährung / Wallet"}]
+    assert iphone.classify_file_hint("Dokumente/wallet-backup.json", "json", RULES)[0]["id"] == "backup"
+    assert iphone.classify_file_hint("Dokumente/wallet-backup.txt", "txt", RULES) == []
+
+
+def test_inventory_reads_only_filesystem_metadata(tmp_path: Path, monkeypatch):
+    folder = tmp_path / "Dokumente"
+    folder.mkdir()
+    target = folder / "wallet-backup.json"
+    target.write_text("SECRET CONTENT MUST NOT BE READ", encoding="utf-8")
+    original_open = Path.open
+
+    def guarded_open(path, *args, **kwargs):
+        if path == target:
+            raise AssertionError("file content was opened")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", guarded_open)
+    files, directories, hints, truncated = iphone.inventory_tree(
+        tmp_path, "AFC_MEDIA", RULES, deadline=float("inf"), max_files=20,
+    )
+    assert not truncated
+    assert files[0]["path"] == "AFC_MEDIA/Dokumente/wallet-backup.json"
+    assert files[0]["size"] == len("SECRET CONTENT MUST NOT BE READ")
+    assert hints[0]["id"] == "backup"
+    assert directories
+
+
+def test_inventory_limit_is_explicit(tmp_path: Path):
+    (tmp_path / "a.txt").write_text("a")
+    (tmp_path / "b.txt").write_text("b")
+    files, _directories, _hints, truncated = iphone.inventory_tree(
+        tmp_path, "AFC_MEDIA", RULES, deadline=float("inf"), max_files=1,
+    )
+    assert len(files) == 1
+    assert truncated
+
+
+def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
+    exposed = tmp_path / "exposed"
+    exposed.mkdir()
+    (exposed / "wallet-export.json").write_text("payload is deliberately ignored")
+
+    monkeypatch.setattr(iphone, "ensure_paired", lambda udid: {
+        "path": f"iphone:{udid}", "media_type": "iphone", "vendor": "Apple",
+        "model": "iPhone15,4", "device_name": "Testtelefon", "serial": udid, "udid": udid,
+        "ios_version": "18.6", "build_version": "22G86", "connection_state": "paired",
+        "size": 0, "mounted": False, "read_only": False, "scan_supported": True,
+    })
+    monkeypatch.setattr(iphone, "_application_plist", lambda udid: ([{
+        "CFBundleDisplayName": "Test Wallet", "CFBundleIdentifier": "io.test.wallet",
+        "CFBundleShortVersionString": "1.2",
+    }], "complete"))
+    monkeypatch.setattr(iphone, "file_sharing_bundle_ids", lambda udid: (set(), "complete"))
+
+    @contextmanager
+    def fake_mount(_udid, _documents=None):
+        yield exposed
+
+    monkeypatch.setattr(iphone, "readonly_ifuse", fake_mount)
+    result = iphone.scan_iphone({
+        "udid": "000-test", "evidence": "SICHT-001", "results_root": str(tmp_path / "results"),
+        "profile_path": str(tmp_path / "unused.yaml"), "keywords": ["wallet"],
+        "profile_sources": [{"id": "test", "name": "TEST", "version": "1", "sha256": "abc"}],
+        "filetype_catalog": {"version": 1, "categories": {"Web-Dateien": ["json"]}},
+        "iphone_rules": RULES,
+    })
+    summary = json.loads((result / "summary.json").read_text())
+    detail = json.loads((result / "iphone.json").read_text())
+    device = json.loads((result / "device.json").read_text())
+    assert summary["file_count"] == 1
+    assert summary["iphone"]["app_hint_count"] == 1
+    assert detail["file_hints"][0]["id"] == "backup"
+    assert device["write_operations_performed"] is False
+    assert device["access_mode"] == "apple_services_metadata_read_only"
+    for name in ("files.csv", "hits.json", "partitions.json", "container-index.json", "apps.json", "iphone-rules.json"):
+        assert (result / name).is_file()

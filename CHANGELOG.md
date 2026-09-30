@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.54] – 2026-09-30
+
+- Erste integrierte iPhone-Grobsichtung über reguläre Apple-USB-Dienste: Geräte-/iOS-/Kopplungsmetadaten, Benutzer-App-Metadaten und nur lesend zugängliche AFC-/File-Sharing-Bereiche.
+- Lokale, dauerhaft anpassbare iPhone-Regeln kategorisieren Wallet-/Krypto-, Börsen-, Messenger-, Cloud- und Banking-Apps sowie metadatenbasierte Dateihinweise. Hinweise werden ausdrücklich nicht als Nachweis von Inhalten oder Vermögenswerten bewertet.
+- Gesperrte Geräte, fehlendes Vertrauen, unvollständige App-Listen, unzugängliche Bereiche und erreichte Grenzen bleiben als konkrete Teilfehler sichtbar; sie werden nicht in „keine Treffer“ umgedeutet.
+- iPhone-Ergebnisse verwenden dieselbe Sichtungsnummer, Fallakte, Explorer-, Treffer-, Entscheidungs- und Exportlogik wie vorhandene Medien. Technische App-/Bundle-ID-/Bereichsdetails sind in der Ergebnisansicht nachvollziehbar.
+- Pi-Installer ergänzt `usbmuxd`, `libimobiledevice-utils`, `ideviceinstaller` und `ifuse`. Simulierte Tests prüfen Kopplungszustände, Plist-/Regelauswertung und eine Inhaltszugriffe ausschließende, begrenzte Metadateninventarisierung.
+
 ## [0.2.0-alpha.53] – 2026-09-12
 
 - Die Online-Updateprüfung vergleicht eine freigegebene Version nun mit der tatsächlich installierten Paketversion und nicht nur mit dem exakten Git-Tag des Checkouts.

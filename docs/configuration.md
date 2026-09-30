@@ -18,6 +18,8 @@ Der optionale Pi-Modus legt Netzwerkgeheimnisse bewusst getrennt vom Webdienst a
 
 Auch diese Datei gehört `root`, hat Modus `0600` und wird bei Aktualisierungen nicht überschrieben. Dadurch erhält der Webprozess das WLAN-Kennwort nicht als eigene Umgebungsvariable.
 
+Für iPhones gelten zusätzlich `FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS` (45), `FORENSIC_TRIAGE_IPHONE_METADATA_SECONDS` (60), `FORENSIC_TRIAGE_IPHONE_MAX_FILES` (20000), `FORENSIC_TRIAGE_IPHONE_MAX_APPS` (500) und `FORENSIC_TRIAGE_IPHONE_MAX_SHARED_APPS` (50). Die dauerhafte lokale Regelliste liegt als `iphone-triage.json` im `FORENSIC_TRIAGE_SETTINGS_ROOT`; ein Update überschreibt sie nicht. Kleine Werte dienen auch zum Test der sichtbaren Unvollständigkeitsanzeige.
+
 Bearbeiten, nachdem Fall und Scans beendet wurden:
 
 ```bash

@@ -25,11 +25,13 @@ from . import __version__
 from .casefiles import CaseStore
 from .commands import run_command
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
+from .iphone import discover_iphones, load_rules as load_iphone_rules
 from .scan_process import ScanTimeoutError, run_isolated_scan
 from .settings import SettingsConflict, atomic_write, default_catalog, load_catalog, prepare_profiles, save_catalog
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BUNDLED_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WEB_ROOT = PROJECT_ROOT / "web"
 EVIDENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 OPERATOR_PATTERN = re.compile(r"^[^\x00-\x1f]{0,120}$")
@@ -42,6 +44,9 @@ DEVICE_DISCOVERY_LOCK = threading.Lock()
 DEVICE_DISCOVERY_UNHEALTHY_UNTIL = 0.0
 LAST_DEVICE_DISCOVERY: list[dict[str, Any]] = []
 LAST_DEVICE_DISCOVERY_ERROR = ""
+IPHONE_DISCOVERY_LOCK = threading.Lock()
+LAST_IPHONE_DISCOVERY: list[dict[str, Any]] = []
+LAST_IPHONE_DISCOVERY_ERROR = ""
 POWER_STATUS_LOCK = threading.Lock()
 LAST_POWER_STATUS: dict[str, Any] = {}
 LAST_POWER_STATUS_AT = 0.0
@@ -219,6 +224,24 @@ def discover_media_devices() -> list[dict[str, Any]]:
     return parse_media_devices(list_block_devices())
 
 
+def cached_iphone_discovery() -> tuple[list[dict[str, Any]], str]:
+    """Keep Apple-service failures separate from block-device discovery."""
+    global LAST_IPHONE_DISCOVERY, LAST_IPHONE_DISCOVERY_ERROR
+    if not IPHONE_DISCOVERY_LOCK.acquire(blocking=False):
+        return [dict(item) for item in LAST_IPHONE_DISCOVERY], "iPhone-Erkennung läuft; letzter Stand."
+    try:
+        try:
+            devices = discover_iphones()
+        except (OSError, subprocess.SubprocessError, ValueError) as exc:
+            LAST_IPHONE_DISCOVERY_ERROR = f"iPhone-Erkennung nicht verfügbar: {exc}"
+            return [dict(item) for item in LAST_IPHONE_DISCOVERY], LAST_IPHONE_DISCOVERY_ERROR
+        LAST_IPHONE_DISCOVERY = [dict(item) for item in devices]
+        LAST_IPHONE_DISCOVERY_ERROR = ""
+        return devices, ""
+    finally:
+        IPHONE_DISCOVERY_LOCK.release()
+
+
 def cached_media_discovery(*, reactivate: bool = False) -> tuple[list[dict[str, Any]], str, list[str]]:
     """Return media inventory without hammering a blocked USB/SCSI stack."""
     global DEVICE_DISCOVERY_UNHEALTHY_UNTIL, LAST_DEVICE_DISCOVERY, LAST_DEVICE_DISCOVERY_ERROR
@@ -268,7 +291,7 @@ def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
 
 def _device_ejectable(device: dict[str, Any]) -> bool:
     """Allow an empty external optical tray to open without weakening USB checks."""
-    if device.get("mounted"):
+    if device.get("mounted") or device.get("media_type") == "iphone":
         return False
     return bool(device.get("scan_supported") or device.get("media_type") == "optical")
 
@@ -441,6 +464,15 @@ class TriageHTTPServer(ThreadingHTTPServer):
         self.catalog_path = self.settings_root / "filetypes.json"
         if not self.catalog_path.exists():
             atomic_write(self.catalog_path, json.dumps(default_catalog(), ensure_ascii=False, indent=2).encode())
+        self.iphone_rules_path = self.settings_root / "iphone-triage.json"
+        if not self.iphone_rules_path.exists():
+            atomic_write(self.iphone_rules_path, (BUNDLED_PROJECT_ROOT / "rules" / "iphone-triage.json").read_bytes())
+        self.iphone_rules_error = ""
+        try:
+            load_iphone_rules(self.iphone_rules_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            self.iphone_rules_error = str(exc)
+            logging.error("iPhone-Regeln nicht verfügbar: %s", exc)
         self.settings_lock = threading.Lock()
         self.offline_update_file = Path(os.environ.get(
             "FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE", "/var/lib/forensic-triage/offline-update.tbu",
@@ -533,12 +565,15 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/status":
             try:
                 devices, device_error, _ = cached_media_discovery()
+                iphones, iphone_error = cached_iphone_discovery()
+                devices = [*devices, *iphones]
                 if not device_error:
                     clear_absent_quarantines(devices)
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
                 self._json(HTTPStatus.OK, {
                     "devices": devices,
                     "device_error": device_error,
+                    "iphone_error": iphone_error,
                     "latest": latest,
                     "cases": self.server.case_store.list_cases(),
                     "active_devices": active_device_paths(),
@@ -988,11 +1023,14 @@ class TriageHandler(BaseHTTPRequestHandler):
         """Reactivate software-ejected USB media, then return fresh hardware state."""
         try:
             devices, device_error, paths = cached_media_discovery(reactivate=True)
+            iphones, iphone_error = cached_iphone_discovery()
+            devices = [*devices, *iphones]
             if not device_error:
                 clear_absent_quarantines(devices)
             self._json(HTTPStatus.OK, {
                 "devices": devices,
                 "device_error": device_error,
+                "iphone_error": iphone_error,
                 "reactivated": paths,
                 "active_devices": active_device_paths(),
                 "quarantined_devices": quarantined_device_paths(),
@@ -1078,7 +1116,10 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             with self.server.settings_lock:
                 filetype_catalog = load_catalog(self.server.catalog_path)
-            devices = discover_media_devices()
+            if device_path.startswith("iphone:"):
+                devices, _iphone_error = cached_iphone_discovery()
+            else:
+                devices = discover_media_devices()
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Datenträgerstatus nicht verfügbar: {exc}"})
             return
@@ -1089,6 +1130,16 @@ class TriageHandler(BaseHTTPRequestHandler):
         if device is None:
             self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist nicht mehr verfügbar oder nicht scanbereit."})
             return
+        iphone_rules: dict[str, Any] = {}
+        if device.get("media_type") == "iphone":
+            if self.server.iphone_rules_error:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"iPhone-Regeln nicht verfügbar: {self.server.iphone_rules_error}"})
+                return
+            try:
+                iphone_rules = load_iphone_rules(self.server.iphone_rules_path)
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"iPhone-Regeln nicht verfügbar: {exc}"})
+                return
         if device_path in quarantined_device_paths():
             self._json(
                 HTTPStatus.CONFLICT,
@@ -1105,6 +1156,9 @@ class TriageHandler(BaseHTTPRequestHandler):
             )
             result_dir = run_isolated_scan({
                 "device": device_path,
+                "scan_kind": "iphone" if device.get("media_type") == "iphone" else "block",
+                "udid": device.get("udid", ""),
+                "iphone_rules": iphone_rules,
                 "profile_path": str(self.server.profile_path.parent / f"{profile_ids[0]}.yaml"),
                 "evidence": sighting_number,
                 "results_root": str(self.server.case_store.scan_root(case_number, sighting_number)),

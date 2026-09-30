@@ -253,6 +253,24 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .metrics span, .metrics small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; }
 .metrics strong { display: block; margin: 6px 0 4px; font: 900 33px/1 Arial Black, Impact, sans-serif; }
 .metrics .hot strong { color: var(--amber); }
+.iphone-summary { margin-top: 12px; }
+.iphone-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.iphone-summary-grid > div { min-width: 0; padding: 14px; background: var(--panel); }
+.iphone-summary-grid small, .iphone-summary-grid span { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.iphone-summary-grid strong { display: block; margin: 7px 0; color: var(--ink); font-size: 16px; overflow-wrap: anywhere; }
+.iphone-summary-grid > div:nth-child(2) strong, .iphone-summary-grid > div:nth-child(3) strong { color: var(--amber); font-size: 28px; }
+.iphone-assessment strong { color: var(--acid); }
+.iphone-technical { border-top: 1px solid var(--line); }
+.iphone-technical > summary { padding: 12px 14px; color: var(--acid); cursor: pointer; font-size: 11px; font-weight: 900; }
+.iphone-technical > p { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.iphone-technical table { font-size: 11px; }
+.iphone-technical td { white-space: normal; overflow-wrap: anywhere; }
+.iphone-areas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; padding-top: 1px; background: var(--line); }
+.iphone-area { padding: 11px 14px; background: var(--panel); }
+.iphone-area strong, .iphone-area span, .iphone-area small { display: block; overflow-wrap: anywhere; }
+.iphone-area span { margin-top: 5px; color: var(--acid); font-size: 10px; }
+.iphone-area.unavailable span, .iphone-area.not_checked_limit span { color: var(--amber); }
+.iphone-area small { margin-top: 5px; color: var(--muted); font-size: 10px; }
 .analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }
@@ -570,6 +588,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
 
 @media (max-width: 680px) {
   .analysis-grid { grid-template-columns: 1fr; }
+  .iphone-summary-grid, .iphone-areas { grid-template-columns: 1fr; }
   .detail-workspace { grid-template-columns: 1fr; }
   .inventory-panel, .decision-panel { grid-column: 1; }
   .decision-headline { grid-template-columns: 1fr; }

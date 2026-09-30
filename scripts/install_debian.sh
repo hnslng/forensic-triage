@@ -104,7 +104,7 @@ run_as_owner() {
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-PACKAGES=(git openssh-client python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx)
+PACKAGES=(git openssh-client python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx usbmuxd libimobiledevice-utils ideviceinstaller ifuse)
 if $PI_MODE; then
   PACKAGES+=(network-manager avahi-daemon libnss-mdns nftables)
 fi

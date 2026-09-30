@@ -597,8 +597,11 @@ function renderDeviceEvidence(media = {}, storedDevice = {}) {
   const liveDevice = devices.find((device) => device.serial && device.serial === media.serial) || {};
   const device = { ...liveDevice, ...storedDevice };
   const model = [media.vendor || device.vendor, media.model || device.model].filter(Boolean).join(" ") || "UNBEKANNT";
+  const isIphone = device.media_type === "iphone" || String(media.device_path || "").startsWith("iphone:");
   const isOptical = device.type === "rom" || device.media_type === "optical" || String(media.device_path || "").startsWith("/dev/sr");
-  const readOnly = device.read_only_verified === true
+  const readOnly = isIphone
+    ? "APPLE-DIENSTE · METADATEN NUR LESEND (KEIN HARDWARE-SCHREIBBLOCKER)"
+    : device.read_only_verified === true
     ? "BEIM SCAN VERIFIZIERT"
     : (device.read_only || device.ro ? "AKTIV" : "NICHT DOKUMENTIERT");
   $("evidenceDeviceModel").textContent = model;
@@ -606,9 +609,30 @@ function renderDeviceEvidence(media = {}, storedDevice = {}) {
   $("evidenceDeviceCapacity").textContent = Number(media.size || device.size || 0) > 0
     ? formatBytes(media.size || device.size)
     : "NICHT GEMELDET";
-  $("evidenceDeviceType").textContent = isOptical ? "CD/DVD (USB)" : "USB-DATENTRÄGER";
+  $("evidenceDeviceType").textContent = isIphone ? "IPHONE (APPLE USB-DIENSTE)" : isOptical ? "CD/DVD (USB)" : "USB-DATENTRÄGER";
   $("evidenceDevicePath").textContent = media.device_path || device.path || "—";
   $("evidenceDeviceReadOnly").textContent = readOnly;
+}
+
+function renderIphoneSummary(iphone) {
+  $("iphoneSummary").hidden = !iphone;
+  if (!iphone) return;
+  const device = iphone.device || {};
+  const appHints = iphone.app_hints || [];
+  const fileHints = iphone.file_hints || [];
+  $("iphoneDevice").textContent = [device.device_name, device.model].filter(Boolean).join(" · ") || "IPHONE";
+  $("iphoneSystem").textContent = `IOS ${device.ios_version || "UNBEKANNT"} · ${device.connection_state === "paired" ? "VERTRAUENSWÜRDIG / GEKOPPELT" : String(device.connection_state || "STATUS UNBEKANNT").toUpperCase()}`;
+  $("iphoneAppHintCount").textContent = Number(appHints.length).toLocaleString("de-AT");
+  $("iphoneAppHintNames").textContent = appHints.length ? [...new Set(appHints.map((item) => item.name))].join(" · ") : "KEINE RELEVANTEN APPS IN DER ERFASSTEN LISTE";
+  $("iphoneFileHintCount").textContent = Number(fileHints.length).toLocaleString("de-AT");
+  $("iphoneAssessment").textContent = iphone.assessment || "—";
+  $("iphoneCompleteness").textContent = iphone.complete ? "ERFASSUNG DER ANGEGEBENEN BEREICHE VOLLSTÄNDIG" : "ERFASSUNG UNVOLLSTÄNDIG · DETAILS PRÜFEN";
+  $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
+  $("iphoneApps").innerHTML = (iphone.apps || []).map((app) => {
+    const matches = (app.matches || []).map((match) => `${match.category} (${match.id})`).join(" · ") || "—";
+    return `<tr><td>${escapeHtml(app.name || "—")}</td><td><code>${escapeHtml(app.bundle_id || "—")}</code></td><td>${escapeHtml(app.version || "—")}</td><td>${escapeHtml(matches)}</td></tr>`;
+  }).join("") || '<tr><td colspan="4">APP-LISTE NICHT VERFÜGBAR ODER LEER</td></tr>';
+  $("iphoneAreas").innerHTML = (iphone.areas || []).map((area) => `<div class="iphone-area ${escapeHtml(area.status || "unknown")}"><strong>${escapeHtml(area.area || "BEREICH")}</strong><span>${escapeHtml(String(area.status || "unbekannt").toUpperCase())}${area.file_count !== undefined ? ` · ${Number(area.file_count).toLocaleString("de-AT")} DATEIEN` : ""}</span><small>${escapeHtml(area.message || "")}</small></div>`).join("");
 }
 
 const decisionLabels = {
@@ -643,6 +667,7 @@ function updateDecisionFields() {
 
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
+  renderIphoneSummary(record.iphone || null);
   if (record.media) {
     clearInventoryView();
     const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
@@ -920,19 +945,25 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     : visibleDevices.filter((device) => device.media_type === "optical");
   $("deviceList").innerHTML = dashboardDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
-    const model = [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
+    const iphone = device.media_type === "iphone";
+    const model = iphone
+      ? [device.device_name, device.model].filter(Boolean).join(" · ") || "Apple iPhone"
+      : [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = device.serial || "NICHT GEMELDET";
-    const type = device.media_type === "optical" ? "CD/DVD" : "USB";
+    const type = iphone ? `IPHONE · IOS ${device.ios_version || "?"}` : device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = deviceDiscoveryError || !device.scan_supported || state === "scanning" || state === "timeout";
     const stateReason = state === "timeout"
       ? "ABZIEHEN UND NEU VERBINDEN"
       : (deviceErrors.get(device.path) || device.unavailable_reason || "");
     const optical = device.media_type === "optical";
+    const visibleState = iphone && state === "ready" && device.connection_state !== "paired"
+      ? "IPHONE ENTSPERREN / VERTRAUEN"
+      : stateLabels[state];
     const ejectDisabled = deviceDiscoveryError || ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${stateLabels[state]}"></i><b>${optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
-      <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)} · ${formatBytes(device.size)} · ${type}</span><code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
-      <div class="device-state"><b>${stateLabels[state]}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
+      <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${iphone ? "IPHONE ERKANNT" : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
+      <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)}${iphone ? "" : ` · ${formatBytes(device.size)}`} · ${type}</span><code title="${escapeHtml(serial)}">${iphone ? "UDID" : "SERIAL"} ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
+      <div class="device-state"><b>${escapeHtml(visibleState)}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <div class="device-card-actions${optical ? " optical" : ""}">
         <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
@@ -1082,7 +1113,7 @@ function updateProgress() {
   $("progressBar").style.width = `${Math.max(runningPaths.size ? 8 : 0, percent)}%`;
   if (runningPaths.size) $("progressLabel").textContent = `${runningPaths.size} Grobsichtung${runningPaths.size === 1 ? "" : "en"} parallel …`;
   else if (batchDone === batchTotal) $("progressLabel").textContent = "Sichtungslauf abgeschlossen";
-  $("progressLog").textContent = runningPaths.size ? `$ RO-Prüfung + Inventarisierung: ${[...runningPaths].join(" · ")}` : "$ Protokolle und Prüfsummen aktualisiert";
+  $("progressLog").textContent = runningPaths.size ? `$ Geschützte Metadaten-Inventarisierung: ${[...runningPaths].join(" · ")}` : "$ Protokolle und Prüfsummen aktualisiert";
 }
 
 async function runScan(devicePath, standalone = true) {

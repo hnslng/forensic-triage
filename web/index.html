@@ -92,6 +92,22 @@
           <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
         </div>
 
+        <section id="iphoneSummary" class="panel iphone-summary" hidden>
+          <div class="panel-title"><span>IPHONE</span> METADATEN-GROBSICHTUNG</div>
+          <div class="iphone-summary-grid">
+            <div><small>GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
+            <div><small>KRYPTO-/APP-HINWEISE</small><strong id="iphoneAppHintCount">0</strong><span id="iphoneAppHintNames">KEINE HINWEISE</span></div>
+            <div><small>DATEI-HINWEISE</small><strong id="iphoneFileHintCount">0</strong><span>ZUGÄNGLICHE BEREICHE · NUR METADATEN</span></div>
+            <div class="iphone-assessment"><small>BEWERTUNG</small><strong id="iphoneAssessment">—</strong><span id="iphoneCompleteness">—</span></div>
+          </div>
+          <details class="iphone-technical">
+            <summary>TECHNISCHE DETAILS · APPS, BUNDLE-IDS UND ZUGRIFFSBEREICHE</summary>
+            <p id="iphoneNotice"></p>
+            <div class="table-wrap"><table><thead><tr><th>APP</th><th>BUNDLE-ID</th><th>VERSION</th><th>KATEGORIE / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
+            <div id="iphoneAreas" class="iphone-areas"></div>
+          </details>
+        </section>
+
         <div class="analysis-grid">
           <article class="panel categories-panel">
             <div class="panel-title"><span>05</span> DATEITYPEN</div>

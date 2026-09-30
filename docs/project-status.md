@@ -1,6 +1,6 @@
 # Projektstand und Nachweise
 
-Stand: **12. September 2026**, Anwendung **v0.2.0-alpha.53**. Einstellungen für Stichwortprofile, Dateitypen und Updates, signierte Offline-Updates sowie kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Nach zwei ausgewerteten Bootstrap-/Selbsttestfehlern wurde Alpha 48 erfolgreich über ein signiertes `.tbu` auf dem Pi installiert; der weitere Offline-Updateablauf wurde im Testbetrieb als funktionierend bestätigt. Alpha 52 ergänzte die gemeinsame Entscheidungszentrale; Alpha 53 korrigiert den Versionsvergleich der Online-Updateprüfung nach einer Neuinstallation von `main`. Einzelheiten: [Bedienung](operation.md), [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
+Stand: **30. September 2026**, Anwendung **v0.2.0-alpha.54**. Einstellungen, signierte Offline-Updates, kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Alpha 54 ergänzt eine reguläre, metadatenbasierte iPhone-USB-Grobsichtung; der Realtest mit einem echten iPhone steht ausdrücklich noch aus. Einzelheiten: [Bedienung](operation.md), [iPhone-Grobsichtung](iphone-triage.md) und [Offline-Updates](offline-updates.md).
 
 ## Was „funktioniert“ hier bedeutet
 
@@ -14,6 +14,7 @@ Stand: **12. September 2026**, Anwendung **v0.2.0-alpha.53**. Einstellungen für
 | Raspberry Pi 3B+ | Installiert und im Testbetrieb; signierte Offline-Updates wurden am 10. September erfolgreich verwendet. | Alpha 53 per `.tbu` aktualisieren; reproduzierbare Neuinstallation, finaler Speicher-/Stromaufbau und Dauerbetrieb. |
 | Netzwerk | Hotspot und Router-LAN verwendet; `http://triagebox.local/` erfolgreich ohne Port aufgerufen. Direkte Pi–Mac-Ethernet-Verbindung mit macOS-Internetfreigabe funktionierte über `192.168.2.2`. | Reiner Direktbetrieb ohne Internetfreigabe, gerätespezifisches Passwort, Firewall-Abnahme und optionaler temporärer WLAN-Wartungsmodus mit automatischem Hotspot-Fallback. |
 | USB-Grobsichtung | Reale Testmedien, darunter drei gleichzeitig angeschlossene Sticks, bereits gesichtet. | Vollständiger Soll-/Ist-Vergleich, systematische Parallel- und Störungstests. |
+| iPhone-Grobsichtung | Reguläre USB-Erkennung, Pairinghinweise, App-/AFC-/File-Sharing-Metadaten, Regeln und Ergebnisansicht implementiert; simulierte Tests bestanden. | Erster dokumentierter Test mit echtem iPhone/iOS, insbesondere Trust-, Sperr-, App- und File-Sharing-Vollständigkeit. |
 | Fallworkflow | Start/Ende, Sichtungsnummern, zwei Entscheidungen, Entscheidungszentrale für abgezogene Medien, Geräte-/Dateimetadaten, PDF und ZIP implementiert. | Vollständiger Probeeinsatz einschließlich Mehrfachabzug, Wiederöffnung, konsistentem Bericht und Pflichtangaben. |
 | Explorer und Archivfilter | Medienwechsel, verspätete Antworten, Filter, Archiv-Unterordner und Pagination automatisch geprüft. | Wiederholung mit bekannten Beständen auf dem Pi; Grenzen bei großen und unvollständigen Katalogen. |
 | Archivverschlüsselung | ZIP/7Z/RAR-Merkmale, ungeklärter Status und lesbare Verzeichnisse implementiert. | Keine allgemeine PDF-/Office-/Volume-Verschlüsselungserkennung; Gründe nur soweit der gespeicherte Index sie liefert. |

@@ -6,6 +6,8 @@ Diese Seite erklärt das System ohne Programmierkenntnisse. Die technische Modul
 
 Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freigegebenen USB-Datenträger an einen abgesicherten Metadaten-Scanner und schreibt Ergebnis, Verlauf und Entscheidung in eine lokale Fallakte.
 
+Seit Alpha 54 erkennt derselbe Koordinator zusätzlich iPhones über die regulären Apple-USB-Dienste. Nach Entsperrung und Trust-Bestätigung liest ein isolierter Worker Basis- und App-Metadaten sowie ausschließlich die von iOS regulär freigegebenen AFC-/File-Sharing-Bereiche. Die Dateien selbst werden nicht geöffnet; nicht erreichbare Listen oder Bereiche bleiben als unvollständig gekennzeichnet. Der iPhone-Lauf erzeugt dieselbe Sichtungsnummer, Fallakte, Trefferansicht und Entscheidung wie ein Datenträgerlauf. Technische Einzelheiten: [iPhone-Grobsichtung](iphone-triage.md).
+
 ## Was passiert beim Anschließen?
 
 1. Linux meldet die vorhandenen Laufwerke.

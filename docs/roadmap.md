@@ -1,6 +1,13 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 12. September 2026 · Anwendung: `v0.2.0-alpha.53`.
+Dokumentationsstand: 30. September 2026 · Anwendung: `v0.2.0-alpha.54`.
+
+## iPhone-Grobsichtung – nächste Abnahme
+
+- Alpha 54 implementiert die kleinste reguläre USB-Stufe ohne Jailbreak oder Sicherheitsumgehung.
+- Auf einem echten Test-iPhone müssen aktuelle iOS-Version, Trust-/Sperrfehler, App-Listen-Vollständigkeit, AFC-Medienbereich und mindestens eine bewusst freigegebene File-Sharing-App dokumentiert verglichen werden.
+- Erst anhand dieses Tests entscheiden, ob `pymobiledevice3` als begründete Kompatibilitätsschicht nötig ist. Keine zweite Architektur und keine Developer-Tunnel nur auf Verdacht ergänzen.
+- Regeln um bestätigte Bundle-IDs erweitern, Treffer fachlich reviewen und UI-Bearbeitung erst nach stabiler Realerfassung priorisieren.
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 

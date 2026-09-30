@@ -430,9 +430,17 @@ class CaseStore:
         except (OSError, json.JSONDecodeError):
             # Older or incomplete records remain readable from their database fields.
             pass
+        iphone: dict[str, Any] | None = None
+        try:
+            stored_iphone = json.loads((result_dir / "iphone.json").read_text(encoding="utf-8"))
+            if isinstance(stored_iphone, dict):
+                iphone = stored_iphone
+        except (OSError, json.JSONDecodeError):
+            pass
         return {
             "media": self._media_dict(row),
             "device": device,
+            "iphone": iphone,
             "summary": summary,
             "hits": {word: int(value.get("count", 0)) for word, value in hits_data.get("by_keyword", {}).items()},
             "archive": self._archive_info(str(row["case_number"]), result_dir),

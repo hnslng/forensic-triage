@@ -1,11 +1,11 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.53 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.54 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
 
-TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern vor Ort. Es inventarisiert mehrere geeignete USB-Datenträger parallel, ordnet Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
+TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern und regulär gekoppelten iPhones vor Ort. Es inventarisiert geeignete Medien, ordnet zugängliche Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
 
 Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
@@ -35,10 +35,12 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - direktes Öffnen und doppelt bestätigtes Entfernen einzelner Fälle mit Dateierhalt im Papierkorb; Rückimport noch offen
 - sicherer Software-Auswurf und erneute Geräteerkennung
 - softwareseitiges Öffnen externer USB-CD/DVD-Laufwerke auch ohne physischen Auswurfknopf
+- integrierte iPhone-Erkennung über reguläre Apple-USB-Dienste mit Geräte-/iOS-/Pairingstatus, App-Metadaten und nur lesend zugänglichen AFC-/File-Sharing-Metadaten
+- lokale iPhone-Regeln für neutrale Wallet-/Krypto-, Börsen-, Messenger-, Cloud-, Banking- und Dateihinweise samt technischer Bundle-ID-/Bereichsansicht
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.53 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.54 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Beim iPhone werden ausschließlich Metadaten regulär zugänglicher AFC-/File-Sharing-Bereiche erfasst. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
 
 Das bedeutet insbesondere:
 
@@ -149,6 +151,7 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Lokale Fallakte und Protokollierung](docs/case-archive.md)
 - [Testplan](docs/test-plan.md)
 - [Realistische USB-/CD-Testmedien](docs/test-media.md)
+- [iPhone-Grobsichtung, Grenzen und erster Realtest](docs/iphone-triage.md)
 - [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
 - [Roadmap und offene Aufgaben](docs/roadmap.md)
 - [Sicherheitsrichtlinie](SECURITY.md)
@@ -168,13 +171,13 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a53` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.53`
-- automatisierte Tests: 137 Python-Tests und 31 isolierte Browser-Tests
+- Paketversion: `0.2.0a54` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.54`
+- automatisierte Tests: 144 Python-Tests und 32 isolierte Browserprüfungen einschließlich simulierter iPhone-Metadaten-/Oberflächenfälle
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
-- Dokumentationsstand: 12. September 2026; der [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
+- Dokumentationsstand: 30. September 2026; der [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
 
 Siehe [docs/roadmap.md](docs/roadmap.md) für die priorisierten nächsten Schritte.
 
@@ -184,4 +187,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.53 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception: entries can be expanded and searched, but file payloads are never extracted or decompressed; compressed directory metadata may be decoded internally. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure”, groups removed undecided media into one persistent decision queue, and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Signed offline application updates can be uploaded through the private hotspot without giving the Pi internet access; releases that change dependencies still require the online path. Pi power health is visible, while reboot and shutdown use a deliberate two-step action and server-side work locks. Installation details are in [docs/installation.md](docs/installation.md); configuration is documented in [docs/configuration.md](docs/configuration.md), and the current limitations are in [docs/roadmap.md](docs/roadmap.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.54 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception. A paired iPhone can expose device, user-app and read-only AFC/File Sharing metadata through normal Apple services; inaccessible or incomplete areas remain explicit. Entries can be expanded and searched, but file payloads are never extracted or decompressed. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure”, groups removed undecided media into one persistent decision queue, and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Signed offline application updates can be uploaded through the private hotspot without giving the Pi internet access; releases that change dependencies still require the online path. Pi power health is visible, while reboot and shutdown use a deliberate two-step action and server-side work locks. Installation details are in [docs/installation.md](docs/installation.md); iPhone scope and testing are in [docs/iphone-triage.md](docs/iphone-triage.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).

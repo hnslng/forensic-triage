@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "app_rules": [
+    {"id": "ledger-live", "category": "Kryptowährung / Wallet", "bundle_ids": ["com.ledger.live"], "name_contains": ["ledger live"]},
+    {"id": "metamask", "category": "Kryptowährung / Wallet", "bundle_ids": ["io.metamask.MetaMask"], "name_contains": ["metamask"]},
+    {"id": "trust-wallet", "category": "Kryptowährung / Wallet", "bundle_ids": ["com.sixdays.trust"], "name_contains": ["trust wallet"]},
+    {"id": "phantom", "category": "Kryptowährung / Wallet", "bundle_ids": ["app.phantom"], "name_contains": ["phantom"]},
+    {"id": "exodus", "category": "Kryptowährung / Wallet", "bundle_ids": ["com.exodusmovement.exodus"], "name_contains": ["exodus"]},
+    {"id": "bluewallet", "category": "Kryptowährung / Wallet", "bundle_ids": ["io.bluewallet.bluewallet"], "name_contains": ["bluewallet", "blue wallet"]},
+    {"id": "coinbase", "category": "Kryptobörse", "bundle_ids": ["com.vilcsak.bitcoin2"], "name_contains": ["coinbase"]},
+    {"id": "binance", "category": "Kryptobörse", "bundle_ids": ["com.czzhao.binance"], "name_contains": ["binance"]},
+    {"id": "kraken", "category": "Kryptobörse", "bundle_ids": ["com.kraken.invest.app"], "name_contains": ["kraken"]},
+    {"id": "crypto-com", "category": "Kryptobörse", "bundle_ids": ["co.mona.Monaco"], "name_contains": ["crypto.com"]},
+    {"id": "okx", "category": "Kryptobörse", "bundle_ids": ["com.okex.OKEx"], "name_contains": ["okx", "okex"]},
+    {"id": "bitpanda", "category": "Kryptobörse", "bundle_ids": ["com.bitpanda.bitpanda"], "name_contains": ["bitpanda"]},
+    {"id": "messenger", "category": "Messenger", "bundle_prefixes": ["net.whatsapp.", "org.whispersystems.", "ph.telegra."], "name_contains": ["whatsapp", "signal", "telegram", "threema"]},
+    {"id": "cloud", "category": "Cloudspeicher", "bundle_prefixes": ["com.getdropbox.", "com.google.Drive", "com.microsoft.skydrive"], "name_contains": ["dropbox", "google drive", "onedrive", "icloud drive"]},
+    {"id": "banking", "category": "Banking/Finanzen", "bundle_prefixes": ["com.revolut.", "com.n26."], "name_contains": ["banking", "bank", "revolut", "n26", "paypal"]}
+  ],
+  "file_rules": [
+    {"id": "wallet-backup", "label": "Mögliches Wallet-Backup", "path_contains": ["wallet", "keystore", "seed", "recovery", "backup"], "extensions": ["dat", "json", "backup", "bak"]},
+    {"id": "crypto-export", "label": "Möglicher Krypto-/Transaktionsexport", "path_contains": ["bitcoin", "ethereum", "crypto", "transaction", "transaktion", "coinbase", "binance", "kraken"], "extensions": ["csv", "xlsx", "pdf", "json"]}
+  ]
+}

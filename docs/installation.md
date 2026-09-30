@@ -2,6 +2,8 @@
 
 Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät; Installation, Online-Updates und mehrere USB-Sichtungen wurden praktisch verwendet. Der Alpha-45- und Offline-Update-Praxistest, systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
 
+Für die iPhone-Grobsichtung installiert der Pi-Installer zusätzlich `usbmuxd`, `libimobiledevice-utils`, `ideviceinstaller` und `ifuse`. Eine Neuinstallation erledigt das automatisch. Ein signiertes Offline-`.tbu` kann keine fehlenden Debian-Pakete nachladen; bei einem bestehenden System müssen diese Pakete einmal online installiert oder der aktuelle Installer erneut ausgeführt werden. Einzelheiten und Realtest: [iPhone-Grobsichtung](iphone-triage.md).
+
 ## Kurzfassung
 
 ### Raspberry Pi mit kurzzeitig öffentlichem Repository

@@ -40,10 +40,12 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 
 ## 4. Datenträger sichten
 
+Ein iPhone erscheint als eigene Kachel mit Gerätename/Modell, iOS-Version und Kopplungshinweis. TRIAGE//BOX fragt keinen Gerätecode ab. Die Ergebnisansicht trennt App-/Dateihinweise, Bewertung und technische Details. `ERFASSUNG UNVOLLSTÄNDIG` bedeutet ausdrücklich, dass ein Bereich oder die App-Liste nicht zuverlässig verfügbar war; es bedeutet nicht „keine Treffer“. Vollständige Grenzen und erster Realtest: [iPhone-Grobsichtung](iphone-triage.md).
+
 1. Berechtigung und physische Identität des Mediums außerhalb des Tools klären.
 2. Medium anschließen.
 3. Geräteangaben wie Typ, Größe, Modell und Seriennummer prüfen.
-4. Bei aktivem Auto-Scan beginnt ein geeignetes, ungemountetes USB-Medium automatisch. Mehrere geeignete USB-Medien können parallel laufen.
+4. Bei aktivem Auto-Scan beginnt ein geeignetes, ungemountetes USB-Medium automatisch. Ein erkanntes iPhone muss entsperrt sein; die Apple-Abfrage „Diesem Computer vertrauen“ ist am iPhone zu bestätigen. Mehrere geeignete Sichtungen können parallel laufen.
 5. Fortschritt und Abschlussstatus je Kachel beobachten.
 6. Detailansicht öffnen und Kategorien, Stichworttreffer, Größen sowie Verzeichnisbaum prüfen.
 

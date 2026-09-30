@@ -1,6 +1,6 @@
 # Testplan / Test plan
 
-Stand: 12. September 2026 · Anwendung: `v0.2.0-alpha.53`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md).
+Stand: 30. September 2026 · Anwendung: `v0.2.0-alpha.54`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Der konkrete erste iPhone-Test steht in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone).
 
 ## Automatisierte Tests
 
@@ -36,7 +36,7 @@ Bei vorhandenem Google Chrome kann `TRIAGE_BROWSER_CHANNEL=chrome` gesetzt werde
 
 Geprüft werden Medien- und Filterwechsel mit absichtlich verspäteten Antworten, Rückkehr zum Dashboard, A–B–A-Wechsel, Archiv-Unterordner und Pagination in beiden Ansichten, Wiederholung fehlgeschlagener Archivabrufe sowie numerische Sichtungssortierung. Dazu kommen Archivstatusfilter, exakte Dateiauswahl, Fallende im Updatefenster, der signierte Offline-Upload, die flackerfreie Wiederherstellung des Updatefensters und die Strom-/Systemansicht einschließlich Sperr- und Bestätigungszustand. Die Entscheidungszentrale wird mit drei gleichzeitig entfernten synthetischen Medien, verhindertem Dialogstapeln, eindeutiger Zuordnung und Rückkehr aus der Sichtung geprüft. Eine reine Navigation darf keine schreibenden API-Aufrufe auslösen.
 
-Für Alpha 53 sind 31 Browserprüfungen und 137 Python-Tests erfolgreich. Installer und Updater führen Python-Tests aus, nicht diese Browser- oder Hardwareprüfungen.
+Für Alpha 54 sind 144 Python-Tests und 32 isolierte Browserprüfungen mit dem vorhandenen Chrome-Kanal erfolgreich. Installer und Updater führen Python-Tests aus, nicht diese Browser- oder Hardwareprüfungen.
 
 ## Vollständiger Probeeinsatz
 
@@ -148,7 +148,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.53` dokumentiert einen funktionsfähigen Prototyp. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.54` dokumentiert einen funktionsfähigen Prototyp mit noch nicht real getesteter iPhone-Erweiterung. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Nutzdatei-Extraktion oder Inhaltsanalyse, keine Passwortversuche, sichtbare Limitkennzeichnung und unveränderte äußere Datei-/Ordnerzahlen. Komprimierte Archivverzeichnisse können intern dekodiert werden. Das Zusatzzeitbudget ist zu messen; es ist keine harte Garantie gegen blockierte Bibliotheks-/Kernelzugriffe. Überschreitungen und nicht beendete Prozesse müssen als Abweichung protokolliert werden.
 

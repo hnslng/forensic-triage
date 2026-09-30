@@ -37,7 +37,9 @@ Der Standardmodus `fast` liest aktive Verzeichniseinträge über einen Mount mit
 
 ## Webdienst und Parallelität
 
-Der Webdienst erkennt Geräte mit `lsblk`, führt geeignete USB- und optische Medien getrennt und reserviert pro physischem Gerätepfad höchstens einen laufenden Worker-Prozess. Jeder Worker ruft den abgesicherten Scanner in einem privaten Linux-Mount-Namensraum auf. Einzelbefehle und Gesamtscan besitzen eigene Zeitlimits. Nach einer Überschreitung wird der betroffene Gerätepfad bis zum erkannten Abziehen gesperrt. Die Prozessisolation soll andere Scans und den Webdienst verfügbar halten; ein blockierter Kernel, USB-Bus oder Systemdatenträger kann diese Trennung dennoch überwinden.
+Der Webdienst erkennt Blockgeräte mit `lsblk` und iPhones getrennt über `idevice_id`; ein Fehler der Apple-Dienste darf die USB-/CD-Erkennung nicht blockieren. Er reserviert pro physischem Gerätepfad beziehungsweise `iphone:<UDID>` höchstens einen laufenden Worker-Prozess. Jeder Worker läuft in einem privaten Linux-Mount-Namensraum. Einzelbefehle und Gesamtscan besitzen eigene Zeitlimits. Nach einer Überschreitung wird der betroffene Gerätepfad bis zum erkannten Abziehen gesperrt. Die Prozessisolation soll andere Scans und den Webdienst verfügbar halten; ein blockierter Kernel, USB-Bus oder Systemdatenträger kann diese Trennung dennoch überwinden.
+
+Der iPhone-Worker verwendet dieselbe Prozess- und Fallarchitektur, aber keine Blockgeräteoperationen. Nach regulärer Kopplung liest er Basis- und App-Metadaten und bindet AFC-/File-Sharing-Bereiche mit `ifuse -o ro` ein. Nur nach zusätzlicher Verifikation des Nur-Lese-Mounts beginnt die Metadateninventarisierung. `iphone.json` und `apps.json` ergänzen die üblichen Ergebnisdateien; `files.csv`, `hits.json`, `summary.json`, Entscheidung, Audit und Exporte bleiben gemeinsam.
 
 Bei USB-Speichern dient die gemeldete Datenträgerseriennummer als Wiedererkennungsmerkmal. Bei CD/DVD darf die Seriennummer des Laufwerks nicht als Identität der eingelegten Scheibe gelten. Dort bildet der Webdienst deshalb eine Medienkennung aus vorhandener Volume-UUID, Volume-Label und Kapazität. Diese Kennung ist eine praktische Grobsichtungsidentität und keine kryptografische Prüfsumme des optischen Mediums.
 
@@ -67,7 +69,7 @@ Der Online-Updater bereitet einen Git-Tag in einem eigenen Release-Verzeichnis v
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.53 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem bereitgestellte Zeitstempel. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.54 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem beziehungsweise regulären Apple-Diensten bereitgestellte Metadaten. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 

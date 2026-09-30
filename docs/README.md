@@ -4,7 +4,7 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 ## Einstieg
 
-Stand: 12. September 2026, Anwendung Alpha 53. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
+Stand: 30. September 2026, Anwendung Alpha 54. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
 
 1. [Installation und Aktualisierung](installation.md)
    - [Signierte Offline-Updates](offline-updates.md)
@@ -15,6 +15,7 @@ Stand: 12. September 2026, Anwendung Alpha 53. Zuerst [Projektstand und Nachweis
 5. [Forensische Sicherheitsgrenzen](forensic-safety.md)
 6. [Geplantes Zugriffsschutzkonzept](security-concept.md)
 7. [Roadmap und offene Aufgaben](roadmap.md)
+8. [iPhone-Grobsichtung über USB](iphone-triage.md)
 
 ## Technische Unterlagen
 
@@ -36,7 +37,7 @@ Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Ras
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.53. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a53`; der Git-Tag lautet `v0.2.0-alpha.53`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.54. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a54`; der Git-Tag lautet `v0.2.0-alpha.54`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

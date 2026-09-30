@@ -501,6 +501,41 @@ test('multiple removed undecided media use one queue and return there from detai
   assert.equal(await page.locator('#pendingDecisionBanner').isVisible(), true);
 });
 
+test('iphone card and result distinguish hints from incomplete collection', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    renderDevices([{
+      path: 'iphone:000-test', serial: '000-test', udid: '000-test', vendor: 'Apple',
+      model: 'iPhone15,4', device_name: 'Testtelefon', ios_version: '18.6',
+      media_type: 'iphone', connection_state: 'trust_required', scan_supported: true,
+      unavailable_reason: 'iPhone entsperren und „Diesem Computer vertrauen“ bestätigen.',
+    }]);
+  });
+  assert.match(await page.locator('#deviceList').innerText(), /IPHONE ENTSPERREN \/ VERTRAUEN/);
+  assert.match(await page.locator('#deviceList').innerText(), /IOS 18\.6/);
+  await page.evaluate(() => renderRecord({
+    media: { id: 99, case_number: 'TEST', sighting_number: 'SICHT-099', device_path: 'iphone:000-test', serial: '000-test', vendor: 'Apple', model: 'iPhone15,4', decision: 'open' },
+    device: { media_type: 'iphone', device_name: 'Testtelefon', ios_version: '18.6', write_operations_performed: false },
+    summary: { evidence: 'SICHT-099', file_count: 1, directory_count: 1, total_file_bytes: 20, keyword_matches: 1, categories_by_count: { 'Web-Dateien': 1 }, largest_files: [] },
+    hits: { wallet: 1 }, archive: {},
+    iphone: {
+      device: { device_name: 'Testtelefon', model: 'iPhone15,4', ios_version: '18.6', connection_state: 'paired' },
+      apps_status: 'complete', file_sharing_status: 'incomplete: nicht verfügbar', complete: false,
+      app_hints: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', id: 'wallet', category: 'Kryptowährung / Wallet' }],
+      file_hints: [{ path: 'AFC_MEDIA/wallet.json', id: 'backup', label: 'Mögliches Wallet-Backup' }],
+      apps: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', matches: [{ id: 'wallet', category: 'Kryptowährung / Wallet' }] }],
+      areas: [{ area: 'AFC_MEDIA', status: 'unavailable', message: 'Bereich nicht zugänglich' }],
+      assessment: 'Relevante Hinweise vorhanden – weitere Untersuchung empfohlen',
+      notice: 'Nur Triage-Hinweise.',
+    },
+  }));
+  assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /ERFASSUNG UNVOLLSTÄNDIG/);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /TEST WALLET/i);
+  assert.match(await page.locator('#iphoneNotice').textContent(), /FILE SHARING: INCOMPLETE/);
+});
+
 test('largest-file sizes remain visible without horizontal scrolling for long paths', async t => {
   const longPath = 'Sehr langer Ordner/'.repeat(12) + 'Langer Dateiname '.repeat(20) + '.mkv';
   const { page } = await setup(t, url => {
