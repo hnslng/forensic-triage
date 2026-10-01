@@ -1,6 +1,6 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.56`
+Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.57`
 
 ## Zweck und Grenze
 
@@ -26,7 +26,7 @@ Die gemeinsame Ausgangsliste für App- und Dateimetadaten liegt in `src/forensic
 
 App-Regeln prüfen zuerst exakte Bundle-IDs, dann exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Die mitgelieferte Liste enthält keine unbestätigten Bundle-IDs; diese können nach Realtest ergänzt werden. Wallets, Hardware-Wallet-Apps und Börsen werden als hohe Hinweise kategorisiert, Portfolio-/Steuer- und Markt-Apps niedriger. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln kombinieren Dateinamen/Pfad, gegebenenfalls Kontext und Endung; sie lesen keine Dateiinhalte. `wallet.dat` ist ein Namenshinweis, nicht der Nachweis einer funktionsfähigen Wallet.
 
-Die Telefonansicht zeigt zunächst Identität, App-Kategorien und Erfassungsgrenzen. Die zugängliche Dateistatistik ist ein aufklappbarer Nebenbereich. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
+Die Telefonansicht zeigt zuerst Gerät, Anzahl erfasster Benutzer-Apps, Anzahl zugänglicher Dateien, Krypto-Hinweise und aufklappbare App-Kategorien. Krypto-Details erscheinen nur bei Treffern. Seriennummer, UDID, genaue Zugriffsgrenzen und die vollständige App-Liste sind gesondert aufklappbar; die detaillierte Dateistatistik bleibt ein Nebenbereich. „Zugängliche Bereiche erfasst“ behauptet keine vollständige Telefonauslesung. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
 
 ## Zuverlässigkeit und Einschränkungen
 

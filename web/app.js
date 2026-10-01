@@ -753,7 +753,7 @@ function renderDeviceEvidence(media = {}, storedDevice = {}) {
   $("evidenceDeviceReadOnly").textContent = readOnly;
 }
 
-function renderIphoneSummary(iphone) {
+function renderIphoneSummary(iphone, accessibleFiles = 0) {
   $("iphoneSummary").hidden = !iphone;
   if (!iphone) return;
   const device = iphone.device || {};
@@ -766,12 +766,17 @@ function renderIphoneSummary(iphone) {
   $("iphoneHardware").textContent = `MODELLKENNUNG ${device.model_number || device.hardware_model || "NICHT GEMELDET"}`;
   const apps = iphone.apps || [];
   $("iphoneAppsCount").textContent = Number(apps.length).toLocaleString("de-AT");
+  $("iphoneAccessibleFiles").textContent = Number(accessibleFiles).toLocaleString("de-AT");
   $("iphoneAppsStatus").textContent = iphone.apps_status === "complete" ? "BENUTZER-APP-LISTE ERFASST" : "APP-LISTE UNVOLLSTÄNDIG / UNBEKANNT";
-  $("iphoneAppHintCount").textContent = Number(new Set(appHints.map(item => item.bundle_id || item.name)).size).toLocaleString("de-AT");
-  $("iphoneAppHintNames").textContent = appHints.length ? [...new Set(appHints.map(item => item.name))].slice(0, 4).join(" · ") : "KEIN HINWEIS IN ERFASSTER APP-LISTE";
-  $("iphoneFileHintCount").textContent = Number(new Set(fileHints.map(item => item.path)).size).toLocaleString("de-AT");
+  const appHintCount = new Set(appHints.map(item => item.bundle_id || item.name)).size;
+  const fileHintCount = new Set(fileHints.map(item => item.path)).size;
+  $("iphoneAppHintCount").textContent = appHintCount.toLocaleString("de-AT");
+  $("iphoneFileHintCount").textContent = fileHintCount.toLocaleString("de-AT");
+  $("iphoneHintCount").textContent = (appHintCount + fileHintCount).toLocaleString("de-AT");
+  $("iphoneHintSummary").classList.toggle("has-hints", appHintCount + fileHintCount > 0);
   $("iphoneAssessment").textContent = iphone.assessment || "—";
-  $("iphoneCompleteness").textContent = iphone.complete ? "ERFASSTE BEREICHE VOLLSTÄNDIG" : "ERFASSUNG UNVOLLSTÄNDIG";
+  $("iphoneCompleteness").textContent = iphone.complete ? "ZUGÄNGLICHE BEREICHE ERFASST" : "ERFASSUNG UNVOLLSTÄNDIG";
+  $("iphoneCompleteness").classList.toggle("incomplete", !iphone.complete);
   $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
   const grouped = new Map();
   for (const app of apps) {
@@ -792,13 +797,13 @@ function renderIphoneSummary(iphone) {
 }
 
 function renderCryptoFindings(crypto, isPhone) {
-  $("cryptoFindings").hidden = !crypto;
+  $("cryptoFindings").hidden = !crypto || (isPhone && !(crypto.app_hints?.length || crypto.file_hints?.length));
   if (!crypto) return;
   const apps = crypto.app_hints || [];
   const files = crypto.file_hints || [];
   $("cryptoRulesVersion").textContent = crypto.rules?.version ? `REGELSTAND V${crypto.rules.version}` : "ÄLTERE SICHTUNG";
   $("cryptoScope").textContent = isPhone
-    ? "Hinweise aus erfasster Benutzer-App-Liste und zugänglichen Dateinamen. Kein Nachweis für Wallet-Inhalte; gesperrte Bereiche bleiben unbekannt."
+    ? "Hinweise aus Apps und zugänglichen Dateinamen · keine Inhaltsanalyse."
     : "Hinweise nur aus Dateinamen und Pfaden des Grobindex. Keine Inhaltsanalyse und kein Nachweis für Krypto-Vermögenswerte.";
   const appRows = apps.slice(0, 100).map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
   const fileRows = files.slice(0, 100).map(item => {
@@ -843,6 +848,8 @@ function updateDecisionFields() {
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   const isPhone = Boolean(record.iphone);
+  $("inventoryTitle").textContent = isPhone ? "ZUGÄNGLICHE DATEIEN DES TELEFONS" : "DATEIEN DIESES MEDIUMS";
+  $("decisionTitle").textContent = isPhone ? "ENTSCHEIDUNG ZUM TELEFON" : "ENTSCHEIDUNG ZUM DATENTRÄGER";
   if (isPhone) {
     $("phoneFiles").appendChild($("classicAnalysis"));
     $("phoneFiles").hidden = false;
@@ -855,7 +862,7 @@ function renderRecord(record) {
     $("phoneFiles").hidden = true;
     $("classicHome").after($("cryptoFindings"));
   }
-  renderIphoneSummary(record.iphone || null);
+  renderIphoneSummary(record.iphone || null, record.summary?.file_count || 0);
   renderCryptoFindings(record.crypto || null, isPhone);
   if (record.media) {
     clearInventoryView();

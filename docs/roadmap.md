@@ -1,10 +1,10 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.56`.
+Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.57`.
 
 ## iPhone-Grobsichtung – nächste Abnahme
 
-- [ ] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Backend und HTML/CSS/JS müssen aus demselben Release stammen. Beim ersten Realtest zeigte der Pi trotz Alpha 55 noch die alte Telefonansicht; vor einer Designabnahme den Web-Root des Dienstes und den tatsächlich ausgelieferten HTML-Stand vergleichen.
+- [x] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Der Pi zeigte mit Alpha 55 noch altes HTML. Alpha 56 bindet den Web-Root an das aktive Release; der neue Stand wurde auf dem Pi per Screenshot sichtbar. Nach Alpha 57 erneut prüfen.
 - Alpha 54 implementiert die kleinste reguläre USB-Stufe ohne Jailbreak oder Sicherheitsumgehung.
 - Auf einem echten Test-iPhone müssen aktuelle iOS-Version, Trust-/Sperrfehler, App-Listen-Vollständigkeit, AFC-Medienbereich und mindestens eine bewusst freigegebene File-Sharing-App dokumentiert verglichen werden.
 - Erst anhand dieses Tests entscheiden, ob `pymobiledevice3` als begründete Kompatibilitätsschicht nötig ist. Keine zweite Architektur und keine Developer-Tunnel nur auf Verdacht ergänzen.

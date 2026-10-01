@@ -86,24 +86,29 @@
         </div>
 
         <section id="iphoneSummary" class="panel iphone-summary" hidden>
-          <div class="panel-title"><span>TELEFON</span> GERÄT &amp; METADATEN-GROBSICHTUNG</div>
-          <div class="iphone-identity">
-            <div><small>GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
-            <div><small>SERIENNUMMER</small><strong id="iphoneSerial">NICHT GEMELDET</strong><span>VON APPLE GEMELDETE KENNUNG</span></div>
-            <div><small>UDID</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
+          <div class="panel-title"><span>TELEFON</span> ÜBERBLICK</div>
+          <div class="iphone-head">
+            <div><small>ANGESCHLOSSENES GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
+            <span id="iphoneCompleteness" class="iphone-coverage">—</span>
           </div>
           <div class="iphone-overview">
-            <div><small>BENUTZER-APPS ERFASST</small><strong id="iphoneAppsCount">0</strong><span id="iphoneAppsStatus">—</span></div>
-            <div><small>KRYPTO-APP-HINWEISE</small><strong id="iphoneAppHintCount">0</strong><span id="iphoneAppHintNames">—</span></div>
-            <div><small>KRYPTO-DATEIHINWEISE</small><strong id="iphoneFileHintCount">0</strong><span>NUR ZUGÄNGLICHE DATEINAMEN</span></div>
-            <div class="iphone-assessment"><small>ERFASSUNGSUMFANG</small><strong id="iphoneCompleteness">—</strong><span id="iphoneAssessment">—</span></div>
+            <div><small>APPS ERFASST</small><strong id="iphoneAppsCount">0</strong><span id="iphoneAppsStatus">—</span></div>
+            <div><small>ZUGÄNGLICHE DATEIEN</small><strong id="iphoneAccessibleFiles">0</strong><span>FREIGEGEBENE BEREICHE</span></div>
+            <div id="iphoneHintSummary"><small>KRYPTO-HINWEISE</small><strong id="iphoneHintCount">0</strong><span>APPS <b id="iphoneAppHintCount">0</b> · DATEINAMEN <b id="iphoneFileHintCount">0</b></span></div>
           </div>
           <div class="iphone-main">
-            <div><h3>APP-KATEGORIEN</h3><div id="iphoneCategories" class="iphone-categories"></div></div>
-            <div><h3>ZUGRIFFSBEREICHE</h3><div id="iphoneAreas" class="iphone-areas"></div></div>
+            <h3>APP-KATEGORIEN <small>ANTIPPEN FÜR APP-NAMEN</small></h3>
+            <div id="iphoneCategories" class="iphone-categories"></div>
           </div>
           <details class="iphone-technical">
-            <summary>TECHNISCHE DETAILS · VOLLSTÄNDIGE APP-LISTE, BUNDLE-IDS UND REGELN</summary>
+            <summary>GERÄTEKENNUNGEN, ZUGRIFFSGRENZEN &amp; APP-DETAILS ANZEIGEN</summary>
+            <div class="iphone-identity">
+              <div><small>SERIENNUMMER</small><strong id="iphoneSerial">NICHT GEMELDET</strong></div>
+              <div><small>UDID</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
+            </div>
+            <div class="iphone-scope"><strong>ERFASSUNGSUMFANG</strong><span id="iphoneAssessment">—</span><small>Nur von iOS freigegebene Bereiche; keine vollständige Telefonauslesung.</small></div>
+            <h3>ZUGRIFFSBEREICHE</h3><div id="iphoneAreas" class="iphone-areas"></div>
+            <h3>VOLLSTÄNDIGE APP-LISTE</h3>
             <p id="iphoneNotice"></p>
             <div class="table-wrap"><table><thead><tr><th>APP</th><th>BUNDLE-ID</th><th>VERSION</th><th>KATEGORIE / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
           </details>
@@ -152,12 +157,12 @@
         </div>
         </div>
         <details id="phoneFiles" class="panel phone-files" hidden>
-          <summary class="panel-title"><span>↓</span> ZUGÄNGLICHE DATEIBEREICHE <small id="phoneFileCount">—</small></summary>
+          <summary class="panel-title">ZUGÄNGLICHE DATEIBEREICHE <small id="phoneFileCount">—</small></summary>
         </details>
 
         <div id="documentationGrid" class="detail-workspace" hidden>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
-            <summary class="panel-title"><span>08</span> DATEIEN DIESES MEDIUMS <small>EXPLORER &amp; SUCHE</small></summary>
+            <summary class="panel-title"><span>08</span> <b id="inventoryTitle">DATEIEN DIESES MEDIUMS</b> <small>EXPLORER &amp; SUCHE</small></summary>
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
               <button id="inventoryLoad" type="button">SUCHEN</button>
@@ -178,7 +183,7 @@
             <button id="inventoryMore" class="inventory-more" type="button" hidden>WEITERE DATEIEN LADEN</button>
           </details>
           <article class="panel decision-panel">
-            <div class="panel-title"><span>09</span> ENTSCHEIDUNG ZUM DATENTRÄGER</div>
+            <div class="panel-title"><span>09</span> <b id="decisionTitle">ENTSCHEIDUNG ZUM DATENTRÄGER</b></div>
             <p id="decisionHelp" class="decision-help">Wählen Sie <b>„Sichern“</b> oder <b>„Nicht sichern“</b>. Eine Beweismittelnummer ist nur bei Sicherung erforderlich; eine Nicht-Sicherung muss nachvollziehbar begründet werden.</p>
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>

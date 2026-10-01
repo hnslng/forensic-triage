@@ -1,6 +1,6 @@
 # Projektstand und Nachweise
 
-Stand: **1. Oktober 2026**, Anwendung **v0.2.0-alpha.56**. Einstellungen, signierte Offline-Updates, kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Alpha 55 ergänzt eine eigenständige iPhone-Ergebnisansicht und gemeinsame Krypto-Metadatenregeln für Telefon-Apps und Dateien auf allen Medien. Ein echter iPhone-Test und die Installation dieses Stands auf dem Pi stehen ausdrücklich noch aus. Einzelheiten: [Bedienung](operation.md), [iPhone-Grobsichtung](iphone-triage.md), [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
+Stand: **1. Oktober 2026**, Anwendung **v0.2.0-alpha.57**. Einstellungen, signierte Offline-Updates, kontrollierte Systemaktionen und Pi-Stromstatus sind implementiert. Alpha 55 ergänzt eine eigenständige iPhone-Ergebnisansicht und gemeinsame Krypto-Metadatenregeln; Alpha 56 korrigiert die Web-Auslieferung aus dem aktiven Release, Alpha 57 verdichtet die Telefonansicht. Erste Screenshots eines echten iPhones liegen vor; eine systematische Geräte- und Vollständigkeitsabnahme sowie die Installation von Alpha 57 auf dem Pi stehen noch aus. Einzelheiten: [Bedienung](operation.md), [iPhone-Grobsichtung](iphone-triage.md), [Einstellungen](settings.md) und [Offline-Updates](offline-updates.md).
 
 ## Was „funktioniert“ hier bedeutet
 

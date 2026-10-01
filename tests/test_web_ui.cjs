@@ -522,6 +522,7 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
     device: { media_type: 'iphone', device_name: 'Testtelefon', ios_version: '18.6', write_operations_performed: false },
     summary: { evidence: 'SICHT-099', file_count: 1, directory_count: 1, total_file_bytes: 20, keyword_matches: 1, categories_by_count: { 'Web-Dateien': 1 }, largest_files: [] },
     hits: { wallet: 1 }, archive: {},
+    crypto: { rules: { version: 1 }, app_hints: [{ name: 'Test Wallet', category: 'wallet', reason: 'Testregel' }], file_hints: [{ path: 'AFC_MEDIA/wallet.json', matches: [{ category: 'wallet', reason: 'Dateiname' }] }] },
     iphone: {
       device: { device_name: 'Testtelefon', model: 'iPhone15,4', ios_version: '18.6', connection_state: 'paired' },
       apps_status: 'complete', file_sharing_status: 'incomplete: nicht verfügbar', complete: false,
@@ -535,7 +536,10 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
   }));
   assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
   assert.match(await page.locator('#iphoneSummary').innerText(), /ERFASSUNG UNVOLLSTÄNDIG/);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /TEST WALLET/i);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /KRYPTO-HINWEISE\s+2/i);
+  assert.equal(await page.locator('#cryptoFindings').isVisible(), true);
+  assert.match(await page.locator('#decisionTitle').innerText(), /TELEFON/);
+  if (process.env.TRIAGE_SCREENSHOT) await page.locator('#results').screenshot({ path: process.env.TRIAGE_SCREENSHOT });
   assert.match(await page.locator('#iphoneNotice').textContent(), /FILE SHARING: INCOMPLETE/);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
   assert.equal(await page.locator('#phoneFiles').isVisible(), true);

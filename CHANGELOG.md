@@ -2,6 +2,12 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.57] – 2026-10-01
+
+- Telefonansicht neu gewichtet: Gerät, zugängliche Dateien, App-Kategorien und Krypto-Hinweise zuerst; Seriennummer, UDID, Zugriffsgrenzen und vollständige App-Tabelle in einem aufklappbaren Technikbereich.
+- Der Krypto-Detailbereich erscheint beim Telefon nur bei Treffern. Kennzahlen beschreiben ausdrücklich nur zugängliche Bereiche; Telefonbezeichnungen ersetzen generische Datenträger-Titel.
+- „Jetzt prüfen“ im Systemupdate ohne angebotenes Update kompakt zentriert.
+
 ## [0.2.0-alpha.56] – 2026-10-01
 
 - Die Weboberfläche wird vom systemd-Dienst ausdrücklich aus dem aktiven Release-Verzeichnis geladen; ein alter `WEB_ROOT` in der lokalen Konfiguration kann nach einem Update nicht mehr die vorige Telefonansicht anzeigen.
