@@ -2,6 +2,13 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.55] – 2026-10-01
+
+- Eigene iPhone-Ergebnisansicht mit getrennt ausgewiesener Seriennummer und UDID, App-Kategorien, Erfassungsstatus und sekundär aufklappbarer Dateistatistik. Fehlende Listen/Bereiche bleiben ausdrücklich unvollständig.
+- Gemeinsame, versionierte Krypto-Regeln für App-Metadaten und Dateinamen auf iPhone, USB und anderen indexierten Medien. Neue Einstellungsregisterkarte zum Bearbeiten, Importieren und Exportieren; jeder Scan speichert Regel-Snapshot und konkrete Treffergründe.
+- Messenger, Cloud und Banking sind neutrale Kategorien; sie erscheinen nicht als Krypto-Hinweis. Die gebündelte Startliste verwendet exakte App-Namen, keine unbestätigten Bundle-IDs. Dateitreffer bleiben Metadatenhinweise, ohne Inhalte zu lesen.
+- Android und andere Telefone sind noch nicht implementiert; die geplanten Grenzen stehen in der Roadmap. Automatische Python- und Browserprüfungen erweitert, iPhone-Praxistest weiterhin offen.
+
 ## [0.2.0-alpha.54] – 2026-09-30
 
 - Erste integrierte iPhone-Grobsichtung über reguläre Apple-USB-Dienste: Geräte-/iOS-/Kopplungsmetadaten, Benutzer-App-Metadaten und nur lesend zugängliche AFC-/File-Sharing-Bereiche.

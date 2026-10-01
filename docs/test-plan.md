@@ -1,6 +1,8 @@
 # Testplan / Test plan
 
-Stand: 30. September 2026 · Anwendung: `v0.2.0-alpha.54`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Der konkrete erste iPhone-Test steht in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone).
+Stand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.55`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Der konkrete erste iPhone-Test steht in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone).
+
+Für Alpha 55 zusätzlich prüfen: im Einstellungsfenster Krypto-Regel ändern und speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `summary.json` und Fall-ZIP vergleichen. Eine bestehende Sichtung muss unverändert bleiben. Ein neutral kategorisierter Messenger darf nicht als Krypto-App-Hinweis zählen. Bei iPhone-Tests Seriennummer und UDID getrennt gegen die vom Gerät gemeldeten Werte prüfen; fehlende Seriennummer darf nicht mit der UDID ersetzt werden. Ein abgezogenes iPhone ohne gemeldete Seriennummer muss trotzdem als offline mit offener Entscheidung sichtbar bleiben.
 
 ## Automatisierte Tests
 
@@ -148,7 +150,7 @@ Jede Abweichung ist bis zu einer nachvollziehbaren Erklärung ein fehlgeschlagen
 
 ## Releasekriterium
 
-`v0.2.0-alpha.54` dokumentiert einen funktionsfähigen Prototyp mit noch nicht real getesteter iPhone-Erweiterung. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
+`v0.2.0-alpha.55` dokumentiert einen funktionsfähigen Prototyp mit noch nicht real getesteter iPhone-Erweiterung. Eine spätere Einsatzversion benötigt bestandene Hardwaretests, ein Sicherheitsreview, verschlüsselten Fallspeicher, getestete Wiederherstellung, festgelegte Betriebsprozesse und dokumentierte Freigabe.
 
 Für den ZIP-/ISO-/7Z-/RAR-Schnellindex müssen zusätzlich intakte, beschädigte, verschlüsselte, mehrteilige und sehr große Testcontainer geprüft werden. Nachzuweisen sind: keine Nutzdatei-Extraktion oder Inhaltsanalyse, keine Passwortversuche, sichtbare Limitkennzeichnung und unveränderte äußere Datei-/Ordnerzahlen. Komprimierte Archivverzeichnisse können intern dekodiert werden. Das Zusatzzeitbudget ist zu messen; es ist keine harte Garantie gegen blockierte Bibliotheks-/Kernelzugriffe. Überschreitungen und nicht beendete Prozesse müssen als Abweichung protokolliert werden.
 

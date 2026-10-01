@@ -57,6 +57,8 @@ Seit Alpha 44 liegen bearbeitete Profile als YAML-Dateien unter `FORENSIC_TRIAGE
 
 Der Webdienst übergibt einen Katalog-Snapshot an den isolierten Worker. Vor Statistik und Export ordnet `apply_catalog()` sowohl äußere Dateien als auch virtuelle Archivdateien anhand desselben Snapshots ein. `filetype-catalog.json` und die Referenz in `summary.json` dokumentieren diesen Stand; Leseansichten greifen weiterhin auf gespeicherte Kategorien zu. Die technische Auswahl unterstützter Archivleser bleibt davon getrennt. Migrationsdetails stehen in [settings.md](settings.md).
 
+`crypto_rules.py` verwaltet zusätzlich eine gemeinsame, versionierte Regelsammlung. Der Webdienst übergibt denselben unveränderlichen Stand an iPhone- und Medien-Worker. Der iPhone-Worker prüft gemeldete App-Metadaten und zugängliche Dateinamen; der Medien-Worker prüft Metadatenpfade einschließlich bereits katalogisierter virtueller Containerdateien. `crypto-rules.json` und `crypto-hints.json` speichern Regelstand und konkrete Gründe pro Sichtung. Neutrale Kategorien (Messenger, Cloud, Banking) bleiben App-Kategorien, aber keine Krypto-Hinweise. Laufende und historische Scans werden durch Einstellungsänderungen nicht umklassifiziert.
+
 Die Suche arbeitet ausschließlich auf Namen und Pfaden, einschließlich katalogisierter ZIP-/ISO-/7Z-/RAR-Pfade. Sie ist nicht gleichbedeutend mit Inhaltsanalyse oder struktureller Erkennung eines Wallets.
 
 ## Frontend
@@ -69,7 +71,7 @@ Der Online-Updater bereitet einen Git-Tag in einem eigenen Release-Verzeichnis v
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.54 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem beziehungsweise regulären Apple-Diensten bereitgestellte Metadaten. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.55 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem beziehungsweise regulären Apple-Diensten bereitgestellte Metadaten. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 

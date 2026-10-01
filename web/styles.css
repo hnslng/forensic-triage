@@ -254,12 +254,34 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .metrics strong { display: block; margin: 6px 0 4px; font: 900 33px/1 Arial Black, Impact, sans-serif; }
 .metrics .hot strong { color: var(--amber); }
 .iphone-summary { margin-top: 12px; }
-.iphone-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); }
-.iphone-summary-grid > div { min-width: 0; padding: 14px; background: var(--panel); }
-.iphone-summary-grid small, .iphone-summary-grid span { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.iphone-summary-grid strong { display: block; margin: 7px 0; color: var(--ink); font-size: 16px; overflow-wrap: anywhere; }
-.iphone-summary-grid > div:nth-child(2) strong, .iphone-summary-grid > div:nth-child(3) strong { color: var(--amber); font-size: 28px; }
+.iphone-identity, .iphone-overview { display: grid; gap: 1px; background: var(--line); }
+.iphone-identity { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.iphone-overview { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.iphone-identity > div, .iphone-overview > div { min-width: 0; padding: 15px; background: var(--panel); }
+.iphone-identity small, .iphone-overview small, .iphone-identity span, .iphone-overview span { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.iphone-identity strong, .iphone-overview strong { display: block; margin: 7px 0; color: var(--ink); font-size: 17px; overflow-wrap: anywhere; }
+.iphone-overview > div:nth-child(2) strong, .iphone-overview > div:nth-child(3) strong { color: var(--amber); font-size: 30px; }
 .iphone-assessment strong { color: var(--acid); }
+.iphone-main { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+.iphone-main > div { min-width: 0; background: var(--panel); padding: 15px; }
+.iphone-main h3 { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.iphone-category { border-top: 1px dashed var(--line); }
+.iphone-category summary { display: flex; justify-content: space-between; gap: 10px; padding: 11px 2px; cursor: pointer; font-size: 13px; }
+.iphone-category.crypto summary { color: var(--acid); }
+.iphone-category ul { margin: 0; padding: 0 0 12px 23px; color: var(--ink); font-size: 12px; line-height: 1.6; }
+.iphone-empty { margin: 0; padding: 15px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.phone-files { margin-top: 12px; }
+.phone-files > summary { cursor: pointer; }
+.phone-files #classicAnalysis { padding: 12px; }
+.crypto-findings { margin-top: 12px; }
+.crypto-findings > p { margin: 0; padding: 14px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.crypto-hint-list { list-style: none; margin: 0; padding: 0 14px 14px; }
+.crypto-hint-list li { border-top: 1px dashed var(--line); padding: 10px 0; }
+.crypto-hint-list strong, .crypto-hint-list span { display: block; overflow-wrap: anywhere; }
+.crypto-hint-list strong { color: var(--acid); font-size: 13px; }
+.crypto-hint-list span { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.crypto-file-link { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 0; cursor: pointer; }
+.crypto-file-link:hover strong { text-decoration: underline; }
 .iphone-technical { border-top: 1px solid var(--line); }
 .iphone-technical > summary { padding: 12px 14px; color: var(--acid); cursor: pointer; font-size: 11px; font-weight: 900; }
 .iphone-technical > p { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
@@ -432,7 +454,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .settings-modal.nested-open::backdrop { background: transparent; backdrop-filter: none; }
 .settings-modal { width: min(960px, calc(100% - 28px)); height: min(680px, calc(100vh - 36px)); overflow: hidden; }
 .settings-modal[open] { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
-.settings-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+.settings-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
 .settings-tabs button { min-height: 52px; padding: 12px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-size: 14px; font-weight: 900; cursor: pointer; }
 .settings-tabs button[aria-pressed="true"] { color: var(--acid); border-bottom-color: var(--acid); background: #181e13; }
 .settings-tabs button.update-available { color: var(--amber); }
@@ -464,6 +486,19 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 #catalogSave { border-color: var(--acid); background: var(--acid); color: #111; }
 .settings-modal button:disabled { opacity: .45; cursor: not-allowed; }
 #catalogMessage { min-height: 22px; margin: 14px 0 0; color: var(--amber); font-size: 12px; }
+.crypto-rule-list { max-height: 32vh; overflow-y: auto; margin: 10px 0; border-top: 1px solid var(--line); }
+.crypto-rule { border-bottom: 1px dashed var(--line); }
+.crypto-rule summary { display: flex; justify-content: space-between; gap: 12px; padding: 12px 4px; cursor: pointer; font-size: 13px; }
+.crypto-rule summary small { color: var(--muted); }
+.crypto-rule-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px; background: #0d110b; }
+.crypto-rule-fields label { min-width: 0; color: var(--muted); font-size: 11px; }
+.crypto-rule-fields input:not([type="checkbox"]), .crypto-rule-fields select, .crypto-rule-fields textarea { display: block; width: 100%; margin-top: 5px; padding: 9px; border: 1px solid var(--line); background: #090b08; color: var(--ink); font-size: 12px; }
+.crypto-rule-fields textarea { resize: vertical; }
+.crypto-enabled { display: flex; gap: 9px; align-items: center; }
+.crypto-remove { border: 1px solid var(--danger); background: transparent; color: var(--danger); cursor: pointer; }
+.crypto-import { display: inline-flex; align-items: center; padding: 9px 12px; border: 1px solid var(--line); color: var(--ink); cursor: pointer; font-size: 12px; }
+#cryptoSave { background: var(--acid); color: #111; }
+#cryptoMessage { min-height: 22px; color: var(--amber); font-size: 12px; }
 @media (max-width: 620px) {
   .settings-pane { padding: 14px; }
   .settings-profile { grid-template-columns: 1fr 1fr; }
@@ -588,7 +623,9 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
 
 @media (max-width: 680px) {
   .analysis-grid { grid-template-columns: 1fr; }
-  .iphone-summary-grid, .iphone-areas { grid-template-columns: 1fr; }
+  .iphone-identity, .iphone-overview, .iphone-main, .iphone-areas { grid-template-columns: 1fr; }
+  .settings-tabs { grid-template-columns: repeat(2, 1fr); }
+  .crypto-rule-fields { grid-template-columns: 1fr; }
   .detail-workspace { grid-template-columns: 1fr; }
   .inventory-panel, .decision-panel { grid-column: 1; }
   .decision-headline { grid-template-columns: 1fr; }

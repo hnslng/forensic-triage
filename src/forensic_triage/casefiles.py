@@ -437,10 +437,18 @@ class CaseStore:
                 iphone = stored_iphone
         except (OSError, json.JSONDecodeError):
             pass
+        crypto: dict[str, Any] | None = None
+        try:
+            stored_crypto = json.loads((result_dir / "crypto-hints.json").read_text(encoding="utf-8"))
+            if isinstance(stored_crypto, dict):
+                crypto = stored_crypto
+        except (OSError, json.JSONDecodeError):
+            pass
         return {
             "media": self._media_dict(row),
             "device": device,
             "iphone": iphone,
+            "crypto": crypto,
             "summary": summary,
             "hits": {word: int(value.get("count", 0)) for word, value in hits_data.get("by_keyword", {}).items()},
             "archive": self._archive_info(str(row["case_number"]), result_dir),

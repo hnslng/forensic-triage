@@ -85,28 +85,44 @@
           <div class="result-actions"><button id="openEvidenceModal" type="button">NACHWEIS ANZEIGEN</button><div class="result-stamp">SCAN ABGESCHLOSSEN <b id="resultDuration">0,732 s</b></div></div>
         </div>
 
+        <section id="iphoneSummary" class="panel iphone-summary" hidden>
+          <div class="panel-title"><span>TELEFON</span> GERÄT &amp; METADATEN-GROBSICHTUNG</div>
+          <div class="iphone-identity">
+            <div><small>GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
+            <div><small>SERIENNUMMER</small><strong id="iphoneSerial">NICHT GEMELDET</strong><span>VON APPLE GEMELDETE KENNUNG</span></div>
+            <div><small>UDID</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
+          </div>
+          <div class="iphone-overview">
+            <div><small>BENUTZER-APPS ERFASST</small><strong id="iphoneAppsCount">0</strong><span id="iphoneAppsStatus">—</span></div>
+            <div><small>KRYPTO-APP-HINWEISE</small><strong id="iphoneAppHintCount">0</strong><span id="iphoneAppHintNames">—</span></div>
+            <div><small>KRYPTO-DATEIHINWEISE</small><strong id="iphoneFileHintCount">0</strong><span>NUR ZUGÄNGLICHE DATEINAMEN</span></div>
+            <div class="iphone-assessment"><small>ERFASSUNGSUMFANG</small><strong id="iphoneCompleteness">—</strong><span id="iphoneAssessment">—</span></div>
+          </div>
+          <div class="iphone-main">
+            <div><h3>APP-KATEGORIEN</h3><div id="iphoneCategories" class="iphone-categories"></div></div>
+            <div><h3>ZUGRIFFSBEREICHE</h3><div id="iphoneAreas" class="iphone-areas"></div></div>
+          </div>
+          <details class="iphone-technical">
+            <summary>TECHNISCHE DETAILS · VOLLSTÄNDIGE APP-LISTE, BUNDLE-IDS UND REGELN</summary>
+            <p id="iphoneNotice"></p>
+            <div class="table-wrap"><table><thead><tr><th>APP</th><th>BUNDLE-ID</th><th>VERSION</th><th>KATEGORIE / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
+          </details>
+        </section>
+
+        <section id="cryptoFindings" class="panel crypto-findings" hidden>
+          <div class="panel-title"><span>↗</span> KRYPTO-HINWEISE <small id="cryptoRulesVersion"></small></div>
+          <p id="cryptoScope"></p>
+          <div id="cryptoHintList"></div>
+        </section>
+
+        <div id="classicHome">
+        <div id="classicAnalysis">
         <div class="metrics">
           <article><span>DATEIEN</span><strong id="fileCount">960</strong><small>ERFASST</small></article>
           <article><span>ORDNER</span><strong id="directoryCount">18</strong><small>ERFASST</small></article>
           <article class="hot"><span>STICHWORTTREFFER</span><strong id="keywordMatches">60</strong><small>IN NAMEN / PFADEN</small></article>
           <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
         </div>
-
-        <section id="iphoneSummary" class="panel iphone-summary" hidden>
-          <div class="panel-title"><span>IPHONE</span> METADATEN-GROBSICHTUNG</div>
-          <div class="iphone-summary-grid">
-            <div><small>GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
-            <div><small>KRYPTO-/APP-HINWEISE</small><strong id="iphoneAppHintCount">0</strong><span id="iphoneAppHintNames">KEINE HINWEISE</span></div>
-            <div><small>DATEI-HINWEISE</small><strong id="iphoneFileHintCount">0</strong><span>ZUGÄNGLICHE BEREICHE · NUR METADATEN</span></div>
-            <div class="iphone-assessment"><small>BEWERTUNG</small><strong id="iphoneAssessment">—</strong><span id="iphoneCompleteness">—</span></div>
-          </div>
-          <details class="iphone-technical">
-            <summary>TECHNISCHE DETAILS · APPS, BUNDLE-IDS UND ZUGRIFFSBEREICHE</summary>
-            <p id="iphoneNotice"></p>
-            <div class="table-wrap"><table><thead><tr><th>APP</th><th>BUNDLE-ID</th><th>VERSION</th><th>KATEGORIE / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
-            <div id="iphoneAreas" class="iphone-areas"></div>
-          </details>
-        </section>
 
         <div class="analysis-grid">
           <article class="panel categories-panel">
@@ -133,6 +149,11 @@
             </div>
           </article>
         </div>
+        </div>
+        </div>
+        <details id="phoneFiles" class="panel phone-files" hidden>
+          <summary class="panel-title"><span>↓</span> ZUGÄNGLICHE DATEIBEREICHE <small id="phoneFileCount">—</small></summary>
+        </details>
 
         <div id="documentationGrid" class="detail-workspace" hidden>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
@@ -297,12 +318,27 @@
       <nav class="settings-tabs" aria-label="Einstellungsbereich">
         <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
+        <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">KRYPTO-REGELN</button>
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">SYSTEM &amp; UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane" aria-labelledby="settingsProfilesTab">
         <p>Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
         <div id="settingsProfilesList" class="settings-profiles"></div>
         <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+      </section>
+      <section id="settingsCryptoPane" class="settings-pane" aria-labelledby="settingsCryptoTab" hidden>
+        <p>Gemeinsame Regeln für Telefon-Apps und zugängliche Dateinamen auf allen Medien. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
+        <div class="catalog-toolbar"><label for="cryptoSearch">REGEL SUCHEN<input id="cryptoSearch" type="search" placeholder="APP, KATEGORIE ODER BEGRIFF …" /></label><span id="cryptoVersion"></span></div>
+        <h3>APP-REGELN</h3><div id="cryptoAppRules" class="crypto-rule-list"></div>
+        <button id="cryptoAddApp" type="button">+ APP-REGEL</button>
+        <h3>DATEIREGELN</h3><div id="cryptoFileRules" class="crypto-rule-list"></div>
+        <button id="cryptoAddFile" type="button">+ DATEIREGEL</button>
+        <div class="catalog-actions">
+          <button id="cryptoExport" type="button">JSON EXPORTIEREN</button>
+          <label class="crypto-import">JSON IMPORTIEREN<input id="cryptoImport" type="file" accept=".json,application/json" hidden /></label>
+          <button id="cryptoSave" type="button" disabled>REGELN SPEICHERN</button>
+        </div>
+        <p id="cryptoMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsFiletypesPane" class="settings-pane" aria-labelledby="settingsFiletypesTab" hidden>
         <p>Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>

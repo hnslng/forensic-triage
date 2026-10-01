@@ -8,6 +8,8 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freig
 
 Seit Alpha 54 erkennt derselbe Koordinator zusätzlich iPhones über die regulären Apple-USB-Dienste. Nach Entsperrung und Trust-Bestätigung liest ein isolierter Worker Basis- und App-Metadaten sowie ausschließlich die von iOS regulär freigegebenen AFC-/File-Sharing-Bereiche. Die Dateien selbst werden nicht geöffnet; nicht erreichbare Listen oder Bereiche bleiben als unvollständig gekennzeichnet. Der iPhone-Lauf erzeugt dieselbe Sichtungsnummer, Fallakte, Trefferansicht und Entscheidung wie ein Datenträgerlauf. Technische Einzelheiten: [iPhone-Grobsichtung](iphone-triage.md).
 
+Seit Alpha 55 nutzt die Telefonansicht eine eigene Zusammenfassung: Seriennummer und UDID werden getrennt gezeigt, dann erfasste Benutzer-Apps nach Kategorie und die Zugriffsgrenzen. Die zugängliche Dateistatistik ist nur ein aufklappbarer Nebenbereich. Eine gemeinsame lokale Krypto-Regelsammlung prüft App-Metadaten und Datei-/Pfadnamen auf iPhone und Medien; ein Treffer beweist weder Dateiinhalte noch Krypto-Vermögenswerte. Pro Sichtung werden Regelstand und Treffergründe gespeichert. Andere Telefone sind noch nicht unterstützt: [Abgrenzung](andere-telefone.md).
+
 ## Was passiert beim Anschließen?
 
 1. Linux meldet die vorhandenen Laufwerke.
@@ -56,6 +58,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
 | `src/forensic_triage/pdf_report.py` | kompakter druckbarer Fallbericht |
+| `src/forensic_triage/crypto_rules.py` | gemeinsame App-/Dateinamenregeln, Validierung und Versionierung |
 | `profiles/*.yaml` | mitgelieferte Stichwortprofile |
 | `src/forensic_triage/settings.py` | lokale Einstellungen, Katalogprüfung, Migration und Scan-Snapshots |
 

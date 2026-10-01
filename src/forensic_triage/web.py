@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from importlib.resources import files as package_files
 import io
 import json
 import logging
@@ -25,8 +24,9 @@ from urllib.parse import parse_qs, urlsplit
 from . import __version__
 from .casefiles import CaseStore
 from .commands import run_command
+from .crypto_rules import bundled_rules as bundled_crypto_rules, load_rules as load_crypto_rules, save_rules as save_crypto_rules, seed_rules as seed_crypto_rules
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
-from .iphone import discover_iphones, load_rules as load_iphone_rules
+from .iphone import discover_iphones
 from .scan_process import ScanTimeoutError, run_isolated_scan
 from .settings import SettingsConflict, atomic_write, default_catalog, load_catalog, prepare_profiles, save_catalog
 
@@ -465,15 +465,8 @@ class TriageHTTPServer(ThreadingHTTPServer):
         if not self.catalog_path.exists():
             atomic_write(self.catalog_path, json.dumps(default_catalog(), ensure_ascii=False, indent=2).encode())
         self.iphone_rules_path = self.settings_root / "iphone-triage.json"
-        if not self.iphone_rules_path.exists():
-            bundled_rules = package_files("forensic_triage").joinpath("data/iphone-triage.json").read_bytes()
-            atomic_write(self.iphone_rules_path, bundled_rules)
-        self.iphone_rules_error = ""
-        try:
-            load_iphone_rules(self.iphone_rules_path)
-        except (OSError, ValueError, json.JSONDecodeError) as exc:
-            self.iphone_rules_error = str(exc)
-            logging.error("iPhone-Regeln nicht verfügbar: %s", exc)
+        self.crypto_rules_path = self.settings_root / "crypto-rules.json"
+        seed_crypto_rules(self.crypto_rules_path, self.iphone_rules_path)
         self.settings_lock = threading.Lock()
         self.offline_update_file = Path(os.environ.get(
             "FORENSIC_TRIAGE_OFFLINE_UPDATE_FILE", "/var/lib/forensic-triage/offline-update.tbu",
@@ -604,6 +597,14 @@ class TriageHandler(BaseHTTPRequestHandler):
             except (OSError, ValueError) as exc:
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
             return
+        if route == "/api/settings/crypto":
+            try:
+                with self.server.settings_lock:
+                    rules = load_crypto_rules(self.server.crypto_rules_path)
+                self._json(HTTPStatus.OK, {"rules": rules, "defaults": bundled_crypto_rules()})
+            except (OSError, ValueError) as exc:
+                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
+            return
         if route == "/api/updates":
             self._json(HTTPStatus.OK, {"update": read_update_status(), "jobs": update_job_states()})
             return
@@ -725,6 +726,9 @@ class TriageHandler(BaseHTTPRequestHandler):
         if route == "/api/settings/filetypes":
             self._post_filetypes()
             return
+        if route == "/api/settings/crypto":
+            self._post_crypto_rules()
+            return
         if route == "/api/profiles":
             self._post_profile()
             return
@@ -767,6 +771,19 @@ class TriageHandler(BaseHTTPRequestHandler):
         except SettingsConflict as exc:
             self._json(HTTPStatus.CONFLICT, {"error": str(exc)})
         except (OSError, ValueError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+
+    def _post_crypto_rules(self) -> None:
+        try:
+            payload = self._read_payload(max_bytes=131072)
+            with self.server.settings_lock:
+                rules = save_crypto_rules(
+                    self.server.crypto_rules_path, payload.get("rules"), str(payload.get("base_sha256", "")),
+                )
+            self._json(HTTPStatus.OK, {"rules": rules})
+        except SettingsConflict as exc:
+            self._json(HTTPStatus.CONFLICT, {"error": str(exc)})
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def _post_profile(self) -> None:
@@ -1117,6 +1134,7 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             with self.server.settings_lock:
                 filetype_catalog = load_catalog(self.server.catalog_path)
+                crypto_rules = load_crypto_rules(self.server.crypto_rules_path)
             if device_path.startswith("iphone:"):
                 devices, _iphone_error = cached_iphone_discovery()
             else:
@@ -1131,16 +1149,6 @@ class TriageHandler(BaseHTTPRequestHandler):
         if device is None:
             self._json(HTTPStatus.CONFLICT, {"error": "Datenträger ist nicht mehr verfügbar oder nicht scanbereit."})
             return
-        iphone_rules: dict[str, Any] = {}
-        if device.get("media_type") == "iphone":
-            if self.server.iphone_rules_error:
-                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"iPhone-Regeln nicht verfügbar: {self.server.iphone_rules_error}"})
-                return
-            try:
-                iphone_rules = load_iphone_rules(self.server.iphone_rules_path)
-            except (OSError, ValueError, json.JSONDecodeError) as exc:
-                self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"iPhone-Regeln nicht verfügbar: {exc}"})
-                return
         if device_path in quarantined_device_paths():
             self._json(
                 HTTPStatus.CONFLICT,
@@ -1159,7 +1167,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 "device": device_path,
                 "scan_kind": "iphone" if device.get("media_type") == "iphone" else "block",
                 "udid": device.get("udid", ""),
-                "iphone_rules": iphone_rules,
+                "crypto_rules": crypto_rules,
                 "profile_path": str(self.server.profile_path.parent / f"{profile_ids[0]}.yaml"),
                 "evidence": sighting_number,
                 "results_root": str(self.server.case_store.scan_root(case_number, sighting_number)),

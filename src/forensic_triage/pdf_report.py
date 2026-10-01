@@ -225,14 +225,20 @@ def build_case_pdf(
         ) or "USB-Datenträger"
         serial = str(row.get("serial") or "nicht gemeldet")
         is_iphone = str(row.get("device_path") or "").startswith("iphone:")
+        device_data = {}
+        if is_iphone:
+            try:
+                device_data = json.loads((casefiles_root / str(row.get("result_path")) / "device.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
         content = rough_content(summary)
         total_bytes = summary.get("total_file_bytes", 0)
         decision, decision_color = decision_summary(row)
         table_data.append([
             Paragraph(f"<b>{sighting}</b><br/>{scanned}", cell),
             Paragraph(
-                f"<b>{html.escape(device_name)}</b><br/>{'UDID' if is_iphone else 'Seriennummer'}: {html.escape(serial)}"
-                + ("<br/>Apple-Dienste · nur zugängliche Metadaten" if is_iphone
+                f"<b>{html.escape(device_name)}</b><br/>Seriennummer: {html.escape(serial)}"
+                + (f"<br/>UDID: {html.escape(str(device_data.get('udid') or 'nicht gemeldet'))}<br/>Apple-Dienste · nur zugängliche Metadaten" if is_iphone
                    else f"<br/>Kapazität: {html.escape(format_bytes(row.get('size')))}"),
                 cell,
             ),

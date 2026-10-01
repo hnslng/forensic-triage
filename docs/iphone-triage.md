@@ -1,6 +1,6 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 30. September 2026 · Anwendung `v0.2.0-alpha.54`
+Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.55`
 
 ## Zweck und Grenze
 
@@ -12,7 +12,7 @@ Die Oberfläche zeigt ausschließlich Triage-Hinweise. Eine installierte Wallet-
 
 1. `usbmuxd` stellt die USB-Verbindung zu den Apple-Diensten her.
 2. `idevice_id` erkennt angeschlossene iPhones. `idevicepair` prüft beziehungsweise startet die reguläre Kopplung; erforderlichenfalls muss das iPhone entsperrt und „Diesem Computer vertrauen“ bestätigt werden.
-3. `ideviceinfo` liest Gerätename, ProductType, iOS-/Build-Version und verfügbare Gerätekennung.
+3. `ideviceinfo` liest Gerätename, ProductType, iOS-/Build-Version, die gemeldete **Seriennummer** und getrennt davon die **UDID**. Wird eine Kennung nicht gemeldet, steht dort ausdrücklich „nicht gemeldet“; die UDID wird nicht als Seriennummer ausgegeben.
 4. `ideviceinstaller` fragt die Metadaten der gemeldeten Benutzer-Apps ab. Name, Bundle-ID und Version werden anhand lokaler Regeln kategorisiert.
 5. `ifuse` bindet den regulären AFC-Medienbereich und ausdrücklich per File Sharing freigegebene App-Dokumentbereiche jeweils nur lesend in den privaten Mount-Namensraum des Scan-Workers ein.
 6. TRIAGE//BOX liest dort nur Dateisystem-Metadaten: Name, Pfad, Endung, Größe und verfügbaren Änderungszeitpunkt. Nutzdateien werden nicht geöffnet.
@@ -22,9 +22,11 @@ Der allgemeine Bereich „Auf meinem iPhone“ ist nicht als vollständiger glob
 
 ## Erkennungsregeln
 
-Die mitgelieferte Ausgangsliste liegt paketiert in `src/forensic_triage/data/iphone-triage.json`. Beim ersten Start wird eine dauerhafte lokale Kopie als `iphone-triage.json` im konfigurierten `FORENSIC_TRIAGE_SETTINGS_ROOT` angelegt. Updates überschreiben diese lokale Kopie nicht.
+Die gemeinsame Ausgangsliste für App- und Dateimetadaten liegt in `src/forensic_triage/data/crypto-rules.json`. Beim ersten Start wird sie als `crypto-rules.json` im konfigurierten `FORENSIC_TRIAGE_SETTINGS_ROOT` angelegt. Eine bereits vorhandene ältere `iphone-triage.json` wird einmalig als Ausgangspunkt übernommen; danach wird ausschließlich die neue gemeinsame Datei verwendet. Updates überschreiben lokale Anpassungen nicht. Die Oberfläche bietet unter **Einstellungen → Krypto-Regeln** Bearbeiten, JSON-Import und -Export. Jeder neue Scan speichert seine eigene `crypto-rules.json`-Kopie und `crypto-hints.json` mit konkreten Treffergründen.
 
-App-Regeln verwenden exakte Bundle-IDs, Bundle-Präfixe und neutrale Namensfragmente. Enthalten sind zunächst Wallet-/Krypto-, Kryptobörsen-, Messenger-, Cloud- und Banking-Hinweise, unter anderem Ledger Live, MetaMask, Trust Wallet, Coinbase, Binance, Kraken, Crypto.com, Phantom, Exodus, OKX, Bitpanda und BlueWallet. Dateiregeln kombinieren Pfadfragmente und Endungen, damit etwa `wallet-backup.json` als möglicher Hinweis markiert wird, nicht aber jede beliebige JSON-Datei.
+App-Regeln prüfen zuerst exakte Bundle-IDs, dann exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Die mitgelieferte Liste enthält keine unbestätigten Bundle-IDs; diese können nach Realtest ergänzt werden. Wallets, Hardware-Wallet-Apps und Börsen werden als hohe Hinweise kategorisiert, Portfolio-/Steuer- und Markt-Apps niedriger. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln kombinieren Dateinamen/Pfad, gegebenenfalls Kontext und Endung; sie lesen keine Dateiinhalte. `wallet.dat` ist ein Namenshinweis, nicht der Nachweis einer funktionsfähigen Wallet.
+
+Die Telefonansicht zeigt zunächst Identität, App-Kategorien und Erfassungsgrenzen. Die zugängliche Dateistatistik ist ein aufklappbarer Nebenbereich. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
 
 ## Zuverlässigkeit und Einschränkungen
 

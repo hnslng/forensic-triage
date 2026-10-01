@@ -62,6 +62,9 @@ function gate() {
 const settingsCatalog = { version: 1, sha256: 'first', categories: { Bilder: ['jpg', 'png'], Dokumente: ['pdf'] } };
 function settingsFixture(url) {
   if (url.pathname === '/api/settings/filetypes') return { json: { catalog: settingsCatalog, defaults: settingsCatalog } };
+  if (url.pathname === '/api/settings/crypto') return { json: { rules: { version: 1, sha256: 'crypto-first', app_rules: [
+    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, bundle_ids: ['io.test.wallet'], aliases: [], terms: [] },
+  ], file_rules: [] } } };
   if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein', version: '1.0', keyword_count: 2 }] } };
   if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
 }
@@ -522,9 +525,9 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
     iphone: {
       device: { device_name: 'Testtelefon', model: 'iPhone15,4', ios_version: '18.6', connection_state: 'paired' },
       apps_status: 'complete', file_sharing_status: 'incomplete: nicht verfügbar', complete: false,
-      app_hints: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', id: 'wallet', category: 'Kryptowährung / Wallet' }],
-      file_hints: [{ path: 'AFC_MEDIA/wallet.json', id: 'backup', label: 'Mögliches Wallet-Backup' }],
-      apps: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', matches: [{ id: 'wallet', category: 'Kryptowährung / Wallet' }] }],
+      app_hints: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', id: 'wallet', category: 'wallet' }],
+      file_hints: [{ path: 'AFC_MEDIA/wallet.json', id: 'backup', category: 'wallet' }],
+      apps: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', matches: [{ id: 'wallet', category: 'wallet' }] }],
       areas: [{ area: 'AFC_MEDIA', status: 'unavailable', message: 'Bereich nicht zugänglich' }],
       assessment: 'Relevante Hinweise vorhanden – weitere Untersuchung empfohlen',
       notice: 'Nur Triage-Hinweise.',
@@ -534,6 +537,41 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
   assert.match(await page.locator('#iphoneSummary').innerText(), /ERFASSUNG UNVOLLSTÄNDIG/);
   assert.match(await page.locator('#iphoneSummary').innerText(), /TEST WALLET/i);
   assert.match(await page.locator('#iphoneNotice').textContent(), /FILE SHARING: INCOMPLETE/);
+  assert.equal(await page.locator('#classicHome').isHidden(), true);
+  assert.equal(await page.locator('#phoneFiles').isVisible(), true);
+  await page.locator('#iphoneCategories summary').click();
+  assert.match(await page.locator('#iphoneCategories').innerText(), /TEST WALLET/i);
+});
+
+test('crypto rules editor and shared hints remain separate from neutral apps', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  assert.equal(await page.locator('#cryptoAppRules .crypto-rule').count(), 1);
+  await page.locator('#cryptoAppRules .crypto-rule summary').click();
+  await page.locator('#cryptoAppRules [data-rule-field="name"]').fill('Test Wallet 2');
+  assert.equal(await page.locator('#cryptoSave').isEnabled(), true);
+  await page.locator('#cryptoSearch').fill('Kein Treffer');
+  assert.equal(await page.locator('#cryptoAppRules .crypto-rule').isHidden(), true);
+  await page.locator('#cryptoSearch').fill('');
+  await page.locator('#cryptoExport').click();
+});
+
+test('iPhone without reported serial uses UDID path for online and pending decision', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    currentCaseMedia = [{ id: 77, case_number: 'TEST', sighting_number: 'SICHT-077', device_path: 'iphone:udid-77', serial: '',
+      vendor: 'Apple', model: 'iPhone', file_count: 0, keyword_matches: 0, decision: 'open' }];
+    renderDevices([{ path: 'iphone:udid-77', udid: 'udid-77', serial: '', media_type: 'iphone', model: 'iPhone',
+      scan_supported: true, connection_state: 'paired' }]);
+  });
+  assert.equal(await page.locator('#mediaCards .media-card').count(), 1);
+  assert.equal(await page.locator('#decisionQueueList .decision-queue-item').count(), 0);
+  assert.equal(await page.locator('#mediaCards .media-eject').count(), 0);
+  await page.evaluate(() => renderDevices([]));
+  assert.equal(await page.locator('#decisionQueueList .decision-queue-item').count(), 1);
+  assert.match(await page.locator('#decisionQueueList').innerText(), /UDID udid-77/);
 });
 
 test('largest-file sizes remain visible without horizontal scrolling for long paths', async t => {

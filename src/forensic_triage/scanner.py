@@ -20,6 +20,7 @@ from .container_inventory import (
     merge_catalogs,
     virtual_files,
 )
+from .crypto_rules import bundled_rules, find_file_hints
 from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
 from .fast_inventory import partition_path_for_start, readonly_mount_inventory
@@ -90,6 +91,7 @@ def scan(
     keywords: list[str] | None = None,
     profile_sources: list[dict[str, str]] | None = None,
     filetype_catalog: dict[str, Any] | None = None,
+    crypto_rules: dict[str, Any] | None = None,
 ) -> Path:
     started = time.monotonic()
     catalog = (catalog_snapshot(filetype_catalog.get("categories"), filetype_catalog.get("version"))
@@ -177,6 +179,13 @@ def scan(
             container_catalog = merge_catalogs(container_catalogs)
 
         apply_catalog(all_files, container_catalog, catalog)
+        rule_snapshot = crypto_rules or bundled_rules()
+        crypto_files = find_file_hints([*all_files, *virtual_files(container_catalog)], rule_snapshot)
+        write_json(result_dir / "crypto-rules.json", rule_snapshot)
+        write_json(result_dir / "crypto-hints.json", {
+            "rules": {"version": rule_snapshot["version"], "sha256": rule_snapshot["sha256"]},
+            "app_hints": [], "file_hints": crypto_files,
+        })
         # Web requests already froze keywords and profile provenance before I/O.
         profile = (load_profile(profile_path) if keywords is None or not profile_sources
                    else {**profile_sources[0], "keywords": keywords})
@@ -205,6 +214,8 @@ def scan(
                 "duration_seconds": round(time.monotonic() - started, 3),
                 "scan_mode": mode,
                 "filetype_catalog": {"version": catalog["version"], "sha256": catalog["sha256"]},
+                "crypto_rules": {"version": rule_snapshot["version"], "sha256": rule_snapshot["sha256"]},
+                "crypto_file_hints": len(crypto_files),
                 "keyword_matches": hits["total_matches"],
                 "container_index": {
                     "status": container_catalog.get("status", "ok"),

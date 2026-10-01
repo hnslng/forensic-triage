@@ -1,4 +1,4 @@
-# Einstellungen: Stichwortprofile, Dateitypen und Updates
+# Einstellungen: Stichwortprofile, Dateitypen, Krypto-Regeln und Updates
 
 Seit `v0.2.0-alpha.44` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall.
 
@@ -24,15 +24,21 @@ Der erweiterte Standard enthält unter anderem Kameraformate, makrofähige Offic
 
 Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordnet. Mehrteilige Sondernamen werden nicht als eigener Dateitypnachweis interpretiert. Zusätzliche Archivendungen erweitern nur die Kategoriezuordnung; der Verzeichnisleser unterstützt weiterhin ZIP, ISO, 7Z und RAR. Die Verschlüsselungszähler beziehen sich auf die der Kategorie **Archive** zugeordneten äußeren Dateien. Beim Verschieben einer Endung in eine andere Kategorie verändert sich deshalb auch der Umfang dieser Zähler.
 
+## Krypto-Regeln
+
+Die gemeinsame Regelsammlung gilt für App-Metadaten regulär gekoppelter iPhones und für Dateinamen/Pfade aller neu gesichteten Medien. App-Regeln nutzen exakte Bundle-ID, exakten Namen/Alias oder ausdrücklich angelegte Suchbegriffe. Datei-Regeln können exakten Namen, Begriffe, zusätzliche Kontextbegriffe und Endungen kombinieren. Ein Treffer ist nur ein Hinweis aus Metadaten – kein Inhalts- oder Vermögensnachweis. Messenger, Cloud und Banking sind neutrale Kategorien und zählen nicht als Krypto-App-Hinweis.
+
+Regeln können gesucht, auf- und zugeklappt, aktiviert, ergänzt und entfernt werden. **JSON exportieren** liefert einen bearbeitbaren Entwurf; ein Import muss vor dem Speichern geprüft werden. Das Speichern validiert IDs, Kategorien, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Der Ausgangsstand enthält nur exakte App-Namen und keine unbestätigten Bundle-IDs. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
+
 ## System & Updates
 
-Der dritte Einstellungsbereich enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird beim Neuladen bereits vor dem ersten Statusabruf direkt in dieser Registerkarte wiederhergestellt. Dadurch erscheint nicht kurz das Dashboard zwischen zwei Updatephasen. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben. Nach erfolgreichem Abschluss erscheint im Fenster zusätzlich eine klar erkennbare Erfolgsmeldung mit der installierten Version.
+Der vierte Einstellungsbereich enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird beim Neuladen bereits vor dem ersten Statusabruf direkt in dieser Registerkarte wiederhergestellt. Dadurch erscheint nicht kurz das Dashboard zwischen zwei Updatephasen. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben. Nach erfolgreichem Abschluss erscheint im Fenster zusätzlich eine klar erkennbare Erfolgsmeldung mit der installierten Version.
 
 ## Nachvollziehbarkeit
 
 Neue Scans übernehmen zu Beginn einen unveränderlichen Katalogstand. Derselbe Stand gilt für äußere Dateien und katalogisierte Archiv-Inneneinträge. Gespeichert werden der vollständige Katalog als `filetype-catalog.json` sowie Version und SHA-256 in `summary.json`. Der Katalog gehört damit zur Fallakte, zum Manifest und zum ZIP-Export. Im Nachweisdialog steht er unter **Technische Ablagepfade anzeigen**.
 
-Änderungen beeinflussen ausschließlich neue Scans. Laufende Scans behalten ihren übernommenen Stand; alte Sichtungen, Entscheidungen und Berichte werden durch das Bearbeiten der Einstellungen nicht umklassifiziert. Ältere Sichtungen ohne Katalogdatei werden im Nachweis entsprechend bezeichnet.
+Änderungen beeinflussen ausschließlich neue Scans. Laufende Scans behalten ihren übernommenen Stand; alte Sichtungen, Entscheidungen und Berichte werden durch das Bearbeiten der Einstellungen nicht umklassifiziert. Ältere Sichtungen ohne Katalogdatei werden im Nachweis entsprechend bezeichnet. Neue Sichtungen speichern außerdem `crypto-rules.json` und `crypto-hints.json` in den Ergebnissen und im Fall-ZIP.
 
 ## Lokale Ablage und Updates
 
@@ -40,6 +46,7 @@ Neue Scans übernehmen zu Beginn einen unveränderlichen Katalogstand. Derselbe 
 
 ```text
 settings/
+├── crypto-rules.json
 ├── filetypes.json
 └── profiles/
     ├── default.yaml
@@ -54,4 +61,4 @@ Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT
 
 ## English summary
 
-Settings has separate keyword-profile, file-type, and system-update sections outside the case dialog. Operators can edit or duplicate profiles, maintain an extension catalog, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores its immutable catalog and hash; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Extension categories do not confirm file contents or encryption.
+Settings has separate keyword-profile, file-type, crypto-rule, and system-update sections outside the case dialog. Operators can edit or duplicate profiles, maintain an extension catalog and shared metadata rules, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores immutable catalog and crypto-rule snapshots; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Neither extension categories nor crypto-rule hits confirm file contents or assets.

@@ -43,6 +43,17 @@ let catalogDefaults = null;
 let catalogBusy = false;
 let catalogDirty = false;
 let settingsRevision = 0;
+let cryptoState = null;
+let cryptoDirty = false;
+let cryptoBusy = false;
+const appCategoryLabels = {
+  wallet: "SELF-CUSTODY WALLETS", hardware_wallet: "HARDWARE-WALLETS",
+  exchange: "KRYPTOBÖRSEN / BROKER", portfolio: "STEUER / PORTFOLIO",
+  payment: "KRYPTO-ZAHLUNGSDIENSTE", market: "KURSE / MARKT",
+  messenger: "MESSENGER", cloud: "CLOUDSPEICHER", banking: "BANKING / FINANZEN",
+  other: "SONSTIGE APPS",
+};
+const cryptoCategories = new Set(["wallet", "hardware_wallet", "exchange", "portfolio", "payment", "market"]);
 let updateState = { state: "unknown", message: "UPDATE NOCH NICHT GEPRÜFT" };
 let updateActionInProgress = null;
 const UPDATE_DIALOG_RESTORE_KEY = "triagebox-update-dialog";
@@ -411,7 +422,7 @@ function renderProfileList() {
 }
 
 function selectSettingsPane(pane = "profiles") {
-  for (const name of ["Profiles", "Filetypes", "Updates"]) {
+  for (const name of ["Profiles", "Filetypes", "Crypto", "Updates"]) {
     const active = name.toLowerCase() === pane.toLowerCase();
     $(`settings${name}Pane`).hidden = !active;
     $(`settings${name}Tab`).setAttribute("aria-pressed", String(active));
@@ -429,7 +440,9 @@ async function openSettings(initialPane = "profiles") {
   $("catalogReset").disabled = true;
   $("catalogAddCategory").disabled = true;
   $("catalogMessage").textContent = "DATEITYPEN WERDEN GELADEN …";
+  $("cryptoMessage").textContent = "REGELN WERDEN GELADEN …";
   loadProfiles();
+  loadCryptoRules(revision);
   try {
     const response = await fetch("/api/settings/filetypes");
     const data = await response.json();
@@ -500,9 +513,135 @@ async function saveCatalog() {
   }
 }
 
+const cryptoCategoryOptions = Object.entries(appCategoryLabels).filter(([id]) => id !== "other")
+  .map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
+const cryptoRelevanceOptions = [
+  ["high", "HOCH"], ["medium", "MITTEL"], ["low", "NIEDRIG"], ["neutral", "NEUTRAL"],
+].map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
+
+function cryptoField(key, label, value, multi = false) {
+  const content = escapeHtml(multi ? (value || []).join(", ") : value || "");
+  return `<label>${label}${multi
+    ? `<textarea data-rule-field="${key}" rows="2" spellcheck="false">${content}</textarea>`
+    : `<input data-rule-field="${key}" value="${content}" autocomplete="off" spellcheck="false" />`}</label>`;
+}
+
+function renderCryptoRule(rule, kind) {
+  const app = kind === "app";
+  return `<details class="crypto-rule" data-rule-kind="${kind}">
+    <summary><span>${escapeHtml(rule.name || "NEUE REGEL")}</span><small>${escapeHtml(appCategoryLabels[rule.category] || rule.category || "KATEGORIE")} · ${escapeHtml((rule.relevance || "neutral").toUpperCase())}</small></summary>
+    <div class="crypto-rule-fields">
+      ${cryptoField("id", "REGEL-ID", rule.id)}
+      ${cryptoField("name", "NAME / EXAKTER APP-NAME", rule.name)}
+      <label>KATEGORIE<select data-rule-field="category">${cryptoCategoryOptions}</select></label>
+      <label>HINWEISSTÄRKE<select data-rule-field="relevance">${cryptoRelevanceOptions}</select></label>
+      ${app ? `${cryptoField("bundle_ids", "BUNDLE-IDS · KOMMAGETRENNT", rule.bundle_ids, true)}
+        ${cryptoField("aliases", "EXAKTE ALIASE · KOMMAGETRENNT", rule.aliases, true)}
+        ${cryptoField("terms", "VORSICHTIGE SUCHBEGRIFFE", rule.terms, true)}`
+      : `${cryptoField("filename_equals", "EXAKTE DATEINAMEN", rule.filename_equals, true)}
+        ${cryptoField("terms", "BEGRIFFE IN NAME / PFAD", rule.terms, true)}
+        ${cryptoField("context_terms", "ZUSÄTZLICHER KONTEXT (ODER)", rule.context_terms, true)}
+        ${cryptoField("extensions", "ENDUNGEN · LEER = BELIEBIG", rule.extensions, true)}`}
+      ${cryptoField("comment", "KOMMENTAR", rule.comment)}
+      <label class="crypto-enabled"><input data-rule-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> REGEL AKTIV</label>
+      <button class="crypto-remove" type="button">REGEL ENTFERNEN</button>
+    </div>
+  </details>`;
+}
+
+function renderCryptoRules() {
+  if (!cryptoState) return;
+  $("cryptoVersion").textContent = `REGELSTAND V${cryptoState.version}`;
+  $("cryptoAppRules").innerHTML = cryptoState.app_rules.map(rule => renderCryptoRule(rule, "app")).join("");
+  $("cryptoFileRules").innerHTML = cryptoState.file_rules.map(rule => renderCryptoRule(rule, "file")).join("");
+  for (const [kind, rules, root] of [
+    ["app", cryptoState.app_rules, $("cryptoAppRules")], ["file", cryptoState.file_rules, $("cryptoFileRules")],
+  ]) {
+    [...root.children].forEach((element, index) => {
+      for (const field of ["category", "relevance"]) element.querySelector(`[data-rule-field="${field}"]`).value = rules[index][field];
+    });
+  }
+  filterCryptoRules();
+}
+
+function splitCryptoList(value) {
+  return value.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
+}
+
+function cryptoDraft() {
+  function parse(root, kind) {
+    return [...root.querySelectorAll(".crypto-rule")].map(element => {
+      const field = key => element.querySelector(`[data-rule-field="${key}"]`);
+      const common = {
+        id: field("id").value.trim(), name: field("name").value.trim(),
+        category: field("category").value, relevance: field("relevance").value,
+        enabled: field("enabled").checked, comment: field("comment").value.trim(),
+      };
+      return kind === "app"
+        ? { ...common, bundle_ids: splitCryptoList(field("bundle_ids").value), aliases: splitCryptoList(field("aliases").value), terms: splitCryptoList(field("terms").value) }
+        : { ...common, filename_equals: splitCryptoList(field("filename_equals").value), terms: splitCryptoList(field("terms").value),
+            context_terms: splitCryptoList(field("context_terms").value), extensions: splitCryptoList(field("extensions").value) };
+    });
+  }
+  return { app_rules: parse($("cryptoAppRules"), "app"), file_rules: parse($("cryptoFileRules"), "file") };
+}
+
+function filterCryptoRules() {
+  const query = $("cryptoSearch").value.trim().toLocaleLowerCase("de");
+  for (const element of document.querySelectorAll(".crypto-rule")) {
+    element.hidden = !element.textContent.toLocaleLowerCase("de").includes(query)
+      && ![...element.querySelectorAll("input, textarea")].some(input => input.value.toLocaleLowerCase("de").includes(query));
+  }
+}
+
+function markCryptoDirty() {
+  cryptoDirty = true;
+  $("cryptoSave").disabled = cryptoBusy || !cryptoState;
+  $("cryptoMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
+}
+
+async function loadCryptoRules(revision) {
+  try {
+    const response = await fetch("/api/settings/crypto");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Regeln nicht verfügbar");
+    if (revision !== settingsRevision || !$("settingsModal").open) return;
+    cryptoState = data.rules; cryptoDirty = false;
+    renderCryptoRules();
+    $("cryptoMessage").textContent = "";
+    $("cryptoSave").disabled = true;
+  } catch (error) {
+    if (revision === settingsRevision) $("cryptoMessage").textContent = `FEHLER: ${error.message}`;
+  }
+}
+
+async function saveCryptoRules() {
+  if (!cryptoState || cryptoBusy) return;
+  cryptoBusy = true;
+  $("cryptoSave").disabled = true;
+  $("closeSettings").disabled = true;
+  $("cryptoMessage").textContent = "REGELN WERDEN GESPEICHERT …";
+  try {
+    const response = await fetch("/api/settings/crypto", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rules: cryptoDraft(), base_sha256: cryptoState.sha256 }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Speichern fehlgeschlagen");
+    cryptoState = data.rules; cryptoDirty = false;
+    renderCryptoRules();
+    $("cryptoMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SICHTUNGEN";
+  } catch (error) {
+    $("cryptoMessage").textContent = `FEHLER: ${error.message}`;
+  } finally {
+    cryptoBusy = false;
+    $("closeSettings").disabled = isUpdateBusy();
+    $("cryptoSave").disabled = !cryptoDirty;
+  }
+}
+
 function closeSettings() {
-  if (catalogBusy || isUpdateBusy()) return;
+  if (catalogBusy || cryptoBusy || isUpdateBusy()) return;
   if (catalogDirty && !window.confirm("Ungespeicherte Änderungen am Dateityp-Katalog verwerfen?")) return;
+  if (cryptoDirty && !window.confirm("Ungespeicherte Änderungen an den Krypto-Regeln verwerfen?")) return;
   ++settingsRevision;
   $("settingsModal").close();
 }
@@ -594,7 +733,7 @@ function renderArchive(archive) {
 }
 
 function renderDeviceEvidence(media = {}, storedDevice = {}) {
-  const liveDevice = devices.find((device) => device.serial && device.serial === media.serial) || {};
+  const liveDevice = devices.find((device) => deviceMatchesMedium(device, media)) || {};
   const device = { ...liveDevice, ...storedDevice };
   const model = [media.vendor || device.vendor, media.model || device.model].filter(Boolean).join(" ") || "UNBEKANNT";
   const isIphone = device.media_type === "iphone" || String(media.device_path || "").startsWith("iphone:");
@@ -621,18 +760,54 @@ function renderIphoneSummary(iphone) {
   const appHints = iphone.app_hints || [];
   const fileHints = iphone.file_hints || [];
   $("iphoneDevice").textContent = [device.device_name, device.model].filter(Boolean).join(" · ") || "IPHONE";
-  $("iphoneSystem").textContent = `IOS ${device.ios_version || "UNBEKANNT"} · ${device.connection_state === "paired" ? "VERTRAUENSWÜRDIG / GEKOPPELT" : String(device.connection_state || "STATUS UNBEKANNT").toUpperCase()}`;
-  $("iphoneAppHintCount").textContent = Number(appHints.length).toLocaleString("de-AT");
-  $("iphoneAppHintNames").textContent = appHints.length ? [...new Set(appHints.map((item) => item.name))].join(" · ") : "KEINE RELEVANTEN APPS IN DER ERFASSTEN LISTE";
-  $("iphoneFileHintCount").textContent = Number(fileHints.length).toLocaleString("de-AT");
+  $("iphoneSystem").textContent = `IOS ${device.ios_version || "UNBEKANNT"} · ${device.connection_state === "paired" ? "GEKOPPELT" : String(device.connection_state || "STATUS UNBEKANNT").toUpperCase()}`;
+  $("iphoneSerial").textContent = device.serial || "NICHT GEMELDET";
+  $("iphoneUdid").textContent = device.udid || "NICHT GEMELDET";
+  $("iphoneHardware").textContent = `MODELLKENNUNG ${device.model_number || device.hardware_model || "NICHT GEMELDET"}`;
+  const apps = iphone.apps || [];
+  $("iphoneAppsCount").textContent = Number(apps.length).toLocaleString("de-AT");
+  $("iphoneAppsStatus").textContent = iphone.apps_status === "complete" ? "BENUTZER-APP-LISTE ERFASST" : "APP-LISTE UNVOLLSTÄNDIG / UNBEKANNT";
+  $("iphoneAppHintCount").textContent = Number(new Set(appHints.map(item => item.bundle_id || item.name)).size).toLocaleString("de-AT");
+  $("iphoneAppHintNames").textContent = appHints.length ? [...new Set(appHints.map(item => item.name))].slice(0, 4).join(" · ") : "KEIN HINWEIS IN ERFASSTER APP-LISTE";
+  $("iphoneFileHintCount").textContent = Number(new Set(fileHints.map(item => item.path)).size).toLocaleString("de-AT");
   $("iphoneAssessment").textContent = iphone.assessment || "—";
-  $("iphoneCompleteness").textContent = iphone.complete ? "ERFASSUNG DER ANGEGEBENEN BEREICHE VOLLSTÄNDIG" : "ERFASSUNG UNVOLLSTÄNDIG · DETAILS PRÜFEN";
+  $("iphoneCompleteness").textContent = iphone.complete ? "ERFASSTE BEREICHE VOLLSTÄNDIG" : "ERFASSUNG UNVOLLSTÄNDIG";
   $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
+  const grouped = new Map();
+  for (const app of apps) {
+    const category = app.matches?.[0]?.category || "other";
+    if (!grouped.has(category)) grouped.set(category, []);
+    grouped.get(category).push(app);
+  }
+  $("iphoneCategories").innerHTML = [...grouped.entries()].sort((a, b) => b[1].length - a[1].length).map(([category, entries]) => `
+    <details class="iphone-category ${cryptoCategories.has(category) ? "crypto" : ""}">
+      <summary><span>${escapeHtml(appCategoryLabels[category] || "WEITERE APPS")}</span><b>${entries.length}</b></summary>
+      <ul>${entries.map(app => `<li>${escapeHtml(app.name || app.bundle_id || "UNBEKANNT")}</li>`).join("")}</ul>
+    </details>`).join("") || '<p class="iphone-empty">KEINE BENUTZER-APPS ERFASST · NICHT ALS „KEINE INSTALLIERT“ WERTEN</p>';
   $("iphoneApps").innerHTML = (iphone.apps || []).map((app) => {
     const matches = (app.matches || []).map((match) => `${match.category} (${match.id})`).join(" · ") || "—";
     return `<tr><td>${escapeHtml(app.name || "—")}</td><td><code>${escapeHtml(app.bundle_id || "—")}</code></td><td>${escapeHtml(app.version || "—")}</td><td>${escapeHtml(matches)}</td></tr>`;
   }).join("") || '<tr><td colspan="4">APP-LISTE NICHT VERFÜGBAR ODER LEER</td></tr>';
   $("iphoneAreas").innerHTML = (iphone.areas || []).map((area) => `<div class="iphone-area ${escapeHtml(area.status || "unknown")}"><strong>${escapeHtml(area.area || "BEREICH")}</strong><span>${escapeHtml(String(area.status || "unbekannt").toUpperCase())}${area.file_count !== undefined ? ` · ${Number(area.file_count).toLocaleString("de-AT")} DATEIEN` : ""}</span><small>${escapeHtml(area.message || "")}</small></div>`).join("");
+}
+
+function renderCryptoFindings(crypto, isPhone) {
+  $("cryptoFindings").hidden = !crypto;
+  if (!crypto) return;
+  const apps = crypto.app_hints || [];
+  const files = crypto.file_hints || [];
+  $("cryptoRulesVersion").textContent = crypto.rules?.version ? `REGELSTAND V${crypto.rules.version}` : "ÄLTERE SICHTUNG";
+  $("cryptoScope").textContent = isPhone
+    ? "Hinweise aus erfasster Benutzer-App-Liste und zugänglichen Dateinamen. Kein Nachweis für Wallet-Inhalte; gesperrte Bereiche bleiben unbekannt."
+    : "Hinweise nur aus Dateinamen und Pfaden des Grobindex. Keine Inhaltsanalyse und kein Nachweis für Krypto-Vermögenswerte.";
+  const appRows = apps.slice(0, 100).map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
+  const fileRows = files.slice(0, 100).map(item => {
+    const matches = item.matches || [item];
+    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(item.path || "")}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(item.path || "DATEI")}</strong><span>${escapeHtml(matches.map(match => `${appCategoryLabels[match.category] || match.category}: ${match.reason || match.id}`).join(" · "))}</span></button></li>`;
+  });
+  $("cryptoHintList").innerHTML = appRows.length || fileRows.length
+    ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>${apps.length > 100 || files.length > 100 ? `<p class="iphone-empty">ANZEIGE AUF 100 APP- UND 100 DATEIHINWEISE BEGRENZT · VOLLSTÄNDIGE LISTE IN DER FALLAKTE</p>` : ""}`
+    : '<p class="iphone-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</p>';
 }
 
 const decisionLabels = {
@@ -667,10 +842,24 @@ function updateDecisionFields() {
 
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
+  const isPhone = Boolean(record.iphone);
+  if (isPhone) {
+    $("phoneFiles").appendChild($("classicAnalysis"));
+    $("phoneFiles").hidden = false;
+    $("classicHome").hidden = true;
+    $("iphoneSummary").after($("cryptoFindings"));
+    $("phoneFileCount").textContent = `${Number(record.summary?.file_count || 0).toLocaleString("de-AT")} ZUGÄNGLICHE DATEIEN`;
+  } else {
+    $("classicHome").appendChild($("classicAnalysis"));
+    $("classicHome").hidden = false;
+    $("phoneFiles").hidden = true;
+    $("classicHome").after($("cryptoFindings"));
+  }
   renderIphoneSummary(record.iphone || null);
+  renderCryptoFindings(record.crypto || null, isPhone);
   if (record.media) {
     clearInventoryView();
-    const connected = devices.some((device) => device.serial && device.serial === record.media.serial);
+    const connected = devices.some((device) => deviceMatchesMedium(device, record.media));
     $("detailConnectionState").textContent = deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE";
     $("detailConnectionState").className = connected && !deviceDiscoveryError ? "connected" : "disconnected";
     renderDeviceEvidence(record.media, record.device);
@@ -744,9 +933,20 @@ function decisionIsOpen(medium) {
   return !["secure", "not_selected"].includes(medium?.decision);
 }
 
+function presenceKey(item) {
+  const path = String(item?.device_path || item?.path || "");
+  return path.startsWith("iphone:") ? path : String(item?.serial || path);
+}
+
+function deviceMatchesMedium(device, medium) {
+  const path = String(medium?.device_path || "");
+  if (path.startsWith("iphone:")) return device.path === path;
+  return Boolean(device.serial && medium.serial && device.serial === medium.serial)
+    || Boolean(device.path && device.path === path);
+}
+
 function pendingOfflineMedia() {
-  const onlineSerials = new Set(devices.map((device) => device.serial).filter(Boolean));
-  return sortedSightings(currentCaseMedia.filter((medium) => decisionIsOpen(medium) && (!medium.serial || !onlineSerials.has(medium.serial))));
+  return sortedSightings(currentCaseMedia.filter((medium) => decisionIsOpen(medium) && !devices.some(device => deviceMatchesMedium(device, medium))));
 }
 
 function renderPendingDecisionState(pending = pendingOfflineMedia()) {
@@ -762,13 +962,14 @@ function renderPendingDecisionState(pending = pendingOfflineMedia()) {
   $("decisionQueueSummary").textContent = `${count} ABGEZOGENE ${count === 1 ? "SICHTUNG" : "SICHTUNGEN"} OHNE ENTSCHEIDUNG`;
   $("decisionQueueList").innerHTML = pending.map((medium, index) => {
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || "USB-DATENTRÄGER";
-    const serial = medium.serial || "NICHT GEMELDET";
+    const isIphone = String(medium.device_path || "").startsWith("iphone:");
+    const serial = (isIphone ? String(medium.device_path).slice(7) : medium.serial) || "NICHT GEMELDET";
     const capacity = Number(medium.size || 0) > 0 ? formatBytes(medium.size) : "GRÖSSE NICHT GEMELDET";
     return `<button type="button" class="decision-queue-item" data-queue-media-id="${Number(medium.id)}">
       <span class="decision-queue-position">${index + 1} / ${count}</span>
       <strong>${escapeHtml(medium.sighting_number || `SICHT-${medium.id}`)}</strong>
       <span class="decision-queue-model">${escapeHtml(model)}</span>
-      <code title="${escapeHtml(serial)}">SERIAL ${escapeHtml(serial)}</code>
+      <code title="${escapeHtml(serial)}">${isIphone ? "UDID" : "SERIAL"} ${escapeHtml(serial)}</code>
       <small>${escapeHtml(capacity)} · ${Number(medium.file_count || 0).toLocaleString("de-AT")} DATEIEN · ${Number(medium.keyword_matches || 0).toLocaleString("de-AT")} TREFFER</small>
       <em>SICHTUNG &amp; ENTSCHEIDUNG ÖFFNEN →</em>
     </button>`;
@@ -795,10 +996,10 @@ function scheduleDecisionQueue(delay = 1200) {
 
 function observeConfirmedDevicePresence(items) {
   if (deviceDiscoveryError) return;
-  const nextSerials = new Set((items || []).map((device) => device.serial).filter(Boolean));
+  const nextSerials = new Set((items || []).map(presenceKey).filter(Boolean));
   if (devicePresenceInitialized) {
     const removed = [...confirmedOnlineSerials].filter((serial) => !nextSerials.has(serial));
-    const requiresDecision = removed.some((serial) => currentCaseMedia.some((medium) => medium.serial === serial && decisionIsOpen(medium)));
+    const requiresDecision = removed.some((serial) => currentCaseMedia.some((medium) => presenceKey(medium) === serial && decisionIsOpen(medium)));
     if (requiresDecision) {
       decisionQueueDeferred = false;
       scheduleDecisionQueue();
@@ -811,10 +1012,11 @@ function observeConfirmedDevicePresence(items) {
 function renderMediaCards(media) {
   media = sortedSightings(media);
   for (const device of devices) {
-    const alreadyRecorded = device.serial && media.some((medium) => medium.serial === device.serial);
+    const alreadyRecorded = media.some((medium) => deviceMatchesMedium(device, medium));
     if (alreadyRecorded && deviceStates.get(device.path) === "ready") deviceStates.set(device.path, "complete");
   }
   const renderCard = (medium, connected) => {
+    const isIphone = String(medium.device_path || "").startsWith("iphone:");
     const evidenceLabel = medium.evidence_number
       ? `<b>${escapeHtml(medium.evidence_number)}</b>`
       : "";
@@ -829,10 +1031,10 @@ function renderMediaCards(media) {
       <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
       <span class="connection-badge ${connected && !deviceDiscoveryError ? "connected" : "disconnected"}">${deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
-    </button>${connected ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}" ${deviceDiscoveryError ? "disabled" : ""}>${ejectLabel}</button>` : ""}</div>`;
+    </button>${connected && !isIphone ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}" ${deviceDiscoveryError ? "disabled" : ""}>${ejectLabel}</button>` : ""}</div>`;
   };
-  const onlineMedia = media.filter((medium) => devices.some((device) => device.serial && device.serial === medium.serial));
-  const offlineMedia = media.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial));
+  const onlineMedia = media.filter((medium) => devices.some((device) => deviceMatchesMedium(device, medium)));
+  const offlineMedia = media.filter((medium) => !devices.some((device) => deviceMatchesMedium(device, medium)));
   const pendingOffline = offlineMedia.filter(decisionIsOpen);
   const offlineHistory = offlineMedia.filter((medium) => !decisionIsOpen(medium));
   $("mediaCards").innerHTML = onlineMedia.map((medium) => renderCard(medium, true)).join("");
@@ -860,7 +1062,7 @@ function updateDashboardState() {
     return;
   }
   const pending = pendingOfflineMedia().length;
-  const offline = currentCaseMedia.filter((medium) => !devices.some((device) => device.serial && device.serial === medium.serial) && !decisionIsOpen(medium)).length;
+  const offline = currentCaseMedia.filter((medium) => !devices.some((device) => deviceMatchesMedium(device, medium)) && !decisionIsOpen(medium)).length;
   $("deviceCount").textContent = `${online} ONLINE · ${pending} OFFEN · ${offline} OFFLINE`;
   $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM FALL";
   $("deviceEmptyCopy").textContent = "USB-Medium einstecken. Auto-Scan übernimmt die geschützte Grobsichtung.";
@@ -914,7 +1116,7 @@ const stateLabels = {
 
 function resetDeviceStatesForCase() {
   for (const device of devices) {
-    const recorded = activeCaseNumber && device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial);
+    const recorded = activeCaseNumber && currentCaseMedia.some((medium) => deviceMatchesMedium(device, medium));
     if (runningPaths.has(device.path)) deviceStates.set(device.path, "scanning");
     else if (quarantinedPaths.has(device.path)) deviceStates.set(device.path, "timeout");
     else if (recorded) deviceStates.set(device.path, "complete");
@@ -938,7 +1140,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
   const visibleDevices = devices.filter((device) => !(
-    device.serial && currentCaseMedia.some((medium) => medium.serial === device.serial)
+    currentCaseMedia.some((medium) => deviceMatchesMedium(device, medium))
   ));
   const dashboardDevices = activeCaseNumber
     ? visibleDevices
@@ -949,7 +1151,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const model = iphone
       ? [device.device_name, device.model].filter(Boolean).join(" · ") || "Apple iPhone"
       : [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
-    const serial = device.serial || "NICHT GEMELDET";
+    const serial = (iphone ? device.udid : device.serial) || "NICHT GEMELDET";
     const type = iphone ? `IPHONE · IOS ${device.ios_version || "?"}` : device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = deviceDiscoveryError || !device.scan_supported || state === "scanning" || state === "timeout";
     const stateReason = state === "timeout"
@@ -978,7 +1180,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   renderMediaCards(currentCaseMedia);
   const detailMedium = currentCaseMedia.find((medium) => Number(medium.id) === currentMediaId);
   if (detailMedium) {
-    const connected = devices.some((device) => device.serial && device.serial === detailMedium.serial);
+    const connected = devices.some((device) => deviceMatchesMedium(device, detailMedium));
     $("detailConnectionState").textContent = deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE";
     $("detailConnectionState").className = connected && !deviceDiscoveryError ? "connected" : "disconnected";
   }
@@ -1793,7 +1995,59 @@ $("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(
 $("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
 $("settingsProfilesTab").addEventListener("click", () => selectSettingsPane("profiles"));
 $("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane("filetypes"));
+$("settingsCryptoTab").addEventListener("click", () => selectSettingsPane("crypto"));
 $("settingsUpdatesTab").addEventListener("click", () => selectSettingsPane("updates"));
+$("cryptoSearch").addEventListener("input", filterCryptoRules);
+for (const root of [$("cryptoAppRules"), $("cryptoFileRules")]) {
+  root.addEventListener("input", markCryptoDirty);
+  root.addEventListener("change", markCryptoDirty);
+  root.addEventListener("click", event => {
+    const remove = event.target.closest(".crypto-remove");
+    if (remove && !cryptoBusy) { remove.closest(".crypto-rule").remove(); markCryptoDirty(); }
+  });
+}
+$("cryptoAddApp").addEventListener("click", () => {
+  if (!cryptoState || cryptoBusy) return;
+  const rule = { id: `neue-app-${Date.now().toString(36)}`, name: "Neue App", category: "wallet", relevance: "high",
+    enabled: true, bundle_ids: [], aliases: [], terms: [], comment: "" };
+  $("cryptoAppRules").insertAdjacentHTML("beforeend", renderCryptoRule(rule, "app"));
+  const added = $("cryptoAppRules").lastElementChild;
+  added.querySelector('[data-rule-field="category"]').value = rule.category;
+  added.querySelector('[data-rule-field="relevance"]').value = rule.relevance;
+  added.hidden = false; added.open = true; markCryptoDirty();
+});
+$("cryptoAddFile").addEventListener("click", () => {
+  if (!cryptoState || cryptoBusy) return;
+  const rule = { id: `neue-datei-${Date.now().toString(36)}`, name: "Neue Dateiregel", category: "portfolio", relevance: "medium",
+    enabled: true, filename_equals: [], terms: [], context_terms: [], extensions: [], comment: "" };
+  $("cryptoFileRules").insertAdjacentHTML("beforeend", renderCryptoRule(rule, "file"));
+  const added = $("cryptoFileRules").lastElementChild;
+  added.querySelector('[data-rule-field="category"]').value = rule.category;
+  added.querySelector('[data-rule-field="relevance"]').value = rule.relevance;
+  added.hidden = false; added.open = true; markCryptoDirty();
+});
+$("cryptoSave").addEventListener("click", saveCryptoRules);
+$("cryptoExport").addEventListener("click", () => {
+  if (!cryptoState) return;
+  const blob = new Blob([JSON.stringify({ version: cryptoState.version, ...cryptoDraft() }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a"); link.href = url; link.download = "triagebox-krypto-regeln.json"; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+$("cryptoImport").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file || !cryptoState) return;
+  try {
+    if (file.size > 131072) throw new Error("Datei zu groß (maximal 128 KB).");
+    const imported = JSON.parse(await file.text());
+    if (!Array.isArray(imported.app_rules) || !Array.isArray(imported.file_rules)) throw new Error("Keine gültige Regelsammlung.");
+    cryptoState = { ...cryptoState, app_rules: imported.app_rules, file_rules: imported.file_rules };
+    renderCryptoRules(); markCryptoDirty();
+    $("cryptoMessage").textContent = "IMPORTIERT · BITTE PRÜFEN UND SPEICHERN";
+  } catch (error) {
+    $("cryptoMessage").textContent = `IMPORT FEHLGESCHLAGEN: ${error.message}`;
+  } finally { event.target.value = ""; }
+});
 $("settingsProfilesList").addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-profile]");
   const copy = event.target.closest("[data-copy-profile]");
@@ -1944,6 +2198,14 @@ $("inventoryMore").addEventListener("click", () => {
 });
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
 $("largestFiles").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-inventory-file]");
+  if (!button || !currentMediaId) return;
+  $("inventoryPanel").open = true;
+  $("inventorySearch").value = button.dataset.inventoryFile;
+  loadInventory({ exactPath: button.dataset.inventoryFile, search: "" });
+  $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("cryptoHintList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-file]");
   if (!button || !currentMediaId) return;
   $("inventoryPanel").open = true;

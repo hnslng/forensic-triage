@@ -156,6 +156,24 @@ def test_api_serializes_competing_catalog_writes_and_keeps_profiles_outside_code
         assert server.case_store.list_cases() == []
 
 
+def test_crypto_rules_api_is_versioned_and_not_in_code_checkout(tmp_path, monkeypatch):
+    with settings_server(tmp_path, monkeypatch) as server:
+        status, original = request(server, "GET", "/api/settings/crypto")
+        assert status == 200
+        rules = original["rules"]
+        assert any(item["name"] == "MetaMask" for item in rules["app_rules"])
+        edited = {"app_rules": [dict(item) for item in rules["app_rules"]],
+                  "file_rules": rules["file_rules"]}
+        edited["app_rules"][0]["enabled"] = False
+        payload = {"rules": edited, "base_sha256": rules["sha256"]}
+        status, saved = request(server, "POST", "/api/settings/crypto", payload)
+        assert status == 200
+        assert saved["rules"]["version"] == rules["version"] + 1
+        assert request(server, "POST", "/api/settings/crypto", payload)[0] == 409
+        assert server.crypto_rules_path.is_file()
+        assert server.crypto_rules_path.parent == tmp_path / "local-settings"
+
+
 def test_scan_catalog_snapshot_applies_to_files_containers_and_preserves_history(tmp_path, monkeypatch):
     catalog = catalog_snapshot({"Fotos": ["heic"], "Archive": ["zip"], "Meine Dokumente": ["docm"]}, 7)
     containers = {"status": "ok", "containers": [{"id": "OPT:Test.zip", "path": "Test.zip", "format": "zip",

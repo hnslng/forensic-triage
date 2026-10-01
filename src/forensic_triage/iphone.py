@@ -19,6 +19,7 @@ from typing import Any, Iterator
 
 from .commands import run_command
 from .container_inventory import empty_catalog
+from .crypto_rules import CRYPTO_CATEGORIES, classify_app as classify_app_rule, classify_file as classify_file_rule
 from .keywords import build_hits, load_profile
 from .reporting import write_files_csv, write_json
 from .settings import apply_catalog, catalog_snapshot, load_catalog
@@ -93,9 +94,12 @@ def probe_iphone(udid: str) -> dict[str, Any]:
         reason = "iPhone-Unterstützung unvollständig installiert; Systempakete prüfen."
     product_type = str(info.get("ProductType", "iPhone"))
     name = str(info.get("DeviceName", "iPhone"))
+    reported_serial = str(info.get("SerialNumber") or "")
     return {
         "path": f"iphone:{udid}", "size": 0, "vendor": "Apple", "model": product_type,
-        "device_name": name, "serial": udid, "udid": udid,
+        "device_name": name, "serial": reported_serial, "udid": udid,
+        "model_number": str(info.get("ModelNumber") or ""),
+        "hardware_model": str(info.get("HardwareModel") or ""),
         "ios_version": str(info.get("ProductVersion", "")),
         "build_version": str(info.get("BuildVersion", "")),
         "connection_state": connection_state, "media_type": "iphone", "mounted": False,
@@ -192,7 +196,7 @@ def normalize_apps(rows: list[dict[str, Any]], rules: dict[str, Any]) -> list[di
             "version": str(row.get("CFBundleShortVersionString") or row.get("CFBundleVersion") or ""),
             "file_sharing": bool(row.get("UIFileSharingEnabled") or row.get("UISupportsDocumentBrowser")),
         }
-        app["matches"] = classify_app(app, rules)
+        app["matches"] = classify_app_rule(app, rules) if "sha256" in rules else classify_app(app, rules)
         apps.append(app)
     return sorted(apps, key=lambda item: (item["name"].casefold(), item["bundle_id"]))
 
@@ -279,7 +283,8 @@ def inventory_tree(root: Path, prefix: str, rules: dict[str, Any], *, deadline: 
                 "uid": "", "gid": "", "metadata_address": "", "tsk_type": "r/r",
             }
             files.append(item)
-            for match in classify_file_hint(logical, extension, rules):
+            matches = classify_file_rule(logical, extension, rules) if "sha256" in rules else classify_file_hint(logical, extension, rules)
+            for match in matches:
                 hints.append({"path": logical, "size": stat.st_size, **match})
     return files, directories, hints, truncated
 
@@ -301,7 +306,7 @@ def scan_iphone(request: dict[str, Any]) -> Path:
     logger.addHandler(handler)
     try:
         logger.info("iPhone metadata scan start evidence=%s udid=%s", evidence, udid)
-        rules = request["iphone_rules"]
+        rules = request.get("crypto_rules") or request["iphone_rules"]
         catalog = catalog_snapshot(request["filetype_catalog"]["categories"], request["filetype_catalog"]["version"])
         device = ensure_paired(udid)
         device.update({
@@ -310,7 +315,7 @@ def scan_iphone(request: dict[str, Any]) -> Path:
         })
         write_json(result_dir / "device.json", device)
         write_json(result_dir / "filetype-catalog.json", catalog)
-        write_json(result_dir / "iphone-rules.json", rules)
+        write_json(result_dir / "crypto-rules.json", rules)
         app_rows, app_status = _application_plist(udid)
         app_limit = _limit("FORENSIC_TRIAGE_IPHONE_MAX_APPS", 500)
         if len(app_rows) > app_limit:
@@ -357,16 +362,21 @@ def scan_iphone(request: dict[str, Any]) -> Path:
         hits["profile"] = {"version": "combined" if len(sources) > 1 else sources[0]["version"], "sha256": hashlib.sha256(json.dumps(sources, sort_keys=True).encode()).hexdigest(), "sources": sources, "selected_keywords": keywords}
         app_hints = [
             {"name": app["name"], "bundle_id": app["bundle_id"], "version": app["version"], **match}
-            for app in apps for match in app["matches"]
+            for app in apps for match in app["matches"] if match.get("category") in CRYPTO_CATEGORIES
         ]
+        crypto_file_hints = [hint for hint in file_hints if hint.get("category") in CRYPTO_CATEGORIES]
+        write_json(result_dir / "crypto-hints.json", {
+            "rules": {"version": rules.get("version"), "sha256": rules.get("sha256")},
+            "app_hints": app_hints, "file_hints": crypto_file_hints,
+        })
         complete = app_status == "complete" and file_sharing_status == "complete" and all(area["status"] == "complete" for area in areas)
         assessment = "Relevante Hinweise vorhanden – weitere Untersuchung empfohlen" if app_hints or file_hints else (
             "Keine relevanten Hinweise in den zugänglichen Metadaten" if complete else "Erfassung unvollständig – keine abschließende Aussage möglich"
         )
         iphone = {
-            "device": {key: device.get(key, "") for key in ("device_name", "model", "ios_version", "build_version", "udid", "connection_state")},
+            "device": {key: device.get(key, "") for key in ("device_name", "model", "model_number", "hardware_model", "serial", "ios_version", "build_version", "udid", "connection_state")},
             "apps": apps, "apps_status": app_status, "file_sharing_status": file_sharing_status, "app_hints": app_hints,
-            "file_hints": file_hints, "areas": areas, "complete": complete, "assessment": assessment,
+            "file_hints": crypto_file_hints, "areas": areas, "complete": complete, "assessment": assessment,
             "notice": "App- und Dateihinweise sind Triage-Indikatoren und kein Nachweis für Vermögenswerte oder Dateiinhalte.",
         }
         summary = summarize(files, directories)
@@ -375,7 +385,9 @@ def scan_iphone(request: dict[str, Any]) -> Path:
             "scan_mode": "iphone_metadata", "filetype_catalog": {"version": catalog["version"], "sha256": catalog["sha256"]},
             "keyword_matches": hits["total_matches"], "archive_encryption": {"total": 0, "encrypted": 0, "unknown": 0},
             "container_index": {"status": "not_opened_on_iphone", "containers_seen": 0, "containers_indexed": 0, "entries_indexed": 0, "duration_seconds": 0, "truncated": False},
-            "iphone": {"app_hint_count": len(app_hints), "file_hint_count": len(file_hints), "complete": complete, "assessment": assessment},
+            "iphone": {"app_hint_count": len(app_hints), "file_hint_count": len(crypto_file_hints), "complete": complete, "assessment": assessment},
+            "crypto_rules": {"version": rules.get("version"), "sha256": rules.get("sha256")},
+            "crypto_file_hints": len(crypto_file_hints),
         })
         write_json(result_dir / "iphone.json", iphone)
         write_json(result_dir / "apps.json", {"status": app_status, "apps": apps})

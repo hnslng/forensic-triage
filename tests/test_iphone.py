@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from forensic_triage import iphone
+from forensic_triage.crypto_rules import snapshot
 
 
 RULES = {
@@ -113,12 +114,16 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
         yield exposed
 
     monkeypatch.setattr(iphone, "readonly_ifuse", fake_mount)
+    current_rules = snapshot({"app_rules": [{"id": "wallet", "name": "Test Wallet", "category": "wallet", "relevance": "high", "enabled": True,
+        "bundle_ids": ["io.test.wallet"], "aliases": [], "terms": []}],
+        "file_rules": [{"id": "backup", "name": "Wallet-Backup", "category": "wallet", "relevance": "high", "enabled": True,
+        "filename_equals": [], "terms": ["wallet"], "context_terms": [], "extensions": ["json"]}]})
     result = iphone.scan_iphone({
         "udid": "000-test", "evidence": "SICHT-001", "results_root": str(tmp_path / "results"),
         "profile_path": str(tmp_path / "unused.yaml"), "keywords": ["wallet"],
         "profile_sources": [{"id": "test", "name": "TEST", "version": "1", "sha256": "abc"}],
         "filetype_catalog": {"version": 1, "categories": {"Web-Dateien": ["json"]}},
-        "iphone_rules": RULES,
+        "crypto_rules": current_rules,
     })
     summary = json.loads((result / "summary.json").read_text())
     detail = json.loads((result / "iphone.json").read_text())
@@ -128,5 +133,5 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
     assert detail["file_hints"][0]["id"] == "backup"
     assert device["write_operations_performed"] is False
     assert device["access_mode"] == "apple_services_metadata_read_only"
-    for name in ("files.csv", "hits.json", "partitions.json", "container-index.json", "apps.json", "iphone-rules.json"):
+    for name in ("files.csv", "hits.json", "partitions.json", "container-index.json", "apps.json", "crypto-rules.json", "crypto-hints.json"):
         assert (result / name).is_file()
