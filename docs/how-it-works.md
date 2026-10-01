@@ -10,6 +10,8 @@ Seit Alpha 54 erkennt derselbe Koordinator zusätzlich iPhones über die regulä
 
 Seit Alpha 55 nutzt die Telefonansicht eine eigene Zusammenfassung: Seriennummer und UDID werden getrennt gezeigt, dann erfasste Benutzer-Apps nach Kategorie und die Zugriffsgrenzen. Die zugängliche Dateistatistik ist nur ein aufklappbarer Nebenbereich. Eine gemeinsame lokale Krypto-Regelsammlung prüft App-Metadaten und Datei-/Pfadnamen auf iPhone und Medien; ein Treffer beweist weder Dateiinhalte noch Krypto-Vermögenswerte. Pro Sichtung werden Regelstand und Treffergründe gespeichert. Andere Telefone sind noch nicht unterstützt: [Abgrenzung](andere-telefone.md).
 
+Seit Alpha 58 ist die App-Liste beim iPhone das primäre Grobsichtungsergebnis. Ein automatischer, deutlich kürzer begrenzter Dateinamen-Auszug folgt erst danach; App- und Datei-Vollständigkeit werden getrennt ausgewiesen. Der Dateiauszug bleibt ein Metadatenhinweis und keine vollständige Telefonauslesung.
+
 ## Was passiert beim Anschließen?
 
 1. Linux meldet die vorhandenen Laufwerke.

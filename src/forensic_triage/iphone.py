@@ -328,22 +328,33 @@ def scan_iphone(request: dict[str, Any]) -> Path:
         directories: list[dict[str, Any]] = []
         file_hints: list[dict[str, Any]] = []
         areas: list[dict[str, Any]] = []
-        deadline = time.monotonic() + _limit("FORENSIC_TRIAGE_IPHONE_METADATA_SECONDS", 60)
-        max_files = _limit("FORENSIC_TRIAGE_IPHONE_MAX_FILES", 20000)
+        # App metadata is already collected. Filename inventory is only a
+        # bounded supplement, including on installations with the old 20k/60s
+        # limits still present in triage.env after an application update.
+        file_seconds = min(_limit("FORENSIC_TRIAGE_IPHONE_METADATA_SECONDS", 60),
+                           _limit("FORENSIC_TRIAGE_IPHONE_FILE_SECONDS", 15))
+        max_files = min(_limit("FORENSIC_TRIAGE_IPHONE_MAX_FILES", 20000),
+                        _limit("FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES", 2000))
+        deadline = time.monotonic() + file_seconds
 
-        targets: list[tuple[str, str | None]] = [("AFC_MEDIA", None)]
-        targets.extend(
+        targets: list[tuple[str, str | None]] = list(
             (f"APP_DOKUMENTE/{app['bundle_id']}", app["bundle_id"])
             for app in apps if app["file_sharing"] and app["bundle_id"]
         )
-        for prefix, bundle_id in targets[:1 + _limit("FORENSIC_TRIAGE_IPHONE_MAX_SHARED_APPS", 50)]:
+        targets = targets[:_limit("FORENSIC_TRIAGE_IPHONE_MAX_SHARED_APPS", 50)]
+        targets.append(("AFC_MEDIA", None))
+        for index, (prefix, bundle_id) in enumerate(targets):
             if time.monotonic() >= deadline or len(files) >= max_files:
                 areas.append({"area": prefix, "status": "not_checked_limit", "message": "Triage-Limit erreicht."})
                 continue
             try:
                 with readonly_ifuse(udid, bundle_id) as mountpoint:
+                    # Leave a share of the remaining file budget for each
+                    # subsequent area instead of letting one large photo tree
+                    # exhaust the entire supplemental inventory.
+                    area_allowance = max(1, (max_files - len(files)) // (len(targets) - index))
                     found, found_dirs, hints, truncated = inventory_tree(
-                        mountpoint, prefix, rules, deadline=deadline, max_files=max_files - len(files),
+                        mountpoint, prefix, rules, deadline=deadline, max_files=area_allowance,
                     )
                 files.extend(found); directories.extend(found_dirs); file_hints.extend(hints)
                 areas.append({"area": prefix, "status": "partial" if truncated else "complete", "file_count": len(found)})
@@ -369,14 +380,20 @@ def scan_iphone(request: dict[str, Any]) -> Path:
             "rules": {"version": rules.get("version"), "sha256": rules.get("sha256")},
             "app_hints": app_hints, "file_hints": crypto_file_hints,
         })
-        complete = app_status == "complete" and file_sharing_status == "complete" and all(area["status"] == "complete" for area in areas)
+        apps_complete = app_status == "complete"
+        files_complete = file_sharing_status == "complete" and all(area["status"] == "complete" for area in areas)
+        complete = apps_complete and files_complete
         assessment = "Relevante Hinweise vorhanden – weitere Untersuchung empfohlen" if app_hints or file_hints else (
-            "Keine relevanten Hinweise in den zugänglichen Metadaten" if complete else "Erfassung unvollständig – keine abschließende Aussage möglich"
+            "Keine Hinweise in der erfassten App-Liste und den zugänglichen Dateinamen" if complete else
+            "App-Liste erfasst; Dateinamen nur teilweise geprüft" if apps_complete else
+            "App-Liste unvollständig – keine abschließende Aussage möglich"
         )
         iphone = {
             "device": {key: device.get(key, "") for key in ("device_name", "model", "model_number", "hardware_model", "serial", "ios_version", "build_version", "udid", "connection_state")},
             "apps": apps, "apps_status": app_status, "file_sharing_status": file_sharing_status, "app_hints": app_hints,
-            "file_hints": crypto_file_hints, "areas": areas, "complete": complete, "assessment": assessment,
+            "file_hints": crypto_file_hints, "areas": areas, "apps_complete": apps_complete,
+            "files_complete": files_complete, "complete": complete, "assessment": assessment,
+            "file_inventory_budget": {"max_files": max_files, "seconds": file_seconds},
             "notice": "App- und Dateihinweise sind Triage-Indikatoren und kein Nachweis für Vermögenswerte oder Dateiinhalte.",
         }
         summary = summarize(files, directories)
@@ -385,7 +402,10 @@ def scan_iphone(request: dict[str, Any]) -> Path:
             "scan_mode": "iphone_metadata", "filetype_catalog": {"version": catalog["version"], "sha256": catalog["sha256"]},
             "keyword_matches": hits["total_matches"], "archive_encryption": {"total": 0, "encrypted": 0, "unknown": 0},
             "container_index": {"status": "not_opened_on_iphone", "containers_seen": 0, "containers_indexed": 0, "entries_indexed": 0, "duration_seconds": 0, "truncated": False},
-            "iphone": {"app_hint_count": len(app_hints), "file_hint_count": len(crypto_file_hints), "complete": complete, "assessment": assessment},
+            "iphone": {"app_hint_count": len(app_hints), "file_hint_count": len(crypto_file_hints),
+                       "apps_complete": apps_complete, "files_complete": files_complete,
+                       "complete": complete, "assessment": assessment,
+                       "file_inventory_budget": {"max_files": max_files, "seconds": file_seconds}},
             "crypto_rules": {"version": rules.get("version"), "sha256": rules.get("sha256")},
             "crypto_file_hints": len(crypto_file_hints),
         })

@@ -105,9 +105,11 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
     })
     monkeypatch.setattr(iphone, "_application_plist", lambda udid: ([{
         "CFBundleDisplayName": "Test Wallet", "CFBundleIdentifier": "io.test.wallet",
-        "CFBundleShortVersionString": "1.2",
+        "CFBundleShortVersionString": "1.2", "UIFileSharingEnabled": True,
     }], "complete"))
     monkeypatch.setattr(iphone, "file_sharing_bundle_ids", lambda udid: (set(), "complete"))
+    monkeypatch.setenv("FORENSIC_TRIAGE_IPHONE_MAX_FILES", "20000")
+    monkeypatch.setenv("FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES", "1")
 
     @contextmanager
     def fake_mount(_udid, _documents=None):
@@ -130,6 +132,11 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
     device = json.loads((result / "device.json").read_text())
     assert summary["file_count"] == 1
     assert summary["iphone"]["app_hint_count"] == 1
+    assert summary["iphone"]["apps_complete"] is True
+    assert summary["iphone"]["files_complete"] is False
+    assert summary["iphone"]["file_inventory_budget"]["max_files"] == 1
+    assert detail["areas"][0]["area"] == "APP_DOKUMENTE/io.test.wallet"
+    assert detail["areas"][1]["status"] == "not_checked_limit"
     assert detail["file_hints"][0]["id"] == "backup"
     assert device["write_operations_performed"] is False
     assert device["access_mode"] == "apple_services_metadata_read_only"

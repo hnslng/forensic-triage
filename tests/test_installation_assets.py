@@ -60,6 +60,8 @@ def test_debian_installer_includes_iphone_usb_tools() -> None:
     environment = (ROOT / "deploy/triage.env.example").read_text(encoding="utf-8")
     assert "FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS=45" in environment
     assert "FORENSIC_TRIAGE_IPHONE_MAX_FILES=20000" in environment
+    assert "FORENSIC_TRIAGE_IPHONE_FILE_SECONDS=15" in environment
+    assert "FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES=2000" in environment
 
 
 def test_installed_package_contains_default_iphone_rules() -> None:

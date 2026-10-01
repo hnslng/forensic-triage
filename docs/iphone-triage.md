@@ -1,6 +1,6 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.57`
+Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.58`
 
 ## Zweck und Grenze
 
@@ -14,8 +14,8 @@ Die Oberfläche zeigt ausschließlich Triage-Hinweise. Eine installierte Wallet-
 2. `idevice_id` erkennt angeschlossene iPhones. `idevicepair` prüft beziehungsweise startet die reguläre Kopplung; erforderlichenfalls muss das iPhone entsperrt und „Diesem Computer vertrauen“ bestätigt werden.
 3. `ideviceinfo` liest Gerätename, ProductType, iOS-/Build-Version, die gemeldete **Seriennummer** und getrennt davon die **UDID**. Wird eine Kennung nicht gemeldet, steht dort ausdrücklich „nicht gemeldet“; die UDID wird nicht als Seriennummer ausgegeben.
 4. `ideviceinstaller` fragt die Metadaten der gemeldeten Benutzer-Apps ab. Name, Bundle-ID und Version werden anhand lokaler Regeln kategorisiert.
-5. `ifuse` bindet den regulären AFC-Medienbereich und ausdrücklich per File Sharing freigegebene App-Dokumentbereiche jeweils nur lesend in den privaten Mount-Namensraum des Scan-Workers ein.
-6. TRIAGE//BOX liest dort nur Dateisystem-Metadaten: Name, Pfad, Endung, Größe und verfügbaren Änderungszeitpunkt. Nutzdateien werden nicht geöffnet.
+5. Erst nach der App-Liste bindet `ifuse` die ausdrücklich per File Sharing freigegebenen App-Dokumentbereiche und anschließend den regulären AFC-Medienbereich jeweils nur lesend in den privaten Mount-Namensraum des Scan-Workers ein. Die knappe Dateizahl und Zeit werden möglichst auf die Bereiche verteilt; ein Bereich darf nicht die gesamte Zusatzprüfung aufbrauchen.
+6. TRIAGE//BOX liest dort nur einen begrenzten Dateinamen-Auszug mit Metadaten: Name, Pfad, Endung, Größe und verfügbaren Änderungszeitpunkt. Standardmäßig höchstens 2.000 Dateien und 15 Sekunden für diesen Zusatz; Nutzdateien werden nicht geöffnet.
 7. Ergebnis, unzugängliche Bereiche, Limits und Regelstand werden in derselben lokalen Fallakte wie USB-/CD-Sichtungen gespeichert.
 
 Der allgemeine Bereich „Auf meinem iPhone“ ist nicht als vollständiger globaler Ordner verfügbar. Sichtbar sind nur Bereiche, die iOS über AFC beziehungsweise den jeweiligen File-Sharing-/House-Arrest-Dienst freigibt. App-Sandboxes, Schlüsselbund, private App-Daten und gesperrte Bereiche bleiben außerhalb des Umfangs.
@@ -26,7 +26,7 @@ Die gemeinsame Ausgangsliste für App- und Dateimetadaten liegt in `src/forensic
 
 App-Regeln prüfen zuerst exakte Bundle-IDs, dann exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Die mitgelieferte Liste enthält keine unbestätigten Bundle-IDs; diese können nach Realtest ergänzt werden. Wallets, Hardware-Wallet-Apps und Börsen werden als hohe Hinweise kategorisiert, Portfolio-/Steuer- und Markt-Apps niedriger. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln kombinieren Dateinamen/Pfad, gegebenenfalls Kontext und Endung; sie lesen keine Dateiinhalte. `wallet.dat` ist ein Namenshinweis, nicht der Nachweis einer funktionsfähigen Wallet.
 
-Die Telefonansicht zeigt zuerst Gerät, Anzahl erfasster Benutzer-Apps, Anzahl zugänglicher Dateien, Krypto-Hinweise und aufklappbare App-Kategorien. Krypto-Details erscheinen nur bei Treffern. Seriennummer, UDID, genaue Zugriffsgrenzen und die vollständige App-Liste sind gesondert aufklappbar; die detaillierte Dateistatistik bleibt ein Nebenbereich. „Zugängliche Bereiche erfasst“ behauptet keine vollständige Telefonauslesung. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
+Die Telefonansicht zeigt zuerst Gerät, Anzahl erfasster Benutzer-Apps, den begrenzten Dateinamen-Zusatz, Krypto-Hinweise und aufklappbare App-Kategorien. Die App-Liste und der Dateinamen-Auszug haben getrennte Vollständigkeitsangaben: „App-Liste erfasst“ kann zutreffen, obwohl weitere Dateibereiche offen sind. Krypto-Details erscheinen nur bei Treffern. Seriennummer, UDID, genaue Zugriffsgrenzen und die vollständige App-Liste sind gesondert aufklappbar; die detaillierte Dateistatistik bleibt ein Nebenbereich. Keine Angabe behauptet eine vollständige Telefonauslesung. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
 
 ## Zuverlässigkeit und Einschränkungen
 

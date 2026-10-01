@@ -2,6 +2,11 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.58] – 2026-10-01
+
+- iPhone-Grobsichtung priorisiert die bereits erfasste App-Liste. Dateinamen sind nur ein nachgeordneter, auf 2.000 Einträge und 15 Sekunden begrenzter Zusatz; freigegebene App-Dokumentbereiche kommen vor dem großen AFC-Medienbereich dran.
+- App-Listen-Vollständigkeit und Dateibereich-Vollständigkeit werden getrennt im Scan-Nachweis gespeichert und in der Telefonansicht angezeigt. Bereits gespeicherte Sichtungen bleiben unverändert und werden bei der Anzeige konservativ eingeordnet.
+
 ## [0.2.0-alpha.57] – 2026-10-01
 
 - Telefonansicht neu gewichtet: Gerät, zugängliche Dateien, App-Kategorien und Krypto-Hinweise zuerst; Seriennummer, UDID, Zugriffsgrenzen und vollständige App-Tabelle in einem aufklappbaren Technikbereich.

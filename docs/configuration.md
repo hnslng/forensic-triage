@@ -18,7 +18,7 @@ Der optionale Pi-Modus legt Netzwerkgeheimnisse bewusst getrennt vom Webdienst a
 
 Auch diese Datei gehört `root`, hat Modus `0600` und wird bei Aktualisierungen nicht überschrieben. Dadurch erhält der Webprozess das WLAN-Kennwort nicht als eigene Umgebungsvariable.
 
-Für iPhones gelten zusätzlich `FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS` (45), `FORENSIC_TRIAGE_IPHONE_METADATA_SECONDS` (60), `FORENSIC_TRIAGE_IPHONE_MAX_FILES` (20000), `FORENSIC_TRIAGE_IPHONE_MAX_APPS` (500) und `FORENSIC_TRIAGE_IPHONE_MAX_SHARED_APPS` (50). Die dauerhafte lokale Regelliste liegt als `iphone-triage.json` im `FORENSIC_TRIAGE_SETTINGS_ROOT`; ein Update überschreibt sie nicht. Kleine Werte dienen auch zum Test der sichtbaren Unvollständigkeitsanzeige.
+Für iPhones gelten zusätzlich `FORENSIC_TRIAGE_IPHONE_PAIR_TIMEOUT_SECONDS` (45), `FORENSIC_TRIAGE_IPHONE_MAX_APPS` (500) und `FORENSIC_TRIAGE_IPHONE_MAX_SHARED_APPS` (50). Die App-Liste wird zuerst unabhängig vom Dateiverzeichnis gelesen. Für den nachgeordneten Dateinamen-Auszug gelten `FORENSIC_TRIAGE_IPHONE_FILE_SECONDS` (15) und `FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES` (2000). Die bisherigen Werte `FORENSIC_TRIAGE_IPHONE_METADATA_SECONDS` (60) und `FORENSIC_TRIAGE_IPHONE_MAX_FILES` (20000) bleiben als zusätzliche Obergrenzen erhalten; effektiv gilt jeweils der kleinere Wert. Deshalb greift die kurze Zusatzprüfung auch auf bereits installierten Pis, deren alte Konfiguration nicht überschrieben wird. Alle Grenzen gelten pro iPhone-Sichtung, nicht für USB-Sticks. Die dauerhafte lokale Regelliste liegt als `iphone-triage.json` im `FORENSIC_TRIAGE_SETTINGS_ROOT`; ein Update überschreibt sie nicht.
 
 Bearbeiten, nachdem Fall und Scans beendet wurden:
 

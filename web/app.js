@@ -767,7 +767,11 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
   const apps = iphone.apps || [];
   $("iphoneAppsCount").textContent = Number(apps.length).toLocaleString("de-AT");
   $("iphoneAccessibleFiles").textContent = Number(accessibleFiles).toLocaleString("de-AT");
-  $("iphoneAppsStatus").textContent = iphone.apps_status === "complete" ? "BENUTZER-APP-LISTE ERFASST" : "APP-LISTE UNVOLLSTÄNDIG / UNBEKANNT";
+  const appsComplete = iphone.apps_complete ?? iphone.apps_status === "complete";
+  const filesComplete = iphone.files_complete ??
+    (iphone.file_sharing_status === "complete" && (iphone.areas || []).every(area => area.status === "complete"));
+  $("iphoneAppsStatus").textContent = appsComplete ? "GEMELDETE BENUTZER-APPS ERFASST" : "APP-LISTE UNVOLLSTÄNDIG / UNBEKANNT";
+  $("iphoneFileStatus").textContent = filesComplete ? "ZUGÄNGLICHE BEREICHE ERFASST" : "NUR AUSZUG · WEITERE BEREICHE OFFEN";
   const appHintCount = new Set(appHints.map(item => item.bundle_id || item.name)).size;
   const fileHintCount = new Set(fileHints.map(item => item.path)).size;
   $("iphoneAppHintCount").textContent = appHintCount.toLocaleString("de-AT");
@@ -775,8 +779,8 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
   $("iphoneHintCount").textContent = (appHintCount + fileHintCount).toLocaleString("de-AT");
   $("iphoneHintSummary").classList.toggle("has-hints", appHintCount + fileHintCount > 0);
   $("iphoneAssessment").textContent = iphone.assessment || "—";
-  $("iphoneCompleteness").textContent = iphone.complete ? "ZUGÄNGLICHE BEREICHE ERFASST" : "ERFASSUNG UNVOLLSTÄNDIG";
-  $("iphoneCompleteness").classList.toggle("incomplete", !iphone.complete);
+  $("iphoneCompleteness").textContent = appsComplete ? "APP-LISTE ERFASST" : "APP-LISTE UNVOLLSTÄNDIG";
+  $("iphoneCompleteness").classList.toggle("incomplete", !appsComplete);
   $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
   const grouped = new Map();
   for (const app of apps) {

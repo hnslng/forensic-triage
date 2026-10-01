@@ -535,7 +535,8 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
     },
   }));
   assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /ERFASSUNG UNVOLLSTÄNDIG/);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /APP-LISTE ERFASST/);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /NUR AUSZUG/);
   assert.match(await page.locator('#iphoneSummary').innerText(), /KRYPTO-HINWEISE\s+2/i);
   assert.equal(await page.locator('#cryptoFindings').isVisible(), true);
   assert.match(await page.locator('#decisionTitle').innerText(), /TELEFON/);

@@ -1,14 +1,15 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.57`.
+Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.58`.
 
 ## iPhone-Grobsichtung – nächste Abnahme
 
-- [x] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Der Pi zeigte mit Alpha 55 noch altes HTML. Alpha 56 bindet den Web-Root an das aktive Release; der neue Stand wurde auf dem Pi per Screenshot sichtbar. Nach Alpha 57 erneut prüfen.
+- [x] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Der Pi zeigte mit Alpha 55 noch altes HTML. Alpha 56 bindet den Web-Root an das aktive Release; der neue Stand wurde auf dem Pi per Screenshot sichtbar. Nach Alpha 58 erneut prüfen.
 - Alpha 54 implementiert die kleinste reguläre USB-Stufe ohne Jailbreak oder Sicherheitsumgehung.
 - Auf einem echten Test-iPhone müssen aktuelle iOS-Version, Trust-/Sperrfehler, App-Listen-Vollständigkeit, AFC-Medienbereich und mindestens eine bewusst freigegebene File-Sharing-App dokumentiert verglichen werden.
 - Erst anhand dieses Tests entscheiden, ob `pymobiledevice3` als begründete Kompatibilitätsschicht nötig ist. Keine zweite Architektur und keine Developer-Tunnel nur auf Verdacht ergänzen.
 - Regeln um im Realtest bestätigte Bundle-IDs erweitern und Treffer fachlich reviewen. Die gemeinsame UI-Bearbeitung ist seit Alpha 55 umgesetzt; ihr Bedienablauf ist auf dem Pi noch zu prüfen.
+- [ ] App-Liste und begrenzten Dateinamen-Zusatz nach Alpha 58 mit demselben iPhone erneut prüfen: App-Status muss unabhängig vom Dateilimit verständlich sein, freigegebene App-Dokumente müssen vor dem großen Medienbereich Gelegenheit zur Prüfung bekommen, und das Dateibudget darf den vor Ort benötigten Ablauf nicht spürbar verzögern.
 - [ ] Auf USB-/anderen Dateimedien eine mögliche lokale iPhone-Sicherung (Finder/iTunes) nur über eine Kombination typischer Backup-Dateien und gemeinsamer Verzeichnisstruktur als Metadatenhinweis erkennen. Treffer im Explorer und Nachweis mit Pfad und Erkennungsgrund kennzeichnen; kein automatisches Öffnen, Entschlüsseln oder Einlesen von Backup-Inhalten und keine Behauptung einer vollständigen Sicherung. Mit echten, synthetischen und irreführenden Verzeichnissen testen.
 
 ## Weitere Telefone
