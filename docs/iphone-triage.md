@@ -1,6 +1,6 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.55`
+Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.56`
 
 ## Zweck und Grenze
 

@@ -139,7 +139,7 @@ fi
 ln -sfn "$PROJECT_ROOT" "$RUNTIME_LINK"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   TEMP_CONFIG="$(mktemp)"
-  sed -e "s|@PROJECT_ROOT@|$PROJECT_ROOT|g" \
+  sed -e "s|@PROJECT_ROOT@|$PROJECT_ROOT|g" -e "s|@RUNTIME_ROOT@|$RUNTIME_LINK|g" \
       -e "s|@RUNTIME_ROOT@|$RUNTIME_LINK|g" \
       -e "s|@RELEASES_ROOT@|$RELEASES_ROOT|g" "$CONFIG_TEMPLATE" > "$TEMP_CONFIG"
   install -o root -g root -m 0600 "$TEMP_CONFIG" "$CONFIG_FILE"

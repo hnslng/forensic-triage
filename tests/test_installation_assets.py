@@ -33,6 +33,15 @@ def test_wifi_password_is_not_passed_to_web_service() -> None:
     assert "pi-network.env" not in web_service
 
 
+def test_web_assets_follow_current_release() -> None:
+    environment = (ROOT / "deploy/triage.env.example").read_text(encoding="utf-8")
+    web_service = (ROOT / "deploy/forensic-triage-web.service.in").read_text(encoding="utf-8")
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    assert "FORENSIC_TRIAGE_WEB_ROOT=@RUNTIME_ROOT@/web" in environment
+    assert "--web-root=@RUNTIME_ROOT@/web" in web_service
+    assert 's|@RUNTIME_ROOT@|$RUNTIME_LINK|g' in installer
+
+
 def test_public_bootstrap_targets_expected_repository() -> None:
     bootstrap = (ROOT / "scripts/bootstrap_pi.sh").read_text(encoding="utf-8")
     assert "https://github.com/hnslng/forensic-triage.git" in bootstrap

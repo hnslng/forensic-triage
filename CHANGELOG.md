@@ -2,6 +2,11 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.56] – 2026-10-01
+
+- Die Weboberfläche wird vom systemd-Dienst ausdrücklich aus dem aktiven Release-Verzeichnis geladen; ein alter `WEB_ROOT` in der lokalen Konfiguration kann nach einem Update nicht mehr die vorige Telefonansicht anzeigen.
+- Der Installer trägt den Laufzeitlink auch bei einer Neuinstallation als Web-Root ein; die Erkennung möglicher iPhone-Backups auf Dateimedien ist als gesonderter Metadaten-Test vorgemerkt.
+
 ## [0.2.0-alpha.55] – 2026-10-01
 
 - Eigene iPhone-Ergebnisansicht mit getrennt ausgewiesener Seriennummer und UDID, App-Kategorien, Erfassungsstatus und sekundär aufklappbarer Dateistatistik. Fehlende Listen/Bereiche bleiben ausdrücklich unvollständig.

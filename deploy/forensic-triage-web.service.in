@@ -7,7 +7,7 @@ Type=simple
 User=root
 WorkingDirectory=@RUNTIME_ROOT@
 EnvironmentFile=-/etc/forensic-triage/triage.env
-ExecStart=@RUNTIME_ROOT@/.venv/bin/forensic-triage-web
+ExecStart=@RUNTIME_ROOT@/.venv/bin/forensic-triage-web --web-root=@RUNTIME_ROOT@/web
 Restart=on-failure
 RestartSec=2
 KillMode=control-group

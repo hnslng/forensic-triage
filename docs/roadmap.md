@@ -1,13 +1,15 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.55`.
+Dokumentationsstand: 1. Oktober 2026 · Anwendung: `v0.2.0-alpha.56`.
 
 ## iPhone-Grobsichtung – nächste Abnahme
 
+- [ ] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Backend und HTML/CSS/JS müssen aus demselben Release stammen. Beim ersten Realtest zeigte der Pi trotz Alpha 55 noch die alte Telefonansicht; vor einer Designabnahme den Web-Root des Dienstes und den tatsächlich ausgelieferten HTML-Stand vergleichen.
 - Alpha 54 implementiert die kleinste reguläre USB-Stufe ohne Jailbreak oder Sicherheitsumgehung.
 - Auf einem echten Test-iPhone müssen aktuelle iOS-Version, Trust-/Sperrfehler, App-Listen-Vollständigkeit, AFC-Medienbereich und mindestens eine bewusst freigegebene File-Sharing-App dokumentiert verglichen werden.
 - Erst anhand dieses Tests entscheiden, ob `pymobiledevice3` als begründete Kompatibilitätsschicht nötig ist. Keine zweite Architektur und keine Developer-Tunnel nur auf Verdacht ergänzen.
 - Regeln um im Realtest bestätigte Bundle-IDs erweitern und Treffer fachlich reviewen. Die gemeinsame UI-Bearbeitung ist seit Alpha 55 umgesetzt; ihr Bedienablauf ist auf dem Pi noch zu prüfen.
+- [ ] Auf USB-/anderen Dateimedien eine mögliche lokale iPhone-Sicherung (Finder/iTunes) nur über eine Kombination typischer Backup-Dateien und gemeinsamer Verzeichnisstruktur als Metadatenhinweis erkennen. Treffer im Explorer und Nachweis mit Pfad und Erkennungsgrund kennzeichnen; kein automatisches Öffnen, Entschlüsseln oder Einlesen von Backup-Inhalten und keine Behauptung einer vollständigen Sicherung. Mit echten, synthetischen und irreführenden Verzeichnissen testen.
 
 ## Weitere Telefone
 
