@@ -1,13 +1,12 @@
-# Andere Telefone: Vorschlag für die nächste Stufe
+# Andere Telefone und Betriebssysteme
 
-Stand: 1. Oktober 2026. **Noch nicht implementiert.** Die iPhone-Erweiterung lässt sich nicht unverändert auf Android übertragen: Apple-Dienste (`ideviceinfo`, `ideviceinstaller`, `ifuse`) sind kein allgemeines Telefonprotokoll.
+Stand: 2. Oktober 2026 · Anwendung `v0.2.0-alpha.60`
 
-## Android (Samsung, Pixel, Xiaomi und andere)
+TRIAGE//BOX besitzt zwei implementierte Telefonpfade:
 
-1. **Kleinste sichere Erststufe:** entsperrtes Gerät, Nutzer wählt am Telefon die USB-Dateiübertragung (MTP). TRIAGE//BOX könnte sichtbare gemeinsame Dateien und Basis-Geräteangaben inventarisieren. Diese Sicht wäre ausdrücklich **unvollständig**: App-Liste, private App-Daten und gesperrte Bereiche sind damit nicht allgemein verfügbar. Die vorhandenen Dateinamen-Regeln könnten auf den sichtbaren Bestand angewendet werden; es wäre kein direkter Blockgeräte-Scan und kein iPhone-AFC-Zugriff. [Android-Hilfe zur USB-Dateiübertragung](https://support.google.com/android/answer/9064445)
-2. **Optionale App-Liste:** Android Debug Bridge (ADB) kann mit aktiviertem USB-Debugging und Bestätigung des Host-Schlüssels am entsperrten Telefon Paketinformationsabfragen ermöglichen. Das ist eine bewusste Änderung am Gerät und nicht für die stille Standard-Grobsichtung geeignet. Falls überhaupt, als gesonderte, ausdrücklich freigegebene und protokollierte Funktion nach Realtest. [Offizielle ADB-Dokumentation](https://developer.android.com/tools/adb)
-3. **Keine Vollständigkeitsbehauptung:** moderne Android-Geräte schützen Benutzerdaten durch geräte- und anmeldeabhängige Dateiverschlüsselung. Sichtbare MTP-Daten oder ADB-Paketlisten sind kein vollständiges Abbild. [Android File-Based Encryption](https://source.android.com/docs/security/features/encryption/file-based)
+- iPhone über reguläre Apple-USB-Dienste,
+- Android über USB-Vorerkennung und eine ausdrücklich am Telefon autorisierte ADB-Verbindung.
 
-Vor Implementierung zuerst zwei oder drei gängige Testgeräte mit verschiedenen Herstellern und Android-Versionen aufnehmen: welche Identität ist tatsächlich verfügbar, was zeigt MTP, wie verhält es sich bei Sperre, Verbindungsabbruch und leeren Freigaben? Danach eigener Android-Adapter mit denselben Fall-, Audit-, Abbruch- und Unvollständigkeitsregeln. Bestehende Krypto-Dateiregeln können wiederverwendet werden; für App-Regeln müssen Android-Paketnamen getrennt und real verifiziert werden. iOS-Bundle-IDs dürfen nicht als Android-Paketnamen gelten.
+Beide sind App-only-Krypto-Schnellscans. Sie lesen keine Telefondateien oder Medien. Der Android-Pfad ist herstellerübergreifend; Samsung, Pixel, Xiaomi, Motorola und OnePlus unterscheiden sich in der Oberfläche nur durch die Hilfeschritte. Technischer Ablauf, Profile und Grenzen stehen in [Android-Triage](android-triage.md).
 
-Andere Plattformen oder Sondermodi (zum Beispiel ältere Feature-Phones, Huawei-Sonderkonfigurationen) bleiben zunächst „nicht unterstützt“ und erhalten keine vorgetäuschte automatische Sichtung. Eine eingelegte, separat erkannte Speicherkarte kann dagegen als gewöhnlicher Wechseldatenträger behandelt werden, wenn die bestehenden Sicherheitsprüfungen greifen.
+Andere Telefonbetriebssysteme, proprietäre Synchronisationsprotokolle und Hersteller-Sonderwege sind nicht implementiert. Ein Gerät darf deshalb nicht allein wegen fehlender Erkennung als leer, irrelevant oder frei von Krypto-Apps bewertet werden. Vor einer Erweiterung sind reproduzierbare Geräteerkennung, rechtlich/organisatorisch zulässige Freigabe, stabile App-Metadaten und eine klare Kennzeichnung nicht zugänglicher Bereiche erforderlich. Es wird kein vorhandener iPhone- oder Android-Adapter nur aufgrund ähnlicher USB-Klassen wiederverwendet.

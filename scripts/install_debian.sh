@@ -104,11 +104,14 @@ run_as_owner() {
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-PACKAGES=(git openssh-client python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx usbmuxd libimobiledevice-utils ideviceinstaller ifuse)
+PACKAGES=(git openssh-client python3 python3-venv python3-pip sleuthkit util-linux udev eject 7zip nginx usbmuxd libimobiledevice-utils ideviceinstaller ifuse adb)
 if $PI_MODE; then
   PACKAGES+=(network-manager avahi-daemon libnss-mdns nftables)
 fi
 apt-get install -y "${PACKAGES[@]}"
+if getent group plugdev >/dev/null; then
+  usermod -a -G plugdev "$INSTALL_OWNER"
+fi
 
 # Keep bounded diagnostics across an unclean reboot. This is essential when a
 # defective USB medium or optical drive takes the shared Raspberry Pi USB bus

@@ -77,12 +77,19 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
                 "comment": str(entry.get("comment", ""))[:300],
             }
             if kind == "app_rules":
+                legacy_bundle_ids = entry.get("bundle_ids", [])
+                ios_bundle_ids = entry.get("ios_bundle_ids", legacy_bundle_ids)
                 common.update({
-                    "bundle_ids": _strings(entry.get("bundle_ids", []), "bundle_ids"),
+                    # bundle_ids remains in the serialized snapshot for
+                    # backwards compatibility with existing local settings
+                    # and older frontends. It is the iOS list only.
+                    "ios_bundle_ids": _strings(ios_bundle_ids, "ios_bundle_ids"),
+                    "android_package_ids": _strings(entry.get("android_package_ids", []), "android_package_ids"),
                     "aliases": _strings(entry.get("aliases", []), "aliases"),
                     "terms": _strings(entry.get("terms", []), "terms"),
                 })
-                if not (common["bundle_ids"] or common["name"] or common["aliases"]):
+                common["bundle_ids"] = list(common["ios_bundle_ids"])
+                if not (common["ios_bundle_ids"] or common["android_package_ids"] or common["name"] or common["aliases"]):
                     raise ValueError(f"{rule_id}: App ohne Namen oder Bundle-ID.")
             else:
                 common.update({
@@ -109,7 +116,15 @@ def load_rules(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     result = snapshot(data, data.get("version"))
     if data.get("sha256") != result["sha256"]:
-        raise ValueError("Krypto-Regeln wurden außerhalb der Einstellungen verändert oder sind beschädigt.")
+        # Alpha 59 and older stored only bundle_ids. The schema migration is
+        # deterministic and must not make an otherwise valid local rule file
+        # unusable after an application update.
+        legacy_schema = bool(data.get("app_rules")) and all(
+            isinstance(rule, dict) and "ios_bundle_ids" not in rule and "android_package_ids" not in rule
+            for rule in data.get("app_rules", [])
+        )
+        if not legacy_schema:
+            raise ValueError("Krypto-Regeln wurden außerhalb der Einstellungen verändert oder sind beschädigt.")
     return result
 
 
@@ -151,6 +166,7 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                     # IDs the operator actually changed in the local legacy file.
                     if item.get("bundle_ids", []) != default_by_id.get(rule_id, {}).get("bundle_ids", []):
                         target["bundle_ids"] = item.get("bundle_ids", [])
+                        target["ios_bundle_ids"] = item.get("bundle_ids", [])
                     target["aliases"] = item.get("name_contains", target["aliases"])
                 elif "messenger" in category or "cloud" in category or "bank" in category:
                     mapped = "messenger" if "messenger" in category else "cloud" if "cloud" in category else "banking"
@@ -158,6 +174,7 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                         "id": rule_id, "name": rule_id.replace("-", " ").title(),
                         "category": mapped, "relevance": "neutral", "enabled": True,
                         "bundle_ids": item.get("bundle_ids", []),
+                        "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
                         "aliases": item.get("name_contains", []), "terms": [],
                         "comment": "Aus bisheriger iPhone-Regel übernommen",
                     }
@@ -168,6 +185,7 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                         "id": rule_id, "name": aliases[0] if isinstance(aliases, list) and aliases else rule_id.replace("-", " ").title(),
                         "category": mapped, "relevance": "high" if mapped in {"wallet", "exchange"} else "medium",
                         "enabled": True, "bundle_ids": item.get("bundle_ids", []),
+                        "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
                         "aliases": aliases[1:] if isinstance(aliases, list) else [], "terms": [],
                         "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
                     }
@@ -207,15 +225,18 @@ def _term_in_path(term: str, path: str) -> bool:
 
 
 def classify_app(app: dict[str, Any], rules: dict[str, Any]) -> list[dict[str, str]]:
-    bundle = _fold(str(app.get("bundle_id", "")))
+    platform = _fold(str(app.get("platform", "ios")))
+    app_id = _fold(str(app.get("app_id") or app.get("package_id") or app.get("bundle_id", "")))
     name = _fold(str(app.get("name", "")))
     matches = []
     for rule in rules["app_rules"]:
         if not rule["enabled"]:
             continue
         reason = ""
-        if bundle and bundle in {_fold(value) for value in rule["bundle_ids"]}:
-            reason = f"Bundle-ID: {bundle}"
+        identifiers = rule.get("android_package_ids", []) if platform == "android" else rule.get("ios_bundle_ids", rule.get("bundle_ids", []))
+        if app_id and app_id in {_fold(value) for value in identifiers}:
+            label = "Package-ID" if platform == "android" else "Bundle-ID"
+            reason = f"{label}: {app_id}"
         elif name and name in {_fold(value) for value in [rule["name"], *rule["aliases"]]}:
             reason = f"App-Name: {app['name']}"
         elif any(_term_in_path(term, name) for term in rule["terms"]):

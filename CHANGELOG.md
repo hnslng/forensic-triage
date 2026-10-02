@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.60] – 2026-10-02
+
+- Telefon-Schnellscan auf Geräteinformationen, Benutzer-App-Liste und Krypto-Klassifikation begrenzt. iPhones werden im normalen Lauf nicht mehr per AFC/`ifuse` eingebunden; Fotos, Dateien, Ordner, Dateistichworte und Größenstatistiken bleiben unberührt.
+- Android-Collector ergänzt: verbreitete Hersteller werden bereits als USB-Gerät erkannt, ADB-Status und Autorisierung werden automatisch nachgeführt, sichtbare Android-Benutzer-/Arbeitsprofile werden getrennt abgefragt und geschützte, nicht sichtbare Bereiche ausdrücklich als ungeprüft ausgewiesen.
+- Gemeinsame Krypto-Regeln unterstützen nun getrennte verifizierte `ios_bundle_ids` und `android_package_ids`. Erste Android-IDs für MetaMask, Trust Wallet, Exodus, Ledger Live, Bitpanda, Coinbase, Kraken und Binance stammen aus den offiziellen Store-Einträgen; es werden keine Paketkennungen geraten.
+- Einheitliche Telefonansicht zeigt Krypto-Kategorien, Relevanz und Erfassungsstatus. „Kein Treffer“ gilt nur für eine erfolgreich erfasste App-Liste; unvollständige oder nicht zugängliche Bereiche erzeugen keinen Negativbefund.
+- Phasenlaufzeiten werden für Geräteinformationen, App-Inventar und Klassifikation gespeichert. Ein belastbarer Geschwindigkeitsvergleich folgt erst mit demselben realen iPhone; der letzte alte Lauf mit Dateizusatz dauerte rund 16,35 Sekunden.
+- Debian-/Pi-Installer ergänzt `adb` und die lokale Dokumentation beschreibt Installation, Autorisierung, Herstelleranleitungen, Profile, Secure Folder/Knox, Grenzen und den noch offenen Android-Praxistest.
+
 ## [0.2.0-alpha.59] – 2026-10-02
 
 - iPhone-Ansicht auf Krypto-Triage und direkt sichtbare relevante App-Gruppen reduziert. „Sonstige Apps“ bleibt als einzige Gruppe eingeklappt und ist durchsuchbar; Geräte- und Dateidetails bleiben sekundär.

@@ -92,11 +92,7 @@ def test_inventory_limit_is_explicit(tmp_path: Path):
     assert truncated
 
 
-def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
-    exposed = tmp_path / "exposed"
-    exposed.mkdir()
-    (exposed / "wallet-export.json").write_text("payload is deliberately ignored")
-
+def test_simulated_quick_scan_writes_app_only_case_bundle(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(iphone, "ensure_paired", lambda udid: {
         "path": f"iphone:{udid}", "media_type": "iphone", "vendor": "Apple",
         "model": "iPhone15,4", "device_name": "Testtelefon", "serial": udid, "udid": udid,
@@ -107,15 +103,7 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
         "CFBundleDisplayName": "Test Wallet", "CFBundleIdentifier": "io.test.wallet",
         "CFBundleShortVersionString": "1.2", "UIFileSharingEnabled": True,
     }], "complete"))
-    monkeypatch.setattr(iphone, "file_sharing_bundle_ids", lambda udid: (set(), "complete"))
-    monkeypatch.setenv("FORENSIC_TRIAGE_IPHONE_MAX_FILES", "20000")
-    monkeypatch.setenv("FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES", "1")
-
-    @contextmanager
-    def fake_mount(_udid, _documents=None):
-        yield exposed
-
-    monkeypatch.setattr(iphone, "readonly_ifuse", fake_mount)
+    monkeypatch.setattr(iphone, "readonly_ifuse", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("Quick scan must not mount files")))
     current_rules = snapshot({"app_rules": [{"id": "wallet", "name": "Test Wallet", "category": "wallet", "relevance": "high", "enabled": True,
         "bundle_ids": ["io.test.wallet"], "aliases": [], "terms": []}],
         "file_rules": [{"id": "backup", "name": "Wallet-Backup", "category": "wallet", "relevance": "high", "enabled": True,
@@ -130,15 +118,17 @@ def test_simulated_scan_writes_normal_case_bundle(tmp_path: Path, monkeypatch):
     summary = json.loads((result / "summary.json").read_text())
     detail = json.loads((result / "iphone.json").read_text())
     device = json.loads((result / "device.json").read_text())
-    assert summary["file_count"] == 1
+    assert summary["file_count"] == 0
+    assert summary["scan_mode"] == "phone_crypto_quick"
+    assert summary["timings"]["application_inventory_seconds"] >= 0
     assert summary["iphone"]["app_hint_count"] == 1
     assert summary["iphone"]["apps_complete"] is True
     assert summary["iphone"]["files_complete"] is False
-    assert summary["iphone"]["file_inventory_budget"]["max_files"] == 1
-    assert detail["areas"][0]["area"] == "APP_DOKUMENTE/io.test.wallet"
-    assert detail["areas"][1]["status"] == "not_checked_limit"
-    assert detail["file_hints"][0]["id"] == "backup"
+    assert summary["crypto_file_hints"] == 0
+    assert detail["app_hints"][0]["name"] == "Test Wallet"
+    assert detail["file_hints"] == []
+    assert detail["notice"].startswith("App-Treffer")
     assert device["write_operations_performed"] is False
-    assert device["access_mode"] == "apple_services_metadata_read_only"
+    assert device["access_mode"] == "apple_application_metadata"
     for name in ("files.csv", "hits.json", "partitions.json", "container-index.json", "apps.json", "crypto-rules.json", "crypto-hints.json"):
         assert (result / name).is_file()

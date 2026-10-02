@@ -224,28 +224,39 @@ def build_case_pdf(
             part for part in (str(row.get("vendor") or "").strip(), str(row.get("model") or "").strip()) if part
         ) or "USB-Datenträger"
         serial = str(row.get("serial") or "nicht gemeldet")
-        is_iphone = str(row.get("device_path") or "").startswith("iphone:")
+        device_path = str(row.get("device_path") or "")
+        is_iphone = device_path.startswith("iphone:")
+        is_android = device_path.startswith("android:")
+        is_phone = is_iphone or is_android
         device_data = {}
-        if is_iphone:
+        phone_data = {}
+        if is_phone:
             try:
                 device_data = json.loads((casefiles_root / str(row.get("result_path")) / "device.json").read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 pass
-        content = rough_content(summary)
+            try:
+                phone_data = json.loads((casefiles_root / str(row.get("result_path")) / "phone.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+        app_hint_count = len(phone_data.get("app_hints", [])) if isinstance(phone_data, dict) else 0
+        content = (f"Telefon-Krypto-Schnellscan: {app_hint_count} relevante App-Hinweise" if is_phone else rough_content(summary))
         total_bytes = summary.get("total_file_bytes", 0)
         decision, decision_color = decision_summary(row)
         table_data.append([
             Paragraph(f"<b>{sighting}</b><br/>{scanned}", cell),
             Paragraph(
                 f"<b>{html.escape(device_name)}</b><br/>Seriennummer: {html.escape(serial)}"
-                + (f"<br/>UDID: {html.escape(str(device_data.get('udid') or 'nicht gemeldet'))}<br/>Apple-Dienste · nur zugängliche Metadaten" if is_iphone
+                + (f"<br/>Gerätekennung: {html.escape(str(device_data.get('udid') or device_data.get('adb_serial') or 'nicht gemeldet'))}<br/>{'Apple-App-Metadaten' if is_iphone else 'Android-Paketmetadaten'} · keine Dateisichtung" if is_phone
                    else f"<br/>Kapazität: {html.escape(format_bytes(row.get('size')))}"),
                 cell,
-            ),
-            Paragraph(
-                f"<b>{html.escape(content)}</b><br/>"
-                f"{format_count(row.get('file_count'))} Dateien, {format_count(row.get('directory_count'))} Ordner, "
-                f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer",
+                ),
+                Paragraph(
+                    f"<b>{html.escape(content)}</b><br/>" +
+                    (f"{format_count(len(phone_data.get('apps', [])) if isinstance(phone_data, dict) else 0)} Benutzer-Apps · "
+                 f"Erfassung: {html.escape(str(phone_data.get('apps_status') or 'unbekannt'))}" if is_phone else
+                 f"{format_count(row.get('file_count'))} Dateien, {format_count(row.get('directory_count'))} Ordner, "
+                 f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer"),
                 cell,
             ),
             Paragraph(f"<font color='{decision_color.hexval()}'><b>{decision}</b></font>", cell_bold),

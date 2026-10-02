@@ -16,11 +16,14 @@ from typing import Any
 
 from .scanner import scan
 from .iphone import scan_iphone
+from .android import scan_android
 
 
 def execute(request: dict[str, Any]) -> Path:
     if request.get("scan_kind") == "iphone":
         return scan_iphone(request)
+    if request.get("scan_kind") == "android":
+        return scan_android(request)
     return scan(
         Path(request["device"]),
         Path(request["profile_path"]),

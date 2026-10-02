@@ -26,9 +26,9 @@ Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordn
 
 ## Krypto-Regeln
 
-Die gemeinsame Regelsammlung gilt für App-Metadaten regulär gekoppelter iPhones und für Dateinamen/Pfade aller neu gesichteten Medien. App-Regeln nutzen exakte Bundle-ID, exakten Namen/Alias oder ausdrücklich angelegte Suchbegriffe. Datei-Regeln können exakten Namen, Begriffe, zusätzliche Kontextbegriffe und Endungen kombinieren. Ein Treffer ist nur ein Hinweis aus Metadaten – kein Inhalts- oder Vermögensnachweis. Messenger, Cloud und Banking sind neutrale Kategorien und zählen nicht als Krypto-App-Hinweis.
+Die gemeinsame Regelsammlung gilt für App-Metadaten regulär gekoppelter iPhones, autorisierter Android-Geräte und für Dateinamen/Pfade neu gesichteter Dateimedien. App-Regeln führen getrennte, verifizierte `ios_bundle_ids` und `android_package_ids`; ergänzend sind exakte Namen/Aliase oder ausdrücklich angelegte Begriffe möglich. Datei-Regeln können exakten Namen, Begriffe, zusätzliche Kontextbegriffe und Endungen kombinieren, werden beim Telefon-Schnellscan aber nicht ausgeführt. Ein Treffer ist nur ein Hinweis aus Metadaten – kein Inhalts- oder Vermögensnachweis.
 
-Regeln können gesucht, auf- und zugeklappt, aktiviert, ergänzt und entfernt werden. **JSON exportieren** liefert einen bearbeitbaren Entwurf; ein Import muss vor dem Speichern geprüft werden. Das Speichern validiert IDs, Kategorien, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Der Ausgangsstand enthält nur exakte App-Namen und keine unbestätigten Bundle-IDs. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
+Regeln können gesucht, auf- und zugeklappt, aktiviert, ergänzt und entfernt werden. **JSON exportieren** liefert einen bearbeitbaren Entwurf; ein Import muss vor dem Speichern geprüft werden. Das Speichern validiert IDs, Kategorien, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Android-Package-IDs und iOS-Bundle-IDs dürfen nicht geraten werden; Quelle und Zuordnung müssen überprüfbar sein. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
 
 ## System & Updates
 

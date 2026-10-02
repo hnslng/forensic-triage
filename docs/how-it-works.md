@@ -4,13 +4,11 @@ Diese Seite erklärt das System ohne Programmierkenntnisse. Die technische Modul
 
 ## Der Ablauf in einem Satz
 
-Die Bedienoberfläche erkennt angeschlossene Datenträger, übergibt jeden freigegebenen USB-Datenträger an einen abgesicherten Metadaten-Scanner und schreibt Ergebnis, Verlauf und Entscheidung in eine lokale Fallakte.
+Die Bedienoberfläche erkennt angeschlossene Datenträger und Telefone automatisch, startet den passenden isolierten Scanner und schreibt Ergebnis, Verlauf und Entscheidung in eine lokale Fallakte.
 
-Seit Alpha 54 erkennt derselbe Koordinator zusätzlich iPhones über die regulären Apple-USB-Dienste. Nach Entsperrung und Trust-Bestätigung liest ein isolierter Worker Basis- und App-Metadaten sowie ausschließlich die von iOS regulär freigegebenen AFC-/File-Sharing-Bereiche. Die Dateien selbst werden nicht geöffnet; nicht erreichbare Listen oder Bereiche bleiben als unvollständig gekennzeichnet. Der iPhone-Lauf erzeugt dieselbe Sichtungsnummer, Fallakte, Trefferansicht und Entscheidung wie ein Datenträgerlauf. Technische Einzelheiten: [iPhone-Grobsichtung](iphone-triage.md).
+Bei iPhones liest der Schnellscan nach Entsperrung und Trust-Bestätigung Geräteinformationen und die von Apple gemeldete Benutzer-App-Liste. Bei Android erkennt die Box verbreitete Hersteller zunächst am USB-Gerät. Sobald USB-Debugging aktiviert und der Computer am Telefon autorisiert wurde, liest ein gemeinsamer Android-Collector Geräteinformationen sowie Benutzer-Apps aller über ADB sichtbaren Profile. Herstellerabhängig ist nur die angezeigte Hilfe, nicht die Scanlogik.
 
-Seit Alpha 55 nutzt die Telefonansicht eine eigene Zusammenfassung: Seriennummer und UDID werden getrennt gezeigt, dann erfasste Benutzer-Apps nach Kategorie und die Zugriffsgrenzen. Die zugängliche Dateistatistik ist nur ein aufklappbarer Nebenbereich. Eine gemeinsame lokale Krypto-Regelsammlung prüft App-Metadaten und Datei-/Pfadnamen auf iPhone und Medien; ein Treffer beweist weder Dateiinhalte noch Krypto-Vermögenswerte. Pro Sichtung werden Regelstand und Treffergründe gespeichert. Andere Telefone sind noch nicht unterstützt: [Abgrenzung](andere-telefone.md).
-
-Seit Alpha 58 ist die App-Liste beim iPhone das primäre Grobsichtungsergebnis. Ein automatischer, deutlich kürzer begrenzter Dateinamen-Auszug folgt erst danach; App- und Datei-Vollständigkeit werden getrennt ausgewiesen. Der Dateiauszug bleibt ein Metadatenhinweis und keine vollständige Telefonauslesung.
+Beide Telefonpfade prüfen dieselbe lokale Krypto-Regelbasis mit getrennten iOS-Bundle- und Android-Package-IDs. Der normale Telefonlauf bindet keine AFC-/Medien- oder File-Sharing-Bereiche ein, zählt keine Fotos/Dateien/Ordner und führt keine Dateistichwort- oder Größenanalyse aus. Er liest weder Wallet-Inhalte noch Schlüssel oder Seeds. Treffer sind Triage-Hinweise; ein ausbleibender Treffer gilt nur für die erfolgreich erfasste App-Liste. Nicht sichtbare Android-Profile oder geschützte Bereiche bleiben ausdrücklich ungeprüft. Details: [iPhone-Triage](iphone-triage.md) und [Android-Triage](android-triage.md).
 
 ## Was passiert beim Anschließen?
 
@@ -52,6 +50,8 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `web/styles.css` | Farben, Größen und Terminal-/CRT-Design |
 | `web/app.js` | Klicks, Dialoge, Dashboardzustand und Kommunikation mit dem lokalen Dienst |
 | `src/forensic_triage/web.py` | lokaler Webdienst, Gerätekoordination und API |
+| `src/forensic_triage/iphone.py` | App-only-iPhone-Collector über reguläre Apple-Dienste |
+| `src/forensic_triage/android.py` | USB-Vorerkennung, ADB-Autorisierung, Profile und Android-App-Inventar |
 | `src/forensic_triage/device.py` | Zielprüfung und Read-only-Schutz |
 | `src/forensic_triage/scanner.py` | zentraler Ablauf eines Scans |
 | `src/forensic_triage/fast_inventory.py` | schneller Metadatenlauf über verifizierten Read-only-Mount |
@@ -60,7 +60,7 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
 | `src/forensic_triage/pdf_report.py` | kompakter druckbarer Fallbericht |
-| `src/forensic_triage/crypto_rules.py` | gemeinsame App-/Dateinamenregeln, Validierung und Versionierung |
+| `src/forensic_triage/crypto_rules.py` | gemeinsame iOS-/Android-App- und Dateinamenregeln, Validierung und Versionierung |
 | `profiles/*.yaml` | mitgelieferte Stichwortprofile |
 | `src/forensic_triage/settings.py` | lokale Einstellungen, Katalogprüfung, Migration und Scan-Snapshots |
 
@@ -92,8 +92,8 @@ Seit Alpha 45 kann der Laptop ein signiertes Anwendungsupdate direkt über den T
 
 ## Was passiert ausdrücklich nicht?
 
-TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Nutzdateien werden nicht extrahiert oder dekomprimiert, verschachtelte Archive nicht rekursiv geöffnet. Eine umbenannte Datenbank mit Endung `.jpg` erscheint weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
+TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Dateiinhalten, führt kein Carving durch und entscheidet nicht automatisch über eine Sicherstellung. Die einzige eng begrenzte Ausnahme bei Dateimedien ist das Lesen von ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen; Nutzdateien werden nicht extrahiert oder dekomprimiert, verschachtelte Archive nicht rekursiv geöffnet. Der Telefon-Schnellscan liest ausschließlich Geräte- und App-Metadaten. Eine umbenannte Datenbank mit Endung `.jpg` erscheint auf einem Dateimedium weiterhin als Bild, weil noch keine Dateisignaturprüfung umgesetzt ist.
 
 ## English summary
 
-The browser talks to a local Python service. After an explicit case start, each eligible USB disk is guarded, set read-only, inventoried, classified from metadata, and recorded in a local case archive. Configuration lives outside Git in `/etc/forensic-triage/triage.env`; real case data stays under the configured local case and result roots. The laptop is only a display/access client and stores no case database.
+The browser talks to a local Python service. After an explicit case start, eligible USB media are guarded and inventoried read-only. iPhones and Android devices use separate app-only collectors and a shared crypto-rule set; the phone quick scan does not inspect files or media. Configuration lives outside Git in `/etc/forensic-triage/triage.env`; real case data stays under the configured local case and result roots. The laptop is only a display/access client and stores no case database.

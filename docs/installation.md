@@ -2,7 +2,7 @@
 
 Das Ziel ist eine wiederholbare Installation auf dem Raspberry Pi sowie auf einem Debian-basierten Testsystem. Der Pi 3B+ läuft bereits als Testgerät; Installation, Online-Updates und mehrere USB-Sichtungen wurden praktisch verwendet. Der Alpha-45- und Offline-Update-Praxistest, systematische Fehler-/Wiederherstellungstests und die Einsatzfreigabe stehen aus. Den Nachweisstand beschreibt [Projektstand](project-status.md).
 
-Für die iPhone-Grobsichtung installiert der Pi-Installer zusätzlich `usbmuxd`, `libimobiledevice-utils`, `ideviceinstaller` und `ifuse`. Eine Neuinstallation erledigt das automatisch. Ein signiertes Offline-`.tbu` kann keine fehlenden Debian-Pakete nachladen; bei einem bestehenden System müssen diese Pakete einmal online installiert oder der aktuelle Installer erneut ausgeführt werden. Einzelheiten und Realtest: [iPhone-Grobsichtung](iphone-triage.md).
+Für den Telefon-Schnellscan installiert der Pi-Installer `usbmuxd`, `libimobiledevice-utils` und `ideviceinstaller` für iPhones sowie `adb` für Android. `ifuse` bleibt als Alt-/Erweiterungswerkzeug installiert, wird im normalen App-only-Lauf aber nicht verwendet. Eine Neuinstallation erledigt das automatisch. Ein signiertes Offline-`.tbu` kann keine fehlenden Debian-Pakete nachladen; bei einem bestehenden System muss `adb` einmal online installiert oder der aktuelle Installer erneut ausgeführt werden. Einzelheiten: [iPhone-Triage](iphone-triage.md) und [Android-Triage](android-triage.md).
 
 ## Kurzfassung
 

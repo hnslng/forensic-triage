@@ -38,16 +38,23 @@ Das bloße Eingeben einer anderen Fallnummer wechselt den aktiven Fall nicht. De
 4. Suchprofile prüfen.
 5. „Fall starten“ ausdrücklich bestätigen.
 
-## 4. Datenträger sichten
+## 4. Datenträger oder Telefon sichten
 
-Ein iPhone erscheint als eigene Kachel mit Gerätename/Modell, iOS-Version und Kopplungshinweis. TRIAGE//BOX fragt keinen Gerätecode ab. Die Ergebnisansicht trennt App-/Dateihinweise, Bewertung und technische Details. `ERFASSUNG UNVOLLSTÄNDIG` bedeutet ausdrücklich, dass ein Bereich oder die App-Liste nicht zuverlässig verfügbar war; es bedeutet nicht „keine Treffer“. Vollständige Grenzen und erster Realtest: [iPhone-Grobsichtung](iphone-triage.md).
+Ein iPhone oder Android-Telefon erscheint automatisch als eigene Kachel; eine manuelle Betriebssystemauswahl gibt es nicht. Der normale Telefonlauf ist ausschließlich ein Krypto-Schnellscan aus Geräte- und App-Metadaten. Er durchsucht keine Fotos, Dateien, Ordner, Messengerinhalte, Wallet-Inhalte, Schlüssel oder Seeds. `ERFASSUNG UNVOLLSTÄNDIG` beziehungsweise `BEREICH NICHT PRÜFBAR` bedeutet ausdrücklich, dass die App-Liste oder ein Profil nicht zuverlässig verfügbar war; es bedeutet nicht „keine Treffer“.
+
+- **iPhone:** entsperren und „Diesem Computer vertrauen“ am Telefon bestätigen. TRIAGE//BOX fragt den Gerätecode nicht in der Weboberfläche ab.
+- **Android mit vorbereitetem USB-Debugging:** Telefon entsperren und die angezeigte Computer-/RSA-Freigabe bestätigen. Danach startet die App-Prüfung automatisch.
+- **Android ohne USB-Debugging:** Die Box erkennt verbreitete Hersteller bereits am USB-Anschluss und zeigt konkrete Samsung-, Pixel-, Xiaomi-, Motorola-, OnePlus- oder allgemeine Schritte. Nach Aktivierung und Bestätigung wird keine manuelle Aktualisierung benötigt.
+- **Fehlendes `adb`:** Die Kachel meldet eine unvollständige Android-Installation. Ein bestehender Pi benötigt einmal online `sudo apt-get update && sudo apt-get install -y adb` oder einen erneuten Lauf des aktuellen Installers; ein `.tbu` kann Debian-Pakete nicht nachladen.
+
+Android fragt alle über die autorisierte Schnittstelle sichtbaren Benutzer-/Arbeitsprofile ab. Secure Folder, Knox oder andere geschützte Bereiche können unsichtbar bleiben; die Oberfläche kennzeichnet das als unbekannt statt als negativen Befund. Vollständige Grenzen: [iPhone-Triage](iphone-triage.md) und [Android-Triage](android-triage.md).
 
 1. Berechtigung und physische Identität des Mediums außerhalb des Tools klären.
 2. Medium anschließen.
 3. Geräteangaben wie Typ, Größe, Modell und Seriennummer prüfen.
-4. Bei aktivem Auto-Scan beginnt ein geeignetes, ungemountetes USB-Medium automatisch. Ein erkanntes iPhone muss entsperrt sein; die Apple-Abfrage „Diesem Computer vertrauen“ ist am iPhone zu bestätigen. Mehrere geeignete Sichtungen können parallel laufen.
+4. Bei aktivem Auto-Scan beginnt ein geeignetes Medium automatisch, sobald alle erforderlichen Freigaben vorliegen. Mehrere geeignete Sichtungen können parallel laufen.
 5. Fortschritt und Abschlussstatus je Kachel beobachten.
-6. Detailansicht öffnen und Kategorien, Stichworttreffer, Größen sowie Verzeichnisbaum prüfen.
+6. Bei Dateimedien Kategorien, Stichworttreffer, Größen und Verzeichnisbaum prüfen. Bei Telefonen Krypto-Kategorien, konkrete App-Treffer und Erfassungsstatus der App-Liste/Profile prüfen.
 
 „Nachweis anzeigen“ nennt die beim Scan gespeicherten Geräteangaben (Modell, Seriennummer, Kapazität, Medientyp und Gerätepfad) sowie den verifizierten Schreibschutz. Diese Angaben stammen aus der Sichtungsakte und bleiben deshalb auch nach dem Abziehen des Mediums verfügbar.
 
@@ -72,7 +79,7 @@ Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Des
 
 ## Einstellungen verwalten
 
-**Einstellungen** in der oberen Leiste öffnet die drei Bereiche **Stichwortprofile**, **Dateitypen** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen oder die Updateverwaltung öffnen. Im Fallfenster bleibt die Auswahl der Profile für den Einsatz. Katalogänderungen gelten für neue Scans; alte Ergebnisse behalten ihre Zuordnung. Siehe [ausführliche Bedienung](settings.md).
+**Einstellungen** in der oberen Leiste öffnet die vier Bereiche **Stichwortprofile**, **Dateitypen**, **Krypto-Regeln** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen, verifizierte iOS-/Android-App-Kennungen pflegen oder Updates verwalten. Im Fallfenster bleibt die Auswahl der Profile für Dateimedien. Änderungen gelten für neue Scans; alte Ergebnisse behalten ihren gespeicherten Regel-/Katalogstand. Siehe [ausführliche Bedienung](settings.md).
 
 ## 6. Auswerfen und Aktualisieren
 

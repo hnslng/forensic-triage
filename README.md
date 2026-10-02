@@ -1,11 +1,11 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.59 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.60 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
 
-TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern und regulär gekoppelten iPhones vor Ort. Es inventarisiert geeignete Medien, ordnet zugängliche Dateien anhand ihrer Metadaten ein, sucht in Namen und Pfaden nach konfigurierbaren Begriffen und dokumentiert Scan und Entscheidung nachvollziehbar in einer lokalen Fallakte.
+TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern und Telefonen vor Ort. USB-/CD-Medien werden anhand zugänglicher Metadaten inventarisiert. Bei iPhones und Android-Geräten beantwortet ein eigener Krypto-Schnellscan dagegen bewusst nur die Frage, ob in der erfassten Benutzer-App-Liste relevante Wallet-, Börsen- oder Krypto-Apps vorkommen. Scan und Entscheidung werden nachvollziehbar in einer lokalen Fallakte dokumentiert.
 
 Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
@@ -23,7 +23,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - sichtbare Datenträger-Metadaten mit Modell, Seriennummer, Kapazität, Gerätepfad und verifiziertem Schreibschutz im Nachweisdialog
 - begrenzter ZIP-/ISO-/7Z-/RAR-Schnellindex: interne Verzeichnisnamen ohne Extraktion im Explorer aufklappbar und durchsuchbar
 - bearbeitbarer Dateityp-Katalog mit erweitertem Standard und je Scan gespeichertem Katalogstand
-- gemeinsame Einstellungen für Stichwortprofile, Dateitypen und Systemupdates außerhalb des Fallfensters
+- gemeinsame Einstellungen für Stichwortprofile, Dateitypen, Krypto-Regeln und Systemupdates außerhalb des Fallfensters
 - Kategorien nach Dateiendung, Größenstatistik und größte Dateien
 - kombinierbare und lokal bearbeitbare Stichwortprofile
 - Stichwortsuche ohne Beachtung der Groß-/Kleinschreibung in Namen und Pfaden
@@ -35,12 +35,14 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - direktes Öffnen und doppelt bestätigtes Entfernen einzelner Fälle mit Dateierhalt im Papierkorb; Rückimport noch offen
 - sicherer Software-Auswurf und erneute Geräteerkennung
 - softwareseitiges Öffnen externer USB-CD/DVD-Laufwerke auch ohne physischen Auswurfknopf
-- integrierte iPhone-Erkennung über reguläre Apple-USB-Dienste mit Geräte-/iOS-/Pairingstatus, App-Metadaten und nur lesend zugänglichen AFC-/File-Sharing-Metadaten
-- gemeinsame, lokal bearbeitbare Krypto-Regeln für App-Metadaten und Dateinamen auf Telefonen und Datenträgern; Messenger/Cloud/Banking bleiben neutrale App-Kategorien
+- automatische Telefonerkennung: iPhone über reguläre Apple-USB-Dienste, Android zunächst über USB-Geräteinformationen und nach Freigabe über den gemeinsamen Android-Collector
+- schneller iPhone-/Android-App-Scan mit Geräteinformationen, zugänglichen Benutzerprofilen, Benutzer-App-Liste und Krypto-Klassifikation – ohne Foto-, Medien- oder Dateisichtung
+- verständliche Samsung-, Pixel-, Xiaomi-, Motorola-, OnePlus- und allgemeine Android-Anleitung, solange die Verbindung am Telefon noch nicht vorbereitet oder bestätigt ist
+- gemeinsame, lokal bearbeitbare Krypto-Regeln mit getrennten iOS-Bundle-IDs und Android-Package-IDs; Wallets, Hardware-Wallet-Begleiter, Börsen, Portfolio-/Steuer- und Zahlungsdienste bleiben nachvollziehbar getrennt
 
 ## Wichtige Grenzen
 
-Version 0.2.0-alpha.59 liest keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Beim iPhone werden ausschließlich Metadaten regulär zugänglicher AFC-/File-Sharing-Bereiche erfasst. Komprimierte Archivverzeichnisse können intern dekodiert werden; Nutzdateien werden weder extrahiert noch dekomprimiert oder ausgeführt. Die Stichwortsuche arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden – einschließlich dieser virtuellen Containerpfade. Die Dateikategorie wird derzeit anhand der Dateiendung gebildet.
+Version 0.2.0-alpha.60 liest bei Wechseldatenträgern keine Nutzdatei-Payload. Als eng begrenzte Ausnahme werden die Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven gelesen. Der normale Telefon-Schnellscan liest ausschließlich Geräte- und App-Metadaten: keine AFC-/Medienbereiche, Fotos, Dateien, Ordner, Wallet-Inhalte, Schlüssel oder Seeds. Komprimierte Archivverzeichnisse auf Datenträgern können intern dekodiert werden; Nutzdateien werden weder extrahiert noch ausgeführt. Die Stichwortsuche für Datenträger arbeitet ausschließlich auf Datei- und Ordnernamen beziehungsweise Pfaden.
 
 Das bedeutet insbesondere:
 
@@ -55,6 +57,8 @@ Das bedeutet insbesondere:
 - Verschachtelte Archive werden nur als Eintrag angezeigt und nicht rekursiv geöffnet. TAR und weitere Formate werden derzeit nicht katalogisiert.
 - Geladene Medien in externen USB-CD/DVD-Laufwerken werden über einen eigenen, nur-lesenden Scanpfad erfasst; der reale Hardwaretest steht noch aus.
 - Das System trifft keine rechtliche oder fachliche Sicherstellungsentscheidung.
+- Ein App-Treffer belegt weder Wallet-Inhalte noch Vermögenswerte. „Kein Treffer“ bedeutet nur: keine passende App in der tatsächlich erfassten App-Liste. Ein technisch nicht zugängliches Profil wird ausdrücklich als ungeprüft ausgewiesen.
+- Android erfordert aktiviertes USB-Debugging und eine Bestätigung am entsperrten Telefon. Arbeitsprofile werden abgefragt, soweit das System sie meldet. Secure Folder/Knox und andere geschützte Bereiche können unzugänglich bleiben und werden dann nicht als negativ bewertet.
 
 Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
 
@@ -100,7 +104,7 @@ Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git 
 3. Neue Fallnummer eingeben oder einen vorhandenen Fall im Archiv öffnen.
 4. Bearbeiterkürzel eintragen und Suchprofile auswählen.
 5. „Fall starten“ ausdrücklich bestätigen.
-6. Autorisierte, ungemountete USB-Datenträger anschließen. Bei aktivem Auto-Scan beginnen geeignete Medien selbstständig.
+6. Autorisierte, ungemountete USB-Datenträger oder ein Telefon anschließen. Beim iPhone Entsperren/Vertrauen bestätigen; bei Android gegebenenfalls die angezeigten Schritte und danach die Verbindungsabfrage am Telefon bestätigen. Bei aktivem Auto-Scan beginnt die passende Sichtung selbstständig.
 7. Ergebnis je Medium prüfen und eine Entscheidung dokumentieren.
 8. Nur bei „Sichern“ eine offizielle Beweismittel-/Asservatennummer vergeben.
 9. Datenträger sicher auswerfen beziehungsweise nach abgeschlossener Sichtung abziehen.
@@ -109,6 +113,20 @@ Lokale Einstellungen wie Host, Port und Speicherpfade stehen außerhalb von Git 
 Ein Fall wird direkt im Fallarchiv über „Löschen“ entfernt. Das Dashboard sperrt diese Aktion beim aktiven Fall; die zusätzliche serverseitige Fall-/Scanprüfung fehlt noch. „Löschen“ erhält die Dateien in einem internen Papierkorb; ein fertiger Rückimport in die Fallliste ist noch nicht vorhanden. Es ist keine sichere Datenvernichtung; Einzelheiten unter [Fallakte](docs/case-archive.md#entfernen-und-wiederherstellung).
 
 Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
+
+## Telefon- und Krypto-Schnellscan
+
+TRIAGE//BOX erkennt den Gerätetyp automatisch. Beim iPhone werden nach regulärer Kopplung die gemeldeten Benutzer-Apps gelesen. Bei Android erkennt die Box verbreitete Hersteller bereits auf USB-Ebene; für die zuverlässige App-Liste führt die Oberfläche durch die einmalige Gerätefreigabe. Danach werden alle über die Android-Schnittstelle sichtbaren Benutzer-/Arbeitsprofile nacheinander abgefragt. Ein nicht zugänglicher geschützter Bereich bleibt als **nicht vollständig prüfbar** markiert.
+
+Die lokale Regelbasis ordnet verifizierte iOS-Bundle-IDs beziehungsweise Android-Package-IDs Kategorien und Relevanzstufen zu. **HOCH** kennzeichnet etwa Self-Custody-Wallets, Hardware-Wallet-Begleiter und Börsen/Broker; **MITTEL** derzeit klar kryptobezogene Steuer-/Portfolio-Werkzeuge. App-Namen und Aliase dienen ergänzend der iOS-Erfassung, Paketkennungen werden nicht geraten. Regeln lassen sich unter **Einstellungen → Krypto-Regeln** lokal erweitern.
+
+Der Schnellscan liest keine Wallet-Inhalte, Schlüssel, Seeds, Nachrichten, Fotos oder sonstigen Dateien. Er ist ein Triage-Hinweis: Eine erkannte App begründet eine weitere fachliche Prüfung; kein Treffer ist nur für die erfolgreich erfasste App-Liste aussagekräftig. Details stehen in [iPhone-Triage](docs/iphone-triage.md) und [Android-/Telefon-Triage](docs/android-triage.md).
+
+## Live-Kit: aktueller Stand
+
+Im aktuellen Repository gibt es **kein eigenständiges „Live-Kit“**, kein bootfähiges Live-Abbild und keinen separaten Live-Kit-Startpfad. Vorhanden sind die normale Debian/Raspberry-Pi-Installation (`scripts/bootstrap_pi.sh`, `scripts/install_debian.sh`) und signierte `.tbu`-Pakete für Anwendungsupdates. Ein `.tbu` ist kein Live-Kit: Es aktualisiert eine bereits installierte TRIAGE//BOX und kann fehlende Debian-Systempakete nicht offline nachinstallieren.
+
+Falls künftig ein transportables Live-Kit hinzukommt, braucht es ein eigenes, geprüftes Build-Artefakt, einen dokumentierten Boot-/Vertrauenspfad, Hardwarekompatibilität und eine Abgrenzung zur installierten Pi-Box. Bis dahin bezeichnet die Dokumentation nichts Bestehendes als Live-Kit; der Punkt steht ausdrücklich in der [Roadmap](docs/roadmap.md).
 
 ## Zugriff auf die Oberfläche
 
@@ -144,14 +162,15 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Installation und Aktualisierung](docs/installation.md)
 - [Signierte Offline-Updates](docs/offline-updates.md)
 - [Konfiguration](docs/configuration.md)
-- [Einstellungen: Stichwortprofile und Dateitypen](docs/settings.md)
+- [Einstellungen: Stichwortprofile, Dateitypen und Krypto-Regeln](docs/settings.md)
 - [Bedienung und Fallworkflow](docs/operation.md)
 - [Forensische Sicherheitsgrenzen](docs/forensic-safety.md)
 - [Architektur](docs/architecture.md)
 - [Lokale Fallakte und Protokollierung](docs/case-archive.md)
 - [Testplan](docs/test-plan.md)
 - [Realistische USB-/CD-Testmedien](docs/test-media.md)
-- [iPhone-Grobsichtung, Grenzen und erster Realtest](docs/iphone-triage.md)
+- [iPhone-Krypto-Schnellscan, Grenzen und Realtest](docs/iphone-triage.md)
+- [Android-/Telefon-Triage und Gerätefreigabe](docs/android-triage.md)
 - [Validierung mit physischem Medium](docs/validation-2026-08-26.md)
 - [Roadmap und offene Aufgaben](docs/roadmap.md)
 - [Sicherheitsrichtlinie](SECURITY.md)
@@ -171,13 +190,13 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a59` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.59`
-- automatisierte Tests: Python- und isolierte Browserprüfungen einschließlich simulierter iPhone-Metadaten-/Oberflächenfälle
+- Paketversion: `0.2.0a60` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.60`
+- automatisierte Tests: 157 Python-Prüfungen und 36 isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen und Regelmigration
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
-- offen: vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
-- Dokumentationsstand: 30. September 2026; der [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
+- offen: reale Android-/Samsung-Abnahme, erneuter iPhone-Zeitvergleich der neuen App-only-Version, vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
+- Dokumentationsstand: 2. Oktober 2026; der [Projektstand](docs/project-status.md) unterscheidet vorhandene Funktionen von abgeschlossenen Nachweisen
 
 Siehe [docs/roadmap.md](docs/roadmap.md) für die priorisierten nächsten Schritte.
 
@@ -187,4 +206,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.59 searches file and directory names, not file payloads. A bounded metadata-only ZIP/ISO/7Z/RAR directory index is the explicit exception. A paired iPhone can expose device, user-app and read-only AFC/File Sharing metadata through normal Apple services; inaccessible or incomplete areas remain explicit. Entries can be expanded and searched, but file payloads are never extracted or decompressed. Regular hidden active files are inventoried; deleted, unreadable, and selected internal filesystem entries are not recovered. Detected encryption is counted conservatively; unsupported, incomplete or truncated checks remain explicitly unknown. Each scan runs in a time-limited isolated process; loaded media in external USB optical drives use a dedicated read-only path, pending real-hardware validation. It offers only the decisions “Secure” and reasoned “Do not secure”, groups removed undecided media into one persistent decision queue, and creates a compact PDF case report, but does not detect renamed file types by signature, recover deleted files, carve data, or create forensic images. Signed offline application updates can be uploaded through the private hotspot without giving the Pi internet access; releases that change dependencies still require the online path. Pi power health is visible, while reboot and shutdown use a deliberate two-step action and server-side work locks. Installation details are in [docs/installation.md](docs/installation.md); iPhone scope and testing are in [docs/iphone-triage.md](docs/iphone-triage.md). Any later public visibility would not constitute operational approval or an open-source licence; see [LICENSE.md](LICENSE.md).
+Version 0.2.0-alpha.60 searches removable-media names and paths, not file payloads. Its phone path is separate: paired iPhones and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).

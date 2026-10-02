@@ -1,22 +1,26 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 2. Oktober 2026 · Anwendung: `v0.2.0-alpha.59`.
+Dokumentationsstand: 2. Oktober 2026 · Anwendung: `v0.2.0-alpha.60`.
 
-## iPhone-Grobsichtung – nächste Abnahme
+## Telefon-Schnellscan – nächste Abnahme
 
-- [x] Pi-Auslieferung der Telefonoberfläche gegen die installierte Version prüfen: Der Pi zeigte mit Alpha 55 noch altes HTML. Alpha 56 bindet den Web-Root an das aktive Release; der neue Stand wurde auf dem Pi per Screenshot sichtbar. Die vereinfachte Ansicht aus Alpha 59 muss nach Installation erneut am realen Gerät geprüft werden.
-- Alpha 54 implementiert die kleinste reguläre USB-Stufe ohne Jailbreak oder Sicherheitsumgehung.
-- Auf einem echten Test-iPhone müssen aktuelle iOS-Version, Trust-/Sperrfehler, App-Listen-Vollständigkeit, AFC-Medienbereich und mindestens eine bewusst freigegebene File-Sharing-App dokumentiert verglichen werden.
-- Erst anhand dieses Tests entscheiden, ob `pymobiledevice3` als begründete Kompatibilitätsschicht nötig ist. Keine zweite Architektur und keine Developer-Tunnel nur auf Verdacht ergänzen.
-- Regeln um im Realtest bestätigte Bundle-IDs erweitern und Treffer fachlich reviewen. Die gemeinsame UI-Bearbeitung ist seit Alpha 55 umgesetzt; ihr Bedienablauf ist auf dem Pi noch zu prüfen.
-- [ ] App-Liste und begrenzten Dateinamen-Zusatz nach Alpha 58 mit demselben iPhone erneut prüfen: App-Status muss unabhängig vom Dateilimit verständlich sein, freigegebene App-Dokumente müssen vor dem großen Medienbereich Gelegenheit zur Prüfung bekommen, und das Dateibudget darf den vor Ort benötigten Ablauf nicht spürbar verzögern.
+- [x] Den normalen iPhone-Lauf auf Geräte- und App-Metadaten begrenzen. Alpha 60 verwendet kein AFC/`ifuse`, zählt keine Telefondateien und erzeugt keine Foto-, Größen- oder Stichwortstatistik.
+- [x] Gemeinsame Regeln mit getrennten iOS-Bundle- und Android-Package-IDs, Kategorien und Relevanzstufen implementieren. Unbestätigte Paketkennungen werden nicht ergänzt.
+- [ ] Alpha 60 mit demselben echten iPhone wie den alten Lauf messen. Phasenzeiten aus `summary.json` dokumentieren und erst dann eine prozentuale Verbesserung nennen.
+- [ ] Trust-, Sperr- und unvollständige App-Listen auf mehreren iPhones/iOS-Versionen testen. „Kein Treffer“ darf nur bei vollständig erfasster Benutzer-App-Liste erscheinen.
+- [ ] Erst anhand reproduzierbarer Kompatibilitätsfehler entscheiden, ob `pymobiledevice3` nötig ist. Keine zweite Architektur oder Developer-Tunnel auf Verdacht ergänzen.
+- [ ] Regeln um im Realtest bestätigte Bundle-/Package-IDs erweitern und fachlich reviewen. Bedienung, Import/Export und Migration alter lokaler Regeln auf dem Pi prüfen.
 - [ ] Auf USB-/anderen Dateimedien eine mögliche lokale iPhone-Sicherung (Finder/iTunes) nur über eine Kombination typischer Backup-Dateien und gemeinsamer Verzeichnisstruktur als Metadatenhinweis erkennen. Treffer im Explorer und Nachweis mit Pfad und Erkennungsgrund kennzeichnen; kein automatisches Öffnen, Entschlüsseln oder Einlesen von Backup-Inhalten und keine Behauptung einer vollständigen Sicherung. Mit echten, synthetischen und irreführenden Verzeichnissen testen.
 
-## Weitere Telefone
+## Android-Praxistest
 
-- [ ] Android zuerst als **eigene** MTP-Metadatenstufe untersuchen, nicht den iPhone-Adapter wiederverwenden. Freigegebene Dateien, Geräteidentität, Sperrzustände und Grenzen an realen Samsung-/Pixel-/weiteren Testgeräten vergleichen.
-- [ ] ADB-Paketliste allenfalls später als bewusste Opt-in-Stufe prüfen: USB-Debugging und Gerätefreigabe ändern den Zustand des Telefons. Keine automatische Aktivierung und keine Vollständigkeitsbehauptung.
-- [ ] Andere Telefon-OS und Spezialprotokolle bis zu einem reproduzierbaren Test ausdrücklich als nicht unterstützt kennzeichnen. Details: [Andere Telefone](andere-telefone.md).
+- [x] Eigenen Android-Collector implementieren; keine iPhone-/MTP-Dateisicht wiederverwenden.
+- [x] Bekannte Android-USB-Hersteller bereits ohne ADB erkennen, ADB-Zustände `device`/`unauthorized`/`offline` unterscheiden und passende Samsung-, Pixel-, Xiaomi-, Motorola-, OnePlus- beziehungsweise allgemeine Schritte anzeigen.
+- [x] Nach Autorisierung alle über ADB sichtbaren Benutzer-/Arbeitsprofile abfragen; nicht sichtbare Secure-Folder-/Knox-Bereiche als unbekannt statt negativ ausweisen.
+- [ ] Alpha 60 auf einem echten Samsung testen: Erkennung vor USB-Debugging, Anleitung, RSA-Autorisierung, automatischer Start, Haupt-/Arbeitsprofil und erneutes Verbinden.
+- [ ] Pixel und mindestens einen weiteren Hersteller prüfen; geänderte Menüpfade dokumentieren, ohne herstellerspezifische Scanlogik zu duplizieren.
+- [ ] Verhalten bei fehlendem `adb`, abgelehnter/entzogener Autorisierung, gesperrtem Gerät, mehreren Geräten und Kabelabbruch praktisch testen.
+- [ ] Andere Telefon-OS und Spezialprotokolle bis zu einem reproduzierbaren Test ausdrücklich als nicht unterstützt kennzeichnen. Details: [Android-Triage](android-triage.md) und [Andere Telefone](andere-telefone.md).
 
 Der gemeinsame Einstellungen-Bereich außerhalb des Fallfensters, der erweiterte und bearbeitbare Dateityp-Katalog, Scan-Snapshots sowie die dauerhafte lokale Profilablage sind implementiert und isoliert geprüft. Der Pi-Praxistest nach Aktualisierung steht aus; siehe [Einstellungen](settings.md).
 

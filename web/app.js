@@ -535,7 +535,8 @@ function renderCryptoRule(rule, kind) {
       ${cryptoField("name", "NAME / EXAKTER APP-NAME", rule.name)}
       <label>KATEGORIE<select data-rule-field="category">${cryptoCategoryOptions}</select></label>
       <label>HINWEISSTÄRKE<select data-rule-field="relevance">${cryptoRelevanceOptions}</select></label>
-      ${app ? `${cryptoField("bundle_ids", "BUNDLE-IDS · KOMMAGETRENNT", rule.bundle_ids, true)}
+      ${app ? `${cryptoField("ios_bundle_ids", "IOS BUNDLE-IDS · KOMMAGETRENNT", rule.ios_bundle_ids || rule.bundle_ids, true)}
+        ${cryptoField("android_package_ids", "ANDROID PACKAGE-IDS · KOMMAGETRENNT", rule.android_package_ids, true)}
         ${cryptoField("aliases", "EXAKTE ALIASE · KOMMAGETRENNT", rule.aliases, true)}
         ${cryptoField("terms", "VORSICHTIGE SUCHBEGRIFFE", rule.terms, true)}`
       : `${cryptoField("filename_equals", "EXAKTE DATEINAMEN", rule.filename_equals, true)}
@@ -578,7 +579,9 @@ function cryptoDraft() {
         enabled: field("enabled").checked, comment: field("comment").value.trim(),
       };
       return kind === "app"
-        ? { ...common, bundle_ids: splitCryptoList(field("bundle_ids").value), aliases: splitCryptoList(field("aliases").value), terms: splitCryptoList(field("terms").value) }
+        ? { ...common, ios_bundle_ids: splitCryptoList(field("ios_bundle_ids").value),
+            android_package_ids: splitCryptoList(field("android_package_ids").value),
+            aliases: splitCryptoList(field("aliases").value), terms: splitCryptoList(field("terms").value) }
         : { ...common, filename_equals: splitCryptoList(field("filename_equals").value), terms: splitCryptoList(field("terms").value),
             context_terms: splitCryptoList(field("context_terms").value), extensions: splitCryptoList(field("extensions").value) };
     });
@@ -737,9 +740,11 @@ function renderDeviceEvidence(media = {}, storedDevice = {}) {
   const device = { ...liveDevice, ...storedDevice };
   const model = [media.vendor || device.vendor, media.model || device.model].filter(Boolean).join(" ") || "UNBEKANNT";
   const isIphone = device.media_type === "iphone" || String(media.device_path || "").startsWith("iphone:");
+  const isAndroid = device.media_type === "android" || String(media.device_path || "").startsWith("android:");
+  const isPhone = isIphone || isAndroid;
   const isOptical = device.type === "rom" || device.media_type === "optical" || String(media.device_path || "").startsWith("/dev/sr");
-  const readOnly = isIphone
-    ? "APPLE-DIENSTE · METADATEN NUR LESEND (KEIN HARDWARE-SCHREIBBLOCKER)"
+  const readOnly = isPhone
+    ? `${isAndroid ? "ANDROID-PAKETMETADATEN" : "APPLE-APP-METADATEN"} · KEINE DATEISICHTUNG`
     : device.read_only_verified === true
     ? "BEIM SCAN VERIFIZIERT"
     : (device.read_only || device.ro ? "AKTIV" : "NICHT DOKUMENTIERT");
@@ -748,56 +753,49 @@ function renderDeviceEvidence(media = {}, storedDevice = {}) {
   $("evidenceDeviceCapacity").textContent = Number(media.size || device.size || 0) > 0
     ? formatBytes(media.size || device.size)
     : "NICHT GEMELDET";
-  $("evidenceDeviceType").textContent = isIphone ? "IPHONE (APPLE USB-DIENSTE)" : isOptical ? "CD/DVD (USB)" : "USB-DATENTRÄGER";
+  $("evidenceDeviceType").textContent = isIphone ? "IPHONE (APPLE USB-DIENSTE)" : isAndroid ? "ANDROID (FREIGEGEBENE APP-METADATEN)" : isOptical ? "CD/DVD (USB)" : "USB-DATENTRÄGER";
   $("evidenceDevicePath").textContent = media.device_path || device.path || "—";
   $("evidenceDeviceReadOnly").textContent = readOnly;
 }
 
-function renderIphoneSummary(iphone, accessibleFiles = 0) {
-  $("iphoneSummary").hidden = !iphone;
-  if (!iphone) return;
-  const device = iphone.device || {};
-  const appHints = iphone.app_hints || [];
-  const fileHints = iphone.file_hints || [];
-  $("iphoneDevice").textContent = [device.device_name, device.model].filter(Boolean).join(" · ") || "IPHONE";
-  $("iphoneSystem").textContent = `IOS ${device.ios_version || "UNBEKANNT"} · ${device.connection_state === "paired" ? "GEKOPPELT" : String(device.connection_state || "STATUS UNBEKANNT").toUpperCase()}`;
+function renderIphoneSummary(phone) {
+  $("iphoneSummary").hidden = !phone;
+  if (!phone) return;
+  const device = phone.device || {};
+  const platform = phone.platform || (device.android_version ? "android" : "ios");
+  const appHints = phone.app_hints || [];
+  const apps = phone.apps || [];
+  $("iphoneDevice").textContent = [device.device_name, device.vendor, device.model].filter(Boolean).filter((value, index, all) => all.indexOf(value) === index).join(" · ") || "TELEFON";
+  const os = platform === "android" ? `ANDROID ${device.android_version || "UNBEKANNT"}` : `IOS ${device.ios_version || "UNBEKANNT"}`;
+  $("iphoneSystem").textContent = `${os} · ${platform === "android" ? "VERBINDUNG FREIGEGEBEN" : device.connection_state === "paired" ? "GEKOPPELT" : String(device.connection_state || "STATUS UNBEKANNT").toUpperCase()}`;
   $("iphoneSerial").textContent = device.serial || "NICHT GEMELDET";
-  $("iphoneUdid").textContent = device.udid || "NICHT GEMELDET";
-  $("iphoneHardware").textContent = `MODELLKENNUNG ${device.model_number || device.hardware_model || "NICHT GEMELDET"}`;
-  const apps = iphone.apps || [];
-  $("iphoneAccessibleFiles").textContent = Number(accessibleFiles).toLocaleString("de-AT");
-  const appsComplete = iphone.apps_complete ?? iphone.apps_status === "complete";
-  const filesComplete = iphone.files_complete ??
-    (iphone.file_sharing_status === "complete" && (iphone.areas || []).every(area => area.status === "complete"));
-  $("iphoneFileStatus").textContent = filesComplete ? "ZUGÄNGLICHE BEREICHE ERFASST" : "NUR AUSZUG · WEITERE BEREICHE OFFEN";
-  const uniqueAppHints = [...new Map(appHints.map(item => [item.bundle_id || item.name, item])).values()];
-  const fileHintCount = new Set(fileHints.map(item => item.path)).size;
-  const hasSeveralSignals = uniqueAppHints.length >= 2 || (uniqueAppHints.length && fileHintCount);
-  const triageLevel = hasSeveralSignals ? "DEUTLICHER KRYPTO-HINWEIS"
-    : uniqueAppHints.length ? "KRYPTO-APP ERKANNT"
-      : fileHintCount ? "KRYPTO-DATEINAME ERKANNT"
-        : appsComplete ? "KEIN KRYPTO-HINWEIS ERKANNT" : "KEINE VERLÄSSLICHE AUSSAGE";
-  const triageText = hasSeveralSignals
-    ? "Mehrere passende Hinweise in den zugänglichen Metadaten. Für die weitere Beurteilung eine Fachperson hinzuziehen."
-    : uniqueAppHints.length
-      ? "Eine passende App wurde erkannt. Krypto-Bezug möglich; für die weitere Beurteilung eine Fachperson hinzuziehen."
-      : fileHintCount
-        ? "Ein passender Dateiname wurde erkannt. Für die weitere Beurteilung eine Fachperson hinzuziehen."
-        : appsComplete
-          ? "In den erfassten Apps und zugänglichen Dateinamen kein Hinweis. Das schließt Krypto auf dem Telefon nicht aus."
-          : "Die App-Liste ist unvollständig. Aus diesem Scan lässt sich kein verlässlicher Negativbefund ableiten.";
+  $("iphoneUdid").textContent = device.udid || device.adb_serial || device.serial || "NICHT GEMELDET";
+  $("iphoneHardware").textContent = platform === "android" ? `BUILD ${device.build_version || "NICHT GEMELDET"}` : `MODELLKENNUNG ${device.model_number || device.hardware_model || "NICHT GEMELDET"}`;
+  $("iphoneAccessibleFiles").textContent = "NUR APP-LISTE";
+  $("iphoneFileStatus").textContent = "KEINE DATEI-, FOTO- ODER MEDIENSICHTUNG";
+  const appsComplete = phone.apps_complete ?? phone.apps_status === "complete";
+  const uniqueAppHints = [...new Map(appHints.map(item => [item.package_id || item.bundle_id || item.name, item])).values()];
+  const highSignals = uniqueAppHints.filter(item => item.relevance === "high").length;
+  const triageLevel = uniqueAppHints.length >= 2 || highSignals >= 1 ? "DEUTLICHER KRYPTO-HINWEIS"
+    : uniqueAppHints.length ? "KRYPTO-HINWEIS ERKANNT"
+      : appsComplete ? "KEIN KRYPTO-HINWEIS IN DER APP-LISTE" : "KEINE VERLÄSSLICHE AUSSAGE";
+  const triageText = uniqueAppHints.length
+    ? `${uniqueAppHints.length} relevante ${uniqueAppHints.length === 1 ? "App" : "Apps"} erkannt. Für die weitere Beurteilung eine Fachperson hinzuziehen.`
+    : appsComplete
+      ? "Keine Krypto-Apps in der erfassten Benutzer-App-Liste erkannt. Das schließt Krypto auf dem Telefon nicht aus."
+      : "Die App-Liste oder mindestens ein Profil konnte nicht vollständig geprüft werden. Kein verlässlicher Negativbefund.";
   $("iphoneTriageLevel").textContent = triageLevel;
   $("iphoneTriageText").textContent = triageText;
-  $("iphoneHintSummary").classList.toggle("has-hints", Boolean(uniqueAppHints.length || fileHintCount));
-  $("iphoneTriageApps").innerHTML = uniqueAppHints.map(item => `<span>${escapeHtml(item.name || item.bundle_id || "APP")}</span>`).join("")
-    + (fileHintCount ? `<span>${fileHintCount.toLocaleString("de-AT")} DATEINAMEN-HINWEIS${fileHintCount === 1 ? "" : "E"}</span>` : "");
-  $("iphoneAssessment").textContent = iphone.assessment || "—";
+  $("iphoneHintSummary").classList.toggle("has-hints", Boolean(uniqueAppHints.length));
+  $("iphoneTriageApps").innerHTML = uniqueAppHints.map(item => `<span>${escapeHtml(item.name || item.package_id || item.bundle_id || "APP")}</span>`).join("");
+  $("iphoneAssessment").textContent = phone.assessment || "—";
   $("iphoneCompleteness").textContent = appsComplete ? `${apps.length.toLocaleString("de-AT")} ${apps.length === 1 ? "APP" : "APPS"} ERFASST` : "APP-LISTE UNVOLLSTÄNDIG";
   $("iphoneCompleteness").classList.toggle("incomplete", !appsComplete);
-  $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
+  $("iphoneNotice").textContent = `${phone.notice || ""} APP-LISTE: ${String(phone.apps_status || "unbekannt").toUpperCase()}`;
   const grouped = new Map();
   for (const app of apps) {
     const category = app.matches?.[0]?.category || "other";
+    if (platform === "android" && !cryptoCategories.has(category)) continue;
     if (!grouped.has(category)) grouped.set(category, []);
     grouped.get(category).push(app);
   }
@@ -817,11 +815,12 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
     }
     $("iphoneOtherEmpty").hidden = visible > 0;
   });
-  $("iphoneApps").innerHTML = (iphone.apps || []).map((app) => {
+  $("iphoneApps").innerHTML = apps.map((app) => {
     const matches = (app.matches || []).map((match) => `${match.category} (${match.id})`).join(" · ") || "—";
-    return `<tr><td>${escapeHtml(app.name || "—")}</td><td><code>${escapeHtml(app.bundle_id || "—")}</code></td><td>${escapeHtml(app.version || "—")}</td><td>${escapeHtml(matches)}</td></tr>`;
+    const context = [app.profile_name, matches].filter(Boolean).join(" · ") || "—";
+    return `<tr><td>${escapeHtml(app.name || "—")}</td><td><code>${escapeHtml(app.package_id || app.bundle_id || "—")}</code></td><td>${escapeHtml(app.version || "—")}</td><td>${escapeHtml(context)}</td></tr>`;
   }).join("") || '<tr><td colspan="4">APP-LISTE NICHT VERFÜGBAR ODER LEER</td></tr>';
-  $("iphoneAreas").innerHTML = (iphone.areas || []).map((area) => `<div class="iphone-area ${escapeHtml(area.status || "unknown")}"><strong>${escapeHtml(area.area || "BEREICH")}</strong><span>${escapeHtml(String(area.status || "unbekannt").toUpperCase())}${area.file_count !== undefined ? ` · ${Number(area.file_count).toLocaleString("de-AT")} DATEIEN` : ""}</span><small>${escapeHtml(area.message || "")}</small></div>`).join("");
+  $("phoneCoverage").innerHTML = (phone.coverage || []).map((area) => `<div class="iphone-area ${escapeHtml(area.status || "unknown")}"><strong>${area.status === "complete" ? "✓" : "△"} ${escapeHtml(area.label || "BEREICH")}</strong><span>${escapeHtml(area.status === "complete" ? "GEPRÜFT" : "NICHT VOLLSTÄNDIG PRÜFBAR")}</span><small>${escapeHtml(area.message || "")}</small></div>`).join("");
 }
 
 function renderCryptoFindings(crypto, isPhone) {
@@ -875,7 +874,8 @@ function updateDecisionFields() {
 
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
-  const isPhone = Boolean(record.iphone);
+  const phone = record.phone || record.iphone || record.android || null;
+  const isPhone = Boolean(phone);
   $("inventoryTitle").textContent = isPhone ? "TECHNISCHE DATEIDETAILS" : "DATEIEN DIESES MEDIUMS";
   $("decisionTitle").textContent = isPhone ? "ENTSCHEIDUNG ZUM TELEFON" : "ENTSCHEIDUNG ZUM DATENTRÄGER";
   $("documentationGrid").classList.toggle("phone-view", isPhone);
@@ -887,7 +887,7 @@ function renderRecord(record) {
   } else {
     $("classicHome").after($("cryptoFindings"));
   }
-  renderIphoneSummary(record.iphone || null, record.summary?.file_count || 0);
+  renderIphoneSummary(phone);
   renderCryptoFindings(record.crypto || null, isPhone);
   if (record.media) {
     clearInventoryView();
@@ -1180,11 +1180,13 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   $("deviceList").innerHTML = dashboardDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const iphone = device.media_type === "iphone";
+    const android = device.media_type === "android";
+    const phone = iphone || android;
     const model = iphone
       ? [device.device_name, device.model].filter(Boolean).join(" · ") || "Apple iPhone"
       : [device.vendor, device.model].filter(Boolean).join(" ") || (device.media_type === "optical" ? "CD/DVD-Laufwerk" : "USB-Datenträger");
     const serial = (iphone ? device.udid : device.serial) || "NICHT GEMELDET";
-    const type = iphone ? `IPHONE · IOS ${device.ios_version || "?"}` : device.media_type === "optical" ? "CD/DVD" : "USB";
+    const type = iphone ? `IPHONE · IOS ${device.ios_version || "?"}` : android ? "ANDROID-TELEFON" : device.media_type === "optical" ? "CD/DVD" : "USB";
     const disabled = deviceDiscoveryError || !device.scan_supported || state === "scanning" || state === "timeout";
     const stateReason = state === "timeout"
       ? "ABZIEHEN UND NEU VERBINDEN"
@@ -1192,12 +1194,16 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const optical = device.media_type === "optical";
     const visibleState = iphone && state === "ready" && device.connection_state !== "paired"
       ? "IPHONE ENTSPERREN / VERTRAUEN"
+      : android && !device.scan_supported
+        ? (device.connection_state === "authorization_required" ? "VERBINDUNG AM TELEFON BESTÄTIGEN" : "TELEFON VORBEREITEN")
       : stateLabels[state];
+    const guidance = android && !device.scan_supported ? `<div class="android-guidance"><strong>ANDROID-TELEFON ERKANNT</strong><p>Für die Krypto-App-Prüfung einmalig am Telefon:</p><ol>${(device.guidance || []).map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol><small>TRIAGE//BOX wartet automatisch. Nach der Bestätigung startet der Scan bei aktivem Fall.</small></div>` : "";
     const ejectDisabled = deviceDiscoveryError || ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${iphone ? "IPHONE ERKANNT" : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
-      <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)}${iphone ? "" : ` · ${formatBytes(device.size)}`} · ${type}</span><code title="${escapeHtml(serial)}">${iphone ? "UDID" : "SERIAL"} ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
+      <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${phone ? `${android ? "ANDROID" : "IPHONE"} ERKANNT` : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
+      <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)}${phone ? "" : ` · ${formatBytes(device.size)}`} · ${type}</span><code title="${escapeHtml(serial)}">${phone ? "GERÄTE-ID" : "SERIAL"} ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
       <div class="device-state"><b>${escapeHtml(visibleState)}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
+      ${guidance}
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <div class="device-card-actions${optical ? " optical" : ""}">
         <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
@@ -2041,7 +2047,7 @@ for (const root of [$("cryptoAppRules"), $("cryptoFileRules")]) {
 $("cryptoAddApp").addEventListener("click", () => {
   if (!cryptoState || cryptoBusy) return;
   const rule = { id: `neue-app-${Date.now().toString(36)}`, name: "Neue App", category: "wallet", relevance: "high",
-    enabled: true, bundle_ids: [], aliases: [], terms: [], comment: "" };
+    enabled: true, ios_bundle_ids: [], android_package_ids: [], aliases: [], terms: [], comment: "" };
   $("cryptoAppRules").insertAdjacentHTML("beforeend", renderCryptoRule(rule, "app"));
   const added = $("cryptoAppRules").lastElementChild;
   added.querySelector('[data-rule-field="category"]').value = rule.category;

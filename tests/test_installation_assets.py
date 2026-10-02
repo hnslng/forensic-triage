@@ -64,6 +64,12 @@ def test_debian_installer_includes_iphone_usb_tools() -> None:
     assert "FORENSIC_TRIAGE_IPHONE_FILE_MAX_FILES=2000" in environment
 
 
+def test_debian_installer_includes_android_collector() -> None:
+    installer = (ROOT / "scripts/install_debian.sh").read_text(encoding="utf-8")
+    assert " adb)" in installer
+    assert 'usermod -a -G plugdev "$INSTALL_OWNER"' in installer
+
+
 def test_installed_package_contains_default_iphone_rules() -> None:
     rules = package_files("forensic_triage").joinpath("data/iphone-triage.json")
     assert rules.is_file()

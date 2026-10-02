@@ -86,32 +86,36 @@
         </div>
 
         <section id="iphoneSummary" class="panel iphone-summary" hidden>
-          <div class="panel-title"><span>TELEFON</span> ÜBERBLICK</div>
+          <div class="panel-title"><span>TELEFON</span> KRYPTO-SCHNELLSCAN</div>
           <div class="iphone-head">
             <div><small>ANGESCHLOSSENES GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span><span class="iphone-serial">SERIENNUMMER <b id="iphoneSerial">NICHT GEMELDET</b></span></div>
             <span id="iphoneCompleteness" class="iphone-coverage">—</span>
           </div>
           <div id="iphoneHintSummary" class="iphone-triage" aria-live="polite">
-            <small>KRYPTO-EINSCHÄTZUNG · NUR GROBSICHTUNG</small>
+            <small>KRYPTO-TRIAGE · NUR APP-METADATEN</small>
             <strong id="iphoneTriageLevel">—</strong>
             <p id="iphoneTriageText">—</p>
             <div id="iphoneTriageApps" class="iphone-triage-apps"></div>
           </div>
           <div class="iphone-main">
-            <h3>ERKANNTE APP-GRUPPEN <small>APP-NAMEN DIREKT SICHTBAR · SONSTIGE AUFKLAPPEN</small></h3>
+            <h3>ERKANNTE APP-GRUPPEN <small>KRYPTO-TREFFER DIREKT SICHTBAR</small></h3>
             <div id="iphoneCategories" class="iphone-categories"></div>
+          </div>
+          <div class="iphone-main phone-coverage-wrap">
+            <h3>ERFASSUNGSSTATUS</h3>
+            <div id="phoneCoverage" class="iphone-areas"></div>
           </div>
           <details class="iphone-technical">
             <summary>TECHNISCHE DETAILS &amp; ERFASSUNGSGRENZEN</summary>
             <div class="iphone-identity">
-              <div><small>UDID</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
-              <div><small>DATEINAMEN · ZUSATZ</small><strong id="iphoneAccessibleFiles">0</strong><span id="iphoneFileStatus">BEGRENZT AUF ZUGÄNGLICHE BEREICHE</span></div>
+              <div><small>TECHNISCHE KENNUNG</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
+              <div><small>SCANMODUS</small><strong id="iphoneAccessibleFiles">APP-LISTE</strong><span id="iphoneFileStatus">KEINE DATEI-/MEDIENSICHTUNG</span></div>
             </div>
-            <div class="iphone-scope"><strong>ERFASSUNGSUMFANG</strong><span id="iphoneAssessment">—</span><small>Nur von iOS freigegebene Bereiche; keine vollständige Telefonauslesung.</small></div>
-            <h3>ZUGRIFFSBEREICHE</h3><div id="iphoneAreas" class="iphone-areas"></div>
+            <div class="iphone-scope"><strong>ERFASSUNGSUMFANG</strong><span id="iphoneAssessment">—</span><small>Keine vollständige Telefonauslesung; keine Wallet-Inhalte, Schlüssel, Seeds, Fotos oder Dateien.</small></div>
+            <div id="iphoneAreas" hidden></div>
             <h3>VOLLSTÄNDIGE APP-LISTE</h3>
             <p id="iphoneNotice"></p>
-            <div class="table-wrap"><table><thead><tr><th>APP</th><th>BUNDLE-ID</th><th>VERSION</th><th>KATEGORIE / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>APP</th><th>APP-KENNUNG</th><th>VERSION</th><th>PROFIL / REGEL</th></tr></thead><tbody id="iphoneApps"></tbody></table></div>
           </details>
         </section>
 

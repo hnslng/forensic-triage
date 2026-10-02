@@ -317,6 +317,15 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .iphone-area span { margin-top: 5px; color: var(--acid); font-size: 10px; }
 .iphone-area.unavailable span, .iphone-area.not_checked_limit span { color: var(--amber); }
 .iphone-area small { margin-top: 5px; color: var(--muted); font-size: 10px; }
+.phone-coverage-wrap { border-top: 1px solid var(--line); padding-top: 14px; }
+.phone-coverage-wrap .iphone-areas { padding: 0; }
+.iphone-area.unknown span, .iphone-area.unavailable span { color: var(--amber); }
+.android-guidance { margin: 0 16px 13px; padding: 12px 14px; border: 1px solid var(--amber); background: rgba(255,180,74,.05); }
+.android-guidance strong { color: var(--amber); font-size: 12px; }
+.android-guidance p, .android-guidance li, .android-guidance small { color: var(--ink); font-size: 11px; line-height: 1.45; }
+.android-guidance p { margin: 7px 0 4px; }
+.android-guidance ol { margin: 0; padding-left: 20px; }
+.android-guidance small { display: block; margin-top: 8px; color: var(--muted); }
 .analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }

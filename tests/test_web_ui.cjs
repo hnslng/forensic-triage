@@ -504,7 +504,7 @@ test('multiple removed undecided media use one queue and return there from detai
   assert.equal(await page.locator('#pendingDecisionBanner').isVisible(), true);
 });
 
-test('iphone card and result distinguish hints from incomplete collection', async t => {
+test('iphone card and app-only result distinguish hints from incomplete collection', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
     activeCaseNumber = 'TEST'; activeOperator = 'HL';
@@ -520,35 +520,71 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
   await page.evaluate(() => renderRecord({
     media: { id: 99, case_number: 'TEST', sighting_number: 'SICHT-099', device_path: 'iphone:000-test', serial: '000-test', vendor: 'Apple', model: 'iPhone15,4', decision: 'open' },
     device: { media_type: 'iphone', device_name: 'Testtelefon', ios_version: '18.6', write_operations_performed: false },
-    summary: { evidence: 'SICHT-099', file_count: 1, directory_count: 1, total_file_bytes: 20, keyword_matches: 1, categories_by_count: { 'Web-Dateien': 1 }, largest_files: [] },
-    hits: { wallet: 1 }, archive: {},
-    crypto: { rules: { version: 1 }, app_hints: [{ name: 'Test Wallet', category: 'wallet', reason: 'Testregel' }], file_hints: [{ path: 'AFC_MEDIA/wallet.json', matches: [{ category: 'wallet', reason: 'Dateiname' }] }] },
-    iphone: {
+    summary: { evidence: 'SICHT-099', file_count: 0, directory_count: 0, total_file_bytes: 0, keyword_matches: 0, categories_by_count: {}, largest_files: [] },
+    hits: {}, archive: {},
+    crypto: { rules: { version: 1 }, app_hints: [{ name: 'Test Wallet', category: 'wallet', reason: 'Testregel' }], file_hints: [] },
+    phone: {
+      platform: 'ios',
       device: { device_name: 'Testtelefon', model: 'iPhone15,4', ios_version: '18.6', connection_state: 'paired' },
-      apps_status: 'complete', file_sharing_status: 'incomplete: nicht verfügbar', complete: false,
+      apps_status: 'complete', apps_complete: true, complete: true,
       app_hints: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', id: 'wallet', category: 'wallet' }],
-      file_hints: [{ path: 'AFC_MEDIA/wallet.json', id: 'backup', category: 'wallet' }],
+      file_hints: [],
       apps: [{ name: 'Test Wallet', bundle_id: 'io.test.wallet', version: '1', matches: [{ id: 'wallet', category: 'wallet' }] }],
-      areas: [{ area: 'AFC_MEDIA', status: 'unavailable', message: 'Bereich nicht zugänglich' }],
-      assessment: 'Relevante Hinweise vorhanden – weitere Untersuchung empfohlen',
-      notice: 'Nur Triage-Hinweise.',
+      coverage: [{ label: 'Benutzer-App-Liste', status: 'complete', message: '1 App erfasst' }],
+      assessment: 'Relevante Krypto-Apps erkannt – Fachperson hinzuziehen',
+      notice: 'Dateien und Fotos wurden nicht gelesen.',
     },
   }));
   assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
   assert.match(await page.locator('#iphoneSummary').innerText(), /1 APP ERFASST/);
   await page.locator('#iphoneSummary .iphone-technical summary').click();
-  assert.match(await page.locator('#iphoneFileStatus').innerText(), /NUR AUSZUG/);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /DEUTLICHER KRYPTO-HINWEIS/i);
+  assert.match(await page.locator('#iphoneFileStatus').innerText(), /KEINE DATEI-, FOTO- ODER MEDIENSICHTUNG/);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /KRYPTO-HINWEIS ERKANNT/i);
   assert.match(await page.locator('#iphoneTriageApps').innerText(), /TEST WALLET/i);
   assert.equal(await page.locator('#cryptoFindings').isHidden(), true);
   assert.match(await page.locator('#decisionTitle').innerText(), /TELEFON/);
   if (process.env.TRIAGE_SCREENSHOT) await page.locator('#results').screenshot({ path: process.env.TRIAGE_SCREENSHOT });
-  assert.match(await page.locator('#iphoneNotice').textContent(), /FILE SHARING: INCOMPLETE/);
+  assert.doesNotMatch(await page.locator('#iphoneNotice').textContent(), /FILE SHARING|AFC/);
+  assert.match(await page.locator('#phoneCoverage').innerText(), /Benutzer-App-Liste/i);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
   assert.equal(await page.locator('#inventoryPanel').getAttribute('open'), null);
   assert.match(await page.locator('#iphoneCategories').innerText(), /TEST WALLET/i);
   assert.equal(await page.locator('#iphoneCategories .iphone-category.crypto').isVisible(), true);
+});
+
+test('android card guides authorization and result shows profile coverage', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    renderDevices([{
+      path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test',
+      media_type: 'android', connection_state: 'authorization_required', scan_supported: false,
+      unavailable_reason: 'Verbindungsabfrage am Telefon bestätigen.',
+      guidance: ['Einstellungen öffnen', 'USB-Debugging aktivieren', 'Verbindungsabfrage bestätigen'],
+    }]);
+  });
+  assert.match(await page.locator('#deviceList').innerText(), /ANDROID-TELEFON ERKANNT/);
+  assert.match(await page.locator('#deviceList').innerText(), /VERBINDUNG AM TELEFON BESTÄTIGEN/);
+  assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
+  await page.evaluate(() => renderRecord({
+    media: { id: 100, case_number: 'TEST', sighting_number: 'SICHT-100', device_path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test', decision: 'open' },
+    device: { media_type: 'android', vendor: 'Samsung', model: 'Galaxy Test', android_version: '16', adb_serial: 'SERIAL1' },
+    summary: { evidence: 'SICHT-100', file_count: 0, directory_count: 0, total_file_bytes: 0, keyword_matches: 0, categories_by_count: {}, largest_files: [] },
+    hits: {}, archive: {},
+    phone: {
+      platform: 'android', device: { vendor: 'Samsung', model: 'Galaxy Test', android_version: '16', adb_serial: 'SERIAL1' },
+      apps_status: 'complete', apps_complete: true,
+      apps: [{ name: 'MetaMask', package_id: 'io.metamask', version: '7.50', profile_name: 'Owner', matches: [{ id: 'metamask', category: 'wallet', relevance: 'high' }] }],
+      app_hints: [{ name: 'MetaMask', package_id: 'io.metamask', category: 'wallet', relevance: 'high' }],
+      coverage: [{ label: 'Owner', status: 'complete', message: '1 Benutzer-App erfasst' }, { label: 'Secure Folder', status: 'unknown', message: 'Nicht zuverlässig feststellbar' }],
+      assessment: 'Relevante Krypto-Apps erkannt – Fachperson hinzuziehen', notice: 'Keine Dateien gelesen.',
+    },
+  }));
+  assert.match(await page.locator('#iphoneSystem').innerText(), /ANDROID 16/);
+  assert.match(await page.locator('#iphoneCategories').innerText(), /MetaMask/i);
+  assert.match(await page.locator('#phoneCoverage').innerText(), /Secure Folder/i);
+  assert.match(await page.locator('#phoneCoverage').innerText(), /NICHT VOLLSTÄNDIG PRÜFBAR/);
 });
 
 test('phone app groups show recognized names and search only the collapsed other group', async t => {

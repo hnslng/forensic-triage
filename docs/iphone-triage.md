@@ -1,12 +1,12 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 2. Oktober 2026 · Anwendung `v0.2.0-alpha.59`
+Stand: 2. Oktober 2026 · Anwendung `v0.2.0-alpha.60`
 
 ## Zweck und Grenze
 
 TRIAGE//BOX kann ein regulär entsperrtes und vom Benutzer als vertrauenswürdig bestätigtes iPhone über die normalen Apple-USB-Dienste grob sichten. Die Funktion umgeht keine iOS-Sicherheitsmaßnahme, führt keinen Jailbreak durch und versucht weder Kennwörter noch Seed-Phrases, Private Keys oder andere Geheimnisse zu extrahieren.
 
-Die Oberfläche zeigt ausschließlich Triage-Hinweise. Eine installierte Wallet- oder Börsen-App ist **kein Nachweis für vorhandene Vermögenswerte**. Ein auffälliger Dateiname ist **kein Nachweis für den Inhalt einer Datei**.
+Die Oberfläche zeigt ausschließlich Triage-Hinweise. Eine installierte Wallet- oder Börsen-App ist **kein Nachweis für vorhandene Vermögenswerte**. Der normale Lauf durchsucht seit Alpha 60 keine Dateien oder Medien mehr.
 
 ## Technischer Ablauf
 
@@ -14,34 +14,32 @@ Die Oberfläche zeigt ausschließlich Triage-Hinweise. Eine installierte Wallet-
 2. `idevice_id` erkennt angeschlossene iPhones. `idevicepair` prüft beziehungsweise startet die reguläre Kopplung; erforderlichenfalls muss das iPhone entsperrt und „Diesem Computer vertrauen“ bestätigt werden.
 3. `ideviceinfo` liest Gerätename, ProductType, iOS-/Build-Version, die gemeldete **Seriennummer** und getrennt davon die **UDID**. Wird eine Kennung nicht gemeldet, steht dort ausdrücklich „nicht gemeldet“; die UDID wird nicht als Seriennummer ausgegeben.
 4. `ideviceinstaller` fragt die Metadaten der gemeldeten Benutzer-Apps ab. Name, Bundle-ID und Version werden anhand lokaler Regeln kategorisiert.
-5. Erst nach der App-Liste bindet `ifuse` die ausdrücklich per File Sharing freigegebenen App-Dokumentbereiche und anschließend den regulären AFC-Medienbereich jeweils nur lesend in den privaten Mount-Namensraum des Scan-Workers ein. Die knappe Dateizahl und Zeit werden möglichst auf die Bereiche verteilt; ein Bereich darf nicht die gesamte Zusatzprüfung aufbrauchen.
-6. TRIAGE//BOX liest dort nur einen begrenzten Dateinamen-Auszug mit Metadaten: Name, Pfad, Endung, Größe und verfügbaren Änderungszeitpunkt. Standardmäßig höchstens 2.000 Dateien und 15 Sekunden für diesen Zusatz; Nutzdateien werden nicht geöffnet.
-7. Ergebnis, unzugängliche Bereiche, Limits und Regelstand werden in derselben lokalen Fallakte wie USB-/CD-Sichtungen gespeichert.
+5. Die App-Liste wird gegen den unveränderlich in den Scan kopierten Regelstand klassifiziert.
+6. Ergebnis, Vollständigkeit, Phasendauern und Regelstand werden in derselben lokalen Fallakte wie USB-/CD-Sichtungen gespeichert.
 
-Der allgemeine Bereich „Auf meinem iPhone“ ist nicht als vollständiger globaler Ordner verfügbar. Sichtbar sind nur Bereiche, die iOS über AFC beziehungsweise den jeweiligen File-Sharing-/House-Arrest-Dienst freigibt. App-Sandboxes, Schlüsselbund, private App-Daten und gesperrte Bereiche bleiben außerhalb des Umfangs.
+Der Schnellscan bindet weder den AFC-Medienbereich noch File-Sharing-/House-Arrest-Bereiche ein. App-Sandboxes, Schlüsselbund, private App-Daten, Fotos und gesperrte Bereiche bleiben außerhalb des Umfangs. Eine spätere „Erweiterte Sichtung“ ist nur eine Roadmap-Idee und derzeit nicht als Bedienfunktion vorhanden.
 
 ## Erkennungsregeln
 
 Die gemeinsame Ausgangsliste für App- und Dateimetadaten liegt in `src/forensic_triage/data/crypto-rules.json`. Beim ersten Start wird sie als `crypto-rules.json` im konfigurierten `FORENSIC_TRIAGE_SETTINGS_ROOT` angelegt. Eine bereits vorhandene ältere `iphone-triage.json` wird einmalig als Ausgangspunkt übernommen; danach wird ausschließlich die neue gemeinsame Datei verwendet. Updates überschreiben lokale Anpassungen nicht. Die Oberfläche bietet unter **Einstellungen → Krypto-Regeln** Bearbeiten, JSON-Import und -Export. Jeder neue Scan speichert seine eigene `crypto-rules.json`-Kopie und `crypto-hints.json` mit konkreten Treffergründen.
 
-App-Regeln prüfen zuerst exakte Bundle-IDs, dann exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Die mitgelieferte Liste enthält keine unbestätigten Bundle-IDs; diese können nach Realtest ergänzt werden. Wallets, Hardware-Wallet-Apps und Börsen werden als hohe Hinweise kategorisiert, Portfolio-/Steuer- und Markt-Apps niedriger. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln kombinieren Dateinamen/Pfad, gegebenenfalls Kontext und Endung; sie lesen keine Dateiinhalte. `wallet.dat` ist ein Namenshinweis, nicht der Nachweis einer funktionsfähigen Wallet.
+App-Regeln unterstützen getrennte `ios_bundle_ids` und `android_package_ids`, danach exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Wallets, Hardware-Wallet-Apps und Börsen sind hohe Hinweise, Portfolio-/Steuer- und Markt-Apps mittlere beziehungsweise niedrigere Hinweise. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln bleiben für USB-/CD-Medien vorhanden, werden beim Telefon-Schnellscan aber nicht ausgeführt.
 
-Die Telefonansicht zeigt zuerst Gerätename, Seriennummer und Anzahl der erfassten Apps. Darunter folgt eine verständliche Krypto-Einschätzung: kein erkannter Hinweis, eine erkannte Krypto-App/ein Dateinamen-Hinweis oder mehrere passende Hinweise. Bei Treffern empfiehlt die Ansicht eine Fachperson; selbst mehrere Treffer belegen weder Nutzung noch Vermögenswerte. Fehlt die App-Liste, wird ohne Treffer keine verlässliche Negativaussage getroffen. Messenger, Banking und andere neutrale Kategorien lösen keine Krypto-Warnung aus.
+Die Telefonansicht zeigt zuerst Gerätename, Seriennummer und Anzahl der erfassten Apps. Darunter folgt eine verständliche Krypto-Einschätzung. Bei Treffern empfiehlt sie eine Fachperson; selbst mehrere Treffer belegen weder Nutzung noch Vermögenswerte. Fehlt die App-Liste, wird ohne Treffer keine verlässliche Negativaussage getroffen. Messenger, Banking und andere neutrale Kategorien lösen keine Krypto-Warnung aus.
 
-App-Namen in erkannten Gruppen sind direkt sichtbar. Nur „Sonstige Apps“ ist aufklappbar und durchsuchbar. Die App-Liste und der Dateinamen-Auszug haben getrennte Vollständigkeitsangaben: Eine erfasste App-Liste kann mit einem begrenzten Dateinamen-Auszug einhergehen. UDID, genaue Zugriffsgrenzen, der Dateinamen-Zusatz und die vollständige technische App-Liste sind gesondert aufklappbar. Die USB-typische Dateitypen-/Größenstatistik erscheint in der Telefon-Hauptansicht nicht; das zugängliche Dateiverzeichnis bleibt als technisches Detail erhalten. Keine Angabe behauptet eine vollständige Telefonauslesung.
+App-Namen in erkannten Gruppen sind direkt sichtbar; sonstige Apps bleiben aufklappbar und durchsuchbar. UDID, Modellkennung und vollständige technische App-Liste liegen im Detailbereich. Dateitypen, Größen, Stichwörter, Dateiverzeichnis und größte Dateien erscheinen beim Telefon nicht, weil sie im Schnellscan nicht erhoben werden. Keine Angabe behauptet eine vollständige Telefonauslesung.
 
 ## Zuverlässigkeit und Einschränkungen
 
 - Gerätekennung und Basisinformationen sind bei erfolgreicher Kopplung typischerweise stabil verfügbar.
 - App-Metadaten hängen von iOS-Version, Apple-Dienst und der von Apple tatsächlich herausgegebenen Liste ab. Die Oberfläche unterscheidet deshalb eine leere vollständige Liste von einer technisch unvollständigen Erfassung.
-- AFC-/File-Sharing-Zugriff umfasst nur regulär freigegebene Bereiche. Ein unzugänglicher Bereich wird einzeln protokolliert.
-- Der Zugriff wird mit `-o ro` angefordert und vor der Inventarisierung anhand der Linux-Mountinformationen als nur lesend verifiziert. TRIAGE//BOX führt keine Schreiboperation auf dem iPhone aus. Dies ist kein Hardware-Schreibblocker und iOS/Apple-Dienste bleiben Teil der Vertrauenskette.
-- Zeit-, App-, Bereichs- und Dateilimits halten die Grobsichtung begrenzt. Erreichte Limits erscheinen als `unvollständig`, niemals als „keine Treffer“.
+- TRIAGE//BOX führt im Schnellscan nur Abfragen gegen reguläre Apple-Dienste aus und keine Datei-Mounts. Dies ist kein Hardware-Schreibblocker; iOS/Apple-Dienste bleiben Teil der Vertrauenskette.
+- Das App-Limit hält eine fehlerhafte oder unerwartet große Antwort begrenzt. Ein erreichtes Limit erscheint als `unvollständig`, niemals als „keine Treffer“.
 - Aktuelle iOS-Versionen können Verhalten und verfügbare Metadaten ändern. `pymobiledevice3` wurde als mögliche spätere Kompatibilitätsschicht bewertet, ist in der kleinsten robusten Erstfassung aber bewusst keine zusätzliche Pi-Abhängigkeit. Vor einer Ergänzung ist ein dokumentierter Realtest erforderlich.
 
 ## Installation und Update
 
-Eine Neuinstallation über `scripts/install_debian.sh --pi` installiert zusätzlich `usbmuxd`, `libimobiledevice-utils`, `ideviceinstaller` und `ifuse`.
+Eine Neuinstallation über `scripts/install_debian.sh --pi` installiert `usbmuxd`, `libimobiledevice-utils` und `ideviceinstaller`. `ifuse` bleibt für mögliche erweiterte Tests installiert, wird im normalen Schnellscan aber nicht verwendet.
 
 Ein reines Offline-`.tbu` enthält keine Debian-Pakete. Bei einem bereits installierten Alpha-System müssen diese Pakete daher einmal mit Internetzugang installiert oder der aktuelle Installer erneut ausgeführt werden. Fehlen Werkzeuge, bleibt die iPhone-Funktion deaktiviert; vorhandene USB-/CD-Funktionen bleiben erhalten.
 
@@ -54,9 +52,11 @@ Nur mit einem eigenen beziehungsweise ausdrücklich freigegebenen Testgerät arb
 3. iPhone entsperren, per Datenkabel anschließen und Bildschirm eingeschaltet lassen.
 4. Wenn iOS fragt, „Diesem Computer vertrauen“ bestätigen und den Gerätecode am iPhone eingeben. Der Code wird nicht in TRIAGE//BOX eingegeben.
 5. Auf der iPhone-Kachel Gerätename/Modell, iOS-Version, UDID-Kürzung und Kopplungsstatus prüfen. Dann Scan starten beziehungsweise Auto-Scan abwarten.
-6. Ergebnis prüfen: App-Erfassungsstatus, Kategorien, zugängliche Bereiche, Datei-Hinweise und sichtbare Unvollständigkeitswarnungen. Einen bekannten File-Sharing-Testordner verwenden, ohne sensible Inhalte.
-7. Technische Details und `files.csv`, `apps.json`, `iphone.json`, `device.json` sowie `scan.log` in der Fallakte vergleichen. Sicherstellen, dass keine Nutzdatei kopiert wurde.
+6. Ergebnis prüfen: App-Erfassungsstatus, Krypto-Kategorien, Erfassungsstatus und sichtbare Unvollständigkeitswarnungen.
+7. Technische Details und `summary.json.timings`, leeres `files.csv`, `apps.json`, `phone.json`, `iphone.json`, `device.json` sowie `scan.log` vergleichen. Sicherstellen, dass keine Datei-/Medieninventarisierung stattgefunden hat.
 8. Kabel abziehen, offene Entscheidung dokumentieren und PDF-/ZIP-Export prüfen.
-9. Negativtests wiederholen: gesperrtes iPhone; Vertrauen nicht bestätigt; Vertrauen widerrufen; File Sharing deaktiviert; Scanlimit bewusst klein setzen. Jeder Fall muss eine konkrete Erklärung statt „keine Treffer“ liefern.
+9. Negativtests wiederholen: gesperrtes iPhone; Vertrauen nicht bestätigt; Vertrauen widerrufen; App-Limit bewusst klein setzen. Jeder Fall muss eine konkrete Erklärung statt „keine Treffer“ liefern.
+
+Der zuletzt vor Alpha 60 beobachtete reale iPhone-Lauf dauerte ungefähr 16,35 Sekunden und enthielt noch den begrenzten Dateinamen-Zusatz. Alpha 60 protokolliert erstmals Phasen getrennt und lässt die gesamte Datei-/Mountphase weg. Eine belastbare prozentuale Verbesserung darf erst nach demselben Realgerät-Test mit Alpha 60 angegeben werden.
 
 Dieser Realtest ist noch keine forensische Freigabe. Ergebnisse, iPhone-/iOS-Modell, Kabel, Pi-Version und alle Abweichungen im Prüfprotokoll festhalten.

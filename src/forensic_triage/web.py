@@ -27,6 +27,7 @@ from .commands import run_command
 from .crypto_rules import bundled_rules as bundled_crypto_rules, load_rules as load_crypto_rules, save_rules as save_crypto_rules, seed_rules as seed_crypto_rules
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .iphone import discover_iphones
+from .android import discover_androids
 from .scan_process import ScanTimeoutError, run_isolated_scan
 from .settings import SettingsConflict, atomic_write, default_catalog, load_catalog, prepare_profiles, save_catalog
 
@@ -47,6 +48,9 @@ LAST_DEVICE_DISCOVERY_ERROR = ""
 IPHONE_DISCOVERY_LOCK = threading.Lock()
 LAST_IPHONE_DISCOVERY: list[dict[str, Any]] = []
 LAST_IPHONE_DISCOVERY_ERROR = ""
+ANDROID_DISCOVERY_LOCK = threading.Lock()
+LAST_ANDROID_DISCOVERY: list[dict[str, Any]] = []
+LAST_ANDROID_DISCOVERY_ERROR = ""
 POWER_STATUS_LOCK = threading.Lock()
 LAST_POWER_STATUS: dict[str, Any] = {}
 LAST_POWER_STATUS_AT = 0.0
@@ -242,6 +246,24 @@ def cached_iphone_discovery() -> tuple[list[dict[str, Any]], str]:
         IPHONE_DISCOVERY_LOCK.release()
 
 
+def cached_android_discovery() -> tuple[list[dict[str, Any]], str]:
+    """Detect Android USB presence independently from media and Apple tools."""
+    global LAST_ANDROID_DISCOVERY, LAST_ANDROID_DISCOVERY_ERROR
+    if not ANDROID_DISCOVERY_LOCK.acquire(blocking=False):
+        return [dict(item) for item in LAST_ANDROID_DISCOVERY], "Android-Erkennung läuft; letzter Stand."
+    try:
+        try:
+            devices = discover_androids()
+        except (OSError, subprocess.SubprocessError, ValueError) as exc:
+            LAST_ANDROID_DISCOVERY_ERROR = f"Android-Erkennung nicht verfügbar: {exc}"
+            return [dict(item) for item in LAST_ANDROID_DISCOVERY], LAST_ANDROID_DISCOVERY_ERROR
+        LAST_ANDROID_DISCOVERY = [dict(item) for item in devices]
+        LAST_ANDROID_DISCOVERY_ERROR = ""
+        return devices, ""
+    finally:
+        ANDROID_DISCOVERY_LOCK.release()
+
+
 def cached_media_discovery(*, reactivate: bool = False) -> tuple[list[dict[str, Any]], str, list[str]]:
     """Return media inventory without hammering a blocked USB/SCSI stack."""
     global DEVICE_DISCOVERY_UNHEALTHY_UNTIL, LAST_DEVICE_DISCOVERY, LAST_DEVICE_DISCOVERY_ERROR
@@ -291,7 +313,7 @@ def ejected_usb_paths(nodes: list[dict[str, Any]]) -> list[str]:
 
 def _device_ejectable(device: dict[str, Any]) -> bool:
     """Allow an empty external optical tray to open without weakening USB checks."""
-    if device.get("mounted") or device.get("media_type") == "iphone":
+    if device.get("mounted") or device.get("media_type") in {"iphone", "android"}:
         return False
     return bool(device.get("scan_supported") or device.get("media_type") == "optical")
 
@@ -560,7 +582,8 @@ class TriageHandler(BaseHTTPRequestHandler):
             try:
                 devices, device_error, _ = cached_media_discovery()
                 iphones, iphone_error = cached_iphone_discovery()
-                devices = [*devices, *iphones]
+                androids, android_error = cached_android_discovery()
+                devices = [*devices, *iphones, *androids]
                 if not device_error:
                     clear_absent_quarantines(devices)
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
@@ -568,6 +591,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     "devices": devices,
                     "device_error": device_error,
                     "iphone_error": iphone_error,
+                    "android_error": android_error,
                     "latest": latest,
                     "cases": self.server.case_store.list_cases(),
                     "active_devices": active_device_paths(),
@@ -1042,13 +1066,15 @@ class TriageHandler(BaseHTTPRequestHandler):
         try:
             devices, device_error, paths = cached_media_discovery(reactivate=True)
             iphones, iphone_error = cached_iphone_discovery()
-            devices = [*devices, *iphones]
+            androids, android_error = cached_android_discovery()
+            devices = [*devices, *iphones, *androids]
             if not device_error:
                 clear_absent_quarantines(devices)
             self._json(HTTPStatus.OK, {
                 "devices": devices,
                 "device_error": device_error,
                 "iphone_error": iphone_error,
+                "android_error": android_error,
                 "reactivated": paths,
                 "active_devices": active_device_paths(),
                 "quarantined_devices": quarantined_device_paths(),
@@ -1137,6 +1163,8 @@ class TriageHandler(BaseHTTPRequestHandler):
                 crypto_rules = load_crypto_rules(self.server.crypto_rules_path)
             if device_path.startswith("iphone:"):
                 devices, _iphone_error = cached_iphone_discovery()
+            elif device_path.startswith("android:"):
+                devices, _android_error = cached_android_discovery()
             else:
                 devices = discover_media_devices()
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
@@ -1165,8 +1193,9 @@ class TriageHandler(BaseHTTPRequestHandler):
             )
             result_dir = run_isolated_scan({
                 "device": device_path,
-                "scan_kind": "iphone" if device.get("media_type") == "iphone" else "block",
+                "scan_kind": device.get("media_type") if device.get("media_type") in {"iphone", "android"} else "block",
                 "udid": device.get("udid", ""),
+                "adb_serial": device.get("adb_serial", ""),
                 "crypto_rules": crypto_rules,
                 "profile_path": str(self.server.profile_path.parent / f"{profile_ids[0]}.yaml"),
                 "evidence": sighting_number,
