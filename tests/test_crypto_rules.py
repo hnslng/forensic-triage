@@ -15,6 +15,7 @@ def test_bundled_app_categories_and_neutral_matches():
     assert classify_app({"name": "MetaMask", "bundle_id": "io.metamask.MetaMask"}, rules)[0]["category"] == "wallet"
     assert classify_app({"name": "Signal", "bundle_id": ""}, rules)[0]["relevance"] == "neutral"
     assert classify_app({"name": "WhatsApp", "bundle_id": ""}, rules)[0]["category"] == "messenger"
+    assert classify_app({"name": "\u200eWhatsApp", "bundle_id": ""}, rules)[0]["category"] == "messenger"
     assert classify_app({"name": "Some MetaMask Guide", "bundle_id": ""}, rules) == []
 
 

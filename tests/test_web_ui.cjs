@@ -535,17 +535,43 @@ test('iphone card and result distinguish hints from incomplete collection', asyn
     },
   }));
   assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /APP-LISTE ERFASST/);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /NUR AUSZUG/);
-  assert.match(await page.locator('#iphoneSummary').innerText(), /KRYPTO-HINWEISE\s+2/i);
-  assert.equal(await page.locator('#cryptoFindings').isVisible(), true);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /1 APP ERFASST/);
+  await page.locator('#iphoneSummary .iphone-technical summary').click();
+  assert.match(await page.locator('#iphoneFileStatus').innerText(), /NUR AUSZUG/);
+  assert.match(await page.locator('#iphoneSummary').innerText(), /DEUTLICHER KRYPTO-HINWEIS/i);
+  assert.match(await page.locator('#iphoneTriageApps').innerText(), /TEST WALLET/i);
+  assert.equal(await page.locator('#cryptoFindings').isHidden(), true);
   assert.match(await page.locator('#decisionTitle').innerText(), /TELEFON/);
   if (process.env.TRIAGE_SCREENSHOT) await page.locator('#results').screenshot({ path: process.env.TRIAGE_SCREENSHOT });
   assert.match(await page.locator('#iphoneNotice').textContent(), /FILE SHARING: INCOMPLETE/);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
-  assert.equal(await page.locator('#phoneFiles').isVisible(), true);
-  await page.locator('#iphoneCategories summary').click();
+  assert.equal(await page.locator('#classicHome').isHidden(), true);
+  assert.equal(await page.locator('#inventoryPanel').getAttribute('open'), null);
   assert.match(await page.locator('#iphoneCategories').innerText(), /TEST WALLET/i);
+  assert.equal(await page.locator('#iphoneCategories .iphone-category.crypto').isVisible(), true);
+});
+
+test('phone app groups show recognized names and search only the collapsed other group', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.evaluate(() => {
+    document.getElementById('results').hidden = false;
+    renderIphoneSummary({
+    device: { device_name: 'Testtelefon', serial: 'TEST-SERIAL' }, apps_status: 'complete',
+    apps: [
+      { name: 'Signal', matches: [{ category: 'messenger' }] },
+      { name: 'Unbekannt A', matches: [] }, { name: 'Unbekannt B', matches: [] },
+    ], app_hints: [], file_hints: [], areas: [], file_sharing_status: 'complete',
+    });
+  });
+  assert.match(await page.locator('#iphoneTriageLevel').innerText(), /KEIN KRYPTO-HINWEIS/);
+  assert.match(await page.locator('#iphoneTriageText').innerText(), /nicht aus/);
+  assert.match(await page.locator('#iphoneCategories .iphone-category:not(.iphone-category-other)').innerText(), /SIGNAL/i);
+  assert.equal(await page.locator('#iphoneCategories .iphone-category-other').getAttribute('open'), null);
+  await page.locator('#iphoneCategories .iphone-category-other summary').click();
+  await page.locator('#iphoneOtherSearch').fill('Unbekannt B');
+  assert.equal(await page.locator('#iphoneCategories .iphone-category-other li:visible').count(), 1);
+  assert.match(await page.locator('#iphoneCategories .iphone-category-other li:visible').innerText(), /Unbekannt B/);
+  assert.match(await page.locator('#iphoneSummary .iphone-head').innerText(), /TEST-SERIAL/);
 });
 
 test('crypto rules editor and shared hints remain separate from neutral apps', async t => {

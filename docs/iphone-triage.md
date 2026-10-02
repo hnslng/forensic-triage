@@ -1,6 +1,6 @@
 # iPhone-Grobsichtung über USB
 
-Stand: 1. Oktober 2026 · Anwendung `v0.2.0-alpha.58`
+Stand: 2. Oktober 2026 · Anwendung `v0.2.0-alpha.59`
 
 ## Zweck und Grenze
 
@@ -26,7 +26,9 @@ Die gemeinsame Ausgangsliste für App- und Dateimetadaten liegt in `src/forensic
 
 App-Regeln prüfen zuerst exakte Bundle-IDs, dann exakte Namen/Aliase und zuletzt ausdrücklich eingetragene, vorsichtige Begriffe. Die mitgelieferte Liste enthält keine unbestätigten Bundle-IDs; diese können nach Realtest ergänzt werden. Wallets, Hardware-Wallet-Apps und Börsen werden als hohe Hinweise kategorisiert, Portfolio-/Steuer- und Markt-Apps niedriger. Messenger, Cloud und Banking sind **neutral** und zählen nicht als Krypto-App-Hinweis. Dateiregeln kombinieren Dateinamen/Pfad, gegebenenfalls Kontext und Endung; sie lesen keine Dateiinhalte. `wallet.dat` ist ein Namenshinweis, nicht der Nachweis einer funktionsfähigen Wallet.
 
-Die Telefonansicht zeigt zuerst Gerät, Anzahl erfasster Benutzer-Apps, den begrenzten Dateinamen-Zusatz, Krypto-Hinweise und aufklappbare App-Kategorien. Die App-Liste und der Dateinamen-Auszug haben getrennte Vollständigkeitsangaben: „App-Liste erfasst“ kann zutreffen, obwohl weitere Dateibereiche offen sind. Krypto-Details erscheinen nur bei Treffern. Seriennummer, UDID, genaue Zugriffsgrenzen und die vollständige App-Liste sind gesondert aufklappbar; die detaillierte Dateistatistik bleibt ein Nebenbereich. Keine Angabe behauptet eine vollständige Telefonauslesung. Fehlen App-Liste oder Datei-Zugriff, bedeutet „0 Hinweise“ ausdrücklich nicht „keine Apps“ oder „keine relevanten Daten“.
+Die Telefonansicht zeigt zuerst Gerätename, Seriennummer und Anzahl der erfassten Apps. Darunter folgt eine verständliche Krypto-Einschätzung: kein erkannter Hinweis, eine erkannte Krypto-App/ein Dateinamen-Hinweis oder mehrere passende Hinweise. Bei Treffern empfiehlt die Ansicht eine Fachperson; selbst mehrere Treffer belegen weder Nutzung noch Vermögenswerte. Fehlt die App-Liste, wird ohne Treffer keine verlässliche Negativaussage getroffen. Messenger, Banking und andere neutrale Kategorien lösen keine Krypto-Warnung aus.
+
+App-Namen in erkannten Gruppen sind direkt sichtbar. Nur „Sonstige Apps“ ist aufklappbar und durchsuchbar. Die App-Liste und der Dateinamen-Auszug haben getrennte Vollständigkeitsangaben: Eine erfasste App-Liste kann mit einem begrenzten Dateinamen-Auszug einhergehen. UDID, genaue Zugriffsgrenzen, der Dateinamen-Zusatz und die vollständige technische App-Liste sind gesondert aufklappbar. Die USB-typische Dateitypen-/Größenstatistik erscheint in der Telefon-Hauptansicht nicht; das zugängliche Dateiverzeichnis bleibt als technisches Detail erhalten. Keine Angabe behauptet eine vollständige Telefonauslesung.
 
 ## Zuverlässigkeit und Einschränkungen
 

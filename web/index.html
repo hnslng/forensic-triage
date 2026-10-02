@@ -88,23 +88,24 @@
         <section id="iphoneSummary" class="panel iphone-summary" hidden>
           <div class="panel-title"><span>TELEFON</span> ÜBERBLICK</div>
           <div class="iphone-head">
-            <div><small>ANGESCHLOSSENES GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span></div>
+            <div><small>ANGESCHLOSSENES GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span><span class="iphone-serial">SERIENNUMMER <b id="iphoneSerial">NICHT GEMELDET</b></span></div>
             <span id="iphoneCompleteness" class="iphone-coverage">—</span>
           </div>
-          <div class="iphone-overview">
-            <div><small>APPS ERFASST</small><strong id="iphoneAppsCount">0</strong><span id="iphoneAppsStatus">—</span></div>
-            <div><small>DATEINAMEN · ZUSATZ</small><strong id="iphoneAccessibleFiles">0</strong><span id="iphoneFileStatus">BEGRENZT AUF ZUGÄNGLICHE BEREICHE</span></div>
-            <div id="iphoneHintSummary"><small>KRYPTO-HINWEISE</small><strong id="iphoneHintCount">0</strong><span>APPS <b id="iphoneAppHintCount">0</b> · DATEINAMEN <b id="iphoneFileHintCount">0</b></span></div>
+          <div id="iphoneHintSummary" class="iphone-triage" aria-live="polite">
+            <small>KRYPTO-EINSCHÄTZUNG · NUR GROBSICHTUNG</small>
+            <strong id="iphoneTriageLevel">—</strong>
+            <p id="iphoneTriageText">—</p>
+            <div id="iphoneTriageApps" class="iphone-triage-apps"></div>
           </div>
           <div class="iphone-main">
-            <h3>APP-KATEGORIEN <small>ANTIPPEN FÜR APP-NAMEN</small></h3>
+            <h3>ERKANNTE APP-GRUPPEN <small>APP-NAMEN DIREKT SICHTBAR · SONSTIGE AUFKLAPPEN</small></h3>
             <div id="iphoneCategories" class="iphone-categories"></div>
           </div>
           <details class="iphone-technical">
-            <summary>GERÄTEKENNUNGEN, ZUGRIFFSGRENZEN &amp; APP-DETAILS ANZEIGEN</summary>
+            <summary>TECHNISCHE DETAILS &amp; ERFASSUNGSGRENZEN</summary>
             <div class="iphone-identity">
-              <div><small>SERIENNUMMER</small><strong id="iphoneSerial">NICHT GEMELDET</strong></div>
               <div><small>UDID</small><strong id="iphoneUdid">—</strong><span id="iphoneHardware">MODELLKENNUNG —</span></div>
+              <div><small>DATEINAMEN · ZUSATZ</small><strong id="iphoneAccessibleFiles">0</strong><span id="iphoneFileStatus">BEGRENZT AUF ZUGÄNGLICHE BEREICHE</span></div>
             </div>
             <div class="iphone-scope"><strong>ERFASSUNGSUMFANG</strong><span id="iphoneAssessment">—</span><small>Nur von iOS freigegebene Bereiche; keine vollständige Telefonauslesung.</small></div>
             <h3>ZUGRIFFSBEREICHE</h3><div id="iphoneAreas" class="iphone-areas"></div>
@@ -156,10 +157,6 @@
         </div>
         </div>
         </div>
-        <details id="phoneFiles" class="panel phone-files" hidden>
-          <summary class="panel-title">ZUGÄNGLICHE DATEIBEREICHE <small id="phoneFileCount">—</small></summary>
-        </details>
-
         <div id="documentationGrid" class="detail-workspace" hidden>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
             <summary class="panel-title"><span>08</span> <b id="inventoryTitle">DATEIEN DIESES MEDIUMS</b> <small>EXPLORER &amp; SUCHE</small></summary>

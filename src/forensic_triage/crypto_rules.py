@@ -196,7 +196,8 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
 
 
 def _fold(value: str) -> str:
-    return unicodedata.normalize("NFKC", value).casefold()
+    normalized = unicodedata.normalize("NFKC", value)
+    return "".join(char for char in normalized if unicodedata.category(char) != "Cf").casefold()
 
 
 def _term_in_path(term: str, path: str) -> bool:

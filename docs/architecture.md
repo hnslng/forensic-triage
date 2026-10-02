@@ -71,7 +71,7 @@ Der Online-Updater bereitet einen Git-Tag in einem eigenen Release-Verzeichnis v
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.58 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem beziehungsweise regulären Apple-Diensten bereitgestellte Metadaten. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.59 liest Dateinamen, Pfade, Endungen, Größen und vom Dateisystem beziehungsweise regulären Apple-Diensten bereitgestellte Metadaten. Regulär vorhandene versteckte Einträge werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Eindeutige Verschlüsselungsmerkmale werden gezählt, alle nicht zuverlässig prüfbaren Archive bleiben unbekannt. Klassifizierung erfolgt anhand der Endung; Signaturabweichungen werden noch nicht erkannt. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 

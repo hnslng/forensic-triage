@@ -765,21 +765,34 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
   $("iphoneUdid").textContent = device.udid || "NICHT GEMELDET";
   $("iphoneHardware").textContent = `MODELLKENNUNG ${device.model_number || device.hardware_model || "NICHT GEMELDET"}`;
   const apps = iphone.apps || [];
-  $("iphoneAppsCount").textContent = Number(apps.length).toLocaleString("de-AT");
   $("iphoneAccessibleFiles").textContent = Number(accessibleFiles).toLocaleString("de-AT");
   const appsComplete = iphone.apps_complete ?? iphone.apps_status === "complete";
   const filesComplete = iphone.files_complete ??
     (iphone.file_sharing_status === "complete" && (iphone.areas || []).every(area => area.status === "complete"));
-  $("iphoneAppsStatus").textContent = appsComplete ? "GEMELDETE BENUTZER-APPS ERFASST" : "APP-LISTE UNVOLLSTÄNDIG / UNBEKANNT";
   $("iphoneFileStatus").textContent = filesComplete ? "ZUGÄNGLICHE BEREICHE ERFASST" : "NUR AUSZUG · WEITERE BEREICHE OFFEN";
-  const appHintCount = new Set(appHints.map(item => item.bundle_id || item.name)).size;
+  const uniqueAppHints = [...new Map(appHints.map(item => [item.bundle_id || item.name, item])).values()];
   const fileHintCount = new Set(fileHints.map(item => item.path)).size;
-  $("iphoneAppHintCount").textContent = appHintCount.toLocaleString("de-AT");
-  $("iphoneFileHintCount").textContent = fileHintCount.toLocaleString("de-AT");
-  $("iphoneHintCount").textContent = (appHintCount + fileHintCount).toLocaleString("de-AT");
-  $("iphoneHintSummary").classList.toggle("has-hints", appHintCount + fileHintCount > 0);
+  const hasSeveralSignals = uniqueAppHints.length >= 2 || (uniqueAppHints.length && fileHintCount);
+  const triageLevel = hasSeveralSignals ? "DEUTLICHER KRYPTO-HINWEIS"
+    : uniqueAppHints.length ? "KRYPTO-APP ERKANNT"
+      : fileHintCount ? "KRYPTO-DATEINAME ERKANNT"
+        : appsComplete ? "KEIN KRYPTO-HINWEIS ERKANNT" : "KEINE VERLÄSSLICHE AUSSAGE";
+  const triageText = hasSeveralSignals
+    ? "Mehrere passende Hinweise in den zugänglichen Metadaten. Für die weitere Beurteilung eine Fachperson hinzuziehen."
+    : uniqueAppHints.length
+      ? "Eine passende App wurde erkannt. Krypto-Bezug möglich; für die weitere Beurteilung eine Fachperson hinzuziehen."
+      : fileHintCount
+        ? "Ein passender Dateiname wurde erkannt. Für die weitere Beurteilung eine Fachperson hinzuziehen."
+        : appsComplete
+          ? "In den erfassten Apps und zugänglichen Dateinamen kein Hinweis. Das schließt Krypto auf dem Telefon nicht aus."
+          : "Die App-Liste ist unvollständig. Aus diesem Scan lässt sich kein verlässlicher Negativbefund ableiten.";
+  $("iphoneTriageLevel").textContent = triageLevel;
+  $("iphoneTriageText").textContent = triageText;
+  $("iphoneHintSummary").classList.toggle("has-hints", Boolean(uniqueAppHints.length || fileHintCount));
+  $("iphoneTriageApps").innerHTML = uniqueAppHints.map(item => `<span>${escapeHtml(item.name || item.bundle_id || "APP")}</span>`).join("")
+    + (fileHintCount ? `<span>${fileHintCount.toLocaleString("de-AT")} DATEINAMEN-HINWEIS${fileHintCount === 1 ? "" : "E"}</span>` : "");
   $("iphoneAssessment").textContent = iphone.assessment || "—";
-  $("iphoneCompleteness").textContent = appsComplete ? "APP-LISTE ERFASST" : "APP-LISTE UNVOLLSTÄNDIG";
+  $("iphoneCompleteness").textContent = appsComplete ? `${apps.length.toLocaleString("de-AT")} ${apps.length === 1 ? "APP" : "APPS"} ERFASST` : "APP-LISTE UNVOLLSTÄNDIG";
   $("iphoneCompleteness").classList.toggle("incomplete", !appsComplete);
   $("iphoneNotice").textContent = `${iphone.notice || ""} APP-LISTE: ${String(iphone.apps_status || "unbekannt").toUpperCase()} · FILE SHARING: ${String(iphone.file_sharing_status || "unbekannt").toUpperCase()}`;
   const grouped = new Map();
@@ -788,11 +801,22 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
     if (!grouped.has(category)) grouped.set(category, []);
     grouped.get(category).push(app);
   }
-  $("iphoneCategories").innerHTML = [...grouped.entries()].sort((a, b) => b[1].length - a[1].length).map(([category, entries]) => `
-    <details class="iphone-category ${cryptoCategories.has(category) ? "crypto" : ""}">
-      <summary><span>${escapeHtml(appCategoryLabels[category] || "WEITERE APPS")}</span><b>${entries.length}</b></summary>
-      <ul>${entries.map(app => `<li>${escapeHtml(app.name || app.bundle_id || "UNBEKANNT")}</li>`).join("")}</ul>
-    </details>`).join("") || '<p class="iphone-empty">KEINE BENUTZER-APPS ERFASST · NICHT ALS „KEINE INSTALLIERT“ WERTEN</p>';
+  const sortedGroups = [...grouped.entries()].sort((a, b) => Number(a[0] === "other") - Number(b[0] === "other") || b[1].length - a[1].length);
+  $("iphoneCategories").innerHTML = sortedGroups.map(([category, entries]) => {
+    const label = escapeHtml(appCategoryLabels[category] || "WEITERE APPS");
+    const list = `<ul>${entries.map(app => `<li>${escapeHtml(app.name || app.bundle_id || "UNBEKANNT")}</li>`).join("")}</ul>`;
+    if (category === "other") return `<details class="iphone-category iphone-category-other"><summary><span>${label}</span><b>${entries.length}</b></summary><div class="iphone-other-body"><label for="iphoneOtherSearch">SONSTIGE APPS DURCHSUCHEN</label><input id="iphoneOtherSearch" type="search" placeholder="APP-NAME SUCHEN …" autocomplete="off" />${list}<p id="iphoneOtherEmpty" hidden>KEINE PASSENDE APP</p></div></details>`;
+    return `<section class="iphone-category ${cryptoCategories.has(category) ? "crypto" : ""}"><h4><span>${label}</span><b>${entries.length}</b></h4>${list}</section>`;
+  }).join("") || '<p class="iphone-empty">KEINE BENUTZER-APPS ERFASST · NICHT ALS „KEINE INSTALLIERT“ WERTEN</p>';
+  $("iphoneOtherSearch")?.addEventListener("input", (event) => {
+    const query = event.target.value.trim().toLocaleLowerCase("de");
+    let visible = 0;
+    for (const row of event.target.parentElement.querySelectorAll("li")) {
+      row.hidden = !row.textContent.toLocaleLowerCase("de").includes(query);
+      if (!row.hidden) visible += 1;
+    }
+    $("iphoneOtherEmpty").hidden = visible > 0;
+  });
   $("iphoneApps").innerHTML = (iphone.apps || []).map((app) => {
     const matches = (app.matches || []).map((match) => `${match.category} (${match.id})`).join(" · ") || "—";
     return `<tr><td>${escapeHtml(app.name || "—")}</td><td><code>${escapeHtml(app.bundle_id || "—")}</code></td><td>${escapeHtml(app.version || "—")}</td><td>${escapeHtml(matches)}</td></tr>`;
@@ -801,7 +825,7 @@ function renderIphoneSummary(iphone, accessibleFiles = 0) {
 }
 
 function renderCryptoFindings(crypto, isPhone) {
-  $("cryptoFindings").hidden = !crypto || (isPhone && !(crypto.app_hints?.length || crypto.file_hints?.length));
+  $("cryptoFindings").hidden = !crypto || isPhone;
   if (!crypto) return;
   const apps = crypto.app_hints || [];
   const files = crypto.file_hints || [];
@@ -852,18 +876,15 @@ function updateDecisionFields() {
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   const isPhone = Boolean(record.iphone);
-  $("inventoryTitle").textContent = isPhone ? "ZUGÄNGLICHE DATEIEN DES TELEFONS" : "DATEIEN DIESES MEDIUMS";
+  $("inventoryTitle").textContent = isPhone ? "TECHNISCHE DATEIDETAILS" : "DATEIEN DIESES MEDIUMS";
   $("decisionTitle").textContent = isPhone ? "ENTSCHEIDUNG ZUM TELEFON" : "ENTSCHEIDUNG ZUM DATENTRÄGER";
+  $("documentationGrid").classList.toggle("phone-view", isPhone);
+  $("classicHome").hidden = isPhone;
+  if (isPhone && $("inventoryPanel").dataset.mediaId !== String(record.media?.id ?? "")) $("inventoryPanel").open = false;
+  $("inventoryPanel").dataset.mediaId = String(record.media?.id ?? "");
   if (isPhone) {
-    $("phoneFiles").appendChild($("classicAnalysis"));
-    $("phoneFiles").hidden = false;
-    $("classicHome").hidden = true;
     $("iphoneSummary").after($("cryptoFindings"));
-    $("phoneFileCount").textContent = `${Number(record.summary?.file_count || 0).toLocaleString("de-AT")} ZUGÄNGLICHE DATEIEN`;
   } else {
-    $("classicHome").appendChild($("classicAnalysis"));
-    $("classicHome").hidden = false;
-    $("phoneFiles").hidden = true;
     $("classicHome").after($("cryptoFindings"));
   }
   renderIphoneSummary(record.iphone || null, record.summary?.file_count || 0);

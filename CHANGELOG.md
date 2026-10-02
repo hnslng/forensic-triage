@@ -2,6 +2,12 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.59] – 2026-10-02
+
+- iPhone-Ansicht auf Krypto-Triage und direkt sichtbare relevante App-Gruppen reduziert. „Sonstige Apps“ bleibt als einzige Gruppe eingeklappt und ist durchsuchbar; Geräte- und Dateidetails bleiben sekundär.
+- Die Krypto-Einschätzung zeigt eine verständliche, nicht numerische Stufe und empfiehlt bei Treffern eine Fachperson. Keine Stufe behauptet einen Vermögenswert oder schließt bei ausbleibendem Treffer Krypto aus.
+- Die USB-typische Dateistatistik mit den fünf größten Dateien entfällt bei Telefonen. Die technische Dateiliste bleibt aufklappbar; ein unsichtbares iOS-Steuerzeichen im App-Namen verhindert die WhatsApp-Erkennung nicht mehr.
+
 ## [0.2.0-alpha.58] – 2026-10-01
 
 - iPhone-Grobsichtung priorisiert die bereits erfasste App-Liste. Dateinamen sind nur ein nachgeordneter, auf 2.000 Einträge und 15 Sekunden begrenzter Zusatz; freigegebene App-Dokumentbereiche kommen vor dem großen AFC-Medienbereich dran.
