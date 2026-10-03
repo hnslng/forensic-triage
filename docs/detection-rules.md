@@ -57,4 +57,11 @@ Der mitgelieferte Katalog ist bewusst ein breiter, lokal gepflegter und erweiter
 
 ## Migration
 
-Beim ersten Start werden bestehende lokale `crypto-rules.json` automatisch übernommen. Alte `iphone-triage.json`-Dateien werden weiterhin migriert. Scans speichern den jeweiligen Regelstand als Snapshot; historische Sichtungen werden nicht nachträglich neu klassifiziert.
+Beim Start wird `crypto-rules.json` automatisch mit dem mitgelieferten Standardkatalog abgeglichen:
+
+- Vorhandene lokale Regeln bleiben unverändert erhalten.
+- Neue Standardregeln werden ergänzt.
+- Eigene Benutzerregeln bleiben erhalten.
+- Ab `v0.2.0-alpha.62` werden bewusst gelöschte Standardregeln in `deleted_default_rule_ids` vermerkt und bei künftigen Updates nicht wiederhergestellt.
+
+Das lokale Regelschema ist ab Alpha 62 Version 3. Alpha-61-Bestände (Version 2) werden automatisch auf Version 3 migriert. Scans speichern den jeweiligen Regelstand als Snapshot; historische Sichtungen werden nicht nachträglich neu klassifiziert. Alte `iphone-triage.json`-Dateien werden weiterhin einmalig migriert.

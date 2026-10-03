@@ -800,11 +800,16 @@ class TriageHandler(BaseHTTPRequestHandler):
     def _post_crypto_rules(self) -> None:
         try:
             payload = self._read_payload(max_bytes=786432)
+            defaults = bundled_crypto_rules()
+            default_ids = frozenset(
+                rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in defaults.get(kind, [])
+            )
             with self.server.settings_lock:
                 rules = save_crypto_rules(
                     self.server.crypto_rules_path, payload.get("rules"), str(payload.get("base_sha256", "")),
+                    default_rule_ids=default_ids,
                 )
-            self._json(HTTPStatus.OK, {"rules": rules})
+            self._json(HTTPStatus.OK, {"rules": rules, "defaults": bundled_crypto_rules()})
         except SettingsConflict as exc:
             self._json(HTTPStatus.CONFLICT, {"error": str(exc)})
         except (OSError, ValueError, json.JSONDecodeError) as exc:

@@ -1,6 +1,6 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.61`.
+Dokumentationsstand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.62`.
 
 ## Telefon-Schnellscan – nächste Abnahme
 

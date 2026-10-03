@@ -33,6 +33,10 @@ Der Bereich **Erkennungsregeln** ersetzt die bisherigen „Krypto-Regeln“ durc
 - **Geräte-Backups** – Strukturmerkmale lokaler Backups (Apple Finder/iTunes, Samsung Smart Switch, Android ADB, Xiaomi, Huawei, OnePlus/Oppo/realme, Windows-Image, iCloud Drive)
 - **Dateihinweise** – Dateinamen- und Pfadmuster für Krypto-Hinweise auf Datenträgern
 
+### Arbeitsfläche
+
+Auf Desktop nutzt der Dialog fast die gesamte Browserfläche. Kopfzeile, Haupttabs, Untertabs und der Footer bleiben während des Scrollens sichtbar; nur die Listen- und Editor-Inhalte scrollen in ihren eigenen Bereichen. Links erscheint die Regelliste (ca. 55 %), rechts der Editor (ca. 45 %). Wenn keine Regel ausgewählt ist, zeigt der Editor einen Hilfstext statt einer leeren Fläche.
+
 ### Master-Detail-Ansicht
 
 Links erscheint eine übersichtliche Tabelle aller Regeln des gewählten Bereichs. Eine Zeile zeigt Name, Kategorie, Vorhandensein einer iOS- bzw. Android-ID und den Status (aktiv/inaktiv/legacy). Rechts öffnet sich der Editor genau der ausgewählten Regel. Damit bleibt die Übersicht auch bei vielen hundert Regeln schnell.
@@ -42,14 +46,15 @@ Links erscheint eine übersichtliche Tabelle aller Regeln des gewählten Bereich
 - Freie Suche über Name, Kategorie, Alias, iOS-Bundle-ID und Android-Package-ID
 - Filter: aktiv, inaktiv, legacy, verifiziert, nicht verifiziert, iOS-ID fehlt, Android-ID fehlt
 - Sortierung nach Name, Kategorie oder Status
+- Die sichtbare Regelanzahl wird über der Liste angezeigt; der Footer zeigt Gesamt-, Standard- und Eigenregeln.
 
 ### Aktionen
 
 - **Neue Regel** – erstellt eine leere Regel im aktuellen Bereich
 - **Duplizieren** – kopiert die ausgewählte Regel mit neuer ID
-- **Löschen** – entfernt die Regel nach Rückfrage
+- **Löschen** – entfernt die Regel nach Rückfrage; Standardregeln werden dauerhaft in `deleted_default_rule_ids` vermerkt
 - **Aktivieren/Deaktivieren** – über den Editor-Status
-- **JSON exportieren / importieren** – vollständige Regelsammlung als JSON; Import muss vor dem Speichern geprüft werden
+- **JSON exportieren / importieren** – vollständige Regelsammlung inklusive Tombstones als JSON; Import muss vor dem Speichern geprüft werden
 
 ### Regelinhalt
 
@@ -63,7 +68,21 @@ Jede Regel kann folgende Metadaten tragen:
 - `last_verified`: Prüfdatum im Format `YYYY-MM-DD`
 - `regions`: optionale Länderkürzel (z. B. `["AT","DE"]`)
 
+### Speicherlogik
+
+Der Editor arbeitet mit einem zweistufigen Entwurf:
+
+- **Übernehmen** – schreibt die aktuellen Editorfelder in den lokalen Entwurf (noch nicht dauerhaft).
+- **Abbrechen** – verwirft die Editoränderungen und schließt den Editor.
+- **Alle Änderungen speichern** – speichert den gesamten Entwurf dauerhaft in `crypto-rules.json` und erhöht den Regelstand.
+
+Der Footer zeigt den aktuellen Regelstand und warnt bei ungespeicherten Änderungen. Schließen mit ungespeicherten Änderungen verlangt eine Verwerfbestätigung.
+
 Das Speichern validiert IDs, Kategorien, Hinweisstärken, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Android-Package-IDs und iOS-Bundle-IDs dürfen nicht geraten werden. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
+
+### Hilfe und Tooltips
+
+**? Begriffe erklären** öffnet einen eigenen Hilfe-Dialog über der Einstellungsoberfläche. Das Master-Detail-Layout wird nicht verschoben. Kleine **?**-Tooltips neben den Editorfeldern werden in einer globalen Tooltip-Schicht außerhalb der scrollbaren Bereiche gerendert, sodass sie nicht durch `overflow:hidden` abgeschnitten werden.
 
 ## System & Updates
 
@@ -91,6 +110,17 @@ settings/
 Beim ersten Start werden vorhandene Profile kopiert, ohne bereits gespeicherte lokale Profile zu überschreiben. Der Alpha-44-Webdienst sucht dabei zuerst im neuesten bisherigen Release, dann im ursprünglichen Installationsordner und zuletzt in seinen mitgelieferten Profilen. Damit wird auch der Erstwechsel durch einen älteren Updater abgefangen, der den neuen Migrationsschritt selbst noch nicht ausführen kann. Ab dem neuen Updater werden Profile zusätzlich bereits vor dem Umschalten übernommen. Eine separate Sicherung vor Updates bleibt trotzdem sinnvoll; lokale Änderungen an versionierten Dateien können bereits die Updateprüfung blockieren.
 
 Nach der Übernahme schreibt der Profileditor nur in den Einstellungen-Ordner. Der Dateityp-Katalog wird atomar gespeichert. Bestehende lokale Einstellungen bleiben bei späteren Updates erhalten; neue Standardzuordnungen werden bewusst über **Standard laden** übernommen. Diesen Ordner gemeinsam mit Fallindex und Fallunterlagen sichern. Direkte Änderungen an `filetypes.json` werden bei ungültiger Prüfsumme abgelehnt.
+
+### Automatische Regel-Migration
+
+`crypto-rules.json` wird bei jedem Start mit dem mitgelieferten Standardkatalog abgeglichen:
+
+- **Lokale Änderungen haben Vorrang:** Existiert eine Regel-ID bereits lokal, bleibt sie unverändert erhalten.
+- **Neue Standardregeln werden ergänzt:** Noch nicht vorhandene App-, Datei- und Backup-Regeln der neuen Version werden hinzugefügt.
+- **Eigene Regeln bleiben erhalten:** Vom Benutzer angelegte Regeln, die nicht zum Standard gehören, werden niemals entfernt.
+- **Bewusst gelöschte Standardregeln bleiben entfernt:** Ab `v0.2.0-alpha.62` merkt sich `deleted_default_rule_ids` gelöschte Standardregeln. Sie werden bei künftigen Updates nicht wiederhergestellt. Regeln, die vor Alpha 62 gelöscht wurden, können einmalig wieder auftauchen, weil diese Information noch nicht existierte.
+
+Diese Migration ist deterministisch: Sie verändert keine historischen Scan-Snapshots, klassifiziert alte Fälle nicht neu und verändert die Fallindex-`sqlite3` nicht.
 
 Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT` in ihrer Umgebung gesetzt ist; andernfalls verwendet sie den mitgelieferten Standard. Auch CLI-Scans speichern ihren Katalogstand.
 

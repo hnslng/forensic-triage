@@ -88,6 +88,7 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
             f"Zu viele Regeln (max. {MAX_APP_RULES} Apps, "
             f"{MAX_FILE_RULES} Dateien, {MAX_BACKUP_RULES} Backups)."
         )
+    deleted_default_rule_ids = _optional_strings(value.get("deleted_default_rule_ids", []), "deleted_default_rule_ids", limit=MAX_APP_RULES + MAX_FILE_RULES + MAX_BACKUP_RULES)
     seen: set[str] = set()
     normalized: dict[str, list[dict[str, Any]]] = {"app_rules": [], "file_rules": [], "backup_rules": []}
     for kind, entries in (("app_rules", apps), ("file_rules", files), ("backup_rules", backups)):
@@ -153,7 +154,7 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
                 if not (common["filename_equals"] or common["terms"]):
                     raise ValueError(f"{rule_id}: Dateiregel ohne Suchmerkmal.")
             normalized[kind].append(common)
-    data = {"version": version, **normalized}
+    data = {"version": version, "deleted_default_rule_ids": deleted_default_rule_ids, **normalized}
     raw = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     return {**data, "sha256": hashlib.sha256(raw).hexdigest()}
 
@@ -191,104 +192,174 @@ def load_rules(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     result = snapshot(data, data.get("version"))
     if data.get("sha256") != result["sha256"]:
-        # Alpha 59 and older stored only bundle_ids. The schema migration is
-        # deterministic and must not make an otherwise valid local rule file
-        # unusable after an application update.
+        # Alpha 59 and older stored only bundle_ids. Alpha 61 did not yet store
+        # deleted_default_rule_ids. Both schema migrations are deterministic and
+        # must not make an otherwise valid local rule file unusable.
         legacy_schema = bool(data.get("app_rules")) and all(
             isinstance(rule, dict) and "ios_bundle_ids" not in rule and "android_package_ids" not in rule
             for rule in data.get("app_rules", [])
         )
-        if not legacy_schema:
+        if not legacy_schema and int(data.get("version", 0)) >= 3:
             raise ValueError("Krypto-Regeln wurden außerhalb der Einstellungen verändert oder sind beschädigt.")
     return result
 
 
-def save_rules(path: Path, value: Any, base_sha256: str) -> dict[str, Any]:
+def save_rules(path: Path, value: Any, base_sha256: str, default_rule_ids: frozenset[str] | None = None) -> dict[str, Any]:
     current = load_rules(path)
     if current["sha256"] != base_sha256:
         raise SettingsConflict("Regeln wurden inzwischen geändert. Einstellungen neu laden.")
-    updated = snapshot(value, current["version"] + 1)
+    payload_deleted = set(value.get("deleted_default_rule_ids", []))
+    if default_rule_ids is not None:
+        # If a previously deleted default rule is re-created by the operator, the
+        # tombstone is removed so the rule can be kept intentionally.
+        payload_deleted -= {rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in value.get(kind, []) if rule["id"] in default_rule_ids}
+    updated = snapshot({**value, "deleted_default_rule_ids": sorted(payload_deleted)}, current["version"] + 1)
     atomic_write(path, (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode())
     return updated
 
 
-def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
-    if path.exists():
-        return
-    base = bundled_rules()
-    if legacy_path and legacy_path.is_file():
-        try:
-            old = json.loads(legacy_path.read_text(encoding="utf-8"))
-            old_defaults = json.loads(package_files("forensic_triage").joinpath("data/iphone-triage.json").read_text(encoding="utf-8"))
-            default_by_id = {item["id"]: item for item in old_defaults.get("app_rules", [])}
-            default_files_by_id = {item["id"]: item for item in old_defaults.get("file_rules", [])}
-            by_id = {rule["id"]: rule for rule in base["app_rules"]}
-            if any(
-                any(word in str(item.get("category", "")).casefold() for word in ("messenger", "cloud", "bank"))
-                for item in old.get("app_rules", []) if isinstance(item, dict)
-            ):
-                by_id = {key: value for key, value in by_id.items() if value["category"] in CRYPTO_CATEGORIES}
-            for item in old.get("app_rules", []):
-                if not isinstance(item, dict):
-                    continue
-                rule_id = str(item.get("id", ""))
-                if not ID_PATTERN.fullmatch(rule_id):
-                    continue
-                category = str(item.get("category", "")).casefold()
-                target = by_id.get(rule_id)
-                if target:
-                    # Old bundled IDs were not independently verified. Carry over only
-                    # IDs the operator actually changed in the local legacy file.
-                    if item.get("bundle_ids", []) != default_by_id.get(rule_id, {}).get("bundle_ids", []):
-                        target["bundle_ids"] = item.get("bundle_ids", [])
-                        target["ios_bundle_ids"] = item.get("bundle_ids", [])
-                    target["aliases"] = item.get("name_contains", target["aliases"])
-                elif "messenger" in category or "cloud" in category or "bank" in category:
-                    mapped = "messenger" if "messenger" in category else "cloud" if "cloud" in category else "banking"
-                    by_id[rule_id] = {
-                        "id": rule_id, "name": rule_id.replace("-", " ").title(),
-                        "category": mapped, "relevance": "neutral", "enabled": True,
-                        "bundle_ids": item.get("bundle_ids", []),
-                        "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
-                        "aliases": item.get("name_contains", []), "terms": [],
-                        "comment": "Aus bisheriger iPhone-Regel übernommen",
-                        "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
-                    }
-                elif rule_id not in by_id:
-                    mapped = "exchange" if "börse" in category or "exchange" in category else "wallet" if "wallet" in category else "portfolio"
-                    aliases = item.get("name_contains", [])
-                    by_id[rule_id] = {
-                        "id": rule_id, "name": aliases[0] if isinstance(aliases, list) and aliases else rule_id.replace("-", " ").title(),
-                        "category": mapped, "relevance": "high" if mapped in {"wallet", "exchange"} else "medium",
-                        "enabled": True, "bundle_ids": item.get("bundle_ids", []),
-                        "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
-                        "aliases": aliases[1:] if isinstance(aliases, list) else [], "terms": [],
-                        "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
-                        "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
-                    }
-            file_rules = list(base["file_rules"])
-            for item in old.get("file_rules", []):
-                if not isinstance(item, dict) or item == default_files_by_id.get(item.get("id")):
-                    continue
-                rule_id = str(item.get("id", ""))
-                if not ID_PATTERN.fullmatch(rule_id) or any(rule["id"] == rule_id for rule in file_rules):
-                    continue
-                terms = item.get("path_contains", [])
-                if not isinstance(terms, list) or not terms:
-                    continue
-                category = "wallet" if any(word in rule_id for word in ("wallet", "seed", "key")) else "portfolio"
-                file_rules.append({
-                    "id": rule_id, "name": str(item.get("label") or rule_id), "category": category,
-                    "relevance": "medium", "enabled": True, "filename_equals": [], "terms": terms,
-                    "context_terms": [], "extensions": item.get("extensions", []),
+def merge_rules(local: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
+    """Merge bundled defaults into a local rule set.
+
+    Rules present locally keep their local state. New default rules are added.
+    Default rules the user explicitly deleted (tombstones) stay removed.
+    User-created rules not present in defaults are preserved.
+    """
+    deleted = set(local.get("deleted_default_rule_ids", []))
+    local_by_kind: dict[str, dict[str, dict[str, Any]]] = {
+        kind: {rule["id"]: rule for rule in local.get(kind, [])}
+        for kind in ("app_rules", "file_rules", "backup_rules")
+    }
+    default_by_kind: dict[str, dict[str, dict[str, Any]]] = {
+        kind: {rule["id"]: rule for rule in defaults.get(kind, [])}
+        for kind in ("app_rules", "file_rules", "backup_rules")
+    }
+    result: dict[str, Any] = {"deleted_default_rule_ids": sorted(deleted)}
+    for kind in ("app_rules", "file_rules", "backup_rules"):
+        merged: list[dict[str, Any]] = []
+        # Keep local rules unless they are a deleted default rule.
+        for rule_id, rule in local_by_kind[kind].items():
+            if rule_id in default_by_kind[kind] and rule_id in deleted:
+                continue
+            merged.append(rule)
+        # Add new default rules not present locally and not deleted.
+        for rule_id, rule in default_by_kind[kind].items():
+            if rule_id not in local_by_kind[kind] and rule_id not in deleted:
+                merged.append(rule)
+        result[kind] = merged
+    return result
+
+
+def _migrate_legacy_seed(path: Path) -> dict[str, Any] | None:
+    """One-off migration from pre-Alpha 50 iphone-triage.json, if present."""
+    legacy_path = path.with_name("iphone-triage.json")
+    if not legacy_path.is_file():
+        return None
+    try:
+        old = json.loads(legacy_path.read_text(encoding="utf-8"))
+        old_defaults = json.loads(package_files("forensic_triage").joinpath("data/iphone-triage.json").read_text(encoding="utf-8"))
+        default_by_id = {item["id"]: item for item in old_defaults.get("app_rules", [])}
+        default_files_by_id = {item["id"]: item for item in old_defaults.get("file_rules", [])}
+        base = bundled_rules()
+        by_id = {rule["id"]: rule for rule in base["app_rules"]}
+        if any(
+            any(word in str(item.get("category", "")).casefold() for word in ("messenger", "cloud", "bank"))
+            for item in old.get("app_rules", []) if isinstance(item, dict)
+        ):
+            by_id = {key: value for key, value in by_id.items() if value["category"] in CRYPTO_CATEGORIES}
+        for item in old.get("app_rules", []):
+            if not isinstance(item, dict):
+                continue
+            rule_id = str(item.get("id", ""))
+            if not ID_PATTERN.fullmatch(rule_id):
+                continue
+            category = str(item.get("category", "")).casefold()
+            target = by_id.get(rule_id)
+            if target:
+                # Old bundled IDs were not independently verified. Carry over only
+                # IDs the operator actually changed in the local legacy file.
+                if item.get("bundle_ids", []) != default_by_id.get(rule_id, {}).get("bundle_ids", []):
+                    target["bundle_ids"] = item.get("bundle_ids", [])
+                    target["ios_bundle_ids"] = item.get("bundle_ids", [])
+                target["aliases"] = item.get("name_contains", target["aliases"])
+            elif "messenger" in category or "cloud" in category or "bank" in category:
+                mapped = "messenger" if "messenger" in category else "cloud" if "cloud" in category else "banking"
+                by_id[rule_id] = {
+                    "id": rule_id, "name": rule_id.replace("-", " ").title(),
+                    "category": mapped, "relevance": "neutral", "enabled": True,
+                    "bundle_ids": item.get("bundle_ids", []),
+                    "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
+                    "aliases": item.get("name_contains", []), "terms": [],
+                    "comment": "Aus bisheriger iPhone-Regel übernommen",
+                    "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
+                }
+            elif rule_id not in by_id:
+                mapped = "exchange" if "börse" in category or "exchange" in category else "wallet" if "wallet" in category else "portfolio"
+                aliases = item.get("name_contains", [])
+                by_id[rule_id] = {
+                    "id": rule_id, "name": aliases[0] if isinstance(aliases, list) and aliases else rule_id.replace("-", " ").title(),
+                    "category": mapped, "relevance": "high" if mapped in {"wallet", "exchange"} else "medium",
+                    "enabled": True, "bundle_ids": item.get("bundle_ids", []),
+                    "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
+                    "aliases": aliases[1:] if isinstance(aliases, list) else [], "terms": [],
                     "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
                     "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
-                })
-            base = snapshot({"app_rules": list(by_id.values()), "file_rules": file_rules, "backup_rules": base.get("backup_rules", [])}, base["version"])
-        except (OSError, ValueError, KeyError, TypeError):
-            # A damaged legacy file must not prevent the new default rules.
-            base = bundled_rules()
+                }
+        file_rules = list(base["file_rules"])
+        for item in old.get("file_rules", []):
+            if not isinstance(item, dict) or item == default_files_by_id.get(item.get("id")):
+                continue
+            rule_id = str(item.get("id", ""))
+            if not ID_PATTERN.fullmatch(rule_id) or any(rule["id"] == rule_id for rule in file_rules):
+                continue
+            terms = item.get("path_contains", [])
+            if not isinstance(terms, list) or not terms:
+                continue
+            category = "wallet" if any(word in rule_id for word in ("wallet", "seed", "key")) else "portfolio"
+            file_rules.append({
+                "id": rule_id, "name": str(item.get("label") or rule_id), "category": category,
+                "relevance": "medium", "enabled": True, "filename_equals": [], "terms": terms,
+                "context_terms": [], "extensions": item.get("extensions", []),
+                "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
+                "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
+            })
+        return snapshot({"app_rules": list(by_id.values()), "file_rules": file_rules, "backup_rules": base.get("backup_rules", [])}, base["version"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def seed_rules(path: Path, legacy_path: Path | None = None) -> dict[str, Any]:
+    """Ensure local crypto-rules.json exists and contains current defaults.
+
+    Called on every startup. Existing local rules are preserved; new bundled
+    defaults are added; deleted defaults stay deleted (tombstones).
+    """
+    defaults = bundled_rules()
+    if path.exists():
+        try:
+            local = load_rules(path)
+        except (OSError, ValueError):
+            local = snapshot({"app_rules": [], "file_rules": [], "backup_rules": []}, defaults["version"])
+        merged = merge_rules(local, defaults)
+        # Preserve local version if nothing changed to avoid unnecessary writes.
+        if (
+            {rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in local.get(kind, [])}
+            == {rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in merged[kind]}
+            and set(local.get("deleted_default_rule_ids", [])) == set(merged["deleted_default_rule_ids"])
+            and len(merged["app_rules"]) == len(local.get("app_rules", []))
+            and len(merged["file_rules"]) == len(local.get("file_rules", []))
+            and len(merged["backup_rules"]) == len(local.get("backup_rules", []))
+        ):
+            return local
+        updated = snapshot(merged, local["version"] + 1)
+        atomic_write(path, (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode())
+        return updated
+    # First install: try legacy iphone-triage.json migration, otherwise use defaults.
+    base = _migrate_legacy_seed(legacy_path or path.with_name("iphone-triage.json"))
+    if base is None:
+        base = defaults
     atomic_write(path, (json.dumps(base, ensure_ascii=False, indent=2) + "\n").encode())
+    return base
 
 
 def _fold(value: str) -> str:

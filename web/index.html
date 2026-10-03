@@ -322,11 +322,12 @@
       </form>
     </dialog>
     <dialog id="settingsModal" class="evidence-modal settings-modal" aria-labelledby="settingsTitle">
+      <div id="settingsTooltipLayer" class="global-tooltip" role="tooltip" aria-hidden="true"></div>
       <div class="modal-head"><div><span aria-hidden="true">⚙</span> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
       <nav class="settings-tabs" aria-label="Einstellungsbereich">
         <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
-        <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">KRYPTO-REGELN</button>
+        <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">ERKENNUNGSREGELN</button>
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">SYSTEM &amp; UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane" aria-labelledby="settingsProfilesTab">
@@ -335,83 +336,98 @@
         <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
       </section>
       <section id="settingsCryptoPane" class="settings-pane detection-rules-pane" aria-labelledby="settingsCryptoTab" hidden>
-        <p>Erkennungsregeln für Krypto-Apps, Banking-/Finanz-Apps, Geräte-Backups und Dateihinweise. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
-        <nav class="detection-tabs" aria-label="Erkennungsregel-Bereich">
-          <button id="detectionCryptoTab" type="button" aria-pressed="true" data-detection="crypto">KRYPTO-APPS</button>
-          <button id="detectionBankingTab" type="button" aria-pressed="false" data-detection="banking">BANKING &amp; FINANZEN</button>
-          <button id="detectionBackupsTab" type="button" aria-pressed="false" data-detection="backups">GERÄTE-BACKUPS</button>
-          <button id="detectionFilesTab" type="button" aria-pressed="false" data-detection="files">DATEIHINWEISE</button>
-        </nav>
-        <div class="detection-master-detail">
-          <div class="detection-list-panel">
-            <div class="detection-toolbar">
-              <label for="detectionSearch">REGEL SUCHEN<input id="detectionSearch" type="search" placeholder="NAME, ALIAS, BUNDLE-ID, PACKAGE-ID …" /></label>
-              <select id="detectionFilter" aria-label="Filter">
-                <option value="">ALLE REGELN</option>
-                <option value="active">AKTIV</option>
-                <option value="inactive">INAKTIV</option>
-                <option value="legacy">LEGACY</option>
-                <option value="verified">VERIFIZIERT</option>
-                <option value="unverified">NICHT VERIFIZIERT</option>
-                <option value="missing_ios">IOS-ID FEHLT</option>
-                <option value="missing_android">ANDROID-ID FEHLT</option>
-              </select>
-              <select id="detectionSort" aria-label="Sortierung">
-                <option value="name">NAME</option>
-                <option value="category">KATEGORIE</option>
-                <option value="status">STATUS</option>
-              </select>
-              <span id="detectionCount" class="detection-count">0 REGELN</span>
+        <div class="detection-workspace">
+          <header class="detection-header">
+            <p class="detection-intro">Erkennungsregeln für Krypto-Apps, Banking-/Finanz-Apps, Geräte-Backups und Dateihinweise. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
+            <nav class="detection-tabs" aria-label="Erkennungsregel-Bereich">
+              <button id="detectionCryptoTab" type="button" aria-pressed="true" data-detection="crypto">KRYPTO-APPS</button>
+              <button id="detectionBankingTab" type="button" aria-pressed="false" data-detection="banking">BANKING &amp; FINANZEN</button>
+              <button id="detectionBackupsTab" type="button" aria-pressed="false" data-detection="backups">GERÄTE-BACKUPS</button>
+              <button id="detectionFilesTab" type="button" aria-pressed="false" data-detection="files">DATEIHINWEISE</button>
+              <button id="detectionGlossaryButton" type="button" class="detection-help-button" aria-haspopup="dialog">? BEGRIFFE ERKLÄREN</button>
+            </nav>
+          </header>
+          <div class="detection-body">
+            <div class="detection-list-panel">
+              <div class="detection-toolbar">
+                <label for="detectionSearch">REGEL SUCHEN<input id="detectionSearch" type="search" placeholder="NAME, ALIAS, BUNDLE-ID, PACKAGE-ID …" /></label>
+                <select id="detectionFilter" aria-label="Filter">
+                  <option value="">ALLE REGELN</option>
+                  <option value="active">AKTIV</option>
+                  <option value="inactive">INAKTIV</option>
+                  <option value="legacy">LEGACY</option>
+                  <option value="verified">VERIFIZIERT</option>
+                  <option value="unverified">NICHT VERIFIZIERT</option>
+                  <option value="missing_ios">IOS-ID FEHLT</option>
+                  <option value="missing_android">ANDROID-ID FEHLT</option>
+                </select>
+                <select id="detectionSort" aria-label="Sortierung">
+                  <option value="name">NAME</option>
+                  <option value="category">KATEGORIE</option>
+                  <option value="status">STATUS</option>
+                </select>
+                <span id="detectionCount" class="detection-count">0 REGELN</span>
+              </div>
+              <div class="detection-table-wrap" id="detectionTableWrap">
+                <table class="detection-table" id="detectionTable">
+                  <thead><tr><th>NAME</th><th>KATEGORIE</th><th>IOS</th><th>ANDROID</th><th>STATUS</th></tr></thead>
+                  <tbody id="detectionRows"></tbody>
+                </table>
+              </div>
+              <div class="detection-list-actions">
+                <button id="detectionAdd" type="button">+ NEUE REGEL</button>
+                <button id="detectionExport" type="button">JSON EXPORTIEREN</button>
+                <label class="detection-import">JSON IMPORTIEREN<input id="detectionImport" type="file" accept=".json,application/json" hidden /></label>
+              </div>
             </div>
-            <div class="detection-table-wrap">
-              <table class="detection-table" id="detectionTable">
-                <thead><tr><th>NAME</th><th>KATEGORIE</th><th>IOS</th><th>ANDROID</th><th>STATUS</th></tr></thead>
-                <tbody id="detectionRows"></tbody>
-              </table>
-            </div>
-            <div class="detection-list-actions">
-              <button id="detectionAdd" type="button">+ NEUE REGEL</button>
-              <button id="detectionExport" type="button">JSON EXPORTIEREN</button>
-              <label class="detection-import">JSON IMPORTIEREN<input id="detectionImport" type="file" accept=".json,application/json" hidden /></label>
+            <div class="detection-editor-panel" id="detectionEditor">
+              <div class="detection-editor-empty" id="detectionEditorEmpty">
+                <strong>REGEL AUSWÄHLEN</strong>
+                <p>Wählen Sie links eine Regel aus, um Details anzuzeigen oder zu bearbeiten.</p>
+              </div>
+              <div class="detection-editor-form" id="detectionEditorForm" hidden>
+                <div class="detection-editor-head">
+                  <strong id="detectionEditorTitle">REGEL BEARBEITEN</strong>
+                  <div class="detection-editor-actions">
+                    <button id="detectionDuplicate" type="button">DUPLIZIEREN</button>
+                    <button id="detectionDelete" type="button" class="danger">LÖSCHEN</button>
+                  </div>
+                </div>
+                <div class="detection-editor-fields" id="detectionEditorFields"></div>
+                <div class="detection-editor-form-actions">
+                  <button id="detectionApply" type="button">ÜBERNEHMEN</button>
+                  <button id="detectionCancel" type="button">ABBRECHEN</button>
+                </div>
+                <p id="detectionEditorMessage" role="status" aria-live="polite"></p>
+              </div>
             </div>
           </div>
-          <div class="detection-editor-panel" id="detectionEditor" hidden>
-            <div class="detection-editor-head">
-              <strong id="detectionEditorTitle">REGEL BEARBEITEN</strong>
-              <button id="detectionDuplicate" type="button">DUPLIZIEREN</button>
-              <button id="detectionDelete" type="button" class="danger">LÖSCHEN</button>
+          <footer class="detection-footer">
+            <div class="detection-footer-left">
+              <span id="detectionVersion"></span>
+              <span id="detectionStatus" class="detection-status"></span>
+              <span id="detectionStats" class="detection-stats"></span>
             </div>
-            <div class="detection-editor-fields" id="detectionEditorFields"></div>
-            <div class="detection-editor-actions">
-              <button id="detectionSave" type="button" disabled>SPEICHERN</button>
-              <button id="detectionCancel" type="button">ABBRECHEN</button>
-            </div>
-            <p id="detectionEditorMessage" role="status" aria-live="polite"></p>
-          </div>
-        </div>
-        <div class="detection-glossary" id="detectionGlossary">
-          <details>
-            <summary>BEGRIFFE ERKLÄREN</summary>
-            <dl>
-              <dt>ANDROID-APP-ID / PACKAGE-ID</dt><dd>Eindeutige technische Kennung einer Android-App. Beispiel: <code>io.metamask</code>. Zu finden z. B. im offiziellen Google-Play-Eintrag, häufig in der URL hinter <code>id=</code>. Nicht raten.</dd>
-              <dt>IOS BUNDLE-ID</dt><dd>Eindeutige technische Kennung einer iPhone-/iPad-App. Beispiel: <code>com.hersteller.app</code>. Nur aus überprüfbarer Quelle übernehmen.</dd>
-              <dt>ALIAS</dt><dd>Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.</dd>
-              <dt>SUCHBEGRIFF</dt><dd>Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: <code>metamask</code>. Unscharfe Suchbegriffe können Fehlalarme erzeugen.</dd>
-              <dt>ID FEHLT</dt><dd>Für diese Plattform ist noch keine verifizierte technische App-ID gespeichert. Die App kann gegebenenfalls nur über ihren Namen oder Alias erkannt werden.</dd>
-              <dt>LEGACY</dt><dd>Ältere, umbenannte oder eingestellte App, die auf vorhandenen älteren Geräten noch installiert sein kann.</dd>
-              <dt>VERIFIZIERT</dt><dd>Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.</dd>
-              <dt>RELEVANZ</dt><dd>HOCH = starker Krypto-Hinweis (Wallet/Börse); MITTEL = Portfolio/Steuer/Zahlung; NIEDRIG = vage Hinweise; NEUTRAL = Banking/Messenger/Cloud erzeugt keinen Krypto-Hinweis.</dd>
-              <dt>AKTIV</dt><dd>Nur aktive Regeln werden für neue Scans verwendet.</dd>
-              <dt>BACKUP-ERKENNUNGSSICHERHEIT</dt><dd>Die Einstufung entsteht aus übereinstimmenden Strukturmerkmalen (Pfad, Dateiname, Endung). Sie ist kein Inhaltsnachweis.</dd>
-            </dl>
-          </details>
-        </div>
-        <div class="catalog-actions">
-          <span id="detectionVersion"></span>
-          <button id="detectionSaveAll" type="button" disabled>ALLE ÄNDERUNGEN SPEICHERN</button>
+            <button id="detectionSaveAll" type="button" disabled>ALLE ÄNDERUNGEN SPEICHERN</button>
+          </footer>
         </div>
         <p id="detectionMessage" role="status" aria-live="polite"></p>
       </section>
+      <dialog id="detectionGlossaryDialog" class="detection-glossary-dialog" aria-labelledby="detectionGlossaryTitle">
+        <div class="detection-glossary-head"><strong id="detectionGlossaryTitle">BEGRIFFE ERKLÄREN</strong><button id="detectionGlossaryClose" type="button">SCHLIESSEN ×</button></div>
+        <dl>
+          <dt>ANDROID-APP-ID / PACKAGE-ID</dt><dd>Eindeutige technische Kennung einer Android-App. Beispiel: <code>io.metamask</code>. Zu finden z. B. im offiziellen Google-Play-Eintrag, häufig in der URL hinter <code>id=</code>. Nicht raten.</dd>
+          <dt>IOS BUNDLE-ID</dt><dd>Eindeutige technische Kennung einer iPhone-/iPad-App. Beispiel: <code>com.hersteller.app</code>. Nur aus überprüfbarer Quelle übernehmen.</dd>
+          <dt>ALIAS</dt><dd>Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.</dd>
+          <dt>SUCHBEGRIFF</dt><dd>Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: <code>metamask</code>. Unscharfe Suchbegriffe können Fehlalarme erzeugen.</dd>
+          <dt>ID FEHLT</dt><dd>Für diese Plattform ist noch keine verifizierte technische App-ID gespeichert. Die App kann gegebenenfalls nur über ihren Namen oder Alias erkannt werden.</dd>
+          <dt>LEGACY</dt><dd>Ältere, umbenannte oder eingestellte App, die auf vorhandenen älteren Geräten noch installiert sein kann.</dd>
+          <dt>VERIFIZIERT</dt><dd>Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.</dd>
+          <dt>RELEVANZ</dt><dd>HOCH = starker Krypto-Hinweis (Wallet/Börse); MITTEL = Portfolio/Steuer/Zahlung; NIEDRIG = vage Hinweise; NEUTRAL = Banking/Messenger/Cloud erzeugt keinen Krypto-Hinweis.</dd>
+          <dt>AKTIV</dt><dd>Nur aktive Regeln werden für neue Scans verwendet.</dd>
+          <dt>BACKUP-ERKENNUNGSSICHERHEIT</dt><dd>Die Einstufung entsteht aus übereinstimmenden Strukturmerkmalen (Pfad, Dateiname, Endung). Sie ist kein Inhaltsnachweis.</dd>
+        </dl>
+      </dialog>
       <section id="settingsFiletypesPane" class="settings-pane" aria-labelledby="settingsFiletypesTab" hidden>
         <p>Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
         <div class="catalog-toolbar"><label for="catalogSearch">KATEGORIE / ENDUNG<input id="catalogSearch" type="search" placeholder="Z. B. BILDER ODER HEIC …" /></label><span id="catalogVersion"></span></div>

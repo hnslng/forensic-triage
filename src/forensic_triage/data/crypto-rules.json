@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "app_rules": [
     {"id":"metamask","name":"MetaMask","category":"wallet","relevance":"high","enabled":true,"ios_bundle_ids":["io.metamask.ios"],"android_package_ids":["io.metamask"],"aliases":[],"former_names":[],"terms":[],"comment":"Android-ID über offiziellen Google-Play-Eintrag verifiziert","status":"active","verified":true,"source":"Google Play / Apple App Store","last_verified":"2026-10-03","regions":[]},
     {"id":"trust-wallet","name":"Trust Wallet","category":"wallet","relevance":"high","enabled":true,"ios_bundle_ids":["com.sixdays.trust"],"android_package_ids":["com.wallet.crypto.trustapp"],"aliases":[],"former_names":[],"terms":[],"comment":"Android-ID über offiziellen Google-Play-Eintrag verifiziert","status":"active","verified":true,"source":"Google Play / Apple App Store","last_verified":"2026-10-03","regions":[]},

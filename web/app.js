@@ -45,6 +45,7 @@ let catalogBusy = false;
 let catalogDirty = false;
 let settingsRevision = 0;
 let cryptoState = null;
+let bundledCryptoRules = { app_rules: [], file_rules: [], backup_rules: [] };
 let cryptoDirty = false;
 let cryptoBusy = false;
 let detectionState = null;
@@ -53,6 +54,8 @@ let detectionBusy = false;
 let detectionSection = "crypto";
 let detectionSelectedRuleId = null;
 let detectionEditedRule = null;
+let detectionDeletedRuleIds = new Set();
+let detectionPendingEditorRule = null;
 const detectionSectionLabels = {
   crypto: "KRYPTO-APPS",
   banking: "BANKING & FINANZEN",
@@ -65,6 +68,70 @@ const detectionKindForSection = {
   backups: "backup_rules",
   files: "file_rules",
 };
+
+// Tooltip registry: maps help text to the trigger element and global tooltip layer.
+let activeTooltipTrigger = null;
+let activeTooltipText = "";
+
+function showTooltip(trigger, text) {
+  activeTooltipTrigger = trigger;
+  activeTooltipText = text;
+  const layer = $("settingsTooltipLayer");
+  if (!layer) return;
+  layer.textContent = text;
+  layer.classList.add("visible");
+  positionTooltip();
+  layer.setAttribute("aria-hidden", "false");
+}
+
+function hideTooltip() {
+  activeTooltipTrigger = null;
+  activeTooltipText = "";
+  const layer = $("settingsTooltipLayer");
+  if (!layer) return;
+  layer.classList.remove("visible");
+  layer.setAttribute("aria-hidden", "true");
+}
+
+function positionTooltip() {
+  const layer = $("settingsTooltipLayer");
+  if (!layer || !activeTooltipTrigger) return;
+  const rect = activeTooltipTrigger.getBoundingClientRect();
+  const layerRect = layer.getBoundingClientRect();
+  const margin = 8;
+  let top = rect.top - layerRect.height - margin;
+  let below = false;
+  if (top < margin) {
+    top = rect.bottom + margin;
+    below = true;
+  }
+  let left = rect.left + rect.width / 2 - layerRect.width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - layerRect.width - margin));
+  layer.style.top = `${top}px`;
+  layer.style.left = `${left}px`;
+  layer.classList.toggle("tooltip-below", below);
+}
+
+function tooltip(text) {
+  return `<button type="button" class="info-tooltip" aria-label="Hilfe" data-tooltip="${escapeHtml(text)}">?</button>`;
+}
+
+function initTooltips(root) {
+  for (const trigger of root.querySelectorAll("[data-tooltip]")) {
+    trigger.addEventListener("mouseenter", () => showTooltip(trigger, trigger.dataset.tooltip));
+    trigger.addEventListener("mouseleave", hideTooltip);
+    trigger.addEventListener("focus", () => showTooltip(trigger, trigger.dataset.tooltip));
+    trigger.addEventListener("blur", hideTooltip);
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (activeTooltipTrigger === trigger) {
+        hideTooltip();
+      } else {
+        showTooltip(trigger, trigger.dataset.tooltip);
+      }
+    });
+  }
+}
 const appCategoryLabels = {
   wallet: "SELF-CUSTODY WALLETS", hardware_wallet: "HARDWARE-WALLETS",
   exchange: "KRYPTOBÖRSEN / BROKER", portfolio: "STEUER / PORTFOLIO",
@@ -540,10 +607,6 @@ function joinList(value) {
   return (value || []).join(", ");
 }
 
-function tooltip(text) {
-  return `<span class="info-tooltip" tabindex="0" role="button" aria-label="Hilfe">?<span class="tooltip-text">${escapeHtml(text)}</span></span>`;
-}
-
 function selectDetectionSection(section) {
   detectionSection = section;
   for (const [key, label] of Object.entries(detectionSectionLabels)) {
@@ -552,7 +615,6 @@ function selectDetectionSection(section) {
   }
   detectionSelectedRuleId = null;
   detectionEditedRule = null;
-  $("detectionEditor").hidden = true;
   renderDetectionRules();
 }
 
@@ -606,9 +668,29 @@ function sortDetectionRules() {
   rows.append(...items);
 }
 
+function renderDetectionStats() {
+  if (!detectionState) return;
+  const total = (detectionState.app_rules?.length || 0) + (detectionState.file_rules?.length || 0) + (detectionState.backup_rules?.length || 0);
+  const defaults = bundledCryptoRules;
+  const defaultIds = new Set(defaults ? [
+    ...defaults.app_rules.map(r => r.id),
+    ...defaults.file_rules.map(r => r.id),
+    ...defaults.backup_rules.map(r => r.id),
+  ] : []);
+  const ownRules = total - [...defaultIds].filter(id =>
+    detectionState.app_rules?.some(r => r.id === id) ||
+    detectionState.file_rules?.some(r => r.id === id) ||
+    detectionState.backup_rules?.some(r => r.id === id)
+  ).length;
+  const changed = [...(detectionState.app_rules || []), ...(detectionState.file_rules || []), ...(detectionState.backup_rules || [])]
+    .filter(rule => defaultIds.has(rule.id)).length;
+  $("detectionStats").textContent = `GESAMT ${total} · STANDARD ${defaultIds.size} · EIGEN ${Math.max(0, ownRules)}`;
+}
+
 function renderDetectionRules() {
   if (!detectionState) return;
   $("detectionVersion").textContent = `REGELSTAND V${detectionState.version}`;
+  renderDetectionStats();
   const rules = rulesForSection();
   const kind = detectionKindForSection[detectionSection];
   $("detectionRows").innerHTML = rules.map(rule => {
@@ -630,7 +712,8 @@ function renderDetectionRules() {
   }).join("") || `<tr><td colspan="5" class="iphone-empty">KEINE REGELN IN DIESEM BEREICH</td></tr>`;
   filterDetectionRules();
   sortDetectionRules();
-  $("detectionEditor").hidden = true;
+  $("detectionRows").querySelectorAll("tr").forEach(row => row.classList.toggle("active", row.dataset.id === detectionSelectedRuleId));
+  renderDetectionEditor();
 }
 
 function getRuleById(id) {
@@ -646,8 +729,12 @@ function cloneRule(rule) {
 }
 
 function renderDetectionEditor() {
+  const empty = $("detectionEditorEmpty");
+  const form = $("detectionEditorForm");
+  if (!empty || !form) return;
   if (!detectionEditedRule) {
-    $("detectionEditor").hidden = true;
+    empty.hidden = false;
+    form.hidden = true;
     return;
   }
   const rule = detectionEditedRule;
@@ -719,8 +806,10 @@ function renderDetectionEditor() {
   }
   fields += `<label>KOMMENTAR<textarea data-field="comment" rows="2" spellcheck="false">${escapeHtml(rule.comment || "")}</textarea></label>`;
   $("detectionEditorFields").innerHTML = fields;
-  $("detectionEditor").hidden = false;
-  $("detectionSave").disabled = !detectionDirty;
+  initTooltips($("detectionEditorFields"));
+  empty.hidden = true;
+  form.hidden = false;
+  $("detectionApply").disabled = false;
   $("detectionEditorMessage").textContent = "";
 }
 
@@ -747,29 +836,48 @@ function readDetectionEditor() {
   return rule;
 }
 
+function applyDetectionEditor() {
+  if (!detectionEditedRule || !detectionState) return;
+  const kind = detectionKindForSection[detectionSection];
+  const updated = readDetectionEditor();
+  if (!updated) return;
+  const oldId = detectionSelectedRuleId;
+  const idChanged = oldId && updated.id !== oldId;
+  detectionState[kind] = detectionState[kind].map(rule => rule.id === oldId ? updated : rule);
+  if (idChanged) {
+    // Remove old id from tombstones if it was there; new id is treated as user intent.
+    detectionDeletedRuleIds.delete(oldId);
+    detectionSelectedRuleId = updated.id;
+  }
+  detectionEditedRule = cloneRule(updated);
+  markDetectionDirty();
+  renderDetectionRules();
+  $("detectionEditorMessage").textContent = "IN ENTWURF ÜBERNOMMEN";
+}
+
+function cancelDetectionEditor() {
+  detectionEditedRule = null;
+  detectionSelectedRuleId = null;
+  renderDetectionRules();
+}
+
 function detectionDraft() {
   if (!detectionState) return null;
   const draft = {
     app_rules: [...detectionState.app_rules],
     file_rules: [...detectionState.file_rules],
     backup_rules: [...(detectionState.backup_rules || [])],
+    deleted_default_rule_ids: [...detectionDeletedRuleIds],
   };
-  if (detectionEditedRule?.id) {
-    const kind = detectionKindForSection[detectionSection];
-    const updated = readDetectionEditor();
-    if (updated) {
-      draft[kind] = draft[kind].map(rule => rule.id === updated.id ? updated : rule);
-    }
-  }
   return draft;
 }
 
 function markDetectionDirty() {
   detectionDirty = true;
-  $("detectionSave").disabled = detectionBusy || !detectionState;
+  $("detectionApply").disabled = false;
   $("detectionSaveAll").disabled = detectionBusy || !detectionState;
+  $("detectionStatus").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
   $("detectionEditorMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
-  $("detectionMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
 }
 
 async function loadDetectionRules(revision) {
@@ -780,11 +888,14 @@ async function loadDetectionRules(revision) {
     if (revision !== settingsRevision || !$("settingsModal").open) return;
     detectionState = data.rules;
     cryptoState = data.rules;
+    bundledCryptoRules = data.defaults || bundledCryptoRules;
     detectionDirty = false;
     detectionSelectedRuleId = null;
     detectionEditedRule = null;
+    detectionDeletedRuleIds = new Set(data.rules.deleted_default_rule_ids || []);
     selectDetectionSection(detectionSection);
     $("detectionMessage").textContent = "";
+    $("detectionStatus").textContent = "";
     $("detectionSaveAll").disabled = true;
   } catch (error) {
     if (revision === settingsRevision) $("detectionMessage").textContent = `FEHLER: ${error.message}`;
@@ -794,7 +905,7 @@ async function loadDetectionRules(revision) {
 async function saveDetectionRules() {
   if (!detectionState || detectionBusy) return;
   detectionBusy = true;
-  $("detectionSave").disabled = true;
+  $("detectionApply").disabled = true;
   $("detectionSaveAll").disabled = true;
   $("closeSettings").disabled = true;
   $("detectionMessage").textContent = "REGELN WERDEN GESPEICHERT …";
@@ -805,23 +916,40 @@ async function saveDetectionRules() {
     if (!response.ok) throw new Error(data.error || "Speichern fehlgeschlagen");
     detectionState = data.rules;
     cryptoState = data.rules;
+    bundledCryptoRules = data.defaults || bundledCryptoRules;
     detectionDirty = false;
     detectionSelectedRuleId = null;
     detectionEditedRule = null;
+    detectionDeletedRuleIds = new Set(data.rules.deleted_default_rule_ids || []);
     selectDetectionSection(detectionSection);
     $("detectionMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SICHTUNGEN";
+    $("detectionStatus").textContent = "";
   } catch (error) {
     $("detectionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     detectionBusy = false;
     $("closeSettings").disabled = isUpdateBusy();
-    $("detectionSave").disabled = !detectionDirty;
+    $("detectionApply").disabled = false;
     $("detectionSaveAll").disabled = !detectionDirty;
   }
 }
 
 async function loadCryptoRules(revision) {
   await loadDetectionRules(revision);
+}
+
+function openDetectionGlossary() {
+  const dialog = $("detectionGlossaryDialog");
+  if (!dialog) return;
+  if (dialog.showModal) dialog.showModal();
+  else dialog.open = true;
+}
+
+function closeDetectionGlossary() {
+  const dialog = $("detectionGlossaryDialog");
+  if (!dialog) return;
+  if (dialog.close) dialog.close();
+  else dialog.open = false;
 }
 
 function closeSettings() {
@@ -2273,7 +2401,6 @@ $("detectionRows").addEventListener("click", event => {
   if (!found) return;
   detectionSelectedRuleId = id;
   detectionEditedRule = cloneRule(found.rule);
-  detectionDirty = false;
   $("detectionRows").querySelectorAll("tr").forEach(r => r.classList.toggle("active", r.dataset.id === id));
   renderDetectionEditor();
 });
@@ -2291,6 +2418,8 @@ $("detectionAdd").addEventListener("click", () => {
   } else {
     newRule = { id: baseId, name: "Neue Backup-Regel", platform: "", status: "active", confidence: "medium", enabled: true, required_paths: [], required_files: [], required_extensions: [], typical_paths: [], source: "", last_verified: "", comment: "" };
   }
+  // If a previously deleted default rule is re-added under the same id, clear tombstone.
+  detectionDeletedRuleIds.delete(newRule.id);
   const kindKey = kind;
   detectionState[kindKey] = [...detectionState[kindKey], newRule];
   detectionSelectedRuleId = newRule.id;
@@ -2316,19 +2445,20 @@ $("detectionDelete").addEventListener("click", () => {
   if (!detectionEditedRule || detectionBusy) return;
   if (!window.confirm(`Regel „${detectionEditedRule.name || detectionEditedRule.id}" wirklich löschen?`)) return;
   const kind = detectionKindForSection[detectionSection];
-  detectionState[kind] = detectionState[kind].filter(rule => rule.id !== detectionEditedRule.id);
+  const deletedId = detectionEditedRule.id;
+  const defaults = bundledCryptoRules;
+  const defaultIds = defaults ? new Set([...defaults.app_rules.map(r => r.id), ...defaults.file_rules.map(r => r.id), ...defaults.backup_rules.map(r => r.id)]) : new Set();
+  if (defaultIds.has(deletedId)) {
+    detectionDeletedRuleIds.add(deletedId);
+  }
+  detectionState[kind] = detectionState[kind].filter(rule => rule.id !== deletedId);
   detectionSelectedRuleId = null;
   detectionEditedRule = null;
   markDetectionDirty();
   renderDetectionRules();
 });
-$("detectionCancel").addEventListener("click", () => {
-  detectionEditedRule = null;
-  detectionSelectedRuleId = null;
-  $("detectionEditor").hidden = true;
-  $("detectionRows").querySelectorAll("tr").forEach(r => r.classList.remove("active"));
-});
-$("detectionSave").addEventListener("click", saveDetectionRules);
+$("detectionCancel").addEventListener("click", cancelDetectionEditor);
+$("detectionApply").addEventListener("click", applyDetectionEditor);
 $("detectionSaveAll").addEventListener("click", saveDetectionRules);
 $("detectionEditorFields").addEventListener("input", () => {
   const updated = readDetectionEditor();
@@ -2336,6 +2466,14 @@ $("detectionEditorFields").addEventListener("input", () => {
     detectionEditedRule = updated;
     markDetectionDirty();
   }
+});
+$("detectionEditorFields").addEventListener("scroll", hideTooltip);
+$("detectionTableWrap")?.addEventListener("scroll", hideTooltip);
+$("detectionGlossaryButton")?.addEventListener("click", openDetectionGlossary);
+$("detectionGlossaryClose")?.addEventListener("click", closeDetectionGlossary);
+$("detectionGlossaryDialog")?.addEventListener("cancel", closeDetectionGlossary);
+$("detectionGlossaryDialog")?.addEventListener("click", event => {
+  if (event.target === $("detectionGlossaryDialog")) closeDetectionGlossary();
 });
 $("detectionExport").addEventListener("click", () => {
   if (!detectionState) return;
@@ -2351,13 +2489,28 @@ $("detectionImport").addEventListener("change", async event => {
     if (file.size > 786432) throw new Error("Datei zu groß (maximal 768 KB).");
     const imported = JSON.parse(await file.text());
     if (!Array.isArray(imported.app_rules) || !Array.isArray(imported.file_rules)) throw new Error("Keine gültige Regelsammlung.");
-    detectionState = { ...detectionState, app_rules: imported.app_rules, file_rules: imported.file_rules, backup_rules: imported.backup_rules || detectionState.backup_rules || [] };
+    detectionState = {
+      ...detectionState,
+      app_rules: imported.app_rules,
+      file_rules: imported.file_rules,
+      backup_rules: imported.backup_rules || detectionState.backup_rules || [],
+    };
+    if (Array.isArray(imported.deleted_default_rule_ids)) {
+      detectionDeletedRuleIds = new Set(imported.deleted_default_rule_ids);
+    }
     markDetectionDirty();
     selectDetectionSection(detectionSection);
     $("detectionMessage").textContent = "IMPORTIERT · BITTE PRÜFEN UND SPEICHERN";
   } catch (error) {
     $("detectionMessage").textContent = `IMPORT FEHLGESCHLAGEN: ${error.message}`;
   } finally { event.target.value = ""; }
+});
+document.addEventListener("click", event => {
+  if (!event.target.closest(".info-tooltip") && !event.target.closest(".global-tooltip")) hideTooltip();
+});
+document.addEventListener("scroll", () => hideTooltip(), true);
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && activeTooltipTrigger) hideTooltip();
 });
 $("settingsProfilesList").addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-profile]");

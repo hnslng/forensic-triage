@@ -60,11 +60,24 @@ function gate() {
 }
 
 const settingsCatalog = { version: 1, sha256: 'first', categories: { Bilder: ['jpg', 'png'], Dokumente: ['pdf'] } };
+const defaultCryptoRules = {
+  version: 3,
+  sha256: 'crypto-defaults',
+  app_rules: [
+    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: ['io.test.wallet'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+    { id: 'bank', name: 'Test Bank', category: 'banking', relevance: 'neutral', enabled: true, ios_bundle_ids: ['com.test.bank'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+  ],
+  file_rules: [
+    { id: 'seed-phrase', name: 'Seed Phrase', category: 'wallet', relevance: 'high', enabled: true, filename_equals: [], terms: ['seed'], context_terms: [], extensions: ['txt'], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+  ],
+  backup_rules: [
+    { id: 'apple-finder', name: 'Apple Finder/iTunes Backup', platform: 'iOS/macOS', status: 'active', confidence: 'high', enabled: true, required_paths: ['MobileSync/Backup'], required_files: ['Manifest.db', 'Info.plist'], required_extensions: [], typical_paths: ['~/Library/Application Support/MobileSync/Backup'], source: '', last_verified: '', comment: '' },
+    { id: 'samsung-smart-switch', name: 'Samsung Smart Switch', platform: 'Android', status: 'active', confidence: 'medium', enabled: true, required_paths: ['Smart Switch'], required_files: [], required_extensions: [], typical_paths: [], source: '', last_verified: '', comment: '' },
+  ],
+};
 function settingsFixture(url) {
   if (url.pathname === '/api/settings/filetypes') return { json: { catalog: settingsCatalog, defaults: settingsCatalog } };
-  if (url.pathname === '/api/settings/crypto') return { json: { rules: { version: 1, sha256: 'crypto-first', app_rules: [
-    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: ['io.test.wallet'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
-  ], file_rules: [], backup_rules: [] } } };
+  if (url.pathname === '/api/settings/crypto') return { json: { rules: defaultCryptoRules, defaults: defaultCryptoRules } };
   if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein', version: '1.0', keyword_count: 2 }] } };
   if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
 }
@@ -146,6 +159,97 @@ test('settings remain readable on laptop and small screens', async t => {
     assert.ok(sizes.width < width);
     assert.ok(await page.locator('#catalogSave').isVisible());
   }
+});
+
+test('detection rules workspace is large and both columns are visible on desktop', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  assert.match(await page.locator('#settingsCryptoTab').innerText(), /ERKENNUNGSREGELN/);
+  const modal = await page.locator('#settingsModal').evaluate(node => node.getBoundingClientRect());
+  assert.ok(modal.width >= 1400, `modal width ${modal.width} should use most of viewport`);
+  assert.ok(modal.height >= 900, `modal height ${modal.height} should use most of viewport`);
+  assert.ok(modal.left >= 0 && modal.right <= 1512, 'modal must be fully inside viewport');
+  const list = await page.locator('.detection-list-panel').evaluate(node => node.getBoundingClientRect());
+  const editor = await page.locator('.detection-editor-panel').evaluate(node => node.getBoundingClientRect());
+  assert.ok(list.width > 0 && editor.width > 0, 'both master and detail panels must be visible');
+  assert.ok(list.right <= editor.left + 1, 'list and editor must not overlap');
+  const footer = await page.locator('.detection-footer').evaluate(node => node.getBoundingClientRect());
+  assert.ok(footer.height > 20 && footer.bottom <= modal.bottom, 'save footer must be visible');
+  const empty = await page.locator('#detectionEditorEmpty');
+  assert.equal(await empty.isVisible(), true);
+});
+
+test('detection rules glossary opens as separate dialog without shifting layout', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  const bodyBefore = await page.locator('.detection-body').evaluate(node => node.getBoundingClientRect());
+  await page.locator('#detectionGlossaryButton').click();
+  const dialog = page.locator('#detectionGlossaryDialog');
+  await dialog.waitFor({ state: 'visible' });
+  assert.equal(await dialog.isVisible(), true);
+  assert.match(await dialog.innerText(), /ANDROID-APP-ID/);
+  const bodyAfter = await page.locator('.detection-body').evaluate(node => node.getBoundingClientRect());
+  assert.deepEqual({ width: bodyAfter.width, height: bodyAfter.height, left: bodyAfter.left, top: bodyAfter.top }, { width: bodyBefore.width, height: bodyBefore.height, left: bodyBefore.left, top: bodyBefore.top }, 'master-detail layout must not shift');
+  await page.locator('#detectionGlossaryClose').click();
+  assert.equal(await dialog.isVisible(), false);
+  assert.equal(await page.locator('#detectionEditorEmpty').isVisible(), true);
+});
+
+test('detection rules tooltip stays fully inside viewport', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  await page.locator('#detectionRows tr[data-id="wallet"]').click();
+  const trigger = page.locator('.detection-editor-fields .info-tooltip').first();
+  await trigger.hover();
+  const tooltip = page.locator('#settingsTooltipLayer');
+  await tooltip.waitFor({ state: 'visible' });
+  const box = await tooltip.evaluate(node => node.getBoundingClientRect());
+  assert.ok(box.width > 0 && box.height > 0, 'tooltip must be rendered');
+  assert.ok(box.top >= 0 && box.left >= 0 && box.right <= 1512 && box.bottom <= 982, `tooltip must stay inside viewport: ${JSON.stringify(box)}`);
+  await page.mouse.click(0, 0);
+  assert.equal(await tooltip.isVisible(), false);
+});
+
+test('detection rules backup tab shows bundled backup rules', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  await page.locator('#detectionBackupsTab').click();
+  const text = await page.locator('#detectionRows').innerText();
+  assert.match(text, /Apple Finder/i);
+  assert.match(text, /Samsung Smart Switch/i);
+  assert.equal(await page.locator('#detectionCount').innerText(), '2 REGELN');
+});
+
+test('detection rules apply drafts and save all persist changes', async t => {
+  const { page, requests } = await setup(t, (url, request) => {
+    if (url.pathname === '/api/settings/crypto' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      assert.ok(Array.isArray(payload.rules.app_rules));
+      assert.ok(Array.isArray(payload.rules.deleted_default_rule_ids));
+      return { json: { rules: { ...payload.rules, version: 2, sha256: 'crypto-second' }, defaults: defaultCryptoRules } };
+    }
+    return settingsFixture(url);
+  });
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  await page.locator('#detectionRows tr[data-id="wallet"]').click();
+  await page.locator('[data-field="name"]').fill('Renamed Wallet');
+  await page.locator('#detectionApply').click();
+  assert.equal(await page.locator('#detectionStatus').innerText(), 'UNGESPEICHERTE ÄNDERUNGEN');
+  assert.equal(await page.locator('#detectionSaveAll').isEnabled(), true);
+  await page.locator('#detectionSaveAll').click();
+  await page.waitForFunction(() => document.getElementById('detectionMessage').textContent.includes('GESPEICHERT'));
+  assert.equal(await page.locator('#detectionSaveAll').isDisabled(), true);
+  assert.deepEqual(requests.filter(item => item.method !== 'GET' && item.path === '/api/settings/crypto').length, 1);
 });
 
 for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 'failure retains lock' : 'success enables deliberate install'}`, async t => {
@@ -622,7 +726,7 @@ test('detection rules editor and shared hints remain separate from neutral apps'
   await page.locator('#detectionRows tr[data-id]').click();
   assert.equal(await page.locator('#detectionEditor').isHidden(), false);
   await page.locator('#detectionEditorFields [data-field="name"]').fill('Test Wallet 2');
-  assert.equal(await page.locator('#detectionSave').isEnabled(), true);
+  assert.equal(await page.locator('#detectionApply').isEnabled(), true);
   await page.locator('#detectionSearch').fill('Kein Treffer');
   assert.equal(await page.locator('#detectionRows tr[data-id]:visible').count(), 0);
   await page.locator('#detectionSearch').fill('');

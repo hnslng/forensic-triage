@@ -79,7 +79,7 @@ Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Des
 
 ## Einstellungen verwalten
 
-**Einstellungen** in der oberen Leiste öffnet die vier Bereiche **Stichwortprofile**, **Dateitypen**, **Krypto-Regeln** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen, verifizierte iOS-/Android-App-Kennungen pflegen oder Updates verwalten. Im Fallfenster bleibt die Auswahl der Profile für Dateimedien. Änderungen gelten für neue Scans; alte Ergebnisse behalten ihren gespeicherten Regel-/Katalogstand. Siehe [ausführliche Bedienung](settings.md).
+**Einstellungen** in der oberen Leiste öffnet die vier Bereiche **Stichwortprofile**, **Dateitypen**, **Erkennungsregeln** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen, verifizierte iOS-/Android-App-Kennungen pflegen oder Updates verwalten. Im Fallfenster bleibt die Auswahl der Profile für Dateimedien. Änderungen gelten für neue Scans; alte Ergebnisse behalten ihren gespeicherten Regel-/Katalogstand. Siehe [ausführliche Bedienung](settings.md).
 
 ## 6. Auswerfen und Aktualisieren
 

@@ -5,7 +5,7 @@ import json
 import pytest
 
 from forensic_triage.crypto_rules import (
-    bundled_rules, classify_app, classify_file, find_file_hints, load_rules, save_rules, seed_rules, snapshot,
+    bundled_rules, classify_app, classify_file, find_file_hints, load_rules, merge_rules, save_rules, seed_rules, snapshot,
 )
 from forensic_triage.settings import SettingsConflict
 
@@ -45,7 +45,7 @@ def test_rule_version_and_conflict_preserve_prior_scan_snapshot(tmp_path):
     assert load_rules(path)["sha256"] == second["sha256"]
     with pytest.raises(SettingsConflict):
         save_rules(path, changed, first["sha256"])
-    path.write_text(json.dumps({"version": 2, "app_rules": [], "file_rules": [], "sha256": "wrong"}))
+    path.write_text(json.dumps({"version": 3, "app_rules": [], "file_rules": [], "backup_rules": [], "sha256": "wrong"}))
     with pytest.raises(ValueError):
         load_rules(path)
 
@@ -127,6 +127,82 @@ def test_large_rule_set_scales_without_validation_error():
     data = {"app_rules": many, "file_rules": rules["file_rules"], "backup_rules": rules["backup_rules"]}
     result = snapshot(data)
     assert result["sha256"]
+
+
+def test_merge_rules_preserves_local_changes_and_adds_new_defaults(tmp_path):
+    defaults = bundled_rules()
+    local = snapshot({
+        "app_rules": [
+            {"id": "metamask", "name": "MetaMask", "category": "wallet", "relevance": "high", "enabled": False,
+             "ios_bundle_ids": ["io.metamask.ios"], "android_package_ids": ["io.metamask"], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": True, "source": "", "last_verified": "", "regions": []},
+            {"id": "own-wallet", "name": "Own Wallet", "category": "wallet", "relevance": "high", "enabled": True,
+             "ios_bundle_ids": ["org.example.own"], "android_package_ids": [], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": False, "source": "", "last_verified": "", "regions": []},
+        ],
+        "file_rules": [],
+        "backup_rules": [],
+    }, 2)
+    merged = merge_rules(local, defaults)
+    assert any(rule["id"] == "own-wallet" for rule in merged["app_rules"])
+    metamask = next(rule for rule in merged["app_rules"] if rule["id"] == "metamask")
+    assert metamask["enabled"] is False  # local change preserved
+    assert any(rule["id"] == "ledger-live" for rule in merged["app_rules"])
+    assert len(merged["backup_rules"]) == len(defaults["backup_rules"])
+
+
+def test_merge_rules_honors_deleted_default_tombstones(tmp_path):
+    defaults = bundled_rules()
+    local = snapshot({
+        "app_rules": [],
+        "file_rules": [],
+        "backup_rules": [],
+        "deleted_default_rule_ids": ["metamask"],
+    }, 3)
+    merged = merge_rules(local, defaults)
+    assert not any(rule["id"] == "metamask" for rule in merged["app_rules"])
+    assert any(rule["id"] == "ledger-live" for rule in merged["app_rules"])
+
+
+def test_seed_rules_merges_new_defaults_into_existing_local_file(tmp_path):
+    path = tmp_path / "crypto-rules.json"
+    # Simulate an Alpha 61 local file: small set, no backup_rules, no tombstones.
+    old_local = snapshot({
+        "app_rules": [
+            {"id": "metamask", "name": "MetaMask", "category": "wallet", "relevance": "high", "enabled": True,
+             "ios_bundle_ids": ["io.metamask.ios"], "android_package_ids": ["io.metamask"], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": True, "source": "", "last_verified": "", "regions": []},
+            {"id": "own-wallet", "name": "Own Wallet", "category": "wallet", "relevance": "high", "enabled": True,
+             "ios_bundle_ids": ["org.example.own"], "android_package_ids": [], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": False, "source": "", "last_verified": "", "regions": []},
+        ],
+        "file_rules": [],
+        "backup_rules": [],
+    }, 2)
+    path.write_text(json.dumps(old_local, ensure_ascii=False, indent=2))
+    seed_rules(path)
+    result = load_rules(path)
+    assert len(result["app_rules"]) >= len(bundled_rules()["app_rules"]) + 1  # defaults + own-wallet
+    assert len(result["backup_rules"]) == len(bundled_rules()["backup_rules"])
+    assert any(rule["id"] == "own-wallet" for rule in result["app_rules"])
+    assert result["version"] == old_local["version"] + 1
+
+
+def test_save_rules_clears_tombstone_when_default_rule_is_recreated(tmp_path):
+    defaults = bundled_rules()
+    default_ids = frozenset(rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in defaults[kind])
+    path = tmp_path / "crypto-rules.json"
+    current = snapshot({"app_rules": [], "file_rules": [], "backup_rules": [], "deleted_default_rule_ids": ["metamask"]}, 3)
+    path.write_text(json.dumps(current, ensure_ascii=False, indent=2))
+    payload = {
+        "app_rules": [dict(item) for item in defaults["app_rules"] if item["id"] == "metamask"],
+        "file_rules": [],
+        "backup_rules": [],
+        "deleted_default_rule_ids": ["metamask"],
+    }
+    updated = save_rules(path, payload, current["sha256"], default_rule_ids=default_ids)
+    assert "metamask" not in updated.get("deleted_default_rule_ids", [])
+    assert any(rule["id"] == "metamask" for rule in updated["app_rules"])
 
 
 def test_legacy_operator_rules_migrate_without_unverified_bundled_ids(tmp_path):

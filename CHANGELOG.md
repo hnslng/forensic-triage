@@ -2,6 +2,23 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.62] – 2026-10-03
+
+- Automatische Regel-Migration bei Programmupdates: mitgelieferte neue Standardregeln (App-, Datei- und Backup-Regeln) werden in bestehende lokale `crypto-rules.json` ergänzt, ohne lokale Änderungen zu überschreiben und ohne eigene Benutzerregeln zu verlieren.
+- Tombstones (`deleted_default_rule_ids`) für bewusst gelöschte Standardregeln: ab Alpha 62 gelöschte Standardregeln bleiben bei späteren Updates dauerhaft entfernt; vor Alpha 62 gelöschte Regeln können einmalig wiederhergestellt werden.
+- Lokales Regelschema auf Version 3 angehoben; Alpha-61-Regelbestände werden beim ersten Start automatisch und deterministisch migriert.
+- Einstellungen-Dialog auf Desktop deutlich vergrößert und als echte Arbeitsfläche umgebaut: Kopfzeile, Haupttabs, Untertabs, Master-Detail-Bereich und Footer bleiben sichtbar, nur die Inhaltsbereiche scrollen.
+- Master-Detail-Bereich verbessert: Liste ca. 55 %, Editor ca. 45 %, eigene Scrollbereiche, leerer Editor zeigt Hilfstext statt leerer Fläche.
+- „Begriffe erklären“ ist kein Inline-`<details>` mehr, sondern öffnet einen eigenen Hilfe-Dialog; Layout wird nicht verschoben, Auswahl bleibt erhalten.
+- Globale Tooltip-Schicht außerhalb scrollbarer Bereiche; Tooltips werden per `getBoundingClientRect()` positioniert, bleiben im Viewport und werden nicht durch `overflow:hidden` abgeschnitten.
+- Speicherlogik visuell geklärt: Editor hat „Übernehmen“/„Abbrechen“, Footer zeigt „Regelstand Vx“ und „Ungesicherte Änderungen“ mit „Alle Änderungen speichern“.
+- Erkennungsregeln-Tab von „KRYPTO-REGELN“ in „ERKENNUNGSREGELN“ umbenannt; Unterbereiche, ARIA-Labels, Tests und Dokumentation angepasst.
+- Regelzähler und einfache Statistik (Gesamt/Standard/Eigen) im Footer der Erkennungsregeln sichtbar.
+- Responsiver Breakpoint für Master-Detail auf ca. 1000 px angehoben.
+- Browsertests erweitert: großer Desktop-Viewport, sichtbarer Footer, Hilfe-Dialog, globale Tooltips, Backup-Regeln, Speicherfluss, Tab-Name.
+- Python-Tests für die neue Merge-/Migrationslogik und Tombstone-Verwaltung ergänzt.
+- Versionen in Code, README und Dokumentation auf `0.2.0-alpha.62` (`0.2.0a62`) angehoben.
+
 ## [0.2.0-alpha.61] – 2026-10-03
 
 - Skalierbare Erkennungsregeln: Obergrenze auf mindestens 2.000 App-Regeln, 500 Dateiregeln und 200 Backup-Regeln erhöht; Regeln bleiben als lokale JSON-Datei dauerhaft bearbeitbar.
