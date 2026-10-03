@@ -17,7 +17,7 @@ from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 
 
-DECISIONS = {"open", "secure", "not_selected"}
+DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
 REASONS = {
     "no_indicators",
     "known_media",
@@ -32,6 +32,8 @@ DECISION_LABELS = {
     "secure": "Zur Sicherung ausgewählt",
     "not_selected": "Nicht zur Sicherung ausgewählt",
     "review": "Entscheidung offen (historischer Status)",
+    "specialist_consulted": "Fachperson hinzugezogen",
+    "specialist_not_consulted": "Keine Fachperson hinzugezogen",
 }
 REASON_LABELS = {
     "no_indicators": "Keine fallbezogenen Indikatoren",
@@ -116,11 +118,14 @@ class CaseStore:
                     reason_note TEXT,
                     decision_operator TEXT,
                     decided_at TEXT,
+                    specialist_name TEXT,
                     UNIQUE(case_id, evidence_number, scan_id)
                 )
                 """
             )
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(media)")}
+            if "specialist_name" not in columns:
+                connection.execute("ALTER TABLE media ADD COLUMN specialist_name TEXT")
             if "sighting_number" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN sighting_number TEXT")
                 case_ids = [int(row["case_id"]) for row in connection.execute("SELECT DISTINCT case_id FROM media")]
@@ -359,6 +364,7 @@ class CaseStore:
         reason_note: str,
         operator: str,
         evidence_number: str | None = None,
+        specialist_name: str | None = None,
     ) -> dict[str, Any]:
         if decision not in DECISIONS - {"open"}:
             raise ValueError("Unbekannter Entscheidungsstatus.")
@@ -366,6 +372,11 @@ class CaseStore:
             raise ValueError("Für eine Nichtauswahl ist eine Begründung erforderlich.")
         if reason_code and reason_code not in REASONS:
             raise ValueError("Unbekannte Begründung.")
+        specialist = (specialist_name or "").strip()[:160]
+        if decision == "specialist_consulted" and not specialist:
+            raise ValueError("Bitte die hinzugezogene Fachperson angeben.")
+        if decision != "specialist_consulted":
+            specialist = ""
         official_evidence = safe_component(evidence_number or "") if evidence_number else ""
         if decision == "secure" and not official_evidence:
             raise ValueError("Für die Sicherung ist eine Beweismittelnummer erforderlich.")
@@ -374,16 +385,21 @@ class CaseStore:
         now = utc_now()
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT media.id, media.case_id, cases.case_number FROM media "
+                "SELECT media.id, media.case_id, media.device_path, cases.case_number FROM media "
                 "JOIN cases ON cases.id=media.case_id WHERE media.id=?",
                 (media_id,),
             ).fetchone()
             if row is None:
                 raise KeyError("Medienakte nicht gefunden.")
+            is_phone = str(row["device_path"]).startswith(("iphone:", "android:"))
+            if decision.startswith("specialist_") and not is_phone:
+                raise ValueError("Die Fachpersonen-Dokumentation ist nur für Telefone vorgesehen.")
+            if decision in {"secure", "not_selected"} and is_phone:
+                raise ValueError("Für Telefone bitte dokumentieren, ob eine Fachperson hinzugezogen wurde.")
             try:
                 connection.execute(
-                    "UPDATE media SET decision=?, evidence_number=?, reason_code=?, reason_note=?, decision_operator=?, decided_at=? WHERE id=?",
-                    (decision, official_evidence, reason_code, reason_note.strip()[:1000] or None, operator.strip()[:120] or None, now, media_id),
+                    "UPDATE media SET decision=?, evidence_number=?, reason_code=?, reason_note=?, decision_operator=?, decided_at=?, specialist_name=? WHERE id=?",
+                    (decision, official_evidence, reason_code, reason_note.strip()[:1000] or None, operator.strip()[:120] or None, now, specialist or None, media_id),
                 )
             except sqlite3.IntegrityError as exc:
                 raise ValueError("Diese Beweismittelnummer ist in diesem Fall bereits vergeben.") from exc
@@ -399,6 +415,7 @@ class CaseStore:
                             "evidence_number": official_evidence or None,
                             "reason_code": reason_code,
                             "reason_note": reason_note.strip()[:1000],
+                            "specialist_name": specialist or None,
                         },
                         ensure_ascii=False,
                     ),
@@ -452,6 +469,13 @@ class CaseStore:
                 crypto = stored_crypto
         except (OSError, json.JSONDecodeError):
             pass
+        backup: dict[str, Any] | None = None
+        try:
+            stored_backup = json.loads((result_dir / "backup-hints.json").read_text(encoding="utf-8"))
+            if isinstance(stored_backup, dict):
+                backup = stored_backup
+        except (OSError, json.JSONDecodeError):
+            pass
         return {
             "media": self._media_dict(row),
             "device": device,
@@ -459,6 +483,7 @@ class CaseStore:
             "android": android,
             "phone": phone,
             "crypto": crypto,
+            "backup": backup,
             "summary": summary,
             "hits": {word: int(value.get("count", 0)) for word, value in hits_data.get("by_keyword", {}).items()},
             "archive": self._archive_info(str(row["case_number"]), result_dir),
@@ -818,7 +843,7 @@ class CaseStore:
             "id", "case_number", "sighting_number", "evidence_number", "scan_id", "scanned_at", "device_path",
             "vendor", "model", "serial", "size", "file_count", "directory_count",
             "keyword_matches", "duration_seconds", "decision", "reason_code", "reason_note",
-            "decision_operator", "decided_at",
+            "decision_operator", "decided_at", "specialist_name",
         }
         return {key: row[key] for key in keys if key in row.keys()}
 
@@ -849,7 +874,7 @@ class CaseStore:
         fields = [
             "id", "sighting_number", "evidence_number", "scan_id", "scanned_at", "vendor", "model", "serial", "size",
             "file_count", "directory_count", "keyword_matches", "duration_seconds", "decision",
-            "reason_code", "reason_note", "decision_operator", "decided_at",
+            "reason_code", "reason_note", "decision_operator", "decided_at", "specialist_name",
         ]
         with (case_dir / "media-register.csv").open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
@@ -882,6 +907,7 @@ class CaseStore:
                     f"Begründung: {REASON_LABELS.get(str(row['reason_code']), str(row['reason_code'] or '—'))}",
                     f"Notiz: {row['reason_note'] or '—'}",
                     f"Bearbeiter / Zeitpunkt: {row['decision_operator'] or '—'} / {row['decided_at'] or '—'}",
+                    f"Hinzugezogene Fachperson: {row['specialist_name'] or '—'}",
                     "-" * 72,
                 ]
             )

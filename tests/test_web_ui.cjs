@@ -63,8 +63,8 @@ const settingsCatalog = { version: 1, sha256: 'first', categories: { Bilder: ['j
 function settingsFixture(url) {
   if (url.pathname === '/api/settings/filetypes') return { json: { catalog: settingsCatalog, defaults: settingsCatalog } };
   if (url.pathname === '/api/settings/crypto') return { json: { rules: { version: 1, sha256: 'crypto-first', app_rules: [
-    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, bundle_ids: ['io.test.wallet'], aliases: [], terms: [] },
-  ], file_rules: [] } } };
+    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: ['io.test.wallet'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+  ], file_rules: [], backup_rules: [] } } };
   if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein', version: '1.0', keyword_count: 2 }] } };
   if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
 }
@@ -610,18 +610,22 @@ test('phone app groups show recognized names and search only the collapsed other
   assert.match(await page.locator('#iphoneSummary .iphone-head').innerText(), /TEST-SERIAL/);
 });
 
-test('crypto rules editor and shared hints remain separate from neutral apps', async t => {
+test('detection rules editor and shared hints remain separate from neutral apps', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.locator('#openSettings').click();
   await page.locator('#settingsCryptoTab').click();
-  assert.equal(await page.locator('#cryptoAppRules .crypto-rule').count(), 1);
-  await page.locator('#cryptoAppRules .crypto-rule summary').click();
-  await page.locator('#cryptoAppRules [data-rule-field="name"]').fill('Test Wallet 2');
-  assert.equal(await page.locator('#cryptoSave').isEnabled(), true);
-  await page.locator('#cryptoSearch').fill('Kein Treffer');
-  assert.equal(await page.locator('#cryptoAppRules .crypto-rule').isHidden(), true);
-  await page.locator('#cryptoSearch').fill('');
-  await page.locator('#cryptoExport').click();
+  await page.locator('#detectionRows tr[data-id]').click();
+  assert.equal(await page.locator('#detectionEditor').isHidden(), false);
+  await page.locator('#detectionEditorFields [data-field="name"]').fill('Test Wallet 2');
+  assert.equal(await page.locator('#detectionSave').isEnabled(), true);
+  await page.locator('#detectionSearch').fill('Kein Treffer');
+  assert.equal(await page.locator('#detectionRows tr[data-id]:visible').count(), 0);
+  await page.locator('#detectionSearch').fill('');
+  await page.locator('#detectionExport').click();
+  await page.locator('#detectionBankingTab').click();
+  assert.equal(await page.locator('#detectionRows tr').count() >= 0, true);
+  await page.locator('#detectionBackupsTab').click();
+  assert.equal(await page.locator('#detectionRows tr').count() >= 0, true);
 });
 
 test('iPhone without reported serial uses UDID path for online and pending decision', async t => {

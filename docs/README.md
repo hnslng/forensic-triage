@@ -4,19 +4,21 @@ Die Projektdokumentation ist primär auf Deutsch verfasst. Die README enthält z
 
 ## Einstieg
 
-Stand: 2. Oktober 2026, Anwendung Alpha 60. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
+Stand: 3. Oktober 2026, Anwendung Alpha 61. Zuerst [Projektstand und Nachweise](project-status.md) lesen; danach [Roadmap](roadmap.md) und [vollständigen Probeeinsatz](test-plan.md#vollständiger-probeeinsatz). Implementierte Funktionen, praktische Beobachtungen und offene Abnahmen werden getrennt ausgewiesen.
 
 1. [Installation und Aktualisierung](installation.md)
    - [Signierte Offline-Updates](offline-updates.md)
 2. [So funktioniert TRIAGE//BOX](how-it-works.md)
 3. [Konfiguration](configuration.md)
 4. [Bedienung und Fallworkflow](operation.md)
-   - [Einstellungen: Stichwortprofile, Dateitypen, Krypto-Regeln und Updates](settings.md)
+   - [Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates](settings.md)
+   - [Erkennungsregeln](detection-rules.md)
+   - [Gerätebackup-Erkennung](device-backups.md)
 5. [Forensische Sicherheitsgrenzen](forensic-safety.md)
 6. [Geplantes Zugriffsschutzkonzept](security-concept.md)
 7. [Roadmap und offene Aufgaben](roadmap.md)
-8. [iPhone-Krypto-Schnellscan über USB](iphone-triage.md)
-9. [Android-/Telefon-Triage](android-triage.md)
+8. [iPhone-/iPad-Krypto-Schnellscan über USB](iphone-triage.md)
+9. [Android-/Mobilgerät-Triage](android-triage.md)
 
 ## Technische Unterlagen
 
@@ -38,7 +40,7 @@ Diese Unterlagen gehören nicht zum Bedien- oder Installationsablauf auf dem Ras
 
 ## Maßgeblicher Stand
 
-Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.60. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a60`; der Git-Tag lautet `v0.2.0-alpha.60`.
+Die Paketversion steht in `pyproject.toml` und `src/forensic_triage/__init__.py`. Die aktuelle Programmversion ist 0.2.0-alpha.61. Dafür lautet die Python-Version gemäß PEP 440 `0.2.0a61`; der Git-Tag lautet `v0.2.0-alpha.61`.
 
 Anleitungen im Repository sind Entwicklungs- und Betriebsunterlagen für den privaten Prototyp. Sie ersetzen keine behördlichen Vorgaben, Verfahrensanweisungen, Freigaben oder formale Werkzeugvalidierung.
 

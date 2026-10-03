@@ -15,7 +15,8 @@ Die bedienende Person muss Berechtigung und physische Identität des Datenträge
 7. USB-Partitionen mit `mmls` und `fsstat` erfassen; das Dateisystem einer CD/DVD direkt am optischen Gerät prüfen.
 8. Im schnellen Modus nur mit `ro,nosuid,nodev,noexec` mounten, `ro` verifizieren, Metadaten lesen und im Cleanup wieder unmounten; Hardwarestillstand oder Prozessabbruch können die Aufräumfolge unterbrechen.
 9. ZIP-/ISO-/7Z-/RAR-Verzeichnisstrukturen nur begrenzt, ohne Extraktion und ohne Rekursion katalogisieren.
-10. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden; dort ist der Containerindex nicht verfügbar.
+10. Geräte-Backup-Strukturen ausschließlich anhand von Pfad-, Dateinamen- und Endungsmerkmalen erkennen; Backup-Inhalte nie öffnen.
+11. Im TSK-Modus stattdessen `fls -u` ohne Mount verwenden; dort ist der Containerindex nicht verfügbar.
 
 ## Bedeutung des Software-Schreibschutzes
 
@@ -42,7 +43,7 @@ Auf einem Raspberry Pi 3B+ teilen sich externe USB-Medien den USB-Pfad mit einer
 
 ## Metadaten und Fehlinterpretationen
 
-Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.60 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Telefon-App-Hinweise stammen nur aus vom Betriebssystem gemeldeten App-Metadaten; sie belegen weder Nutzung noch Vermögenswerte oder Inhalte. Der Telefon-Schnellscan liest keine Dateien. Regulär vorhandene versteckte Dateien auf Dateimedien werden inventarisiert; gelöschte Dateien, interne Dateisystem-Hilfseinträge und nicht lesbare Einträge werden nicht wiederhergestellt. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig erkannte Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, unvollständige oder wegen eines Limits nicht fertig geprüfte Archive bleiben `UNGEPRÜFT`. Bei verschlüsselten Kopfbereichen werden keine Passwörter versucht.
+Dateiendungen können falsch oder absichtlich irreführend sein. Version 0.2.0-alpha.61 prüft noch keine Magic Bytes. Kategorien sind daher Hinweise aus Dateinamen, keine bestätigten Dateitypen. Telefon-App-Hinweise stammen nur aus vom Betriebssystem gemeldeten App-Metadaten; sie belegen weder Nutzung noch Vermögenswerte oder Inhalte. Der Mobilgerät-Schnellscan liest keine Dateien. Geräte-Backup-Erkennungen belegen nur charakteristische Strukturen, niemals den Backup-Inhalt oder die Wiederherstellbarkeit. Regulär vorhandene versteckte Dateien auf Dateimedien werden inventarisiert; gelöschte Dateien, interne Dateisystem-Hilfseinträge und nicht lesbare Einträge werden nicht wiederhergestellt. Stichworttreffer stammen nur aus Namen und Pfaden und beweisen keinen Dateiinhalt. Nur eindeutig erkannte Verschlüsselungsmerkmale werden als verschlüsselt gezählt; nicht unterstützte, beschädigte, unvollständige oder wegen eines Limits nicht fertig geprüfte Archive bleiben `UNGEPRÜFT`. Bei verschlüsselten Kopfbereichen werden keine Passwörter versucht.
 
 ## Schutz der Fallunterlagen
 
@@ -50,4 +51,4 @@ Keine Zugangsdaten, privaten Schlüssel, echten Falldaten oder Ergebnisverzeichn
 
 ## English summary
 
-The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. A paired iPhone uses only normal Apple services and verified read-only metadata mounts; it is not hardware write-blocked. Time-limited isolated scanner processes bound software waits; kernel, bus or system-storage failures can still affect the entire device. File extensions, app and path matches are indicators only; version 0.2.0-alpha.60 does not inspect signatures or file payloads.
+The scanner validates a whole unmounted USB disk or external USB optical drive, sets and verifies it as read-only, and then uses either a defensively read-only mount or a mount-free TSK walk. A paired iPhone or iPad uses only normal Apple services and verified read-only metadata mounts; it is not hardware write-blocked. Time-limited isolated scanner processes bound software waits; kernel, bus or system-storage failures can still affect the entire device. File extensions, app and path matches are indicators only; device-backup detections prove only structural patterns, never contents. Version 0.2.0-alpha.61 does not inspect signatures or file payloads.

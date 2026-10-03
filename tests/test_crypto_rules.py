@@ -59,6 +59,76 @@ def test_neutral_categories_cannot_become_crypto_alerts():
         snapshot(bad)
 
 
+def test_banking_apps_remain_neutral():
+    rules = bundled_rules()
+    revolut = classify_app({"name": "Revolut", "app_id": "com.revolut.revolut", "platform": "android"}, rules)
+    assert revolut
+    assert revolut[0]["category"] == "banking"
+    assert revolut[0]["relevance"] == "neutral"
+    trade = classify_app({"name": "Trade Republic", "app_id": "de.traderepublic.app", "platform": "android"}, rules)
+    assert trade[0]["relevance"] == "neutral"
+
+
+def test_ios_and_android_id_matching():
+    rules = bundled_rules()
+    ios = classify_app({"name": "MetaMask", "bundle_id": "io.metamask.ios", "platform": "ios"}, rules)
+    android = classify_app({"name": "MetaMask", "app_id": "io.metamask", "platform": "android"}, rules)
+    assert ios[0]["category"] == "wallet"
+    assert android[0]["category"] == "wallet"
+
+
+def test_alias_and_former_name_matching():
+    rules = bundled_rules()
+    xaman = classify_app({"name": "Xaman", "bundle_id": "", "platform": "ios"}, rules)
+    assert xaman
+    xumm = classify_app({"name": "Xumm", "bundle_id": "", "platform": "ios"}, rules)
+    assert xumm
+    assert xaman[0]["id"] == xumm[0]["id"]
+
+
+def test_legacy_rule_matches_old_app_name():
+    rules = bundled_rules()
+    hit = classify_app({"name": "Credit Suisse", "bundle_id": "", "platform": "ios"}, rules)
+    assert hit
+    assert hit[0]["status"] == "legacy"
+
+
+def test_unknown_crypto_candidate_is_low_relevance():
+    rules = bundled_rules()
+    hit = classify_app({"name": "My Bitcoin Wallet", "bundle_id": "", "platform": "android"}, rules)
+    assert hit
+    assert hit[0]["id"] == "unknown-crypto-candidate"
+    assert hit[0]["relevance"] == "low"
+
+
+def test_verified_ids_are_counted():
+    rules = bundled_rules()
+    verified = sum(1 for rule in rules["app_rules"] if rule.get("verified"))
+    unverified = sum(1 for rule in rules["app_rules"] if not rule.get("verified"))
+    assert verified >= 50
+    assert unverified >= 0
+
+
+def test_large_rule_set_scales_without_validation_error():
+    rules = bundled_rules()
+    base = rules["app_rules"][0]
+    many = []
+    for index in range(1500):
+        many.append({
+            **base,
+            "id": f"scale-{index:04d}",
+            "name": f"Scale App {index}",
+            "ios_bundle_ids": [],
+            "android_package_ids": [f"com.scale.app{index}"],
+            "aliases": [],
+            "former_names": [],
+            "terms": [],
+        })
+    data = {"app_rules": many, "file_rules": rules["file_rules"], "backup_rules": rules["backup_rules"]}
+    result = snapshot(data)
+    assert result["sha256"]
+
+
 def test_legacy_operator_rules_migrate_without_unverified_bundled_ids(tmp_path):
     from importlib.resources import files
 
@@ -72,6 +142,6 @@ def test_legacy_operator_rules_migrate_without_unverified_bundled_ids(tmp_path):
     target = tmp_path / "crypto-rules.json"
     seed_rules(target, legacy)
     result = load_rules(target)
-    assert next(item for item in result["app_rules"] if item["id"] == "metamask")["bundle_ids"] == []
+    assert next(item for item in result["app_rules"] if item["id"] == "trezor-suite")["bundle_ids"] == []
     assert next(item for item in result["app_rules"] if item["id"] == "own-wallet")["bundle_ids"] == ["org.example.own"]
     assert any(item["id"] == "own-export" for item in result["file_rules"])

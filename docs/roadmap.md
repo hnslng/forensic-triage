@@ -1,13 +1,17 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 2. Oktober 2026 · Anwendung: `v0.2.0-alpha.60`.
+Dokumentationsstand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.61`.
 
 ## Telefon-Schnellscan – nächste Abnahme
 
-- [x] Den normalen iPhone-Lauf auf Geräte- und App-Metadaten begrenzen. Alpha 60 verwendet kein AFC/`ifuse`, zählt keine Telefondateien und erzeugt keine Foto-, Größen- oder Stichwortstatistik.
-- [x] Gemeinsame Regeln mit getrennten iOS-Bundle- und Android-Package-IDs, Kategorien und Relevanzstufen implementieren. Unbestätigte Paketkennungen werden nicht ergänzt.
-- [ ] Alpha 60 mit demselben echten iPhone wie den alten Lauf messen. Phasenzeiten aus `summary.json` dokumentieren und erst dann eine prozentuale Verbesserung nennen.
-- [ ] Trust-, Sperr- und unvollständige App-Listen auf mehreren iPhones/iOS-Versionen testen. „Kein Treffer“ darf nur bei vollständig erfasster Benutzer-App-Liste erscheinen.
+- [x] Den normalen Mobilgerät-Lauf auf Geräte- und App-Metadaten begrenzen. Alpha 61 verwendet kein AFC/`ifuse`, zählt keine Telefondateien und erzeugt keine Foto-, Größen- oder Stichwortstatistik.
+- [x] Gemeinsame Erkennungsregeln mit getrennten iOS-Bundle- und Android-Package-IDs, Kategorien und Relevanzstufen implementieren. Unbestätigte Paketkennungen werden nicht ergänzt.
+- [x] Skalierbare Regelverwaltung mit mindestens 2.000 App-Regeln, Backup-Regeln und erweiterten Metadaten (`status`, `verified`, `source`, `last_verified`, `regions`, `aliases`, `former_names`).
+- [x] Banking-/Finanz-App-Katalog als neutrale Kategorie; allein kein Krypto-Hinweis.
+- [x] Geräte-Backup-Erkennung auf Datenträgern ohne Öffnung der Inhalte.
+- [x] Master-Detail-Einstellungs-UI für Erkennungsregeln mit Suche, Filter, Sortierung, Tooltips, JSON-Import/Export.
+- [ ] Alpha 61 mit demselben echten iPhone/iPad wie den alten Lauf messen. Phasenzeiten aus `summary.json` dokumentieren und erst dann eine prozentuale Verbesserung nennen.
+- [ ] Trust-, Sperr- und unvollständige App-Listen auf mehreren iPhones/iPads/iOS-Versionen testen. „Kein Treffer" darf nur bei vollständig erfasster Benutzer-App-Liste erscheinen.
 - [ ] Erst anhand reproduzierbarer Kompatibilitätsfehler entscheiden, ob `pymobiledevice3` nötig ist. Keine zweite Architektur oder Developer-Tunnel auf Verdacht ergänzen.
 - [ ] Regeln um im Realtest bestätigte Bundle-/Package-IDs erweitern und fachlich reviewen. Bedienung, Import/Export und Migration alter lokaler Regeln auf dem Pi prüfen.
 - [ ] Auf USB-/anderen Dateimedien eine mögliche lokale iPhone-Sicherung (Finder/iTunes) nur über eine Kombination typischer Backup-Dateien und gemeinsamer Verzeichnisstruktur als Metadatenhinweis erkennen. Treffer im Explorer und Nachweis mit Pfad und Erkennungsgrund kennzeichnen; kein automatisches Öffnen, Entschlüsseln oder Einlesen von Backup-Inhalten und keine Behauptung einer vollständigen Sicherung. Mit echten, synthetischen und irreführenden Verzeichnissen testen.

@@ -30,6 +30,9 @@ casefiles/
                     ├── hits.json
                     ├── container-index.json
                     ├── filetype-catalog.json
+                    ├── crypto-rules.json
+                    ├── crypto-hints.json
+                    ├── backup-hints.json
                     ├── scan.log
                     └── raw/
 ```
@@ -40,6 +43,9 @@ casefiles/
 - `device.json`: beim Scan gespeicherte Geräteangaben einschließlich Modell, Seriennummer, Kapazität, Transport und verifiziertem Read-only-Zustand
 - `container-index.json`: begrenztes Inhaltsverzeichnis erkannter ZIP-, ISO-, 7Z- und RAR-Dateien; keine extrahierten oder dekomprimierten Nutzdaten
 - `filetype-catalog.json`: seit Alpha 44 vollständiger Dateityp-Katalog des Scans mit Version und SHA-256; bei früheren Sichtungen nicht nachträglich ergänzt
+- `crypto-rules.json`: Erkennungsregel-Snapshot des Scans (seit Alpha 50)
+- `crypto-hints.json`: App- und Dateihinweise aus den Erkennungsregeln
+- `backup-hints.json`: seit Alpha 61 strukturelle Geräte-Backup-Hinweise mit Erkennungssicherheit; keine Backup-Inhalte
 - `media-register.csv`: Übersicht aller Sichtungen und Entscheidungen im Fall
 - `case-report.pdf`: kompakter, druckbarer Querformat-Bericht mit einer Zeile je Datenträger
 - `case-report.txt`: menschenlesbare Fallzusammenfassung
@@ -61,7 +67,7 @@ Das Manifest kann Änderungen gegenüber einem vertrauenswürdig aufbewahrten St
 
 ## Export
 
-Der PDF-Bericht kann separat geladen und einer Akte beigelegt werden. Er nennt Sichtungsnummer, Datenträger, Seriennummer, technischen Grobinhalt, Entscheidung und gegebenenfalls die dokumentierte Begründung. Der Grobinhalt wird ausschließlich aus Dateiendungskategorien gebildet; Begriffe wie „Urlaubsfotos“ werden nicht automatisch behauptet, weil keine Dateiinhalte ausgewertet werden.
+Der PDF-Bericht kann separat geladen und einer Akte beigelegt werden. Er nennt Sichtungsnummer, Datenträger, Seriennummer, technischen Grobinhalt, Backup-Strukturen, Entscheidung und gegebenenfalls die dokumentierte Begründung. Der Grobinhalt wird ausschließlich aus Dateiendungskategorien und erkannten Backup-Strukturen gebildet; Begriffe wie „Urlaubsfotos" werden nicht automatisch behauptet, weil keine Dateiinhalte ausgewertet werden.
 
 Der ZIP-Export enthält den einzelnen Fallordner einschließlich PDF, Metadateninventaren und Nachweisen. Der zentrale `case-index.sqlite3` außerhalb dieses Ordners ist nicht enthalten. Daher ist ein Fall-ZIP keine vollständige Systemsicherung und noch kein getestetes Wiederimportformat. Er enthält keine Kopie der Nutzdateien des gesichteten Mediums. Ein Export aus einem realen Fall ist trotzdem eine schützenswerte Fallunterlage und darf nicht in Git gespeichert werden.
 

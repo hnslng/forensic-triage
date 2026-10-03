@@ -1,8 +1,8 @@
 # Testplan / Test plan
 
-Stand: 2. Oktober 2026 · Anwendung: `v0.2.0-alpha.60`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
+Stand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.61`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
 
-Für Alpha 60 zusätzlich prüfen: Krypto-Regel mit getrennten iOS-/Android-IDs ändern und speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `summary.json` und Fall-ZIP vergleichen. Bestehende Sichtungen müssen unverändert bleiben. Ein neutral kategorisierter Messenger darf nicht als Krypto-Hinweis zählen. Telefonläufe müssen ein leeres `files.csv` erzeugen und dürfen keine AFC-/MTP-/Dateiinventarisierung starten. Bei iPhones Seriennummer und UDID getrennt prüfen. Bei Android müssen unvollständige Profile und nicht sichtbare geschützte Bereiche einen unbekannten Status statt eines Negativbefunds erhalten.
+Für Alpha 61 zusätzlich prüfen: Erkennungsregeln im neuen Master-Detail-Editor bearbeiten, suchen, filtern, duplizieren, löschen und per JSON exportieren/importieren. Regeländerungen speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `backup-hints.json`, `summary.json` und Fall-ZIP vergleichen. Bestehende Sichtungen müssen unverändert bleiben. Banking-/Finanz-Apps dürfen nicht als Krypto-Hinweis zählen. Geräte-Backup-Strukturen müssen in `backup-hints.json` und der Oberfläche sichtbar sein, ohne dass Backup-Inhalte analysiert werden. Telefonläufe müssen ein leeres `files.csv` erzeugen und dürfen keine AFC-/MTP-/Dateiinventarisierung starten. Bei iPhones/iPads Seriennummer und UDID getrennt prüfen. Bei Android müssen unvollständige Profile und nicht sichtbare geschützte Bereiche einen unbekannten Status statt eines Negativbefunds erhalten.
 
 ## Automatisierte Tests
 
@@ -26,7 +26,9 @@ Abgedeckt sind insbesondere:
 - Geräteerkennung, Software-Auswurf und Reaktivierung
 - signierte Offline-Pakete, Manipulations-/Versions-/Abhängigkeitsablehnung und gestreamte Uploads
 - iPhone-App-only-Lauf ohne Datei-Mount und mit getrennten Phasenzeiten
-- Android-USB-Vorerkennung ohne ADB, fehlendes `adb`, Autorisierungszustände, mehrere sichtbare Profile und gemeinsamer Krypto-Regelstand
+- Android-USB-Vorerkennung ohne ADB, fehlendes `adb`, Autorisierungszustände, mehrere sichtbare Profile und gemeinsamer Erkennungsregelstand
+- skalierbare Regellisten, Migration alter Regeln, Banking-Neutralität, iOS-/Android-/Alias-Matching, Legacy-Regeln, unbekannte Krypto-Kandidaten
+- Geräte-Backup-Signaturen, falsche/incomplete Backup-Strukturen, mehrere Backups auf einem Datenträger
 
 ### Browser-Regressionsprüfungen
 
@@ -40,7 +42,9 @@ Bei vorhandenem Google Chrome kann `TRIAGE_BROWSER_CHANNEL=chrome` gesetzt werde
 
 Geprüft werden Medien- und Filterwechsel mit absichtlich verspäteten Antworten, Rückkehr zum Dashboard, A–B–A-Wechsel, Archiv-Unterordner und Pagination in beiden Ansichten, Wiederholung fehlgeschlagener Archivabrufe sowie numerische Sichtungssortierung. Dazu kommen Archivstatusfilter, exakte Dateiauswahl, Fallende im Updatefenster, der signierte Offline-Upload, die flackerfreie Wiederherstellung des Updatefensters und die Strom-/Systemansicht einschließlich Sperr- und Bestätigungszustand. Die Entscheidungszentrale wird mit drei gleichzeitig entfernten synthetischen Medien, verhindertem Dialogstapeln, eindeutiger Zuordnung und Rückkehr aus der Sichtung geprüft. Eine reine Navigation darf keine schreibenden API-Aufrufe auslösen.
 
-Für den aktuellen Alpha-60-Arbeitsstand sind 157 Python-Tests und 36 isolierte Browserprüfungen mit dem vorhandenen Chrome-Kanal erfolgreich. Installer und Updater führen Python-Tests aus, nicht Browser- oder Hardwareprüfungen. Diese automatisierten Ergebnisse sind kein Nachweis für den noch offenen realen Android-/Samsung-Test.
+Für die Erkennungsregeln werden zusätzlich geprüft: neue Einstellungsnavigation, Regel-Suche, Filter, Sortierung, Regel-Auswahl, Editor, Speichern, Abbrechen, Aktiv/Inaktiv, Legacy, fehlende ID, Tooltips per Hover und Klick/Touch, JSON-Import/Export, große Regellisten und Backup-Ergebnisdarstellung.
+
+Für den aktuellen Alpha-61-Arbeitsstand sind 157+ Python-Tests und 36+ isolierte Browserprüfungen mit dem vorhandenen Chrome-Kanal erfolgreich. Installer und Updater führen Python-Tests aus, nicht Browser- oder Hardwareprüfungen. Diese automatisierten Ergebnisse sind kein Nachweis für den noch offenen realen Android-/Samsung-Test.
 
 ## Telefon-Schnellscan
 
@@ -48,7 +52,7 @@ Für den aktuellen Alpha-60-Arbeitsstand sind 157 Python-Tests und 36 isolierte 
 
 - Entsperrt/vertrauenswürdig: Geräteinformationen und Benutzer-App-Liste vollständig, Krypto-Treffer reproduzierbar, `files.csv` leer.
 - Gesperrt, Vertrauen verweigert oder App-Limit erreicht: verständlicher Teilfehler; niemals pauschal „keine Krypto-Apps“.
-- Mit demselben Gerät den alten beobachteten Lauf (ca. 16,35 Sekunden mit Dateizusatz) und Alpha 60 vergleichen. Geräte-, App-Inventar- und Klassifikationszeit getrennt aus `summary.json.timings` dokumentieren.
+- Mit demselben Gerät den alten beobachteten Lauf (ca. 16,35 Sekunden mit Dateizusatz) und Alpha 61 vergleichen. Geräte-, App-Inventar- und Klassifikationszeit getrennt aus `summary.json.timings` dokumentieren.
 
 ### Android
 

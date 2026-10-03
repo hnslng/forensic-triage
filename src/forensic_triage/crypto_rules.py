@@ -26,11 +26,23 @@ CATEGORIES = {
 }
 CRYPTO_CATEGORIES = frozenset(("wallet", "hardware_wallet", "exchange", "portfolio", "payment", "market"))
 RELEVANCE = frozenset(("high", "medium", "low", "neutral"))
+STATUS = frozenset(("active", "legacy"))
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,49}$")
+MAX_APP_RULES = 2000
+MAX_FILE_RULES = 500
+MAX_BACKUP_RULES = 200
 
 
 def _text(value: Any, field: str, *, max_length: int = 120) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > max_length or any(ord(c) < 32 for c in value):
+        raise ValueError(f"Ungültiges Regelfeld: {field}.")
+    return value.strip()
+
+
+def _optional_text(value: Any, field: str, *, max_length: int = 240) -> str:
+    if value is None or value == "":
+        return ""
+    if not isinstance(value, str) or len(value) > max_length or any(ord(c) < 32 for c in value):
         raise ValueError(f"Ungültiges Regelfeld: {field}.")
     return value.strip()
 
@@ -44,16 +56,41 @@ def _strings(value: Any, field: str, *, limit: int = 30) -> list[str]:
     return items
 
 
+def _optional_strings(value: Any, field: str, *, limit: int = 30) -> list[str]:
+    if value is None:
+        return []
+    return _strings(value, field, limit=limit)
+
+
+def _date(value: Any, field: str) -> str:
+    text = _optional_text(value, field, max_length=16)
+    if text and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        raise ValueError(f"{field}: Datum im Format YYYY-MM-DD erwartet.")
+    return text
+
+
+def _bool(value: Any, field: str) -> bool:
+    if type(value) is not bool:
+        raise ValueError(f"{field}: Wahrheitswert erwartet.")
+    return value
+
+
 def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
     if type(version) is not int or version < 1 or not isinstance(value, dict):
         raise ValueError("Ungültige Regelversion oder Regelsammlung.")
-    apps = value.get("app_rules")
-    files = value.get("file_rules")
-    if not isinstance(apps, list) or not isinstance(files, list) or len(apps) > 150 or len(files) > 100:
-        raise ValueError("Zu viele oder ungültige App-/Dateiregeln.")
+    apps = value.get("app_rules", [])
+    files = value.get("file_rules", [])
+    backups = value.get("backup_rules", [])
+    if not isinstance(apps, list) or not isinstance(files, list) or not isinstance(backups, list):
+        raise ValueError("Ungültige App-/Datei-/Backup-Regeln.")
+    if len(apps) > MAX_APP_RULES or len(files) > MAX_FILE_RULES or len(backups) > MAX_BACKUP_RULES:
+        raise ValueError(
+            f"Zu viele Regeln (max. {MAX_APP_RULES} Apps, "
+            f"{MAX_FILE_RULES} Dateien, {MAX_BACKUP_RULES} Backups)."
+        )
     seen: set[str] = set()
-    normalized: dict[str, list[dict[str, Any]]] = {"app_rules": [], "file_rules": []}
-    for kind, entries in (("app_rules", apps), ("file_rules", files)):
+    normalized: dict[str, list[dict[str, Any]]] = {"app_rules": [], "file_rules": [], "backup_rules": []}
+    for kind, entries in (("app_rules", apps), ("file_rules", files), ("backup_rules", backups)):
         for entry in entries:
             if not isinstance(entry, dict):
                 raise ValueError("Eine Regel muss ein Objekt sein.")
@@ -61,42 +98,57 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
             if not ID_PATTERN.fullmatch(rule_id) or rule_id in seen:
                 raise ValueError(f"Ungültige oder doppelte Regel-ID: {rule_id}.")
             seen.add(rule_id)
+            if kind == "backup_rules":
+                normalized["backup_rules"].append(_normalize_backup_rule(entry, rule_id))
+                continue
             category = _text(entry.get("category"), "category")
             relevance = _text(entry.get("relevance"), "relevance")
             if category not in CATEGORIES or relevance not in RELEVANCE:
                 raise ValueError(f"{rule_id}: Kategorie oder Hinweisstärke ungültig.")
             if category not in CRYPTO_CATEGORIES and relevance != "neutral":
                 raise ValueError(f"{rule_id}: Messenger, Cloud und Banking sind keine Krypto-Hinweise.")
-            if kind == "app_rules" and category in {"wallet", "hardware_wallet", "exchange"} and relevance != "high":
-                raise ValueError(f"{rule_id}: Wallets und Börsen benötigen Hinweisstärke hoch.")
+            # Wallet, hardware wallet and exchange rules usually carry high relevance,
+            # but a deliberately conservative unknown-candidate rule may be low.
             if type(entry.get("enabled")) is not bool:
                 raise ValueError(f"{rule_id}: aktiv muss ja oder nein sein.")
             common = {
-                "id": rule_id, "name": _text(entry.get("name"), "name"),
-                "category": category, "relevance": relevance, "enabled": entry["enabled"],
+                "id": rule_id,
+                "name": _text(entry.get("name"), "name"),
+                "category": category,
+                "relevance": relevance,
+                "enabled": entry["enabled"],
                 "comment": str(entry.get("comment", ""))[:300],
+                "status": _text(entry.get("status", "active"), "status"),
+                "verified": _bool(entry.get("verified", False), "verified"),
+                "source": _optional_text(entry.get("source", ""), "source"),
+                "last_verified": _date(entry.get("last_verified", ""), "last_verified"),
+                "regions": _optional_strings(entry.get("regions", []), "regions", limit=20),
             }
+            if common["status"] not in STATUS:
+                raise ValueError(f"{rule_id}: Status muss active oder legacy sein.")
             if kind == "app_rules":
                 legacy_bundle_ids = entry.get("bundle_ids", [])
                 ios_bundle_ids = entry.get("ios_bundle_ids", legacy_bundle_ids)
+                aliases = _optional_strings(entry.get("aliases", []), "aliases")
+                former_names = _optional_strings(entry.get("former_names", []), "former_names")
                 common.update({
-                    # bundle_ids remains in the serialized snapshot for
-                    # backwards compatibility with existing local settings
-                    # and older frontends. It is the iOS list only.
                     "ios_bundle_ids": _strings(ios_bundle_ids, "ios_bundle_ids"),
-                    "android_package_ids": _strings(entry.get("android_package_ids", []), "android_package_ids"),
-                    "aliases": _strings(entry.get("aliases", []), "aliases"),
-                    "terms": _strings(entry.get("terms", []), "terms"),
+                    "android_package_ids": _optional_strings(entry.get("android_package_ids", []), "android_package_ids"),
+                    "aliases": aliases,
+                    "former_names": former_names,
+                    "terms": _optional_strings(entry.get("terms", []), "terms"),
                 })
+                # bundle_ids remains in the serialized snapshot for backwards compatibility.
                 common["bundle_ids"] = list(common["ios_bundle_ids"])
-                if not (common["ios_bundle_ids"] or common["android_package_ids"] or common["name"] or common["aliases"]):
+                all_names = [common["name"], *aliases, *former_names]
+                if not (common["ios_bundle_ids"] or common["android_package_ids"] or any(all_names)):
                     raise ValueError(f"{rule_id}: App ohne Namen oder Bundle-ID.")
             else:
                 common.update({
-                    "filename_equals": _strings(entry.get("filename_equals", []), "filename_equals"),
-                    "terms": _strings(entry.get("terms", []), "terms"),
-                    "context_terms": _strings(entry.get("context_terms", []), "context_terms"),
-                    "extensions": [item.lstrip(".").casefold() for item in _strings(entry.get("extensions", []), "extensions")],
+                    "filename_equals": _optional_strings(entry.get("filename_equals", []), "filename_equals"),
+                    "terms": _optional_strings(entry.get("terms", []), "terms"),
+                    "context_terms": _optional_strings(entry.get("context_terms", []), "context_terms"),
+                    "extensions": [item.lstrip(".").casefold() for item in _optional_strings(entry.get("extensions", []), "extensions")],
                 })
                 if not (common["filename_equals"] or common["terms"]):
                     raise ValueError(f"{rule_id}: Dateiregel ohne Suchmerkmal.")
@@ -104,6 +156,29 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
     data = {"version": version, **normalized}
     raw = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     return {**data, "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _normalize_backup_rule(entry: dict[str, Any], rule_id: str) -> dict[str, Any]:
+    if type(entry.get("enabled")) is not bool:
+        raise ValueError(f"{rule_id}: aktiv muss ja oder nein sein.")
+    confidence = _text(entry.get("confidence", "medium"), "confidence")
+    if confidence not in {"high", "medium", "low"}:
+        raise ValueError(f"{rule_id}: Erkennungssicherheit ungültig.")
+    return {
+        "id": rule_id,
+        "name": _text(entry.get("name"), "name"),
+        "platform": _optional_text(entry.get("platform", ""), "platform"),
+        "status": _text(entry.get("status", "active"), "status"),
+        "confidence": confidence,
+        "enabled": entry["enabled"],
+        "required_paths": _optional_strings(entry.get("required_paths", []), "required_paths", limit=50),
+        "required_files": _optional_strings(entry.get("required_files", []), "required_files", limit=50),
+        "required_extensions": [item.lstrip(".").casefold() for item in _optional_strings(entry.get("required_extensions", []), "required_extensions")],
+        "typical_paths": _optional_strings(entry.get("typical_paths", []), "typical_paths", limit=20),
+        "source": _optional_text(entry.get("source", ""), "source"),
+        "last_verified": _date(entry.get("last_verified", ""), "last_verified"),
+        "comment": str(entry.get("comment", ""))[:300],
+    }
 
 
 def bundled_rules() -> dict[str, Any]:
@@ -177,6 +252,7 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                         "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
                         "aliases": item.get("name_contains", []), "terms": [],
                         "comment": "Aus bisheriger iPhone-Regel übernommen",
+                        "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
                     }
                 elif rule_id not in by_id:
                     mapped = "exchange" if "börse" in category or "exchange" in category else "wallet" if "wallet" in category else "portfolio"
@@ -188,6 +264,7 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                         "ios_bundle_ids": item.get("bundle_ids", []), "android_package_ids": [],
                         "aliases": aliases[1:] if isinstance(aliases, list) else [], "terms": [],
                         "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
+                        "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
                     }
             file_rules = list(base["file_rules"])
             for item in old.get("file_rules", []):
@@ -205,8 +282,9 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> None:
                     "relevance": "medium", "enabled": True, "filename_equals": [], "terms": terms,
                     "context_terms": [], "extensions": item.get("extensions", []),
                     "comment": "Aus älterer lokaler iPhone-Regel übernommen; bitte fachlich prüfen",
+                    "status": "active", "verified": False, "source": "", "last_verified": "", "regions": [],
                 })
-            base = snapshot({"app_rules": list(by_id.values()), "file_rules": file_rules}, base["version"])
+            base = snapshot({"app_rules": list(by_id.values()), "file_rules": file_rules, "backup_rules": base.get("backup_rules", [])}, base["version"])
         except (OSError, ValueError, KeyError, TypeError):
             # A damaged legacy file must not prevent the new default rules.
             base = bundled_rules()
@@ -229,7 +307,7 @@ def classify_app(app: dict[str, Any], rules: dict[str, Any]) -> list[dict[str, s
     app_id = _fold(str(app.get("app_id") or app.get("package_id") or app.get("bundle_id", "")))
     name = _fold(str(app.get("name", "")))
     matches = []
-    for rule in rules["app_rules"]:
+    for rule in rules.get("app_rules", []):
         if not rule["enabled"]:
             continue
         reason = ""
@@ -237,19 +315,19 @@ def classify_app(app: dict[str, Any], rules: dict[str, Any]) -> list[dict[str, s
         if app_id and app_id in {_fold(value) for value in identifiers}:
             label = "Package-ID" if platform == "android" else "Bundle-ID"
             reason = f"{label}: {app_id}"
-        elif name and name in {_fold(value) for value in [rule["name"], *rule["aliases"]]}:
+        elif name and name in {_fold(value) for value in [rule["name"], *rule.get("aliases", []), *rule.get("former_names", [])]}:
             reason = f"App-Name: {app['name']}"
-        elif any(_term_in_path(term, name) for term in rule["terms"]):
+        elif any(_term_in_path(term, name) for term in rule.get("terms", [])):
             reason = f"Suchbegriff im App-Namen: {app['name']}"
         if reason:
-            matches.append({key: str(rule[key]) for key in ("id", "name", "category", "relevance")} | {"reason": reason})
+            matches.append({key: str(rule[key]) for key in ("id", "name", "category", "relevance", "status")} | {"reason": reason})
     return matches
 
 
 def classify_file(path: str, extension: str, rules: dict[str, Any]) -> list[dict[str, str]]:
     name = path.rsplit("/", 1)[-1]
     matches = []
-    for rule in rules["file_rules"]:
+    for rule in rules.get("file_rules", []):
         if not rule["enabled"] or (rule["extensions"] and extension.casefold() not in rule["extensions"]):
             continue
         exact = any(_fold(name) == _fold(value) for value in rule["filename_equals"])
@@ -264,7 +342,7 @@ def classify_file(path: str, extension: str, rules: dict[str, Any]) -> list[dict
             reason += f" · Kontext: {context}"
         if rule["extensions"]:
             reason += f" · Endung: .{extension}"
-        matches.append({key: str(rule[key]) for key in ("id", "name", "category", "relevance")} | {"reason": reason})
+        matches.append({key: str(rule[key]) for key in ("id", "name", "category", "relevance", "status")} | {"reason": reason})
     return matches
 
 

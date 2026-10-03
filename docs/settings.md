@@ -1,4 +1,4 @@
-# Einstellungen: Stichwortprofile, Dateitypen, Krypto-Regeln und Updates
+# Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates
 
 Seit `v0.2.0-alpha.44` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall.
 
@@ -24,11 +24,46 @@ Der erweiterte Standard enthält unter anderem Kameraformate, makrofähige Offic
 
 Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordnet. Mehrteilige Sondernamen werden nicht als eigener Dateitypnachweis interpretiert. Zusätzliche Archivendungen erweitern nur die Kategoriezuordnung; der Verzeichnisleser unterstützt weiterhin ZIP, ISO, 7Z und RAR. Die Verschlüsselungszähler beziehen sich auf die der Kategorie **Archive** zugeordneten äußeren Dateien. Beim Verschieben einer Endung in eine andere Kategorie verändert sich deshalb auch der Umfang dieser Zähler.
 
-## Krypto-Regeln
+## Erkennungsregeln
 
-Die gemeinsame Regelsammlung gilt für App-Metadaten regulär gekoppelter iPhones, autorisierter Android-Geräte und für Dateinamen/Pfade neu gesichteter Dateimedien. App-Regeln führen getrennte, verifizierte `ios_bundle_ids` und `android_package_ids`; ergänzend sind exakte Namen/Aliase oder ausdrücklich angelegte Begriffe möglich. Datei-Regeln können exakten Namen, Begriffe, zusätzliche Kontextbegriffe und Endungen kombinieren, werden beim Telefon-Schnellscan aber nicht ausgeführt. Ein Treffer ist nur ein Hinweis aus Metadaten – kein Inhalts- oder Vermögensnachweis.
+Der Bereich **Erkennungsregeln** ersetzt die bisherigen „Krypto-Regeln“ durch eine skalierbare, master-detail-basierte Verwaltung. Er ist in vier Unterbereiche gegliedert:
 
-Regeln können gesucht, auf- und zugeklappt, aktiviert, ergänzt und entfernt werden. **JSON exportieren** liefert einen bearbeitbaren Entwurf; ein Import muss vor dem Speichern geprüft werden. Das Speichern validiert IDs, Kategorien, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Android-Package-IDs und iOS-Bundle-IDs dürfen nicht geraten werden; Quelle und Zuordnung müssen überprüfbar sein. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
+- **Krypto-Apps** – Self-Custody-Wallets, Hardware-Wallet-Begleiter, Börsen/Broker, Portfolio-/Steuer- und Zahlungsdienste
+- **Banking & Finanzen** – Banken, Neobanken, Broker und Finanzdienste (immer neutral, niemals Krypto-Hinweis)
+- **Geräte-Backups** – Strukturmerkmale lokaler Backups (Apple Finder/iTunes, Samsung Smart Switch, Android ADB, Xiaomi, Huawei, OnePlus/Oppo/realme, Windows-Image, iCloud Drive)
+- **Dateihinweise** – Dateinamen- und Pfadmuster für Krypto-Hinweise auf Datenträgern
+
+### Master-Detail-Ansicht
+
+Links erscheint eine übersichtliche Tabelle aller Regeln des gewählten Bereichs. Eine Zeile zeigt Name, Kategorie, Vorhandensein einer iOS- bzw. Android-ID und den Status (aktiv/inaktiv/legacy). Rechts öffnet sich der Editor genau der ausgewählten Regel. Damit bleibt die Übersicht auch bei vielen hundert Regeln schnell.
+
+### Filter und Suche
+
+- Freie Suche über Name, Kategorie, Alias, iOS-Bundle-ID und Android-Package-ID
+- Filter: aktiv, inaktiv, legacy, verifiziert, nicht verifiziert, iOS-ID fehlt, Android-ID fehlt
+- Sortierung nach Name, Kategorie oder Status
+
+### Aktionen
+
+- **Neue Regel** – erstellt eine leere Regel im aktuellen Bereich
+- **Duplizieren** – kopiert die ausgewählte Regel mit neuer ID
+- **Löschen** – entfernt die Regel nach Rückfrage
+- **Aktivieren/Deaktivieren** – über den Editor-Status
+- **JSON exportieren / importieren** – vollständige Regelsammlung als JSON; Import muss vor dem Speichern geprüft werden
+
+### Regelinhalt
+
+App-Regeln führen getrennte, verifizierte `ios_bundle_ids` und `android_package_ids`; ergänzend sind exakte Namen, Aliase, frühere Namen oder ausdrücklich angelegte Suchbegriffe möglich. Datei-Regeln kombinieren exakte Namen, Begriffe, zusätzliche Kontextbegriffe und Endungen. Backup-Regeln definieren Plattform, Erkennungssicherheit sowie erforderliche Pfade, Dateien und Endungen.
+
+Jede Regel kann folgende Metadaten tragen:
+
+- `status`: `active` oder `legacy`
+- `verified`: `true`/`false`
+- `source`: Herkunft der Kennung oder Strukturinformation
+- `last_verified`: Prüfdatum im Format `YYYY-MM-DD`
+- `regions`: optionale Länderkürzel (z. B. `["AT","DE"]`)
+
+Das Speichern validiert IDs, Kategorien, Hinweisstärken, Listen und konkurrierende Änderungen; ungültige Daten werden insgesamt zurückgewiesen. Android-Package-IDs und iOS-Bundle-IDs dürfen nicht geraten werden. Neue Regeln gelten ausschließlich für zukünftige Sichtungen.
 
 ## System & Updates
 
@@ -38,7 +73,7 @@ Der vierte Einstellungsbereich enthält unmittelbar die vollständige Updateverw
 
 Neue Scans übernehmen zu Beginn einen unveränderlichen Katalogstand. Derselbe Stand gilt für äußere Dateien und katalogisierte Archiv-Inneneinträge. Gespeichert werden der vollständige Katalog als `filetype-catalog.json` sowie Version und SHA-256 in `summary.json`. Der Katalog gehört damit zur Fallakte, zum Manifest und zum ZIP-Export. Im Nachweisdialog steht er unter **Technische Ablagepfade anzeigen**.
 
-Änderungen beeinflussen ausschließlich neue Scans. Laufende Scans behalten ihren übernommenen Stand; alte Sichtungen, Entscheidungen und Berichte werden durch das Bearbeiten der Einstellungen nicht umklassifiziert. Ältere Sichtungen ohne Katalogdatei werden im Nachweis entsprechend bezeichnet. Neue Sichtungen speichern außerdem `crypto-rules.json` und `crypto-hints.json` in den Ergebnissen und im Fall-ZIP.
+Änderungen beeinflussen ausschließlich neue Scans. Laufende Scans behalten ihren übernommenen Stand; alte Sichtungen, Entscheidungen und Berichte werden durch das Bearbeiten der Einstellungen nicht umklassifiziert. Ältere Sichtungen ohne Katalogdatei werden im Nachweis entsprechend bezeichnet. Neue Sichtungen speichern `crypto-rules.json`, `crypto-hints.json` und zusätzlich `backup-hints.json` in den Ergebnissen und im Fall-ZIP.
 
 ## Lokale Ablage und Updates
 
@@ -61,4 +96,4 @@ Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT
 
 ## English summary
 
-Settings has separate keyword-profile, file-type, crypto-rule, and system-update sections outside the case dialog. Operators can edit or duplicate profiles, maintain an extension catalog and shared metadata rules, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores immutable catalog and crypto-rule snapshots; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Neither extension categories nor crypto-rule hits confirm file contents or assets.
+Settings has separate keyword-profile, file-type, detection-rule, and system-update sections outside the case dialog. Detection rules cover crypto apps, banking/finance apps, device-backup structures and file-name hints. Operators can edit or duplicate profiles, maintain an extension catalog and shared metadata rules, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores immutable catalog, crypto-rule and backup-hint snapshots; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Neither extension categories nor rule hits confirm file contents or assets.

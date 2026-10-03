@@ -11,6 +11,7 @@ let autoStartTimer = null;
 let currentCaseMedia = [];
 let currentMediaId = null;
 let currentDecision = null;
+let currentIsPhone = false;
 let confirmedOnlineSerials = new Set();
 let devicePresenceInitialized = false;
 let decisionQueueTimer = null;
@@ -46,6 +47,24 @@ let settingsRevision = 0;
 let cryptoState = null;
 let cryptoDirty = false;
 let cryptoBusy = false;
+let detectionState = null;
+let detectionDirty = false;
+let detectionBusy = false;
+let detectionSection = "crypto";
+let detectionSelectedRuleId = null;
+let detectionEditedRule = null;
+const detectionSectionLabels = {
+  crypto: "KRYPTO-APPS",
+  banking: "BANKING & FINANZEN",
+  backups: "GERÄTE-BACKUPS",
+  files: "DATEIHINWEISE",
+};
+const detectionKindForSection = {
+  crypto: "app_rules",
+  banking: "app_rules",
+  backups: "backup_rules",
+  files: "file_rules",
+};
 const appCategoryLabels = {
   wallet: "SELF-CUSTODY WALLETS", hardware_wallet: "HARDWARE-WALLETS",
   exchange: "KRYPTOBÖRSEN / BROKER", portfolio: "STEUER / PORTFOLIO",
@@ -440,9 +459,9 @@ async function openSettings(initialPane = "profiles") {
   $("catalogReset").disabled = true;
   $("catalogAddCategory").disabled = true;
   $("catalogMessage").textContent = "DATEITYPEN WERDEN GELADEN …";
-  $("cryptoMessage").textContent = "REGELN WERDEN GELADEN …";
+  $("detectionMessage").textContent = "REGELN WERDEN GELADEN …";
   loadProfiles();
-  loadCryptoRules(revision);
+  loadDetectionRules(revision);
   try {
     const response = await fetch("/api/settings/filetypes");
     const data = await response.json();
@@ -513,138 +532,302 @@ async function saveCatalog() {
   }
 }
 
-const cryptoCategoryOptions = Object.entries(appCategoryLabels).filter(([id]) => id !== "other")
-  .map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
-const cryptoRelevanceOptions = [
-  ["high", "HOCH"], ["medium", "MITTEL"], ["low", "NIEDRIG"], ["neutral", "NEUTRAL"],
-].map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
-
-function cryptoField(key, label, value, multi = false) {
-  const content = escapeHtml(multi ? (value || []).join(", ") : value || "");
-  return `<label>${label}${multi
-    ? `<textarea data-rule-field="${key}" rows="2" spellcheck="false">${content}</textarea>`
-    : `<input data-rule-field="${key}" value="${content}" autocomplete="off" spellcheck="false" />`}</label>`;
+function splitList(value) {
+  return String(value || "").split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
 }
 
-function renderCryptoRule(rule, kind) {
-  const app = kind === "app";
-  return `<details class="crypto-rule" data-rule-kind="${kind}">
-    <summary><span>${escapeHtml(rule.name || "NEUE REGEL")}</span><small>${escapeHtml(appCategoryLabels[rule.category] || rule.category || "KATEGORIE")} · ${escapeHtml((rule.relevance || "neutral").toUpperCase())}</small></summary>
-    <div class="crypto-rule-fields">
-      ${cryptoField("id", "REGEL-ID", rule.id)}
-      ${cryptoField("name", "NAME / EXAKTER APP-NAME", rule.name)}
-      <label>KATEGORIE<select data-rule-field="category">${cryptoCategoryOptions}</select></label>
-      <label>HINWEISSTÄRKE<select data-rule-field="relevance">${cryptoRelevanceOptions}</select></label>
-      ${app ? `${cryptoField("ios_bundle_ids", "IOS BUNDLE-IDS · KOMMAGETRENNT", rule.ios_bundle_ids || rule.bundle_ids, true)}
-        ${cryptoField("android_package_ids", "ANDROID PACKAGE-IDS · KOMMAGETRENNT", rule.android_package_ids, true)}
-        ${cryptoField("aliases", "EXAKTE ALIASE · KOMMAGETRENNT", rule.aliases, true)}
-        ${cryptoField("terms", "VORSICHTIGE SUCHBEGRIFFE", rule.terms, true)}`
-      : `${cryptoField("filename_equals", "EXAKTE DATEINAMEN", rule.filename_equals, true)}
-        ${cryptoField("terms", "BEGRIFFE IN NAME / PFAD", rule.terms, true)}
-        ${cryptoField("context_terms", "ZUSÄTZLICHER KONTEXT (ODER)", rule.context_terms, true)}
-        ${cryptoField("extensions", "ENDUNGEN · LEER = BELIEBIG", rule.extensions, true)}`}
-      ${cryptoField("comment", "KOMMENTAR", rule.comment)}
-      <label class="crypto-enabled"><input data-rule-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> REGEL AKTIV</label>
-      <button class="crypto-remove" type="button">REGEL ENTFERNEN</button>
+function joinList(value) {
+  return (value || []).join(", ");
+}
+
+function tooltip(text) {
+  return `<span class="info-tooltip" tabindex="0" role="button" aria-label="Hilfe">?<span class="tooltip-text">${escapeHtml(text)}</span></span>`;
+}
+
+function selectDetectionSection(section) {
+  detectionSection = section;
+  for (const [key, label] of Object.entries(detectionSectionLabels)) {
+    const tab = $(`detection${key[0].toUpperCase()}${key.slice(1)}Tab`);
+    if (tab) tab.setAttribute("aria-pressed", String(key === section));
+  }
+  detectionSelectedRuleId = null;
+  detectionEditedRule = null;
+  $("detectionEditor").hidden = true;
+  renderDetectionRules();
+}
+
+function rulesForSection() {
+  if (!detectionState) return [];
+  const kind = detectionKindForSection[detectionSection];
+  let rules = detectionState[kind] || [];
+  if (detectionSection === "crypto") {
+    rules = rules.filter(rule => cryptoCategories.has(rule.category));
+  } else if (detectionSection === "banking") {
+    rules = rules.filter(rule => rule.category === "banking" || rule.category === "messenger" || rule.category === "cloud");
+  }
+  return rules;
+}
+
+function filterDetectionRules() {
+  const query = $("detectionSearch").value.trim().toLocaleLowerCase("de");
+  const filter = $("detectionFilter").value;
+  const rows = $("detectionRows");
+  if (!rows) return;
+  let visible = 0;
+  for (const row of rows.children) {
+    const rule = row.dataset;
+    const haystack = `${rule.name} ${rule.category} ${rule.aliases} ${rule.ios} ${rule.android}`.toLocaleLowerCase("de");
+    const matchesQuery = !query || haystack.includes(query);
+    let matchesFilter = true;
+    if (filter === "active") matchesFilter = rule.enabled === "true";
+    if (filter === "inactive") matchesFilter = rule.enabled === "false";
+    if (filter === "legacy") matchesFilter = rule.status === "legacy";
+    if (filter === "verified") matchesFilter = rule.verified === "true";
+    if (filter === "unverified") matchesFilter = rule.verified === "false";
+    if (filter === "missing_ios") matchesFilter = rule.ios === "";
+    if (filter === "missing_android") matchesFilter = rule.android === "";
+    row.hidden = !(matchesQuery && matchesFilter);
+    if (!row.hidden) visible += 1;
+  }
+  $("detectionCount").textContent = `${visible} REGELN`;
+}
+
+function sortDetectionRules() {
+  const sort = $("detectionSort").value;
+  const rows = $("detectionRows");
+  if (!rows) return;
+  const items = [...rows.children];
+  items.sort((a, b) => {
+    if (sort === "name") return (a.dataset.name || "").localeCompare(b.dataset.name || "", "de", { sensitivity: "base" });
+    if (sort === "category") return (a.dataset.category || "").localeCompare(b.dataset.category || "", "de");
+    if (sort === "status") return (a.dataset.status || "").localeCompare(b.dataset.status || "");
+    return 0;
+  });
+  rows.append(...items);
+}
+
+function renderDetectionRules() {
+  if (!detectionState) return;
+  $("detectionVersion").textContent = `REGELSTAND V${detectionState.version}`;
+  const rules = rulesForSection();
+  const kind = detectionKindForSection[detectionSection];
+  $("detectionRows").innerHTML = rules.map(rule => {
+    const isApp = kind === "app_rules";
+    const iosIds = isApp ? (rule.ios_bundle_ids?.length ? rule.ios_bundle_ids : rule.bundle_ids || []) : [];
+    const androidIds = isApp ? (rule.android_package_ids || []) : [];
+    const ios = isApp ? (iosIds.length ? "✓" : "—") : "";
+    const android = isApp ? (androidIds.length ? "✓" : "—") : "";
+    const category = appCategoryLabels[rule.category] || rule.category || "—";
+    const statusClass = rule.status === "legacy" ? "status-legacy" : "status-active";
+    const statusText = rule.status === "legacy" ? "LEGACY" : (rule.enabled ? "AKTIV" : "INAKTIV");
+    return `<tr data-id="${escapeHtml(rule.id)}" data-name="${escapeHtml(rule.name)}" data-category="${escapeHtml(category)}" data-status="${escapeHtml(rule.status || "active")}" data-enabled="${rule.enabled}" data-verified="${rule.verified || false}" data-ios="${escapeHtml(isApp ? (iosIds.join(",") || "") : "")}" data-android="${escapeHtml(isApp ? (androidIds.join(",") || "") : "")}" data-aliases="${escapeHtml((rule.aliases || []).concat(rule.former_names || []).join(","))}">
+      <td>${escapeHtml(rule.name || rule.id)}${rule.verified ? ' <span class="id-present" title="verifiziert">✓</span>' : ""}</td>
+      <td>${escapeHtml(category)}</td>
+      <td class="${ios === "—" ? "id-missing" : "id-present"}">${escapeHtml(ios)}</td>
+      <td class="${android === "—" ? "id-missing" : "id-present"}">${escapeHtml(android)}</td>
+      <td class="${statusClass}">${escapeHtml(statusText)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" class="iphone-empty">KEINE REGELN IN DIESEM BEREICH</td></tr>`;
+  filterDetectionRules();
+  sortDetectionRules();
+  $("detectionEditor").hidden = true;
+}
+
+function getRuleById(id) {
+  for (const kind of ["app_rules", "file_rules", "backup_rules"]) {
+    const found = detectionState[kind]?.find(rule => rule.id === id);
+    if (found) return { rule: found, kind };
+  }
+  return null;
+}
+
+function cloneRule(rule) {
+  return JSON.parse(JSON.stringify(rule));
+}
+
+function renderDetectionEditor() {
+  if (!detectionEditedRule) {
+    $("detectionEditor").hidden = true;
+    return;
+  }
+  const rule = detectionEditedRule;
+  const kind = detectionKindForSection[detectionSection];
+  const isApp = kind === "app_rules";
+  const isFile = kind === "file_rules";
+  const isBackup = kind === "backup_rules";
+  $("detectionEditorTitle").textContent = rule.id ? rule.name || rule.id : "NEUE REGEL";
+  let fields = `
+    <div class="field-row">
+      <label>REGEL-ID${tooltip("Eindeutige interne Kennung: Kleinbuchstaben, Zahlen, Bindestrich, Unterstrich. Wird in Scan-Nachweisen protokolliert.")}<input data-field="id" value="${escapeHtml(rule.id || "")}" autocomplete="off" spellcheck="false" /></label>
+      <label>NAME${tooltip("Anzeigename der Regel. Bei App-Regeln ist dies der exakte App-Name, über den ebenfalls erkannt wird.")}<input data-field="name" value="${escapeHtml(rule.name || "")}" autocomplete="off" spellcheck="false" /></label>
     </div>
-  </details>`;
-}
-
-function renderCryptoRules() {
-  if (!cryptoState) return;
-  $("cryptoVersion").textContent = `REGELSTAND V${cryptoState.version}`;
-  $("cryptoAppRules").innerHTML = cryptoState.app_rules.map(rule => renderCryptoRule(rule, "app")).join("");
-  $("cryptoFileRules").innerHTML = cryptoState.file_rules.map(rule => renderCryptoRule(rule, "file")).join("");
-  for (const [kind, rules, root] of [
-    ["app", cryptoState.app_rules, $("cryptoAppRules")], ["file", cryptoState.file_rules, $("cryptoFileRules")],
-  ]) {
-    [...root.children].forEach((element, index) => {
-      for (const field of ["category", "relevance"]) element.querySelector(`[data-rule-field="${field}"]`).value = rules[index][field];
-    });
+  `;
+  if (isApp || isFile) {
+    fields += `<div class="field-row">
+      <label>KATEGORIE${tooltip("Kategorie des Treffers. Banking, Messenger und Cloud sind immer neutral und erzeugen keinen Krypto-Hinweis.")}<select data-field="category">${Object.entries(appCategoryLabels).filter(([id]) => id !== "other").map(([id, label]) => `<option value="${id}" ${rule.category === id ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+      <label>HINWEISSTÄRKE${tooltip("HOCH = Wallet/Börse; MITTEL = Portfolio/Steuer/Zahlung; NIEDRIG = vage Hinweise; NEUTRAL = kein Krypto-Hinweis.")}<select data-field="relevance">${[["high","HOCH"],["medium","MITTEL"],["low","NIEDRIG"],["neutral","NEUTRAL"]].map(([id,label])=>`<option value="${id}" ${rule.relevance===id?"selected":""}>${label}</option>`).join("")}</select></label>
+    </div>`;
   }
-  filterCryptoRules();
-}
-
-function splitCryptoList(value) {
-  return value.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
-}
-
-function cryptoDraft() {
-  function parse(root, kind) {
-    return [...root.querySelectorAll(".crypto-rule")].map(element => {
-      const field = key => element.querySelector(`[data-rule-field="${key}"]`);
-      const common = {
-        id: field("id").value.trim(), name: field("name").value.trim(),
-        category: field("category").value, relevance: field("relevance").value,
-        enabled: field("enabled").checked, comment: field("comment").value.trim(),
-      };
-      return kind === "app"
-        ? { ...common, ios_bundle_ids: splitCryptoList(field("ios_bundle_ids").value),
-            android_package_ids: splitCryptoList(field("android_package_ids").value),
-            aliases: splitCryptoList(field("aliases").value), terms: splitCryptoList(field("terms").value) }
-        : { ...common, filename_equals: splitCryptoList(field("filename_equals").value), terms: splitCryptoList(field("terms").value),
-            context_terms: splitCryptoList(field("context_terms").value), extensions: splitCryptoList(field("extensions").value) };
-    });
+  if (isApp) {
+    fields += `
+      <label>IOS BUNDLE-IDS${tooltip("Eindeutige technische Kennung einer iPhone-/iPad-App. Beispiel: com.hersteller.app. Nur aus überprüfbarer Quelle übernehmen.")}<textarea data-field="ios_bundle_ids" rows="2" spellcheck="false">${escapeHtml(joinList(rule.ios_bundle_ids || rule.bundle_ids))}</textarea></label>
+      <label>ANDROID PACKAGE-IDS${tooltip("Eindeutige technische Kennung einer Android-App. Beispiel: io.metamask. Zu finden z. B. im offiziellen Google-Play-Eintrag, häufig in der URL hinter id=. Nicht raten.")}<textarea data-field="android_package_ids" rows="2" spellcheck="false">${escapeHtml(joinList(rule.android_package_ids))}</textarea></label>
+      <label>ALIASSE${tooltip("Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.")}<textarea data-field="aliases" rows="2" spellcheck="false">${escapeHtml(joinList(rule.aliases))}</textarea></label>
+      <label>FRÜHERE NAMEN${tooltip("Ehemalige Markennamen derselben App, z. B. BitKeep vor der Umbenennung in Bitget Wallet.")}<textarea data-field="former_names" rows="2" spellcheck="false">${escapeHtml(joinList(rule.former_names))}</textarea></label>
+      <label>VORSICHTIGE SUCHBEGRIFFE${tooltip("Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: metamask. Unscharfe Suchbegriffe können Fehlalarme erzeugen.")}<textarea data-field="terms" rows="2" spellcheck="false">${escapeHtml(joinList(rule.terms))}</textarea></label>
+      <div class="field-row">
+        <label>STATUS<select data-field="status">${[["active","AKTIV"],["legacy","LEGACY"]].map(([id,label])=>`<option value="${id}" ${(rule.status||"active")===id?"selected":""}>${label}</option>`).join("")}</select></label>
+        <label class="checkbox-row"><input data-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> AKTIV ${tooltip("Nur aktive Regeln werden für neue Scans verwendet.")}</label>
+      </div>
+      <div class="field-row">
+        <label class="checkbox-row"><input data-field="verified" type="checkbox" ${rule.verified ? "checked" : ""} /> VERIFIZIERT ${tooltip("Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.")}</label>
+        <label>QUELLE<input data-field="source" value="${escapeHtml(rule.source || "")}" autocomplete="off" /></label>
+      </div>
+      <div class="field-row">
+        <label>PRÜFDATUM (YYYY-MM-DD)<input data-field="last_verified" value="${escapeHtml(rule.last_verified || "")}" autocomplete="off" /></label>
+        <label>REGIONEN (kommagetrennt, z. B. AT,DE)<input data-field="regions" value="${escapeHtml(joinList(rule.regions))}" autocomplete="off" /></label>
+      </div>
+    `;
+  } else if (isFile) {
+    fields += `
+      <label>EXAKTE DATEINAMEN${tooltip("Dateinamen, die exakt so vorkommen müssen.")}<textarea data-field="filename_equals" rows="2" spellcheck="false">${escapeHtml(joinList(rule.filename_equals))}</textarea></label>
+      <label>BEGRIFFE IN NAME / PFAD${tooltip("Begriffe, die im Datei- oder Ordnerpfad vorkommen müssen.")}<textarea data-field="terms" rows="2" spellcheck="false">${escapeHtml(joinList(rule.terms))}</textarea></label>
+      <label>ZUSÄTZLICHER KONTEXT (ODER)${tooltip("Wenn angegeben, muss mindestens einer dieser Begriffe ebenfalls im Pfad vorkommen.")}<textarea data-field="context_terms" rows="2" spellcheck="false">${escapeHtml(joinList(rule.context_terms))}</textarea></label>
+      <label>ENDUNGEN (LEER = BELIEBIG)${tooltip("Auf diese Endungen einschränken. Leer lassen, um alle Endungen zu prüfen.")}<textarea data-field="extensions" rows="2" spellcheck="false">${escapeHtml(joinList(rule.extensions))}</textarea></label>
+      <div class="field-row">
+        <label>STATUS<select data-field="status">${[["active","AKTIV"],["legacy","LEGACY"]].map(([id,label])=>`<option value="${id}" ${(rule.status||"active")===id?"selected":""}>${label}</option>`).join("")}</select></label>
+        <label class="checkbox-row"><input data-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> AKTIV</label>
+      </div>
+    `;
+  } else if (isBackup) {
+    fields += `
+      <label>PLATTFORM${tooltip("Betriebssystem oder Hersteller, auf den sich die Regel bezieht.")}<input data-field="platform" value="${escapeHtml(rule.platform || "")}" autocomplete="off" /></label>
+      <label>ERKENNUNGSSICHERHEIT<select data-field="confidence">${[["high","HOCH"],["medium","MITTEL"],["low","NIEDRIG"]].map(([id,label])=>`<option value="${id}" ${(rule.confidence||"medium")===id?"selected":""}>${label}</option>`).join("")}</select></label>
+      <label>ERFORDERLICHE PFAde / ORDNER${tooltip("Pfad-Merkmale, die zusammen auftreten müssen. Beispiel: MobileSync/Backup.")}<textarea data-field="required_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_paths))}</textarea></label>
+      <label>ERFORDERLICHE DATEIEN${tooltip("Dateinamen, deren Vorhandensein die Erkennung stützt. Beispiel: Manifest.db, Info.plist.")}<textarea data-field="required_files" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_files))}</textarea></label>
+      <label>ERFORDERLICHE ENDUNGEN${tooltip("Dateiendungen, die zusätzlich vorkommen müssen.")}<textarea data-field="required_extensions" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_extensions))}</textarea></label>
+      <label>TYPISCHE PFAde${tooltip("Beispielpfade zur Orientierung; werden nicht direkt geprüft.")}<textarea data-field="typical_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.typical_paths))}</textarea></label>
+      <div class="field-row">
+        <label>STATUS<select data-field="status">${[["active","AKTIV"],["legacy","LEGACY"]].map(([id,label])=>`<option value="${id}" ${(rule.status||"active")===id?"selected":""}>${label}</option>`).join("")}</select></label>
+        <label class="checkbox-row"><input data-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> AKTIV</label>
+      </div>
+      <div class="field-row">
+        <label>QUELLE<input data-field="source" value="${escapeHtml(rule.source || "")}" autocomplete="off" /></label>
+        <label>PRÜFDATUM (YYYY-MM-DD)<input data-field="last_verified" value="${escapeHtml(rule.last_verified || "")}" autocomplete="off" /></label>
+      </div>
+    `;
   }
-  return { app_rules: parse($("cryptoAppRules"), "app"), file_rules: parse($("cryptoFileRules"), "file") };
+  fields += `<label>KOMMENTAR<textarea data-field="comment" rows="2" spellcheck="false">${escapeHtml(rule.comment || "")}</textarea></label>`;
+  $("detectionEditorFields").innerHTML = fields;
+  $("detectionEditor").hidden = false;
+  $("detectionSave").disabled = !detectionDirty;
+  $("detectionEditorMessage").textContent = "";
 }
 
-function filterCryptoRules() {
-  const query = $("cryptoSearch").value.trim().toLocaleLowerCase("de");
-  for (const element of document.querySelectorAll(".crypto-rule")) {
-    element.hidden = !element.textContent.toLocaleLowerCase("de").includes(query)
-      && ![...element.querySelectorAll("input, textarea")].some(input => input.value.toLocaleLowerCase("de").includes(query));
+function readDetectionEditor() {
+  if (!detectionEditedRule) return null;
+  const rule = { ...detectionEditedRule };
+  const kind = detectionKindForSection[detectionSection];
+  for (const element of $("detectionEditorFields").querySelectorAll("[data-field]")) {
+    const key = element.dataset.field;
+    const isCheckbox = element.type === "checkbox";
+    const value = isCheckbox ? element.checked : element.value;
+    const listFields = ["ios_bundle_ids", "android_package_ids", "aliases", "former_names", "terms", "filename_equals", "context_terms", "extensions", "required_paths", "required_files", "required_extensions", "typical_paths", "regions"];
+    if (listFields.includes(key)) {
+      rule[key] = splitList(value);
+    } else if (["enabled", "verified"].includes(key)) {
+      rule[key] = Boolean(value);
+    } else {
+      rule[key] = value;
+    }
   }
+  if (kind === "app_rules") {
+    rule.bundle_ids = rule.ios_bundle_ids;
+  }
+  return rule;
 }
 
-function markCryptoDirty() {
-  cryptoDirty = true;
-  $("cryptoSave").disabled = cryptoBusy || !cryptoState;
-  $("cryptoMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
+function detectionDraft() {
+  if (!detectionState) return null;
+  const draft = {
+    app_rules: [...detectionState.app_rules],
+    file_rules: [...detectionState.file_rules],
+    backup_rules: [...(detectionState.backup_rules || [])],
+  };
+  if (detectionEditedRule?.id) {
+    const kind = detectionKindForSection[detectionSection];
+    const updated = readDetectionEditor();
+    if (updated) {
+      draft[kind] = draft[kind].map(rule => rule.id === updated.id ? updated : rule);
+    }
+  }
+  return draft;
 }
 
-async function loadCryptoRules(revision) {
+function markDetectionDirty() {
+  detectionDirty = true;
+  $("detectionSave").disabled = detectionBusy || !detectionState;
+  $("detectionSaveAll").disabled = detectionBusy || !detectionState;
+  $("detectionEditorMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
+  $("detectionMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
+}
+
+async function loadDetectionRules(revision) {
   try {
     const response = await fetch("/api/settings/crypto");
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Regeln nicht verfügbar");
     if (revision !== settingsRevision || !$("settingsModal").open) return;
-    cryptoState = data.rules; cryptoDirty = false;
-    renderCryptoRules();
-    $("cryptoMessage").textContent = "";
-    $("cryptoSave").disabled = true;
+    detectionState = data.rules;
+    cryptoState = data.rules;
+    detectionDirty = false;
+    detectionSelectedRuleId = null;
+    detectionEditedRule = null;
+    selectDetectionSection(detectionSection);
+    $("detectionMessage").textContent = "";
+    $("detectionSaveAll").disabled = true;
   } catch (error) {
-    if (revision === settingsRevision) $("cryptoMessage").textContent = `FEHLER: ${error.message}`;
+    if (revision === settingsRevision) $("detectionMessage").textContent = `FEHLER: ${error.message}`;
   }
 }
 
-async function saveCryptoRules() {
-  if (!cryptoState || cryptoBusy) return;
-  cryptoBusy = true;
-  $("cryptoSave").disabled = true;
+async function saveDetectionRules() {
+  if (!detectionState || detectionBusy) return;
+  detectionBusy = true;
+  $("detectionSave").disabled = true;
+  $("detectionSaveAll").disabled = true;
   $("closeSettings").disabled = true;
-  $("cryptoMessage").textContent = "REGELN WERDEN GESPEICHERT …";
+  $("detectionMessage").textContent = "REGELN WERDEN GESPEICHERT …";
   try {
     const response = await fetch("/api/settings/crypto", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rules: cryptoDraft(), base_sha256: cryptoState.sha256 }) });
+      body: JSON.stringify({ rules: detectionDraft(), base_sha256: detectionState.sha256 }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Speichern fehlgeschlagen");
-    cryptoState = data.rules; cryptoDirty = false;
-    renderCryptoRules();
-    $("cryptoMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SICHTUNGEN";
+    detectionState = data.rules;
+    cryptoState = data.rules;
+    detectionDirty = false;
+    detectionSelectedRuleId = null;
+    detectionEditedRule = null;
+    selectDetectionSection(detectionSection);
+    $("detectionMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SICHTUNGEN";
   } catch (error) {
-    $("cryptoMessage").textContent = `FEHLER: ${error.message}`;
+    $("detectionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
-    cryptoBusy = false;
+    detectionBusy = false;
     $("closeSettings").disabled = isUpdateBusy();
-    $("cryptoSave").disabled = !cryptoDirty;
+    $("detectionSave").disabled = !detectionDirty;
+    $("detectionSaveAll").disabled = !detectionDirty;
   }
+}
+
+async function loadCryptoRules(revision) {
+  await loadDetectionRules(revision);
 }
 
 function closeSettings() {
-  if (catalogBusy || cryptoBusy || isUpdateBusy()) return;
+  if (catalogBusy || detectionBusy || isUpdateBusy()) return;
   if (catalogDirty && !window.confirm("Ungespeicherte Änderungen am Dateityp-Katalog verwerfen?")) return;
-  if (cryptoDirty && !window.confirm("Ungespeicherte Änderungen an den Krypto-Regeln verwerfen?")) return;
+  if (detectionDirty && !window.confirm("Ungespeicherte Änderungen an den Erkennungsregeln verwerfen?")) return;
   ++settingsRevision;
   $("settingsModal").close();
 }
@@ -791,6 +974,10 @@ function renderIphoneSummary(phone) {
   $("iphoneAssessment").textContent = phone.assessment || "—";
   $("iphoneCompleteness").textContent = appsComplete ? `${apps.length.toLocaleString("de-AT")} ${apps.length === 1 ? "APP" : "APPS"} ERFASST` : "APP-LISTE UNVOLLSTÄNDIG";
   $("iphoneCompleteness").classList.toggle("incomplete", !appsComplete);
+  const incompleteCoverage = (phone.coverage || []).filter(area => area.status !== "complete").length;
+  $("iphoneCoverageBrief").textContent = appsComplete && !incompleteCoverage
+    ? "BENUTZER-APP-LISTE GEPRÜFT"
+    : `${incompleteCoverage || 1} BEREICH${incompleteCoverage === 1 ? "" : "E"} NICHT VOLLSTÄNDIG PRÜFBAR`;
   $("iphoneNotice").textContent = `${phone.notice || ""} APP-LISTE: ${String(phone.apps_status || "unbekannt").toUpperCase()}`;
   const grouped = new Map();
   for (const app of apps) {
@@ -803,8 +990,8 @@ function renderIphoneSummary(phone) {
   $("iphoneCategories").innerHTML = sortedGroups.map(([category, entries]) => {
     const label = escapeHtml(appCategoryLabels[category] || "WEITERE APPS");
     const list = `<ul>${entries.map(app => `<li>${escapeHtml(app.name || app.bundle_id || "UNBEKANNT")}</li>`).join("")}</ul>`;
-    if (category === "other") return `<details class="iphone-category iphone-category-other"><summary><span>${label}</span><b>${entries.length}</b></summary><div class="iphone-other-body"><label for="iphoneOtherSearch">SONSTIGE APPS DURCHSUCHEN</label><input id="iphoneOtherSearch" type="search" placeholder="APP-NAME SUCHEN …" autocomplete="off" />${list}<p id="iphoneOtherEmpty" hidden>KEINE PASSENDE APP</p></div></details>`;
-    return `<section class="iphone-category ${cryptoCategories.has(category) ? "crypto" : ""}"><h4><span>${label}</span><b>${entries.length}</b></h4>${list}</section>`;
+    if (category === "other") return `<details class="iphone-category iphone-category-other"><summary><span>${label}</span><b>${entries.length}</b><em>+ APPS ANZEIGEN</em></summary><div class="iphone-other-body"><label for="iphoneOtherSearch">SONSTIGE APPS DURCHSUCHEN</label><input id="iphoneOtherSearch" type="search" placeholder="APP-NAME SUCHEN …" autocomplete="off" />${list}<p id="iphoneOtherEmpty" hidden>KEINE PASSENDE APP</p></div></details>`;
+    return `<details class="iphone-category ${cryptoCategories.has(category) ? "crypto" : ""}"><summary><span>${label}</span><b>${entries.length}</b><em>+ APPS ANZEIGEN</em></summary>${list}</details>`;
   }).join("") || '<p class="iphone-empty">KEINE BENUTZER-APPS ERFASST · NICHT ALS „KEINE INSTALLIERT“ WERTEN</p>';
   $("iphoneOtherSearch")?.addEventListener("input", (event) => {
     const query = event.target.value.trim().toLocaleLowerCase("de");
@@ -842,19 +1029,40 @@ function renderCryptoFindings(crypto, isPhone) {
     : '<p class="iphone-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</p>';
 }
 
+function renderBackupFindings(backup) {
+  const container = $("backupFindings");
+  if (!container) return;
+  const hints = backup?.backup_hints || [];
+  container.hidden = !hints.length;
+  if (!hints.length) return;
+  const items = hints.slice(0, 50).map(hit => `
+    <div class="backup-hint">
+      <div class="backup-hint-name">${escapeHtml(hit.name || hit.id || "BACKUP")}</div>
+      <div class="backup-hint-path">${escapeHtml(hit.path || "—")}</div>
+      <div class="backup-hint-confidence ${escapeHtml(hit.confidence || "medium")}">ERKENNUNGSSICHERHEIT: ${escapeHtml((hit.confidence || "medium").toUpperCase())}</div>
+      <small>${escapeHtml((hit.matched_indicators || []).join(" · "))} · Inhalt wurde nicht analysiert.</small>
+    </div>
+  `).join("");
+  container.innerHTML = `<h3><span>↗</span>GERÄTE-BACKUPS · ${hints.length}</h3>${items}${hints.length > 50 ? '<p class="iphone-empty">ANZEIGE AUF 50 HINWEISE BEGRENZT · VOLLSTÄNDIGE LISTE IN DER FALLAKTE</p>' : ""}`;
+}
+
 const decisionLabels = {
   open: "ENTSCHEIDUNG OFFEN",
   secure: "ZUR SICHERUNG AUSGEWÄHLT",
   not_selected: "NICHT ZUR SICHERUNG AUSGEWÄHLT",
+  specialist_consulted: "FACHPERSON HINZUGEZOGEN",
+  specialist_not_consulted: "KEINE FACHPERSON HINZUGEZOGEN",
   review: "ENTSCHEIDUNG OFFEN · ALTER STATUS",
 };
 
 function renderDecision(media) {
   if (!media) return;
   currentMediaId = media.id;
-  currentDecision = ["secure", "not_selected"].includes(media.decision) ? media.decision : null;
+  const allowed = currentIsPhone ? ["specialist_consulted", "specialist_not_consulted"] : ["secure", "not_selected"];
+  currentDecision = allowed.includes(media.decision) ? media.decision : null;
   $("decisionState").textContent = decisionLabels[media.decision] || decisionLabels.open;
   $("decisionEvidence").value = media.evidence_number || "";
+  $("decisionSpecialist").value = media.specialist_name || "";
   updateDecisionFields();
   $("decisionReason").value = media.reason_code || "";
   $("decisionNote").value = media.reason_note || "";
@@ -866,29 +1074,42 @@ function renderDecision(media) {
 
 function updateDecisionFields() {
   const secure = currentDecision === "secure";
-  $("decisionEvidenceWrap").hidden = !secure;
-  $("decisionReasonWrap").hidden = secure;
-  $("decisionNoteWrap").hidden = secure;
-  $("decisionHelp").hidden = secure;
+  const consulted = currentDecision === "specialist_consulted";
+  $("decisionEvidenceWrap").hidden = currentIsPhone || !secure;
+  $("decisionSpecialistWrap").hidden = !currentIsPhone || !consulted;
+  $("decisionReasonWrap").hidden = currentIsPhone || secure;
+  $("decisionNoteWrap").hidden = currentIsPhone || secure;
+  $("decisionHelp").hidden = !currentIsPhone && secure;
 }
 
 function renderRecord(record) {
   renderResults(record.summary, record.hits);
   const phone = record.phone || record.iphone || record.android || null;
   const isPhone = Boolean(phone);
+  currentIsPhone = isPhone;
   $("inventoryTitle").textContent = isPhone ? "TECHNISCHE DATEIDETAILS" : "DATEIEN DIESES MEDIUMS";
-  $("decisionTitle").textContent = isPhone ? "ENTSCHEIDUNG ZUM TELEFON" : "ENTSCHEIDUNG ZUM DATENTRÄGER";
+  $("decisionTitle").textContent = isPhone ? "FACHPERSON DOKUMENTIEREN" : "ENTSCHEIDUNG ZUM DATENTRÄGER";
+  $("decisionHelp").innerHTML = isPhone
+    ? "Dokumentieren Sie, ob nach dem Krypto-Schnellscan eine <b>Fachperson hinzugezogen</b> wurde. Bei Ja ist deren Name oder Dienststelle erforderlich."
+    : "Wählen Sie <b>„Sichern“</b> oder <b>„Nicht sichern“</b>. Eine Beweismittelnummer ist nur bei Sicherung erforderlich; eine Nicht-Sicherung muss nachvollziehbar begründet werden.";
+  $("decisionPrimary").dataset.decision = isPhone ? "specialist_consulted" : "secure";
+  $("decisionPrimary").textContent = isPhone ? "FACHPERSON HINZUGEZOGEN" : "SICHERN";
+  $("decisionSecondary").dataset.decision = isPhone ? "specialist_not_consulted" : "not_selected";
+  $("decisionSecondary").textContent = isPhone ? "KEINE FACHPERSON HINZUGEZOGEN" : "NICHT SICHERN";
   $("documentationGrid").classList.toggle("phone-view", isPhone);
   $("classicHome").hidden = isPhone;
   if (isPhone && $("inventoryPanel").dataset.mediaId !== String(record.media?.id ?? "")) $("inventoryPanel").open = false;
   $("inventoryPanel").dataset.mediaId = String(record.media?.id ?? "");
   if (isPhone) {
     $("iphoneSummary").after($("cryptoFindings"));
+    $("cryptoFindings").after($("backupFindings"));
   } else {
     $("classicHome").after($("cryptoFindings"));
+    $("cryptoFindings").after($("backupFindings"));
   }
   renderIphoneSummary(phone);
   renderCryptoFindings(record.crypto || null, isPhone);
+  renderBackupFindings(record.backup || null);
   if (record.media) {
     clearInventoryView();
     const connected = devices.some((device) => deviceMatchesMedium(device, record.media));
@@ -898,8 +1119,8 @@ function renderRecord(record) {
     renderArchive(record.archive);
     renderDecision(record.media);
     loadCase(record.media.case_number);
-    $("inventoryPanel").hidden = false;
-    if ($("inventoryPanel").open) loadInventoryTree();
+    $("inventoryPanel").hidden = isPhone;
+    if (!isPhone && $("inventoryPanel").open) loadInventoryTree();
   }
 }
 
@@ -962,7 +1183,7 @@ function sortedSightings(media) {
 }
 
 function decisionIsOpen(medium) {
-  return !["secure", "not_selected"].includes(medium?.decision);
+  return !["secure", "not_selected", "specialist_consulted", "specialist_not_consulted"].includes(medium?.decision);
 }
 
 function presenceKey(item) {
@@ -1238,7 +1459,8 @@ function updateDecisionAvailability() {
   const reasonRequired = currentDecision === "not_selected";
   const hasReason = $("decisionReason").value.length > 0;
   const hasEvidence = $("decisionEvidence").value.trim().length > 0;
-  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || !activeOperator;
+  const hasSpecialist = $("decisionSpecialist").value.trim().length > 0;
+  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || (currentDecision === "specialist_consulted" && !hasSpecialist) || !activeOperator;
 }
 
 function renderCaseHistory(cases) {
@@ -1441,6 +1663,7 @@ async function saveDecision() {
         evidence_number: currentDecision === "secure" ? $("decisionEvidence").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80) : null,
         reason_code: currentDecision === "secure" ? null : ($("decisionReason").value || null),
         reason_note: currentDecision === "secure" ? "" : $("decisionNote").value,
+        specialist_name: currentDecision === "specialist_consulted" ? $("decisionSpecialist").value.trim() : null,
         operator: activeOperator,
       }),
     });
@@ -2035,55 +2258,105 @@ $("settingsProfilesTab").addEventListener("click", () => selectSettingsPane("pro
 $("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane("filetypes"));
 $("settingsCryptoTab").addEventListener("click", () => selectSettingsPane("crypto"));
 $("settingsUpdatesTab").addEventListener("click", () => selectSettingsPane("updates"));
-$("cryptoSearch").addEventListener("input", filterCryptoRules);
-for (const root of [$("cryptoAppRules"), $("cryptoFileRules")]) {
-  root.addEventListener("input", markCryptoDirty);
-  root.addEventListener("change", markCryptoDirty);
-  root.addEventListener("click", event => {
-    const remove = event.target.closest(".crypto-remove");
-    if (remove && !cryptoBusy) { remove.closest(".crypto-rule").remove(); markCryptoDirty(); }
-  });
+for (const [key] of Object.entries(detectionSectionLabels)) {
+  const tab = $(`detection${key[0].toUpperCase()}${key.slice(1)}Tab`);
+  if (tab) tab.addEventListener("click", () => selectDetectionSection(key));
 }
-$("cryptoAddApp").addEventListener("click", () => {
-  if (!cryptoState || cryptoBusy) return;
-  const rule = { id: `neue-app-${Date.now().toString(36)}`, name: "Neue App", category: "wallet", relevance: "high",
-    enabled: true, ios_bundle_ids: [], android_package_ids: [], aliases: [], terms: [], comment: "" };
-  $("cryptoAppRules").insertAdjacentHTML("beforeend", renderCryptoRule(rule, "app"));
-  const added = $("cryptoAppRules").lastElementChild;
-  added.querySelector('[data-rule-field="category"]').value = rule.category;
-  added.querySelector('[data-rule-field="relevance"]').value = rule.relevance;
-  added.hidden = false; added.open = true; markCryptoDirty();
+$("detectionSearch").addEventListener("input", () => { filterDetectionRules(); sortDetectionRules(); });
+$("detectionFilter").addEventListener("change", () => { filterDetectionRules(); sortDetectionRules(); });
+$("detectionSort").addEventListener("change", sortDetectionRules);
+$("detectionRows").addEventListener("click", event => {
+  const row = event.target.closest("tr[data-id]");
+  if (!row || !detectionState) return;
+  const id = row.dataset.id;
+  const found = getRuleById(id);
+  if (!found) return;
+  detectionSelectedRuleId = id;
+  detectionEditedRule = cloneRule(found.rule);
+  detectionDirty = false;
+  $("detectionRows").querySelectorAll("tr").forEach(r => r.classList.toggle("active", r.dataset.id === id));
+  renderDetectionEditor();
 });
-$("cryptoAddFile").addEventListener("click", () => {
-  if (!cryptoState || cryptoBusy) return;
-  const rule = { id: `neue-datei-${Date.now().toString(36)}`, name: "Neue Dateiregel", category: "portfolio", relevance: "medium",
-    enabled: true, filename_equals: [], terms: [], context_terms: [], extensions: [], comment: "" };
-  $("cryptoFileRules").insertAdjacentHTML("beforeend", renderCryptoRule(rule, "file"));
-  const added = $("cryptoFileRules").lastElementChild;
-  added.querySelector('[data-rule-field="category"]').value = rule.category;
-  added.querySelector('[data-rule-field="relevance"]').value = rule.relevance;
-  added.hidden = false; added.open = true; markCryptoDirty();
+$("detectionAdd").addEventListener("click", () => {
+  if (!detectionState || detectionBusy) return;
+  const kind = detectionKindForSection[detectionSection];
+  const baseId = `neu-${detectionSection}-${Date.now().toString(36)}`;
+  let newRule;
+  if (kind === "app_rules") {
+    const category = detectionSection === "banking" ? "banking" : "wallet";
+    const relevance = detectionSection === "banking" ? "neutral" : "high";
+    newRule = { id: baseId, name: "Neue Regel", category, relevance, enabled: true, ios_bundle_ids: [], android_package_ids: [], aliases: [], former_names: [], terms: [], comment: "", status: "active", verified: false, source: "", last_verified: "", regions: [] };
+  } else if (kind === "file_rules") {
+    newRule = { id: baseId, name: "Neue Dateiregel", category: "portfolio", relevance: "medium", enabled: true, filename_equals: [], terms: [], context_terms: [], extensions: [], comment: "", status: "active", verified: false, source: "", last_verified: "", regions: [] };
+  } else {
+    newRule = { id: baseId, name: "Neue Backup-Regel", platform: "", status: "active", confidence: "medium", enabled: true, required_paths: [], required_files: [], required_extensions: [], typical_paths: [], source: "", last_verified: "", comment: "" };
+  }
+  const kindKey = kind;
+  detectionState[kindKey] = [...detectionState[kindKey], newRule];
+  detectionSelectedRuleId = newRule.id;
+  detectionEditedRule = cloneRule(newRule);
+  markDetectionDirty();
+  renderDetectionRules();
+  renderDetectionEditor();
 });
-$("cryptoSave").addEventListener("click", saveCryptoRules);
-$("cryptoExport").addEventListener("click", () => {
-  if (!cryptoState) return;
-  const blob = new Blob([JSON.stringify({ version: cryptoState.version, ...cryptoDraft() }, null, 2)], { type: "application/json" });
+$("detectionDuplicate").addEventListener("click", () => {
+  if (!detectionEditedRule || detectionBusy) return;
+  const kind = detectionKindForSection[detectionSection];
+  const copy = cloneRule(detectionEditedRule);
+  copy.id = `${copy.id}-kopie-${Date.now().toString(36)}`;
+  copy.name = `${copy.name} (Kopie)`;
+  detectionState[kind] = [...detectionState[kind], copy];
+  detectionSelectedRuleId = copy.id;
+  detectionEditedRule = cloneRule(copy);
+  markDetectionDirty();
+  renderDetectionRules();
+  renderDetectionEditor();
+});
+$("detectionDelete").addEventListener("click", () => {
+  if (!detectionEditedRule || detectionBusy) return;
+  if (!window.confirm(`Regel „${detectionEditedRule.name || detectionEditedRule.id}" wirklich löschen?`)) return;
+  const kind = detectionKindForSection[detectionSection];
+  detectionState[kind] = detectionState[kind].filter(rule => rule.id !== detectionEditedRule.id);
+  detectionSelectedRuleId = null;
+  detectionEditedRule = null;
+  markDetectionDirty();
+  renderDetectionRules();
+});
+$("detectionCancel").addEventListener("click", () => {
+  detectionEditedRule = null;
+  detectionSelectedRuleId = null;
+  $("detectionEditor").hidden = true;
+  $("detectionRows").querySelectorAll("tr").forEach(r => r.classList.remove("active"));
+});
+$("detectionSave").addEventListener("click", saveDetectionRules);
+$("detectionSaveAll").addEventListener("click", saveDetectionRules);
+$("detectionEditorFields").addEventListener("input", () => {
+  const updated = readDetectionEditor();
+  if (updated) {
+    detectionEditedRule = updated;
+    markDetectionDirty();
+  }
+});
+$("detectionExport").addEventListener("click", () => {
+  if (!detectionState) return;
+  const blob = new Blob([JSON.stringify({ version: detectionState.version, ...detectionDraft() }, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a"); link.href = url; link.download = "triagebox-krypto-regeln.json"; link.click();
+  const link = document.createElement("a"); link.href = url; link.download = "triagebox-erkennungsregeln.json"; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-$("cryptoImport").addEventListener("change", async event => {
+$("detectionImport").addEventListener("change", async event => {
   const file = event.target.files?.[0];
-  if (!file || !cryptoState) return;
+  if (!file || !detectionState) return;
   try {
-    if (file.size > 131072) throw new Error("Datei zu groß (maximal 128 KB).");
+    if (file.size > 786432) throw new Error("Datei zu groß (maximal 768 KB).");
     const imported = JSON.parse(await file.text());
     if (!Array.isArray(imported.app_rules) || !Array.isArray(imported.file_rules)) throw new Error("Keine gültige Regelsammlung.");
-    cryptoState = { ...cryptoState, app_rules: imported.app_rules, file_rules: imported.file_rules };
-    renderCryptoRules(); markCryptoDirty();
-    $("cryptoMessage").textContent = "IMPORTIERT · BITTE PRÜFEN UND SPEICHERN";
+    detectionState = { ...detectionState, app_rules: imported.app_rules, file_rules: imported.file_rules, backup_rules: imported.backup_rules || detectionState.backup_rules || [] };
+    markDetectionDirty();
+    selectDetectionSection(detectionSection);
+    $("detectionMessage").textContent = "IMPORTIERT · BITTE PRÜFEN UND SPEICHERN";
   } catch (error) {
-    $("cryptoMessage").textContent = `IMPORT FEHLGESCHLAGEN: ${error.message}`;
+    $("detectionMessage").textContent = `IMPORT FEHLGESCHLAGEN: ${error.message}`;
   } finally { event.target.value = ""; }
 });
 $("settingsProfilesList").addEventListener("click", (event) => {
@@ -2353,10 +2626,12 @@ $("offlineUpdateFile").addEventListener("change", () => {
 });
 $("offlineUpdateInstall").addEventListener("click", installOfflineUpdate);
 $("decisionEvidence").addEventListener("input", updateDecisionAvailability);
+$("decisionSpecialist").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {
     currentDecision = button.dataset.decision;
     if (currentDecision !== "secure") $("decisionEvidence").value = "";
+    if (currentDecision !== "specialist_consulted") $("decisionSpecialist").value = "";
     updateDecisionFields();
     for (const peer of document.querySelectorAll("[data-decision]")) peer.classList.toggle("active", peer === button);
     $("decisionState").textContent = decisionLabels[currentDecision];

@@ -89,7 +89,7 @@
           <div class="panel-title"><span>TELEFON</span> KRYPTO-SCHNELLSCAN</div>
           <div class="iphone-head">
             <div><small>ANGESCHLOSSENES GERÄT</small><strong id="iphoneDevice">—</strong><span id="iphoneSystem">—</span><span class="iphone-serial">SERIENNUMMER <b id="iphoneSerial">NICHT GEMELDET</b></span></div>
-            <span id="iphoneCompleteness" class="iphone-coverage">—</span>
+            <div class="iphone-coverage-box"><small>ERFASSUNGSSTATUS</small><strong id="iphoneCompleteness" class="iphone-coverage">—</strong><span id="iphoneCoverageBrief">—</span></div>
           </div>
           <div id="iphoneHintSummary" class="iphone-triage" aria-live="polite">
             <small>KRYPTO-TRIAGE · NUR APP-METADATEN</small>
@@ -98,12 +98,8 @@
             <div id="iphoneTriageApps" class="iphone-triage-apps"></div>
           </div>
           <div class="iphone-main">
-            <h3>ERKANNTE APP-GRUPPEN <small>KRYPTO-TREFFER DIREKT SICHTBAR</small></h3>
+            <h3>ERKANNTE APP-GRUPPEN <small>GRUPPE ANKLICKEN, UM APPS ANZUZEIGEN</small></h3>
             <div id="iphoneCategories" class="iphone-categories"></div>
-          </div>
-          <div class="iphone-main phone-coverage-wrap">
-            <h3>ERFASSUNGSSTATUS</h3>
-            <div id="phoneCoverage" class="iphone-areas"></div>
           </div>
           <details class="iphone-technical">
             <summary>TECHNISCHE DETAILS &amp; ERFASSUNGSGRENZEN</summary>
@@ -112,6 +108,7 @@
               <div><small>SCANMODUS</small><strong id="iphoneAccessibleFiles">APP-LISTE</strong><span id="iphoneFileStatus">KEINE DATEI-/MEDIENSICHTUNG</span></div>
             </div>
             <div class="iphone-scope"><strong>ERFASSUNGSUMFANG</strong><span id="iphoneAssessment">—</span><small>Keine vollständige Telefonauslesung; keine Wallet-Inhalte, Schlüssel, Seeds, Fotos oder Dateien.</small></div>
+            <div id="phoneCoverage" class="iphone-areas"></div>
             <div id="iphoneAreas" hidden></div>
             <h3>VOLLSTÄNDIGE APP-LISTE</h3>
             <p id="iphoneNotice"></p>
@@ -123,6 +120,8 @@
           <div class="panel-title"><span>↗</span> KRYPTO-HINWEISE <small id="cryptoRulesVersion"></small></div>
           <p id="cryptoScope"></p>
           <div id="cryptoHintList"></div>
+        </section>
+        <section id="backupFindings" class="panel backup-findings" hidden>
         </section>
 
         <div id="classicHome">
@@ -189,13 +188,16 @@
             <div class="decision-headline">
               <div id="decisionState" class="decision-state">ENTSCHEIDUNG OFFEN</div>
               <div class="decision-buttons">
-                <button type="button" data-decision="secure">SICHERN</button>
-                <button type="button" data-decision="not_selected">NICHT SICHERN</button>
+                <button id="decisionPrimary" type="button" data-decision="secure">SICHERN</button>
+                <button id="decisionSecondary" type="button" data-decision="not_selected">NICHT SICHERN</button>
               </div>
             </div>
             <div class="decision-fields">
               <label id="decisionEvidenceWrap" for="decisionEvidence" hidden>BEWEISMITTEL / ASSERVAT <b>· PFLICHT BEI SICHERUNG</b>
                 <input id="decisionEvidence" class="case-input" placeholder="Z. B. BM-007" autocomplete="off" spellcheck="false" />
+              </label>
+              <label id="decisionSpecialistWrap" for="decisionSpecialist" hidden>HINZUGEZOGENE FACHPERSON <b>· PFLICHT</b>
+                <input id="decisionSpecialist" placeholder="NAME / DIENSTSTELLE" autocomplete="off" maxlength="160" />
               </label>
               <label id="decisionReasonWrap" for="decisionReason">GRUND DER NICHT-SICHERUNG <b>· PFLICHT</b>
                 <select id="decisionReason">
@@ -332,19 +334,83 @@
         <div id="settingsProfilesList" class="settings-profiles"></div>
         <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
       </section>
-      <section id="settingsCryptoPane" class="settings-pane" aria-labelledby="settingsCryptoTab" hidden>
-        <p>Gemeinsame Regeln für Telefon-Apps und zugängliche Dateinamen auf allen Medien. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
-        <div class="catalog-toolbar"><label for="cryptoSearch">REGEL SUCHEN<input id="cryptoSearch" type="search" placeholder="APP, KATEGORIE ODER BEGRIFF …" /></label><span id="cryptoVersion"></span></div>
-        <h3>APP-REGELN</h3><div id="cryptoAppRules" class="crypto-rule-list"></div>
-        <button id="cryptoAddApp" type="button">+ APP-REGEL</button>
-        <h3>DATEIREGELN</h3><div id="cryptoFileRules" class="crypto-rule-list"></div>
-        <button id="cryptoAddFile" type="button">+ DATEIREGEL</button>
-        <div class="catalog-actions">
-          <button id="cryptoExport" type="button">JSON EXPORTIEREN</button>
-          <label class="crypto-import">JSON IMPORTIEREN<input id="cryptoImport" type="file" accept=".json,application/json" hidden /></label>
-          <button id="cryptoSave" type="button" disabled>REGELN SPEICHERN</button>
+      <section id="settingsCryptoPane" class="settings-pane detection-rules-pane" aria-labelledby="settingsCryptoTab" hidden>
+        <p>Erkennungsregeln für Krypto-Apps, Banking-/Finanz-Apps, Geräte-Backups und Dateihinweise. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
+        <nav class="detection-tabs" aria-label="Erkennungsregel-Bereich">
+          <button id="detectionCryptoTab" type="button" aria-pressed="true" data-detection="crypto">KRYPTO-APPS</button>
+          <button id="detectionBankingTab" type="button" aria-pressed="false" data-detection="banking">BANKING &amp; FINANZEN</button>
+          <button id="detectionBackupsTab" type="button" aria-pressed="false" data-detection="backups">GERÄTE-BACKUPS</button>
+          <button id="detectionFilesTab" type="button" aria-pressed="false" data-detection="files">DATEIHINWEISE</button>
+        </nav>
+        <div class="detection-master-detail">
+          <div class="detection-list-panel">
+            <div class="detection-toolbar">
+              <label for="detectionSearch">REGEL SUCHEN<input id="detectionSearch" type="search" placeholder="NAME, ALIAS, BUNDLE-ID, PACKAGE-ID …" /></label>
+              <select id="detectionFilter" aria-label="Filter">
+                <option value="">ALLE REGELN</option>
+                <option value="active">AKTIV</option>
+                <option value="inactive">INAKTIV</option>
+                <option value="legacy">LEGACY</option>
+                <option value="verified">VERIFIZIERT</option>
+                <option value="unverified">NICHT VERIFIZIERT</option>
+                <option value="missing_ios">IOS-ID FEHLT</option>
+                <option value="missing_android">ANDROID-ID FEHLT</option>
+              </select>
+              <select id="detectionSort" aria-label="Sortierung">
+                <option value="name">NAME</option>
+                <option value="category">KATEGORIE</option>
+                <option value="status">STATUS</option>
+              </select>
+              <span id="detectionCount" class="detection-count">0 REGELN</span>
+            </div>
+            <div class="detection-table-wrap">
+              <table class="detection-table" id="detectionTable">
+                <thead><tr><th>NAME</th><th>KATEGORIE</th><th>IOS</th><th>ANDROID</th><th>STATUS</th></tr></thead>
+                <tbody id="detectionRows"></tbody>
+              </table>
+            </div>
+            <div class="detection-list-actions">
+              <button id="detectionAdd" type="button">+ NEUE REGEL</button>
+              <button id="detectionExport" type="button">JSON EXPORTIEREN</button>
+              <label class="detection-import">JSON IMPORTIEREN<input id="detectionImport" type="file" accept=".json,application/json" hidden /></label>
+            </div>
+          </div>
+          <div class="detection-editor-panel" id="detectionEditor" hidden>
+            <div class="detection-editor-head">
+              <strong id="detectionEditorTitle">REGEL BEARBEITEN</strong>
+              <button id="detectionDuplicate" type="button">DUPLIZIEREN</button>
+              <button id="detectionDelete" type="button" class="danger">LÖSCHEN</button>
+            </div>
+            <div class="detection-editor-fields" id="detectionEditorFields"></div>
+            <div class="detection-editor-actions">
+              <button id="detectionSave" type="button" disabled>SPEICHERN</button>
+              <button id="detectionCancel" type="button">ABBRECHEN</button>
+            </div>
+            <p id="detectionEditorMessage" role="status" aria-live="polite"></p>
+          </div>
         </div>
-        <p id="cryptoMessage" role="status" aria-live="polite"></p>
+        <div class="detection-glossary" id="detectionGlossary">
+          <details>
+            <summary>BEGRIFFE ERKLÄREN</summary>
+            <dl>
+              <dt>ANDROID-APP-ID / PACKAGE-ID</dt><dd>Eindeutige technische Kennung einer Android-App. Beispiel: <code>io.metamask</code>. Zu finden z. B. im offiziellen Google-Play-Eintrag, häufig in der URL hinter <code>id=</code>. Nicht raten.</dd>
+              <dt>IOS BUNDLE-ID</dt><dd>Eindeutige technische Kennung einer iPhone-/iPad-App. Beispiel: <code>com.hersteller.app</code>. Nur aus überprüfbarer Quelle übernehmen.</dd>
+              <dt>ALIAS</dt><dd>Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.</dd>
+              <dt>SUCHBEGRIFF</dt><dd>Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: <code>metamask</code>. Unscharfe Suchbegriffe können Fehlalarme erzeugen.</dd>
+              <dt>ID FEHLT</dt><dd>Für diese Plattform ist noch keine verifizierte technische App-ID gespeichert. Die App kann gegebenenfalls nur über ihren Namen oder Alias erkannt werden.</dd>
+              <dt>LEGACY</dt><dd>Ältere, umbenannte oder eingestellte App, die auf vorhandenen älteren Geräten noch installiert sein kann.</dd>
+              <dt>VERIFIZIERT</dt><dd>Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.</dd>
+              <dt>RELEVANZ</dt><dd>HOCH = starker Krypto-Hinweis (Wallet/Börse); MITTEL = Portfolio/Steuer/Zahlung; NIEDRIG = vage Hinweise; NEUTRAL = Banking/Messenger/Cloud erzeugt keinen Krypto-Hinweis.</dd>
+              <dt>AKTIV</dt><dd>Nur aktive Regeln werden für neue Scans verwendet.</dd>
+              <dt>BACKUP-ERKENNUNGSSICHERHEIT</dt><dd>Die Einstufung entsteht aus übereinstimmenden Strukturmerkmalen (Pfad, Dateiname, Endung). Sie ist kein Inhaltsnachweis.</dd>
+            </dl>
+          </details>
+        </div>
+        <div class="catalog-actions">
+          <span id="detectionVersion"></span>
+          <button id="detectionSaveAll" type="button" disabled>ALLE ÄNDERUNGEN SPEICHERN</button>
+        </div>
+        <p id="detectionMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsFiletypesPane" class="settings-pane" aria-labelledby="settingsFiletypesTab" hidden>
         <p>Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>

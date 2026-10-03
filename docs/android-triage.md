@@ -1,18 +1,18 @@
-# Android- und Telefon-Triage
+# Android-/Mobilgerät-Triage
 
-Stand: 2. Oktober 2026 · Anwendung `v0.2.0-alpha.60`
+Stand: 3. Oktober 2026 · Anwendung `v0.2.0-alpha.61`
 
 ## Zweck
 
-Der normale Telefonlauf ist ein **Krypto-Schnellscan**. Er erfasst Geräteidentität, Betriebssystem, zugängliche Benutzer-/Arbeitsprofile und die gemeldeten Benutzer-Apps. Die App-Kennungen werden gegen dieselbe lokale Regelbasis wie beim iPhone geprüft. Er liest keine App-Inhalte, Nachrichten, Fotos, Dateien, Wallets, Schlüssel oder Seeds.
+Der normale Mobilgerät-Lauf ist ein **Krypto-Schnellscan**. Er erfasst Geräteidentität, Betriebssystem, zugängliche Benutzer-/Arbeitsprofile und die gemeldeten Benutzer-Apps. Die App-Kennungen werden gegen dieselbe lokale Erkennungsregelbasis wie beim Apple-Mobilgerät geprüft. Er liest keine App-Inhalte, Nachrichten, Fotos, Dateien, Wallets, Schlüssel oder Seeds.
 
-„Keine Krypto-Apps in der erfassten Benutzer-App-Liste erkannt“ ist deshalb kein Beleg, dass das Telefon keine Krypto-Nutzung oder Vermögenswerte enthält. War ein Profil nicht zugänglich, steht es ausdrücklich auf **nicht vollständig prüfbar**.
+„Keine Krypto-Apps in der erfassten Benutzer-App-Liste erkannt“ ist deshalb kein Beleg, dass das Mobilgerät keine Krypto-Nutzung oder Vermögenswerte enthält. War ein Profil nicht zugänglich, steht es ausdrücklich auf **nicht vollständig prüfbar**. Banking-/Finanz-Apps werden separat als neutraler Finanzhinweis dokumentiert.
 
 ## Automatische Erkennung
 
 1. Apple-Geräte werden über `idevice_id` erkannt und dem iPhone-Collector zugeordnet.
 2. Android-Geräte werden zunächst ohne Inhaltszugriff anhand ihrer Linux-USB-Geräteinformationen erkannt. Bekannte Hersteller-IDs dienen nur der Zuordnung als Android-Kandidat.
-3. Sobald das Telefon die Verbindung freigibt, meldet `adb devices -l` den Zustand `device`. Dann werden Hersteller, Modell, Android-Version und Build ergänzt und der Scan kann automatisch starten.
+3. Sobald das Android-Mobilgerät die Verbindung freigibt, meldet `adb devices -l` den Zustand `device`. Dann werden Hersteller, Modell, Android-Version und Build ergänzt und der Scan kann automatisch starten.
 4. `unauthorized` bedeutet: Die Verbindungsabfrage wartet am Telefon. `offline` beziehungsweise fehlende Freigabe wird nicht als scanbares Gerät behandelt.
 
 Die Box pollt den Zustand weiter. Bei aktivem Fall und Auto-Scan wechselt ein bestätigtes Gerät selbstständig vom Hilfebildschirm in den Scan.

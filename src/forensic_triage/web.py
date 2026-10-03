@@ -799,7 +799,7 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def _post_crypto_rules(self) -> None:
         try:
-            payload = self._read_payload(max_bytes=131072)
+            payload = self._read_payload(max_bytes=786432)
             with self.server.settings_lock:
                 rules = save_crypto_rules(
                     self.server.crypto_rules_path, payload.get("rules"), str(payload.get("base_sha256", "")),
@@ -1242,6 +1242,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 str(payload.get("reason_note", "")),
                 str(payload.get("operator", "")),
                 str(payload.get("evidence_number", "")) or None,
+                str(payload.get("specialist_name", "")) or None,
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.OK, record)

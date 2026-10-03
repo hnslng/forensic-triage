@@ -1,11 +1,11 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.60 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.61 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
 
-TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern und Telefonen vor Ort. USB-/CD-Medien werden anhand zugänglicher Metadaten inventarisiert. Bei iPhones und Android-Geräten beantwortet ein eigener Krypto-Schnellscan dagegen bewusst nur die Frage, ob in der erfassten Benutzer-App-Liste relevante Wallet-, Börsen- oder Krypto-Apps vorkommen. Scan und Entscheidung werden nachvollziehbar in einer lokalen Fallakte dokumentiert.
+TRIAGE//BOX ist ein leichtgewichtiges Werkzeug zur forensischen Grobsichtung von Wechseldatenträgern und Mobilgeräten vor Ort. USB-/CD-Medien werden anhand zugänglicher Metadaten inventarisiert. Bei iPhones, iPads und Android-Geräten beantwortet ein eigener Krypto-Schnellscan dagegen bewusst nur die Frage, ob in der erfassten Benutzer-App-Liste relevante Wallet-, Börsen- Krypto-Apps oder Banking-/Finanz-Apps vorkommen. Zusätzlich erkennt TRIAGE//BOX auf Datenträgern charakteristische Strukturen lokaler Geräte-Backups (z. B. iTunes/Finder, Samsung Smart Switch, Android ADB, Xiaomi, Huawei), öffnet diese aber niemals. Scan und Entscheidung werden nachvollziehbar in einer lokalen Fallakte dokumentiert.
 
 Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es soll die Entscheidung unterstützen, welche Datenträger für eine spätere professionelle Untersuchung gesichert oder mitgenommen werden.
 
@@ -38,7 +38,10 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - automatische Telefonerkennung: iPhone über reguläre Apple-USB-Dienste, Android zunächst über USB-Geräteinformationen und nach Freigabe über den gemeinsamen Android-Collector
 - schneller iPhone-/Android-App-Scan mit Geräteinformationen, zugänglichen Benutzerprofilen, Benutzer-App-Liste und Krypto-Klassifikation – ohne Foto-, Medien- oder Dateisichtung
 - verständliche Samsung-, Pixel-, Xiaomi-, Motorola-, OnePlus- und allgemeine Android-Anleitung, solange die Verbindung am Telefon noch nicht vorbereitet oder bestätigt ist
-- gemeinsame, lokal bearbeitbare Krypto-Regeln mit getrennten iOS-Bundle-IDs und Android-Package-IDs; Wallets, Hardware-Wallet-Begleiter, Börsen, Portfolio-/Steuer- und Zahlungsdienste bleiben nachvollziehbar getrennt
+- gemeinsame, lokal bearbeitbare Erkennungsregeln mit getrennten iOS-Bundle-IDs und Android-Package-IDs; Wallets, Hardware-Wallet-Begleiter, Börsen, Portfolio-/Steuer-, Zahlungsdienste, Banking/Finanzen und Geräte-Backups bleiben nachvollziehbar getrennt
+- Master-Detail-Editor für Erkennungsregeln mit Suche, Filter, Sortierung, Duplizieren, Löschen, JSON-Import/Export und Tooltips
+- Banking-/Finanz-Apps erzeugen bewusst neutrale Hinweise; sie allein lösen keinen Krypto-Hinweis aus
+- Geräte-Backup-Erkennung auf Datenträgern anhand struktureller Merkmale ohne Öffnung der Backup-Inhalte
 
 ## Wichtige Grenzen
 
@@ -58,6 +61,8 @@ Das bedeutet insbesondere:
 - Geladene Medien in externen USB-CD/DVD-Laufwerken werden über einen eigenen, nur-lesenden Scanpfad erfasst; der reale Hardwaretest steht noch aus.
 - Das System trifft keine rechtliche oder fachliche Sicherstellungsentscheidung.
 - Ein App-Treffer belegt weder Wallet-Inhalte noch Vermögenswerte. „Kein Treffer“ bedeutet nur: keine passende App in der tatsächlich erfassten App-Liste. Ein technisch nicht zugängliches Profil wird ausdrücklich als ungeprüft ausgewiesen.
+- Banking-/Finanz-App-Treffer sind neutral und keine Krypto-Indikatoren.
+- Backup-Erkennungen belegen nur charakteristische Strukturen (Pfad, Dateiname, Endung), nie den Inhalt oder die erfolgreiche Wiederherstellung eines Backups.
 - Android erfordert aktiviertes USB-Debugging und eine Bestätigung am entsperrten Telefon. Arbeitsprofile werden abgefragt, soweit das System sie meldet. Secure Folder/Knox und andere geschützte Bereiche können unzugänglich bleiben und werden dann nicht als negativ bewertet.
 
 Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
@@ -118,9 +123,9 @@ Die ausführliche Bedienung steht in [docs/operation.md](docs/operation.md).
 
 TRIAGE//BOX erkennt den Gerätetyp automatisch. Beim iPhone werden nach regulärer Kopplung die gemeldeten Benutzer-Apps gelesen. Bei Android erkennt die Box verbreitete Hersteller bereits auf USB-Ebene; für die zuverlässige App-Liste führt die Oberfläche durch die einmalige Gerätefreigabe. Danach werden alle über die Android-Schnittstelle sichtbaren Benutzer-/Arbeitsprofile nacheinander abgefragt. Ein nicht zugänglicher geschützter Bereich bleibt als **nicht vollständig prüfbar** markiert.
 
-Die lokale Regelbasis ordnet verifizierte iOS-Bundle-IDs beziehungsweise Android-Package-IDs Kategorien und Relevanzstufen zu. **HOCH** kennzeichnet etwa Self-Custody-Wallets, Hardware-Wallet-Begleiter und Börsen/Broker; **MITTEL** derzeit klar kryptobezogene Steuer-/Portfolio-Werkzeuge. App-Namen und Aliase dienen ergänzend der iOS-Erfassung, Paketkennungen werden nicht geraten. Regeln lassen sich unter **Einstellungen → Krypto-Regeln** lokal erweitern.
+Die lokale Regelbasis ordnet verifizierte iOS-Bundle-IDs beziehungsweise Android-Package-IDs Kategorien und Relevanzstufen zu. **HOCH** kennzeichnet etwa Self-Custody-Wallets, Hardware-Wallet-Begleiter und Börsen/Broker; **MITTEL** klar kryptobezogene Steuer-/Portfolio- und Zahlungsdienste; **NIEDRIG** vage Hinweise auf nicht katalogisierte Kandidaten; **NEUTRAL** Banking-/Finanz-, Messenger- und Cloud-Apps. App-Namen und Aliase dienen ergänzend der Erkennung, Paketkennungen werden nicht geraten. Unverifizierte Kennungen bleiben leer und werden als „ID fehlt“ gekennzeichnet. Regeln lassen sich unter **Einstellungen → Erkennungsregeln** lokal erweitern.
 
-Der Schnellscan liest keine Wallet-Inhalte, Schlüssel, Seeds, Nachrichten, Fotos oder sonstigen Dateien. Er ist ein Triage-Hinweis: Eine erkannte App begründet eine weitere fachliche Prüfung; kein Treffer ist nur für die erfolgreich erfasste App-Liste aussagekräftig. Details stehen in [iPhone-Triage](docs/iphone-triage.md) und [Android-/Telefon-Triage](docs/android-triage.md).
+Der Schnellscan liest keine Wallet-Inhalte, Schlüssel, Seeds, Nachrichten, Fotos oder sonstigen Dateien. Er ist ein Triage-Hinweis: Eine erkannte Krypto-App begründet eine weitere fachliche Prüfung; Banking-/Finanz-Apps dokumentiert das System separat als neutralen Finanzhinweis. Kein Treffer ist nur für die erfolgreich erfasste App-Liste aussagekräftig. Details stehen in [iPhone-Triage](docs/iphone-triage.md) und [Android-/Mobilgerät-Triage](docs/android-triage.md).
 
 ## Live-Kit: aktueller Stand
 
@@ -162,7 +167,9 @@ Der Standard ist `--mode fast`. Für den langsameren mountfreien Verzeichnislauf
 - [Installation und Aktualisierung](docs/installation.md)
 - [Signierte Offline-Updates](docs/offline-updates.md)
 - [Konfiguration](docs/configuration.md)
-- [Einstellungen: Stichwortprofile, Dateitypen und Krypto-Regeln](docs/settings.md)
+- [Einstellungen: Stichwortprofile, Dateitypen und Erkennungsregeln](docs/settings.md)
+- [Erkennungsregeln: Krypto, Banking, Backups, Dateihinweise](docs/detection-rules.md)
+- [Gerätebackup-Erkennung](docs/device-backups.md)
 - [Bedienung und Fallworkflow](docs/operation.md)
 - [Forensische Sicherheitsgrenzen](docs/forensic-safety.md)
 - [Architektur](docs/architecture.md)
@@ -190,9 +197,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a60` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.60`
-- automatisierte Tests: 157 Python-Prüfungen und 36 isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen und Regelmigration
+- Paketversion: `0.2.0a61` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.61`
+- automatisierte Tests: 157+ Python-Prüfungen und 36+ isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen, Regelmigration, Backup-Signaturen und skalierbarer Regellisten
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: reale Android-/Samsung-Abnahme, erneuter iPhone-Zeitvergleich der neuen App-only-Version, vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
@@ -206,4 +213,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.60 searches removable-media names and paths, not file payloads. Its phone path is separate: paired iPhones and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).
+Version 0.2.0-alpha.61 searches removable-media names and paths, not file payloads. Its phone path is separate: paired Apple mobile devices and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. Banking/finance app matches are neutral indicators, never crypto alerts. Device-backup structures (e.g. iTunes/Finder, Samsung Smart Switch, Android ADB, Xiaomi, Huawei) are recognized on media from path and filename patterns only; backup contents are never opened. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).

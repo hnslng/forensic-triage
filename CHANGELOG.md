@@ -2,12 +2,26 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.61] – 2026-10-03
+
+- Skalierbare Erkennungsregeln: Obergrenze auf mindestens 2.000 App-Regeln, 500 Dateiregeln und 200 Backup-Regeln erhöht; Regeln bleiben als lokale JSON-Datei dauerhaft bearbeitbar.
+- Regelmodell um Metadaten erweitert: `status` (active/legacy), `verified`, `source`, `last_verified`, `regions`, `aliases`, `former_names`, `ios_bundle_ids`, `android_package_ids`.
+- Neuer Master-Detail-Editor unter **Einstellungen → Erkennungsregeln** mit Unterbereichen Krypto-Apps, Banking & Finanzen, Geräte-Backups und Dateihinweise. Suche, Filter, Sortierung, Duplizieren, Löschen, JSON-Import/Export und Tooltips integriert.
+- Großer erweiterter Krypto-Masterkatalog für Europa und verbreitete internationale Apps: Wallets, Hardware-Wallet-Begleiter, Börsen/Broker, Portfolio/Steuer, Zahlungsdienste sowie chain-spezifische Wallets.
+- Neuer breiter europäischer Banking-/Finanz-App-Katalog. Banking-/Finanz-Apps erzeugen bewusst neutrale Hinweise und lösen allein keinen Krypto-Hinweis aus.
+- Geräte-Backup-Erkennung auf Datenträgern ohne Öffnung der Backup-Inhalte: Apple Finder/iTunes, Samsung Smart Switch, Android ADB Backup, Xiaomi, Huawei, OnePlus/Oppo/realme, Windows-Image, iCloud Drive. Ergebnisse mit Erkennungssicherheit HOCH/MITTEL/NIEDRIG.
+- Backup-Hinweise in Scan-Ergebnis, `backup-hints.json`, `summary.json`, Fallbericht, PDF und Fall-ZIP integriert.
+- Konservative Erkennung unbekannter Krypto-Kandidaten als niedriger Hinweis; bekannte Markenbegriffe sind davon ausgenommen, weil diese über verifizierte Regeln abgedeckt werden.
+- Vollständige Rückwärtskompatibilität: bestehende lokale `crypto-rules.json` werden migriert, alte Scans und Snapshots bleiben lesbar, der Fallindex wird nicht unnötig verändert.
+- Dokumentation überarbeitet: README, settings, architecture, how-it-works, test-plan, case-archive, forensic-safety, iphone-triage, android-triage, project-status, roadmap sowie neue Dokumente detection-rules.md und device-backups.md.
+- Versionen in Code, README und Dokumentation auf `0.2.0-alpha.61` (`0.2.0a61`) angehoben.
+
 ## [0.2.0-alpha.60] – 2026-10-02
 
 - Telefon-Schnellscan auf Geräteinformationen, Benutzer-App-Liste und Krypto-Klassifikation begrenzt. iPhones werden im normalen Lauf nicht mehr per AFC/`ifuse` eingebunden; Fotos, Dateien, Ordner, Dateistichworte und Größenstatistiken bleiben unberührt.
 - Android-Collector ergänzt: verbreitete Hersteller werden bereits als USB-Gerät erkannt, ADB-Status und Autorisierung werden automatisch nachgeführt, sichtbare Android-Benutzer-/Arbeitsprofile werden getrennt abgefragt und geschützte, nicht sichtbare Bereiche ausdrücklich als ungeprüft ausgewiesen.
 - Gemeinsame Krypto-Regeln unterstützen nun getrennte verifizierte `ios_bundle_ids` und `android_package_ids`. Erste Android-IDs für MetaMask, Trust Wallet, Exodus, Ledger Live, Bitpanda, Coinbase, Kraken und Binance stammen aus den offiziellen Store-Einträgen; es werden keine Paketkennungen geraten.
-- Einheitliche Telefonansicht zeigt Krypto-Kategorien, Relevanz und Erfassungsstatus. „Kein Treffer“ gilt nur für eine erfolgreich erfasste App-Liste; unvollständige oder nicht zugängliche Bereiche erzeugen keinen Negativbefund.
+- Einheitliche Telefonansicht zeigt Krypto-Kategorien, Relevanz und Erfassungsstatus. „Kein Treffer" gilt nur für eine erfolgreich erfasste App-Liste; unvollständige oder nicht zugängliche Bereiche erzeugen keinen Negativbefund.
 - Phasenlaufzeiten werden für Geräteinformationen, App-Inventar und Klassifikation gespeichert. Ein belastbarer Geschwindigkeitsvergleich folgt erst mit demselben realen iPhone; der letzte alte Lauf mit Dateizusatz dauerte rund 16,35 Sekunden.
 - Debian-/Pi-Installer ergänzt `adb` und die lokale Dokumentation beschreibt Installation, Autorisierung, Herstelleranleitungen, Profile, Secure Folder/Knox, Grenzen und den noch offenen Android-Praxistest.
 

@@ -8,7 +8,7 @@ Die Bedienoberfläche erkennt angeschlossene Datenträger und Telefone automatis
 
 Bei iPhones liest der Schnellscan nach Entsperrung und Trust-Bestätigung Geräteinformationen und die von Apple gemeldete Benutzer-App-Liste. Bei Android erkennt die Box verbreitete Hersteller zunächst am USB-Gerät. Sobald USB-Debugging aktiviert und der Computer am Telefon autorisiert wurde, liest ein gemeinsamer Android-Collector Geräteinformationen sowie Benutzer-Apps aller über ADB sichtbaren Profile. Herstellerabhängig ist nur die angezeigte Hilfe, nicht die Scanlogik.
 
-Beide Telefonpfade prüfen dieselbe lokale Krypto-Regelbasis mit getrennten iOS-Bundle- und Android-Package-IDs. Der normale Telefonlauf bindet keine AFC-/Medien- oder File-Sharing-Bereiche ein, zählt keine Fotos/Dateien/Ordner und führt keine Dateistichwort- oder Größenanalyse aus. Er liest weder Wallet-Inhalte noch Schlüssel oder Seeds. Treffer sind Triage-Hinweise; ein ausbleibender Treffer gilt nur für die erfolgreich erfasste App-Liste. Nicht sichtbare Android-Profile oder geschützte Bereiche bleiben ausdrücklich ungeprüft. Details: [iPhone-Triage](iphone-triage.md) und [Android-Triage](android-triage.md).
+Beide Telefonpfade prüfen dieselbe lokale Erkennungsregelbasis mit getrennten iOS-Bundle- und Android-Package-IDs. Der normale Mobilgerät-Lauf bindet keine AFC-/Medien- oder File-Sharing-Bereiche ein, zählt keine Fotos/Dateien/Ordner und führt keine Dateistichwort- oder Größenanalyse aus. Er liest weder Wallet-Inhalte noch Schlüssel oder Seeds. Krypto-Treffer sind Triage-Hinweise; Banking-/Finanz-App-Treffer werden separat als neutraler Finanzhinweis dokumentiert. Ein ausbleibender Krypto-Treffer gilt nur für die erfolgreich erfasste App-Liste. Nicht sichtbare Android-Profile oder geschützte Bereiche bleiben ausdrücklich ungeprüft. Details: [iPhone-Triage](iphone-triage.md) und [Android-Triage](android-triage.md).
 
 ## Was passiert beim Anschließen?
 
@@ -21,8 +21,9 @@ Beide Telefonpfade prüfen dieselbe lokale Krypto-Regelbasis mit getrennten iOS-
 7. Dateinamen, Pfade, Endungen, Größen und Zeitstempel werden in eine Tabelle geschrieben.
 8. ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archive erhalten innerhalb eines gemeinsamen Zeitbudgets einen reinen Verzeichnisindex. Nutzdateien werden nicht extrahiert oder dekomprimiert; komprimierte Archivverzeichnisse können intern dekodiert werden.
 9. Kategorien, Größenstatistik und größte Dateien entstehen aus den äußeren Dateimetadaten. Für Namens-/Pfadsuche und Stichworttreffer kommen die katalogisierten virtuellen Containerpfade hinzu. Die normalen Datei-/Ordnerzahlen zählen Containerinhalte bewusst nicht doppelt.
-10. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
-11. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
+10. Zusätzlich prüft die Backup-Erkennung die erfassten Pfade und Dateinamen auf charakteristische Strukturen lokaler Geräte-Backups (z. B. Apple Finder/iTunes, Samsung Smart Switch, Android ADB, Xiaomi, Huawei). Dabei werden keine Backup-Inhalte geöffnet.
+11. Das Dashboard zeigt das Ergebnis. Es öffnet oder zeigt keine Nutzdatei-Payload vom Datenträger.
+12. Die Entscheidung der bedienenden Person wird mit Zeit, Fall, Medium und Bearbeiter protokolliert.
 
 Normale versteckte Dateien und Ordner werden dabei wie andere aktive Dateisystemeinträge erfasst: Dazu gehören Unix-Namen mit führendem Punkt und reguläre aktive Einträge mit einem Hidden-Attribut. Bewusst nicht gesucht werden gelöschte Dateien; interne Dateisystem-Hilfsstrukturen werden ausgefiltert. Beschädigte oder nicht lesbare Einträge können ohne Recovery ebenfalls fehlen.
 
@@ -60,7 +61,8 @@ Mehrere geeignete USB-Datenträger können gleichzeitig jeweils einen eigenen Sc
 | `classifier.py`, `keywords.py`, `statistics.py` | Kategorien, Treffer und Zahlen |
 | `src/forensic_triage/casefiles.py` | Fallindex, Sichtungsnummern, Audit und Exporte |
 | `src/forensic_triage/pdf_report.py` | kompakter druckbarer Fallbericht |
-| `src/forensic_triage/crypto_rules.py` | gemeinsame iOS-/Android-App- und Dateinamenregeln, Validierung und Versionierung |
+| `src/forensic_triage/crypto_rules.py` | gemeinsame Erkennungsregeln für Apps, Dateien und Backups, Validierung und Versionierung |
+| `src/forensic_triage/backup_detection.py` | strukturelle Geräte-Backup-Erkennung ohne Inhaltsöffnung |
 | `profiles/*.yaml` | mitgelieferte Stichwortprofile |
 | `src/forensic_triage/settings.py` | lokale Einstellungen, Katalogprüfung, Migration und Scan-Snapshots |
 
@@ -86,7 +88,7 @@ Eine Konfigurationsdatei trennt lokale Einstellungen vom Programmcode. Dadurch k
 
 Das ist der übliche Ansatz für einen lokalen Linux-Dienst: Code bleibt versioniert, Passwörter und gerätespezifische Pfade bleiben lokal.
 
-Seit Alpha 44 sind Stichwortprofile und Dateitypen über einen eigenen [Einstellungen-Bereich](settings.md) bearbeitbar. Lokale Kopien liegen im konfigurierten Einstellungen-Ordner. Der Scanner speichert seinen vollständigen Endungskatalog mit Prüfsumme, damit spätere Katalogänderungen alte Auswertungen nicht verändern. Das Standardverzeichnis enthält nun auch weitere Kamera-, Office-, Image- und Systemformate; mehrdeutige Endungen werden neutral zugeordnet.
+Seit Alpha 44 sind Stichwortprofile und Dateitypen über einen eigenen [Einstellungen-Bereich](settings.md) bearbeitbar. Seit Alpha 61 umfasst dieser Bereich auch Erkennungsregeln für Krypto-Apps, Banking/Finanzen, Geräte-Backups und Dateihinweise in einer Master-Detail-Ansicht. Lokale Kopien liegen im konfigurierten Einstellungen-Ordner. Der Scanner speichert seinen vollständigen Endungskatalog und die Regelsammlung mit Prüfsumme, damit spätere Änderungen alte Auswertungen nicht verändern. Das Standardverzeichnis enthält nun auch weitere Kamera-, Office-, Image- und Systemformate; mehrdeutige Endungen werden neutral zugeordnet.
 
 Seit Alpha 45 kann der Laptop ein signiertes Anwendungsupdate direkt über den TRIAGEBOX-Hotspot übertragen. Dieses Verfahren betrifft ausschließlich Programmcode: Es liest oder verändert keine angeschlossenen Prüfmedien und keine Fallakten. Vor der Aktivierung werden Signatur, Manifest, Einzelprüfsummen, Versionssprung, unveränderte Abhängigkeiten und die Python-Tests geprüft. Details: [Offline-Updates](offline-updates.md).
 
@@ -96,4 +98,4 @@ TRIAGE//BOX liest keine Nutzdatei-Payload, erzeugt kein Image, sucht nicht in Da
 
 ## English summary
 
-The browser talks to a local Python service. After an explicit case start, eligible USB media are guarded and inventoried read-only. iPhones and Android devices use separate app-only collectors and a shared crypto-rule set; the phone quick scan does not inspect files or media. Configuration lives outside Git in `/etc/forensic-triage/triage.env`; real case data stays under the configured local case and result roots. The laptop is only a display/access client and stores no case database.
+The browser talks to a local Python service. After an explicit case start, eligible USB media are guarded and inventoried read-only. iPhones, iPads and Android devices use separate app-only collectors and a shared detection-rule set; the phone quick scan does not inspect files or media. Device-backup structures are recognized on media from path and filename patterns only; contents are never opened. Configuration lives outside Git in `/etc/forensic-triage/triage.env`; real case data stays under the configured local case and result roots. The laptop is only a display/access client and stores no case database.

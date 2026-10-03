@@ -20,6 +20,7 @@ from .container_inventory import (
     merge_catalogs,
     virtual_files,
 )
+from .backup_detection import find_backup_hints, summarize_backup_hints
 from .crypto_rules import bundled_rules, find_file_hints
 from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
@@ -181,10 +182,20 @@ def scan(
         apply_catalog(all_files, container_catalog, catalog)
         rule_snapshot = crypto_rules or bundled_rules()
         crypto_files = find_file_hints([*all_files, *virtual_files(container_catalog)], rule_snapshot)
+        backup_hints = find_backup_hints(
+            [*all_files, *virtual_files(container_catalog)],
+            all_directories,
+            rule_snapshot,
+        )
         write_json(result_dir / "crypto-rules.json", rule_snapshot)
         write_json(result_dir / "crypto-hints.json", {
             "rules": {"version": rule_snapshot["version"], "sha256": rule_snapshot["sha256"]},
             "app_hints": [], "file_hints": crypto_files,
+        })
+        write_json(result_dir / "backup-hints.json", {
+            "rules": {"version": rule_snapshot["version"], "sha256": rule_snapshot["sha256"]},
+            "backup_hints": backup_hints,
+            "summary": summarize_backup_hints(backup_hints),
         })
         # Web requests already froze keywords and profile provenance before I/O.
         profile = (load_profile(profile_path) if keywords is None or not profile_sources
@@ -216,6 +227,7 @@ def scan(
                 "filetype_catalog": {"version": catalog["version"], "sha256": catalog["sha256"]},
                 "crypto_rules": {"version": rule_snapshot["version"], "sha256": rule_snapshot["sha256"]},
                 "crypto_file_hints": len(crypto_files),
+                "backup_hints": summarize_backup_hints(backup_hints),
                 "keyword_matches": hits["total_matches"],
                 "container_index": {
                     "status": container_catalog.get("status", "ok"),

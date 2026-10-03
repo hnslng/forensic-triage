@@ -70,13 +70,17 @@ def rough_content(summary: Mapping[str, Any], limit: int = 4) -> str:
         ),
         key=lambda item: (-item[1], item[0].casefold()),
     )
-    if not categories:
+    backup_summary = summary.get("backup_hints") or {}
+    backup_total = int(backup_summary.get("total") or 0)
+    if not categories and not backup_total:
         return "Keine kategorisierbaren Dateien"
     shown = categories[:limit]
     parts = [f"{name}: {format_count(count)}" for name, count in shown]
     remaining = sum(count for _, count in categories[limit:])
     if remaining:
         parts.append(f"Weitere: {format_count(remaining)}")
+    if backup_total:
+        parts.append(f"Backup-Strukturen: {format_count(backup_total)}")
     return ", ".join(parts)
 
 
@@ -87,6 +91,8 @@ def decision_summary(row: Mapping[str, Any]) -> tuple[str, colors.Color]:
         "secure": "ZUR SICHERUNG AUSGEWÄHLT",
         "not_selected": "NICHT AUSGEWÄHLT",
         "review": "ENTSCHEIDUNG OFFEN (HISTORISCHER STATUS)",
+        "specialist_consulted": "FACHPERSON HINZUGEZOGEN",
+        "specialist_not_consulted": "KEINE FACHPERSON HINZUGEZOGEN",
     }
     reasons = {
         "no_indicators": "Keine fallbezogenen Indikatoren",
@@ -101,13 +107,16 @@ def decision_summary(row: Mapping[str, Any]) -> tuple[str, colors.Color]:
     evidence = str(row.get("evidence_number") or "").strip()
     if evidence:
         lines.append(f"Beweismittel: {evidence}")
+    specialist = str(row.get("specialist_name") or "").strip()
+    if specialist:
+        lines.append(f"Fachperson: {specialist}")
     reason = reasons.get(str(row.get("reason_code") or ""), "")
     if reason:
         lines.append(reason)
     note = str(row.get("reason_note") or "").strip()
     if note:
         lines.append(note)
-    color = ACCENT if decision == "secure" else AMBER if decision in {"review", "open"} else RED
+    color = ACCENT if decision == "secure" else AMBER if decision in {"review", "open", "specialist_consulted"} else RED
     return "<br/>".join(html.escape(line) for line in lines), color
 
 
