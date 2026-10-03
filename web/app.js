@@ -1,4 +1,15 @@
 const $ = (id) => document.getElementById(id);
+const SVG_ICONS = {
+  settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  power: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`,
+  refresh: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>`,
+  start: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  stop: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg>`,
+  eject: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 0L5 10m7-7l7 7M3 21h18"/></svg>`,
+  bolt: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  plus: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`,
+};
+const ICON_TEXT = (svg) => `<span class="icon-text" aria-hidden="true">${svg}</span>`;
 let devices = [];
 let deviceDiscoveryError = "";
 const deviceStates = new Map();
@@ -39,6 +50,10 @@ let profilesInitialized = false;
 let keywordDraft = [];
 let draftSelectedKeywords = new Set();
 let profileEditorId = "default";
+let profileDetailId = null;
+let profileDetailDraft = [];
+let profileDetailSelected = new Set();
+let profileDetailDirty = false;
 let catalogState = null;
 let catalogDefaults = null;
 let catalogBusy = false;
@@ -148,6 +163,7 @@ let pendingPowerAction = null;
 let powerActionInProgress = false;
 let serverActiveCase = null;
 let caseSessionTransition = false;
+let startOverlayReady = false;
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const rememberUpdateDialog = () => sessionStorage.setItem(UPDATE_DIALOG_RESTORE_KEY, "1");
 const forgetUpdateDialog = () => sessionStorage.removeItem(UPDATE_DIALOG_RESTORE_KEY);
@@ -172,6 +188,20 @@ function setSystemState(text, state = activeCaseNumber ? "ready" : "locked") {
   if (state !== "ready") $("systemStatus").classList.add(state);
 }
 
+function updateStartOverlay() {
+  const overlay = $("startOverlay");
+  if (!overlay) return;
+  const hasCase = Boolean(activeCaseNumber || serverActiveCase?.case_number);
+  if (hasCase) {
+    startOverlayReady = true;
+    overlay.hidden = true;
+    return;
+  }
+  // Wait until the first server status has been loaded so the overlay does not
+  // flash briefly when the page reloads with an active case on the server.
+  overlay.hidden = !startOverlayReady;
+}
+
 function powerBlockedReason() {
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   if (runningPaths.size) return "LAUFENDEN SCAN ZUERST ABSCHLIESSEN";
@@ -187,6 +217,7 @@ function renderPowerState(value = {}) {
   const health = $("powerHealth");
   health.className = `power-health ${state}`;
   health.hidden = !["warning", "danger"].includes(state);
+  health.innerHTML = SVG_ICONS.bolt;
   health.title = state === "danger"
     ? `${label} · Stromversorgung jetzt prüfen`
     : `${label} · seit dem letzten Systemstart gespeichert`;
@@ -454,13 +485,13 @@ function openAuftrag() {
   if (!$("auftragModal").open) $("auftragModal").showModal();
 }
 
-const nestedAuftragDialogs = ["keywordModal", "caseArchiveModal", "deleteModal"];
+const nestedAuftragDialogs = ["caseArchiveModal", "deleteModal"];
 
 function syncAuftragBackdrop() {
   const nestedOpen = nestedAuftragDialogs.some((id) => $(id).open);
   $("auftragModal").classList.toggle("nested-open", $("auftragModal").open && nestedOpen);
   $("caseArchiveModal").classList.toggle("nested-open", $("caseArchiveModal").open && $("deleteModal").open);
-  $("settingsModal").classList.toggle("nested-open", $("settingsModal").open && $("keywordModal").open);
+  $("settingsModal").classList.toggle("nested-open", false);
 }
 
 function openNestedAuftragDialog(id) {
@@ -487,12 +518,18 @@ function updateKeywordSummary() {
   $("dockProfiles").textContent = names.length ? names.join(" + ").toUpperCase() : "KEIN SUCHPROFIL";
 }
 
-function renderKeywordOptions() {
-  $("keywordOptions").innerHTML = keywordDraft.map((keyword) => `<label class="keyword-option">
+function renderKeywordOptions(container = $("profileDetailOptions")) {
+  if (!container) return;
+  container.innerHTML = keywordDraft.map((keyword) => `<label class="keyword-option">
     <input type="checkbox" value="${escapeHtml(keyword)}" ${draftSelectedKeywords.has(keyword) ? "checked" : ""} />
     <span>${escapeHtml(keyword.toUpperCase())}</span>
     <button class="keyword-remove" type="button" data-remove-keyword="${escapeHtml(keyword)}" aria-label="${escapeHtml(keyword)} entfernen">×</button>
   </label>`).join("");
+}
+
+function updateProfileDetailCount() {
+  const count = keywordDraft.length;
+  $("profileDetailCount").textContent = `${count} STICHWORT${count === 1 ? "" : "ER"}`;
 }
 
 function renderProfileList() {
@@ -500,11 +537,14 @@ function renderProfileList() {
     <input type="checkbox" value="${escapeHtml(profile.id)}" ${activeProfileIds.has(profile.id) ? "checked" : ""} />
     <span class="profile-list-copy"><strong>${escapeHtml(profile.name.toUpperCase())}</strong><small>V${escapeHtml(profile.version)} · ${Number(profile.keyword_count)} STICHWÖRTER</small></span>
   </label>`).join("");
-  $("settingsProfilesList").innerHTML = availableProfiles.map((profile) => `<article class="settings-profile">
-    <div><strong>${escapeHtml(profile.name)}</strong><small>${Number(profile.keyword_count)} Stichwörter · Version ${escapeHtml(profile.version)}</small></div>
-    <button type="button" data-edit-profile="${escapeHtml(profile.id)}">BEARBEITEN</button>
-    <button type="button" data-copy-profile="${escapeHtml(profile.id)}">DUPLIZIEREN</button>
-  </article>`).join("") || '<p>Noch keine Profile vorhanden.</p>';
+  $("settingsProfilesList").innerHTML = availableProfiles.map((profile) => {
+    const selected = profileDetailId && profile.id === profileDetailId;
+    return `<article class="settings-profile${selected ? " selected" : ""}">
+      <div><strong>${escapeHtml(profile.name)}</strong><small>${Number(profile.keyword_count)} Stichwörter · Version ${escapeHtml(profile.version)}</small></div>
+      <button type="button" data-edit-profile="${escapeHtml(profile.id)}">BEARBEITEN</button>
+      <button type="button" data-copy-profile="${escapeHtml(profile.id)}">DUPLIZIEREN</button>
+    </article>`;
+  }).join("") || '<p class="iphone-empty" style="padding:16px">Noch keine Profile vorhanden.</p>';
 }
 
 function selectSettingsPane(pane = "profiles") {
@@ -519,6 +559,7 @@ async function openSettings(initialPane = "profiles") {
   if ($("auftragModal").open) $("auftragModal").close();
   if (!$("settingsModal").open) $("settingsModal").showModal();
   selectSettingsPane(initialPane);
+  resetProfileDetail();
   const revision = ++settingsRevision;
   catalogState = null; catalogDirty = false;
   $("catalogRows").innerHTML = "";
@@ -1016,8 +1057,10 @@ function closeSettings() {
   if (catalogBusy || detectionBusy || isUpdateBusy()) return;
   if (catalogDirty && !window.confirm("Ungespeicherte Änderungen am Dateityp-Katalog verwerfen?")) return;
   if (detectionDirty && !window.confirm("Ungespeicherte Änderungen an den Erkennungsregeln verwerfen?")) return;
+  if (profileDetailDirty && !window.confirm("Ungespeicherte Änderungen am Profil verwerfen?")) return;
   ++settingsRevision;
   $("settingsModal").close();
+  resetProfileDetail();
 }
 
 async function loadProfiles(preferredIds = activeProfileIds) {
@@ -1048,6 +1091,16 @@ async function loadProfiles(preferredIds = activeProfileIds) {
     $("createProfile").disabled = false;
     updateKeywordSummary();
     updateCaseSessionUi();
+    if (profileDetailId && !profileDetailDirty) {
+      const detail = profileDetails.get(profileDetailId);
+      if (detail) {
+        keywordDraft = [...detail.keywords];
+        draftSelectedKeywords = new Set(selectedByProfile.get(profileDetailId) || keywordDraft);
+        $("profileDetailName").value = detail.name;
+        renderKeywordOptions();
+        updateProfileDetailCount();
+      }
+    }
   } catch (error) {
     $("profileList").innerHTML = '<p class="case-start-message warning">PROFILE NICHT VERFÜGBAR</p>';
     $("keywordSelectionCount").textContent = "FEHLER";
@@ -1088,7 +1141,7 @@ function renderResults(summary, hits = {}) {
     const separator = path.lastIndexOf("/");
     const name = path.slice(separator + 1);
     const folder = separator >= 0 ? path.slice(0, separator) : "Stammverzeichnis";
-    return `<tr><td class="largest-size">${formatBytes(file.size)}</td><td><button class="largest-file-link" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}" aria-label="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(folder)}</small><span aria-hidden="true">↗</span></button></td></tr>`;
+    return `<tr><td class="largest-size">${formatBytes(file.size)}</td><td><button class="largest-file-link" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}" aria-label="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(folder)}</small><span aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg></span></button></td></tr>`;
   }).join("") || '<tr><td colspan="2">KEINE DATEIEN ERFASST</td></tr>';
   $("results").hidden = false;
 }
@@ -1463,8 +1516,8 @@ function renderMediaCards(media) {
       : "";
     const model = [medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path;
     const ejectLabel = String(medium.device_path || "").startsWith("/dev/sr")
-      ? "⏏ CD/DVD AUSWERFEN"
-      : "⏏ SICHER AUSWERFEN";
+      ? `${ICON_TEXT(SVG_ICONS.eject)} CD/DVD AUSWERFEN`
+      : `${ICON_TEXT(SVG_ICONS.eject)} SICHER AUSWERFEN`;
     return `<div class="media-card-shell${connected ? " online" : " offline"}"><button class="media-card complete${connected ? " online" : " offline"}${Number(medium.id) === currentMediaId ? " active" : ""}" type="button" data-media-id="${Number(medium.id)}">
       <span class="media-card-top">${evidenceLabel}${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
@@ -1527,7 +1580,10 @@ function updateCaseSessionUi(message = "") {
   const ready = openRequirements.length === 0;
   const sameSession = activeCaseNumber === draftCase && activeOperator === draftOperator;
   $("caseStart").disabled = !ready || sameSession;
-  $("caseStart").textContent = activeCaseNumber && !sameSession ? "↻ ANDEREN FALL STARTEN" : "▶ FALL STARTEN";
+  const caseStartLabel = activeCaseNumber && !sameSession ? " ANDEREN FALL STARTEN" : " FALL STARTEN";
+  const caseStartText = $("caseStart").lastChild;
+  if (caseStartText && caseStartText.nodeType === Node.TEXT_NODE) caseStartText.textContent = caseStartLabel;
+  else $("caseStart").append(caseStartLabel);
   $("caseStop").disabled = !activeCaseNumber || runningPaths.size > 0;
   $("activeCaseDisplay").classList.toggle("locked", !activeCaseNumber);
   $("activeCaseNumber").textContent = activeCaseNumber || "KEIN FALL";
@@ -1616,7 +1672,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
       <div class="device-progress" aria-label="Scanfortschritt"><i></i></div>
       <div class="device-card-actions${optical ? " optical" : ""}">
         <button type="button" data-scan-device="${escapeHtml(device.path)}" ${disabled ? "disabled" : ""}>${state === "complete" ? "ERNEUT SCANNEN" : "SCANNEN"}</button>
-        ${optical ? `<button class="device-eject" type="button" data-eject-device="${escapeHtml(device.path)}" ${ejectDisabled ? "disabled" : ""}>⏏ CD/DVD AUSWERFEN</button>` : ""}
+        ${optical ? `<button class="device-eject" type="button" data-eject-device="${escapeHtml(device.path)}" ${ejectDisabled ? "disabled" : ""}>${ICON_TEXT(SVG_ICONS.eject)} CD/DVD AUSWERFEN</button>` : ""}
       </div>
     </article>`;
   }).join("");
@@ -1676,7 +1732,7 @@ async function syncCaseSessionFromServer(session) {
   const serverOperator = String(session?.operator || "");
   serverActiveCase = session || null;
   if (!serverCaseNumber) {
-    if (!activeCaseNumber) return;
+    if (!activeCaseNumber) { updateStartOverlay(); return; }
     invalidateMediaView();
     activeCaseNumber = null;
     activeOperator = "";
@@ -1694,9 +1750,10 @@ async function syncCaseSessionFromServer(session) {
     resetDeviceStatesForCase();
     updateCaseSessionUi("FALL AUF DEM GERÄT BEENDET · SCANS GESPERRT");
     setSystemState("GESPERRT", "locked");
+    updateStartOverlay();
     return;
   }
-  if (activeCaseNumber === serverCaseNumber && activeOperator === serverOperator) return;
+  if (activeCaseNumber === serverCaseNumber && activeOperator === serverOperator) { updateStartOverlay(); return; }
   invalidateMediaView();
   activeCaseNumber = serverCaseNumber;
   activeOperator = serverOperator;
@@ -1710,6 +1767,7 @@ async function syncCaseSessionFromServer(session) {
   resetDeviceStatesForCase();
   updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · GERÄTESTATUS ÜBERNOMMEN`);
   setSystemState("BEREIT", "ready");
+  updateStartOverlay();
 }
 
 async function refresh(loadLatest = false) {
@@ -1727,6 +1785,8 @@ async function refresh(loadLatest = false) {
     if (!updateActionInProgress) renderUpdateState(data.update || {});
     renderPowerState(data.power || {});
     if (loadLatest && data.latest) renderRecord(data.latest);
+    startOverlayReady = true;
+    updateStartOverlay();
   } catch (_) {
     deviceDiscoveryError = "Verbindung zur Geräteerkennung unterbrochen";
     renderDevices(devices);
@@ -2150,6 +2210,7 @@ async function startCaseSession() {
     updateCaseSessionUi(`FALL ${activeCaseNumber} AKTIV · SCANS FREIGEGEBEN`);
     setSystemState("BEREIT", "ready");
     $("auftragModal").close();
+    updateStartOverlay();
     await refresh(false);
     scheduleAutoScan(150);
   } catch (error) {
@@ -2185,11 +2246,13 @@ async function stopCaseSession({ keepUpdateOpen = false } = {}) {
   renderCaseHistory(knownCases);
   updateCaseSessionUi("FALL BEENDET · SCANS GESPERRT");
   setSystemState("GESPERRT", "locked");
+  updateStartOverlay();
   if (!keepUpdateOpen) openAuftrag();
   try {
     const response = await fetch("/api/cases/stop", { method: "POST" });
     if (!response.ok) throw new Error("Fall konnte am Gerät nicht beendet werden");
     serverActiveCase = null;
+    updateStartOverlay();
     renderUpdateState(updateState);
   } catch (error) {
     $("caseStartMessage").textContent = `FEHLER: ${error.message}`;
@@ -2282,7 +2345,6 @@ function showDashboard() {
   invalidateMediaView();
   if ($("evidenceModal").open) $("evidenceModal").close();
   if ($("deleteModal").open) $("deleteModal").close();
-  if ($("keywordModal").open) $("keywordModal").close();
   if ($("caseArchiveModal").open) $("caseArchiveModal").close();
   if ($("auftragModal").open) $("auftragModal").close();
   $("results").hidden = true;
@@ -2300,43 +2362,58 @@ function openProfileEditor(profileId = null, duplicate = false) {
   const createNew = profileId === null || duplicate;
   const detail = profileDetails.get(profileId);
   profileEditorId = createNew ? null : profileId;
+  profileDetailId = profileEditorId;
   keywordDraft = [...(detail?.keywords || [])];
   draftSelectedKeywords = new Set(duplicate ? keywordDraft : selectedByProfile.get(profileId) || keywordDraft);
-  $("keywordProfileName").value = duplicate ? `${(detail?.name || "Profil").slice(0, 34)} Kopie` : detail?.name || "";
-  $("keywordModalTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
-  $("keywordNewInput").value = "";
-  $("keywordMessage").textContent = "";
-  $("saveKeywordSettings").hidden = createNew;
+  $("profileDetailName").value = duplicate ? `${(detail?.name || "Profil").slice(0, 34)} Kopie` : detail?.name || "";
+  $("profileDetailTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
+  $("profileDetailNewInput").value = "";
+  $("profileDetailMessage").textContent = "";
+  $("profileDetailApply").hidden = createNew;
+  profileDetailDirty = false;
+  $("profileDetailEmpty").hidden = true;
+  $("profileDetailForm").hidden = false;
   renderKeywordOptions();
-  openNestedAuftragDialog("keywordModal");
-  if (createNew) $("keywordProfileName").focus();
+  updateProfileDetailCount();
+  renderProfileList();
+  if (!$("settingsModal").open) $("settingsModal").showModal();
+  selectSettingsPane("profiles");
+  if (createNew) $("profileDetailName").focus();
 }
 
 function addKeywordFromInput() {
-  const input = $("keywordNewInput");
+  const input = $("profileDetailNewInput");
   const keyword = input.value.trim();
   if (!keyword) return;
   if (keywordDraft.some((item) => item.toLocaleLowerCase("de") === keyword.toLocaleLowerCase("de"))) {
-    $("keywordMessage").textContent = "DIESES STICHWORT IST BEREITS VORHANDEN";
+    $("profileDetailMessage").textContent = "DIESES STICHWORT IST BEREITS VORHANDEN";
     return;
   }
   keywordDraft.push(keyword);
   draftSelectedKeywords.add(keyword);
   input.value = "";
-  $("keywordMessage").textContent = "";
+  $("profileDetailMessage").textContent = "";
+  profileDetailDirty = true;
   renderKeywordOptions();
+  updateProfileDetailCount();
   input.focus();
 }
 
 function selectedDraftFromControls() {
-  return new Set([...$("keywordOptions").querySelectorAll("input:checked")].map((input) => input.value));
+  return new Set([...$("profileDetailOptions").querySelectorAll("input:checked")].map((input) => input.value));
+}
+
+function markProfileDetailDirty() {
+  profileDetailDirty = true;
+  $("profileDetailMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN";
 }
 
 async function saveProfileEditor() {
-  const name = $("keywordProfileName").value.trim();
+  const name = $("profileDetailName").value.trim();
+  if (!name) { $("profileDetailName").focus(); $("profileDetailMessage").textContent = "PROFILNAME ERFORDERLICH"; return; }
   draftSelectedKeywords = selectedDraftFromControls();
-  $("saveProfileSettings").disabled = true;
-  $("keywordMessage").textContent = "PROFIL WIRD GESPEICHERT …";
+  $("profileDetailSave").disabled = true;
+  $("profileDetailMessage").textContent = "PROFIL WIRD GESPEICHERT …";
   try {
     const response = await fetch("/api/profiles", {
       method: "POST",
@@ -2347,15 +2424,46 @@ async function saveProfileEditor() {
     if (!response.ok) throw new Error(data.error || "Profil konnte nicht gespeichert werden");
     const savedSelection = new Set([...draftSelectedKeywords].filter((word) => data.profile.keywords.includes(word)));
     selectedByProfile.set(data.profile.id, savedSelection.size ? savedSelection : new Set(data.profile.keywords));
+    profileEditorId = data.profile.id;
+    profileDetailId = data.profile.id;
     await loadProfiles(activeProfileIds);
     updateKeywordSummary();
-    $("keywordModal").close();
+    profileDetailDirty = false;
+    $("profileDetailMessage").textContent = "GESPEICHERT";
+    $("profileDetailTitle").textContent = "PROFIL BEARBEITEN";
+    renderProfileList();
     setSystemState(`PROFIL ${data.profile.name.toUpperCase()} GESPEICHERT`, "ready");
   } catch (error) {
-    $("keywordMessage").textContent = `FEHLER: ${error.message}`;
+    $("profileDetailMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
-    $("saveProfileSettings").disabled = false;
+    $("profileDetailSave").disabled = false;
   }
+}
+
+function applyProfileSelection() {
+  if (profileEditorId) {
+    const selected = selectedDraftFromControls();
+    selectedByProfile.set(profileEditorId, selected);
+    updateKeywordSummary();
+    updateCaseSessionUi();
+    $("profileDetailMessage").textContent = "AUSWAHL FÜR NÄCHSTE SCANS ÜBERNOMMEN";
+  }
+}
+
+function canSwitchProfileDetail() {
+  if (!profileDetailDirty) return true;
+  return window.confirm("Ungespeicherte Änderungen am Profil verwerfen?");
+}
+
+function resetProfileDetail() {
+  $("profileDetailEmpty").hidden = false;
+  $("profileDetailForm").hidden = true;
+  profileDetailId = null;
+  profileEditorId = null;
+  profileDetailDirty = false;
+  keywordDraft = [];
+  draftSelectedKeywords = new Set();
+  renderProfileList();
 }
 
 const clockFormatter = new Intl.DateTimeFormat("de-AT", {
@@ -2438,6 +2546,7 @@ $("cancelPowerAction").addEventListener("click", () => {
 });
 $("confirmPowerAction").addEventListener("click", confirmPowerAction);
 $("openAuftragModal").addEventListener("click", openAuftrag);
+$("startOpenCase").addEventListener("click", openAuftrag);
 $("openSettings").addEventListener("click", () => openSettings());
 $("closeSettings").addEventListener("click", closeSettings);
 $("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(); closeSettings(); });
@@ -2573,12 +2682,6 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape" && activeTooltipTrigger) hideTooltip();
 });
 initTooltips(document);
-$("settingsProfilesList").addEventListener("click", (event) => {
-  const edit = event.target.closest("[data-edit-profile]");
-  const copy = event.target.closest("[data-copy-profile]");
-  if (edit) openProfileEditor(edit.dataset.editProfile);
-  if (copy) openProfileEditor(copy.dataset.copyProfile, true);
-});
 $("catalogSearch").addEventListener("input", filterCatalog);
 $("catalogRows").addEventListener("click", (event) => {
   const remove = event.target.closest(".catalog-remove");
@@ -2619,25 +2722,32 @@ $("closeEvidenceModal").addEventListener("click", () => $("evidenceModal").close
 $("evidenceModal").addEventListener("click", (event) => {
   if (event.target === $("evidenceModal")) $("evidenceModal").close();
 });
-$("createProfile").addEventListener("click", () => openProfileEditor(null));
-$("closeKeywordSettings").addEventListener("click", () => $("keywordModal").close());
-$("keywordModal").addEventListener("click", (event) => {
-  if (event.target === $("keywordModal")) $("keywordModal").close();
+$("createProfile").addEventListener("click", () => { if (!canSwitchProfileDetail()) return; openProfileEditor(null); });
+$("settingsProfilesList").addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-profile]");
+  const copy = event.target.closest("[data-copy-profile]");
+  if (!edit && !copy) return;
+  if (!canSwitchProfileDetail()) return;
+  if (edit) openProfileEditor(edit.dataset.editProfile);
+  if (copy) openProfileEditor(copy.dataset.copyProfile, true);
 });
-$("selectAllKeywords").addEventListener("click", () => {
-  for (const checkbox of $("keywordOptions").querySelectorAll("input")) checkbox.checked = true;
+$("profileDetailDuplicate").addEventListener("click", () => {
+  if (!profileDetailId) return;
+  if (!canSwitchProfileDetail()) return;
+  openProfileEditor(profileDetailId, true);
 });
-$("clearAllKeywords").addEventListener("click", () => {
-  for (const checkbox of $("keywordOptions").querySelectorAll("input")) checkbox.checked = false;
+$("profileDetailSelectAll").addEventListener("click", () => {
+  for (const checkbox of $("profileDetailOptions").querySelectorAll("input")) checkbox.checked = true;
+  profileDetailDirty = true;
 });
-$("saveKeywordSettings").addEventListener("click", () => {
-  if (profileEditorId) selectedByProfile.set(profileEditorId, selectedDraftFromControls());
-  updateKeywordSummary();
-  $("keywordModal").close();
+$("profileDetailClearAll").addEventListener("click", () => {
+  for (const checkbox of $("profileDetailOptions").querySelectorAll("input")) checkbox.checked = false;
+  profileDetailDirty = true;
 });
-$("addKeyword").addEventListener("click", addKeywordFromInput);
-$("keywordNewInput").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); addKeywordFromInput(); } });
-$("keywordOptions").addEventListener("click", (event) => {
+$("profileDetailApply").addEventListener("click", applyProfileSelection);
+$("profileDetailAddKeyword").addEventListener("click", addKeywordFromInput);
+$("profileDetailNewInput").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); addKeywordFromInput(); } });
+$("profileDetailOptions").addEventListener("click", (event) => {
   const remove = event.target.closest("button[data-remove-keyword]");
   if (!remove) return;
   event.preventDefault();
@@ -2646,9 +2756,12 @@ $("keywordOptions").addEventListener("click", (event) => {
   draftSelectedKeywords = selectedDraftFromControls();
   draftSelectedKeywords.delete(keyword);
   keywordDraft = keywordDraft.filter((item) => item !== keyword);
+  profileDetailDirty = true;
   renderKeywordOptions();
+  updateProfileDetailCount();
 });
-$("saveProfileSettings").addEventListener("click", saveProfileEditor);
+$("profileDetailName").addEventListener("input", markProfileDetailDirty);
+$("profileDetailSave").addEventListener("click", saveProfileEditor);
 $("profileList").addEventListener("change", (event) => {
   const checkbox = event.target.closest('input[type="checkbox"]');
   if (!checkbox) return;

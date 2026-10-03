@@ -26,22 +26,30 @@
         <label class="mini-auto" for="autoScanToggle"><input id="autoScanToggle" type="checkbox" checked /><span>AUTO-SCAN EIN</span></label>
         <div class="utility-zone">
           <div class="utility-controls">
-            <span id="powerHealth" class="power-health unknown" title="" aria-label="" role="status" hidden>⚡</span>
-            <button id="openSettings" class="system-button" type="button" title="Einstellungen" aria-label="Einstellungen öffnen"><span aria-hidden="true">⚙</span></button>
-            <button id="openPowerModal" class="system-button power-open" type="button" title="Neustart oder Herunterfahren" aria-label="Neustart oder Herunterfahren öffnen"><span aria-hidden="true">⏻</span></button>
+            <span id="powerHealth" class="power-health unknown" title="" aria-label="" role="status" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+            <button id="openSettings" class="system-button" type="button" title="Einstellungen" aria-label="Einstellungen öffnen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+            <button id="openPowerModal" class="system-button power-open" type="button" title="Neustart oder Herunterfahren" aria-label="Neustart oder Herunterfahren öffnen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
           </div>
         </div>
         <span id="clock">LOKAL --:--:--</span>
       </section>
 
+      <div id="startOverlay" class="start-overlay" hidden>
+        <div class="start-overlay-card" role="region" aria-label="Startbereitschaft">
+          <strong>TRIAGE//BOX BEREIT</strong>
+          <p>Für eine Grobsichtung muss zuerst ein Fall angelegt oder geöffnet werden.</p>
+          <button id="startOpenCase" type="button" class="start-overlay-button"><span class="icon-text" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> FALL ANLEGEN / ÖFFNEN</button>
+        </div>
+      </div>
+
       <section id="dashboardView">
       <section class="case-dock" aria-label="Fallsteuerung">
-        <button id="openAuftragModal" type="button">＋ FALL ANLEGEN / ÖFFNEN</button>
+        <button id="openAuftragModal" type="button"><span class="icon-text" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> FALL ANLEGEN / ÖFFNEN</button>
         <div class="case-dock-profiles"><span>01 · AKTIVE SUCHPROFILE</span><strong id="dockProfiles">ALLGEMEIN / WIRTSCHAFT</strong><small id="dockKeywordCount">10 STICHWÖRTER</small></div>
       </section>
       <section class="control-grid">
         <article class="panel device-panel">
-          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren">↻ AKTUALISIEREN</button><b id="deviceCount">0 MEDIEN</b></div></div>
+          <div class="panel-title device-title"><div><span>02</span> MEDIEN-DASHBOARD</div><div class="device-title-actions"><button id="deviceRefresh" type="button" title="Datenträger neu erkennen" aria-label="Datenträger aktualisieren"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> AKTUALISIEREN</button><b id="deviceCount">0 MEDIEN</b></div></div>
           <div id="deviceEmpty" class="device-empty" hidden>
             <div class="plug">USB</div>
             <strong id="deviceEmptyTitle">KEIN FALL AKTIV</strong>
@@ -222,7 +230,7 @@
 
         <footer>
           <span>ERGEBNIS: NUR GROBSICHTUNG — KEINE FACHLICHE BEWERTUNG</span>
-          <button id="refreshButton" type="button">↻ STATUS AKTUALISIEREN</button>
+          <button id="refreshButton" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> STATUS AKTUALISIEREN</button>
         </footer>
       </section>
     </main>
@@ -255,8 +263,8 @@
         <div class="case-session-footer">
           <p id="caseStartMessage" class="case-start-message">VORAUSSETZUNGEN WERDEN GEPRÜFT</p>
           <div class="case-session-actions">
-            <button id="caseStart" class="case-start" type="button" disabled>▶ FALL STARTEN</button>
-            <button id="caseStop" class="case-stop" type="button" disabled>■ FALL BEENDEN</button>
+            <button id="caseStart" class="case-start" type="button" disabled><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg></span> FALL STARTEN</button>
+            <button id="caseStop" class="case-stop" type="button" disabled><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
           </div>
         </div>
       </div>
@@ -323,17 +331,56 @@
     </dialog>
     <dialog id="settingsModal" class="evidence-modal settings-modal" aria-labelledby="settingsTitle">
       <div id="settingsTooltipLayer" class="global-tooltip" role="tooltip" aria-hidden="true"></div>
-      <div class="modal-head"><div><span aria-hidden="true">⚙</span> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:8px;color:var(--acid)"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <b id="settingsTitle">EINSTELLUNGEN</b></div><button id="closeSettings" type="button">SCHLIESSEN ×</button></div>
       <nav class="settings-tabs" aria-label="Einstellungsbereich">
         <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
         <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">ERKENNUNGSREGELN</button>
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">SYSTEM &amp; UPDATES</button>
       </nav>
-      <section id="settingsProfilesPane" class="settings-pane" aria-labelledby="settingsProfilesTab">
-        <p>Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
-        <div id="settingsProfilesList" class="settings-profiles"></div>
-        <button id="createProfile" class="profile-create" type="button">+ NEUES PROFIL</button>
+      <section id="settingsProfilesPane" class="settings-pane profile-pane" aria-labelledby="settingsProfilesTab">
+        <p class="pane-intro">Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
+        <div class="profile-workspace">
+          <div class="profile-master">
+            <div class="profile-master-head">
+              <strong>PROFILE</strong>
+              <button id="createProfile" class="profile-create-compact" type="button" title="Neues Profil"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEU</button>
+            </div>
+            <div id="settingsProfilesList" class="settings-profiles"></div>
+          </div>
+          <div class="profile-detail" id="profileDetail">
+            <div class="profile-detail-empty" id="profileDetailEmpty">
+              <strong>PROFIL AUSWÄHLEN</strong>
+              <p>Wählen Sie links ein Profil aus, um die enthaltenen Stichwörter zu bearbeiten.</p>
+            </div>
+            <div class="profile-detail-form" id="profileDetailForm" hidden>
+              <div class="profile-detail-head">
+                <strong id="profileDetailTitle">PROFIL BEARBEITEN</strong>
+                <div class="profile-detail-actions">
+                  <button id="profileDetailDuplicate" type="button">DUPLIZIEREN</button>
+                </div>
+              </div>
+              <label class="profile-name-field" for="profileDetailName">PROFILNAME
+                <input id="profileDetailName" maxlength="40" autocomplete="off" spellcheck="false" />
+              </label>
+              <div class="keyword-add-row">
+                <input id="profileDetailNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" />
+                <button id="profileDetailAddKeyword" type="button">+ HINZUFÜGEN</button>
+              </div>
+              <div class="keyword-bulk-actions">
+                <button id="profileDetailSelectAll" type="button">ALLE</button>
+                <button id="profileDetailClearAll" type="button">KEINE</button>
+                <span id="profileDetailCount" class="profile-detail-count">0 STICHWÖRTER</span>
+              </div>
+              <div id="profileDetailOptions" class="keyword-options"></div>
+              <p id="profileDetailMessage" class="keyword-message"></p>
+              <div class="profile-detail-footer">
+                <button id="profileDetailApply" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
+                <button id="profileDetailSave" class="save-keywords" type="button">PROFIL SPEICHERN</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
       <section id="settingsCryptoPane" class="settings-pane detection-rules-pane" aria-labelledby="settingsCryptoTab" hidden>
         <div class="detection-workspace">
@@ -429,16 +476,27 @@
           <dt>BACKUP-ERKENNUNGSSICHERHEIT</dt><dd>Die Einstufung entsteht aus übereinstimmenden Strukturmerkmalen (Pfad, Dateiname, Endung). Sie ist kein Inhaltsnachweis.</dd>
         </dl>
       </dialog>
-      <section id="settingsFiletypesPane" class="settings-pane" aria-labelledby="settingsFiletypesTab" hidden>
-        <p>Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
-        <div class="catalog-toolbar"><label for="catalogSearch">KATEGORIE / ENDUNG<input id="catalogSearch" type="search" placeholder="Z. B. BILDER ODER HEIC …" /></label><span id="catalogVersion"></span></div>
-        <div id="catalogRows" class="catalog-rows"></div>
-        <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“. „Mehrdeutig“ und „Schutz-/Schlüsseldateien“ beschreiben die Endung, keine bestätigten Inhalte oder Verschlüsselung. Zusätzliche Archivendungen erweitern nur die Zuordnung, nicht den Archivleser.</p>
-        <div class="catalog-add"><input id="catalogNewCategory" maxlength="50" aria-label="Neue Kategorie" placeholder="NEUE KATEGORIE …" /><button id="catalogAddCategory" type="button">+ HINZUFÜGEN</button></div>
-        <div class="catalog-actions"><button id="catalogReset" type="button">STANDARD LADEN</button><button id="catalogSave" type="button" disabled>ÄNDERUNGEN SPEICHERN</button></div>
+      <section id="settingsFiletypesPane" class="settings-pane filetypes-pane" aria-labelledby="settingsFiletypesTab" hidden>
+        <p class="pane-intro">Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
+        <div class="filetypes-workspace">
+          <div class="filetypes-toolbar">
+            <label for="catalogSearch">KATEGORIE / ENDUNG SUCHEN<input id="catalogSearch" type="search" placeholder="Z. B. BILDER ODER HEIC …" /></label>
+            <span id="catalogVersion" class="filetypes-version"></span>
+            <div class="catalog-add"><input id="catalogNewCategory" maxlength="50" aria-label="Neue Kategorie" placeholder="NEUE KATEGORIE …" /><button id="catalogAddCategory" type="button">+ HINZUFÜGEN</button></div>
+          </div>
+          <div id="catalogRows" class="catalog-rows"></div>
+          <footer class="filetypes-footer">
+            <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“. „Mehrdeutig“ und „Schutz-/Schlüsseldateien" beschreiben die Endung, keine bestätigten Inhalte oder Verschlüsselung.</p>
+            <div class="catalog-actions">
+              <button id="catalogReset" type="button">STANDARD LADEN</button>
+              <button id="catalogSave" type="button" disabled>ÄNDERUNGEN SPEICHERN</button>
+            </div>
+          </footer>
+        </div>
         <p id="catalogMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsUpdatesPane" class="settings-pane settings-updates-pane" aria-labelledby="settingsUpdatesTab" hidden>
+        <p class="pane-intro">TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
         <div id="updateModal" class="update-modal update-embedded">
           <div class="update-modal-body">
             <div class="update-version-grid">
@@ -446,13 +504,12 @@
               <div><span>UPDATE-STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
               <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
             </div>
-            <div id="updateSuccessNotice" class="update-success-notice" role="status" aria-live="polite" hidden>✓ UPDATE ERFOLGREICH ABGESCHLOSSEN</div>
-            <p>TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
+            <div id="updateSuccessNotice" class="update-success-notice" role="status" aria-live="polite" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> UPDATE ERFOLGREICH ABGESCHLOSSEN</div>
             <p id="updateActionMessage" class="update-action-message"></p>
             <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
             <div class="update-actions">
-              <button id="updateStopCase" type="button" hidden>FALL BEENDEN</button>
-              <button id="updateCheck" type="button">↻ JETZT PRÜFEN</button>
+              <button id="updateStopCase" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
+              <button id="updateCheck" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
               <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
             </div>
             <section class="offline-update">
@@ -466,34 +523,14 @@
         </div>
       </section>
     </dialog>
-    <dialog id="keywordModal" class="evidence-modal keyword-modal">
-      <div class="modal-head"><div><span aria-hidden="true">⚙</span> <b id="keywordModalTitle">PROFIL BEARBEITEN</b></div><button id="closeKeywordSettings" type="button">SCHLIESSEN ×</button></div>
-      <div class="keyword-modal-body">
-        <p>Profile bündeln Suchbegriffe für einen Einsatz. Die aktive Auswahl wird bei jedem neuen Scan im Nachweis mitprotokolliert.</p>
-        <label class="profile-name-field" for="keywordProfileName">PROFILNAME
-          <input id="keywordProfileName" maxlength="40" autocomplete="off" spellcheck="false" />
-        </label>
-        <div class="keyword-add-row">
-          <input id="keywordNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" />
-          <button id="addKeyword" type="button">+ HINZUFÜGEN</button>
-        </div>
-        <div class="keyword-bulk-actions"><button id="selectAllKeywords" type="button">ALLE</button><button id="clearAllKeywords" type="button">KEINE</button></div>
-        <div id="keywordOptions" class="keyword-options"></div>
-        <p id="keywordMessage" class="keyword-message"></p>
-        <div class="keyword-save-actions">
-          <button id="saveKeywordSettings" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
-          <button id="saveProfileSettings" class="save-keywords" type="button">PROFIL SPEICHERN</button>
-        </div>
-      </div>
-    </dialog>
     <dialog id="powerModal" class="evidence-modal power-modal" aria-labelledby="powerModalTitle">
       <div class="modal-head"><div><span>SYS</span> <b id="powerModalTitle">NEUSTART &amp; HERUNTERFAHREN</b></div><button id="closePowerModal" type="button">SCHLIESSEN ×</button></div>
       <div class="power-modal-body">
         <p>Systemaktionen sind nur ohne aktiven Fall, laufenden Scan oder Update möglich und müssen nochmals bestätigt werden.</p>
         <p id="powerMessage" class="power-message" role="status" aria-live="polite"></p>
         <div id="powerActions" class="power-actions">
-          <button type="button" data-power-action="reboot">↻ NEUSTART</button>
-          <button type="button" data-power-action="poweroff">⏻ HERUNTERFAHREN</button>
+          <button type="button" data-power-action="reboot"><span class="icon-text" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> NEUSTART</button>
+          <button type="button" data-power-action="poweroff"><span class="icon-text" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></span> HERUNTERFAHREN</button>
         </div>
         <div id="powerConfirmation" class="power-confirmation" hidden>
           <strong id="powerConfirmationText">SYSTEMAKTION BESTÄTIGEN</strong>

@@ -2,6 +2,18 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.64] – 2026-10-03
+
+- Neuer Startzustand ohne aktiven Fall: Über dem Arbeitsbereich erscheint ein dezentres Overlay mit Hinweis und „Fall anlegen / öffnen“; Systemleiste (Einstellungen, Power, Status) bleibt erreichbar. Das Overlay verschwindet, sobald ein Fall aktiv ist, und erscheint automatisch wieder nach „Fall beenden“ oder Reload ohne Fall. Beim Reload mit serverseitig aktivem Fall blitzt es nicht auf.
+- Wichtige Bedienicons (Einstellungen, Power, Aktualisieren, Fall starten/beenden, Auswerfen, Stromwarnung) werden als lokale Inline-SVGs gerendert, um browser-/fontabhängige Unicode-Probleme zu vermeiden.
+- Stichwortprofile sind jetzt vollständig in die Einstellungs-Arbeitsfläche integriert: Master-Detail-Ansicht mit Profilliste links und Editor rechts. Profile lassen sich auswählen, bearbeiten, duplizieren, neu anlegen und speichern; die Auswahl für kommende Scans bleibt weiterhin eine separate Aktion.
+- Einstellungen visuell vereinheitlicht: Stichwortprofile, Dateitypen, Erkennungsregeln und System & Updates teilen sich jetzt eine konsistentere Typografie, Abstände, Toolbar-/Footer-Struktur und Buttonlogik.
+- iOS-/Android-Plattformstatus in den Erkennungsregeln wieder vereinfacht: nur noch `✓` / `?` / `—` als Text, ohne sichtbaren Kreis oder Badge; Farben und Tooltips mit Erklärung, technischer ID, Quelle und Prüfdatum bleiben erhalten.
+- Scrollbars browserübergreifend beruhigt: Firefox bekommt `scrollbar-width: thin` mit dunklen Farben, Chromium/Brave bekommt eine schmale, dunkle Custom-Scrollbar; Safari behält sein Overlay-Verhalten.
+- Ungespeicherte Profiländerungen im Settings-Editor werden beim Wechsel/Schließen nicht still verworfen.
+- Browsertests erweitert um Start-Overlay, SVG-Icons, integrierte Profilverwaltung, Plattformstatus-Darstellung und Scrollbar-Layout.
+- Version auf `0.2.0-alpha.64` (`0.2.0a64`) angehoben.
+
 ## [0.2.0-alpha.63] – 2026-10-03
 
 - Kritischen Dialogfehler behoben: Der native Einstellungsdialog ist ohne `open`-Attribut nun mit `.settings-modal:not([open]) { display: none; }` vollständig unsichtbar und belegt keine Layoutfläche; nur `.settings-modal[open]` verwendet das große Flex-Layout.

@@ -1,6 +1,6 @@
 # Apple-Mobilgerät-Grobsichtung über USB
 
-Stand: 3. Oktober 2026 · Anwendung `v0.2.0-alpha.63`
+Stand: 3. Oktober 2026 · Anwendung `v0.2.0-alpha.64`
 
 ## Zweck und Grenze
 

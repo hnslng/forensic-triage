@@ -73,6 +73,6 @@ Beim Start wird `crypto-rules.json` automatisch mit dem mitgelieferten Standardk
 - Neue Standardregeln werden ergänzt.
 - Eigene Benutzerregeln bleiben erhalten.
 - Ab `v0.2.0-alpha.62` werden bewusst gelöschte Standardregeln in `deleted_default_rule_ids` vermerkt und bei künftigen Updates nicht wiederhergestellt.
-- Ab `v0.2.0-alpha.63` werden die getrennten Plattformstatus ergänzt. Eine vorhandene ID wird nur mit bisherigem `verified: true` als `verified` übernommen; fehlende IDs werden `unverified`. `not_applicable` entsteht ausschließlich durch eine explizite, belegte Angabe.
+- Ab `v0.2.0-alpha.63` wurden die getrennten Plattformstatus ergänzt; Alpha 64 zeigt sie als vereinfachte Textzeichen `✓` / `?` / `—` ohne sichtbaren Badge. Eine vorhandene ID wird nur mit bisherigem `verified: true` als `verified` übernommen; fehlende IDs werden `unverified`. `not_applicable` entsteht ausschließlich durch eine explizite, belegte Angabe.
 
 Das lokale Regelschema bleibt in Alpha 63 auf Version 3; die neuen Felder werden beim ersten Start deterministisch ergänzt und die lokale Regelversion fortgeschrieben. Lokale Änderungen, eigene Regeln und Tombstones bleiben erhalten. Scans speichern den jeweiligen Regelstand als Snapshot; historische Sichtungen werden weder umgeschrieben noch nachträglich neu klassifiziert. Alte `iphone-triage.json`-Dateien werden weiterhin einmalig migriert.

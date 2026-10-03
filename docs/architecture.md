@@ -75,7 +75,7 @@ Der Online-Updater bereitet einen Git-Tag in einem eigenen Release-Verzeichnis v
 
 ## Sicherheitsgrenze
 
-Version 0.2.0-alpha.63 liest bei Dateimedien Namen, Pfade, Endungen, Größen und Dateisystemmetadaten. Bei Telefonen liest sie ausschließlich vom Betriebssystem gemeldete Geräte- und App-Metadaten; keine Telefondateien oder Medien. Regulär vorhandene versteckte Einträge auf Dateimedien werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Geräte-Backup-Strukturen werden ausschließlich anhand von Pfad-, Dateinamen- und Endungsmerkmalen erkannt; Backup-Inhalte werden nicht geöffnet. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
+Version 0.2.0-alpha.64 liest bei Dateimedien Namen, Pfade, Endungen, Größen und Dateisystemmetadaten. Bei Telefonen liest sie ausschließlich vom Betriebssystem gemeldete Geräte- und App-Metadaten; keine Telefondateien oder Medien. Regulär vorhandene versteckte Einträge auf Dateimedien werden mit erfasst; gelöschte und ausgewählte interne Dateisystemeinträge werden bewusst nicht wiederhergestellt. Zusätzlich werden Verzeichnisstrukturen von ZIP-Dateien, ISO-Images sowie 7Z- und RAR-Archiven zeitlich und mengenmäßig begrenzt gelesen; Nutzdaten werden nicht extrahiert, dekomprimiert oder interpretiert. Geräte-Backup-Strukturen werden ausschließlich anhand von Pfad-, Dateinamen- und Endungsmerkmalen erkannt; Backup-Inhalte werden nicht geöffnet. Recovery, Carving und Imaging liegen außerhalb des Umfangs.
 
 ## English summary
 

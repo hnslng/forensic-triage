@@ -45,7 +45,7 @@ async function setup(t, override = () => null) {
   return { page, requests };
 }
 async function open(page, id) {
-  await page.evaluate(id => openMedia(id), id);
+  await page.evaluate(id => { activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' }; updateStartOverlay(); openMedia(id); }, id);
   await page.waitForFunction(id => inventoryTreeMediaId === id, id);
 }
 async function filter(page) {
@@ -115,20 +115,21 @@ test('settings are outside the case dialog and profile editor uses only one back
   assert.equal(await page.locator('#auftragModal').isVisible(), false);
   assert.equal(await page.locator('#settingsProfilesPane').isVisible(), true);
   assert.equal((await page.locator('#settingsTitle').locator('..').innerText()).includes('CFG'), false);
+  assert.equal(await page.locator('#profileDetailEmpty').isVisible(), true);
   await page.locator('#settingsProfilesList [data-edit-profile]').click();
-  assert.equal(await page.locator('#keywordProfileName').inputValue(), 'Allgemein');
-  assert.equal(await page.locator('#keywordOptions input').count(), 2);
-  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('settingsModal'), '::backdrop').backdropFilter), 'none');
-  await page.locator('#closeKeywordSettings').click();
-  await page.waitForFunction(() => !document.getElementById('settingsModal').classList.contains('nested-open'));
+  assert.equal(await page.locator('#profileDetailEmpty').isVisible(), false);
+  assert.equal(await page.locator('#profileDetailForm').isVisible(), true);
+  assert.equal(await page.locator('#profileDetailName').inputValue(), 'Allgemein');
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 2);
   assert.equal(await page.locator('#settingsModal').evaluate(node => node.classList.contains('nested-open')), false);
-  await page.locator('#settingsProfilesList [data-copy-profile]').click();
-  assert.equal(await page.locator('#keywordProfileName').inputValue(), 'Allgemein Kopie');
+  await page.locator('#profileDetailDuplicate').click();
+  assert.equal(await page.locator('#profileDetailName').inputValue(), 'Allgemein Kopie');
   assert.equal(await page.evaluate(() => profileEditorId), null);
-  assert.equal(await page.locator('#keywordOptions input').count(), 2);
-  await page.locator('#closeKeywordSettings').click();
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 2);
   await page.locator('#closeSettings').click();
-  await page.locator('#openAuftragModal').click();
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+  await page.locator('#startOpenCase').click();
+  assert.equal(await page.locator('#auftragModal').isVisible(), true);
   assert.equal(await page.locator('#auftragModal [data-edit-profile]').count(), 0);
   assert.equal(await page.locator('#profileList input').count(), 1);
   assert.equal(requests.some(item => item.method !== 'GET'), false);
@@ -529,7 +530,7 @@ test('late decision confirmation cannot change the currently viewed medium', asy
 
 test('manual status refresh does not jump to the latest stored medium', async t => {
   const { page } = await setup(t, url => {
-    if (url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: null, update: {}, latest: record(2) } };
+    if (url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: { case_number: 'TEST', operator: 'HL' }, update: {}, latest: record(2) } };
   });
   await open(page, 1);
   const response = page.waitForResponse('**/api/status');
@@ -691,7 +692,7 @@ test('iphone card and app-only result distinguish hints from incomplete collecti
   });
   assert.match(await page.locator('#deviceList').innerText(), /IPHONE ENTSPERREN \/ VERTRAUEN/);
   assert.match(await page.locator('#deviceList').innerText(), /IOS 18\.6/);
-  await page.evaluate(() => renderRecord({
+  const iphoneRecord = {
     media: { id: 99, case_number: 'TEST', sighting_number: 'SICHT-099', device_path: 'iphone:000-test', serial: '000-test', vendor: 'Apple', model: 'iPhone15,4', decision: 'open' },
     device: { media_type: 'iphone', device_name: 'Testtelefon', ios_version: '18.6', write_operations_performed: false },
     summary: { evidence: 'SICHT-099', file_count: 0, directory_count: 0, total_file_bytes: 0, keyword_matches: 0, categories_by_count: {}, largest_files: [] },
@@ -708,7 +709,8 @@ test('iphone card and app-only result distinguish hints from incomplete collecti
       assessment: 'Relevante Krypto-Apps erkannt – Fachperson hinzuziehen',
       notice: 'Dateien und Fotos wurden nicht gelesen.',
     },
-  }));
+  };
+  await page.evaluate(data => { activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' }; updateStartOverlay(); renderRecord(data); }, iphoneRecord);
   assert.equal(await page.locator('#iphoneSummary').isVisible(), true);
   assert.match(await page.locator('#iphoneSummary').innerText(), /1 APP ERFASST/);
   await page.locator('#iphoneSummary .iphone-technical summary').click();
@@ -742,7 +744,7 @@ test('android card guides authorization and result shows profile coverage', asyn
   assert.match(await page.locator('#deviceList').innerText(), /ANDROID-TELEFON ERKANNT/);
   assert.match(await page.locator('#deviceList').innerText(), /VERBINDUNG AM TELEFON BESTÄTIGEN/);
   assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
-  await page.evaluate(() => renderRecord({
+  const androidRecord = {
     media: { id: 100, case_number: 'TEST', sighting_number: 'SICHT-100', device_path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test', decision: 'open' },
     device: { media_type: 'android', vendor: 'Samsung', model: 'Galaxy Test', android_version: '16', adb_serial: 'SERIAL1' },
     summary: { evidence: 'SICHT-100', file_count: 0, directory_count: 0, total_file_bytes: 0, keyword_matches: 0, categories_by_count: {}, largest_files: [] },
@@ -755,7 +757,8 @@ test('android card guides authorization and result shows profile coverage', asyn
       coverage: [{ label: 'Owner', status: 'complete', message: '1 Benutzer-App erfasst' }, { label: 'Secure Folder', status: 'unknown', message: 'Nicht zuverlässig feststellbar' }],
       assessment: 'Relevante Krypto-Apps erkannt – Fachperson hinzuziehen', notice: 'Keine Dateien gelesen.',
     },
-  }));
+  };
+  await page.evaluate(data => { activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' }; updateStartOverlay(); renderRecord(data); }, androidRecord);
   assert.match(await page.locator('#iphoneSystem').innerText(), /ANDROID 16/);
   await page.locator('#iphoneCategories .iphone-category.crypto summary').click();
   assert.match(await page.locator('#iphoneCategories .iphone-category.crypto').innerText(), /MetaMask/i);
@@ -767,6 +770,7 @@ test('android card guides authorization and result shows profile coverage', asyn
 test('phone app groups show recognized names and search only the collapsed other group', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' }; updateStartOverlay();
     document.getElementById('results').hidden = false;
     renderIphoneSummary({
     device: { device_name: 'Testtelefon', serial: 'TEST-SERIAL' }, apps_status: 'complete',
@@ -974,4 +978,139 @@ test('late archive-status result cannot replace another medium or a different st
   assert.equal(await page.locator('#inventoryTree').isVisible(), true);
   assert.doesNotMatch(await page.locator('#inventoryFiles').innerText(), /STALE/);
   assert.equal(await page.evaluate(() => inventoryListState), null);
+});
+
+test('start overlay blocks dashboard but leaves system controls reachable', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.waitForFunction(() => startOverlayReady);
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+  assert.equal(await page.locator('#dashboardView button').first().isEnabled(), true);
+  assert.equal(await page.locator('#openSettings').isEnabled(), true);
+  assert.equal(await page.locator('#openPowerModal').isEnabled(), true);
+  await page.locator('#startOpenCase').click();
+  assert.equal(await page.locator('#auftragModal').isVisible(), true);
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+  await page.locator('#closeAuftragModal').click();
+});
+
+test('starting a case hides the overlay and ending it shows it again', async t => {
+  const { page } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/cases/start' && request.method() === 'POST') {
+      return { json: { case: { case_number: 'TEST-64' } } };
+    }
+    if (url.pathname === '/api/cases/stop' && request.method() === 'POST') {
+      return { json: { ok: true } };
+    }
+    return settingsFixture(url);
+  });
+  await page.waitForFunction(() => startOverlayReady);
+  await page.locator('#startOpenCase').click();
+  await page.locator('#caseNumber').fill('TEST-64');
+  await page.locator('#operator').fill('HL');
+  await page.locator('#caseStart').click();
+  await page.waitForFunction(() => activeCaseNumber === 'TEST-64');
+  assert.equal(await page.locator('#startOverlay').isVisible(), false);
+  await page.evaluate(() => stopCaseSession());
+  await page.waitForFunction(() => !activeCaseNumber);
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+});
+
+test('reload with active case does not flash overlay', async t => {
+  const { page } = await setup(t, url => {
+    if (url.pathname === '/api/status') return { json: { devices: [], cases: [], active_case: { case_number: 'TEST-64', operator: 'HL' }, update: {} } };
+    return settingsFixture(url);
+  });
+  await page.waitForFunction(() => activeCaseNumber === 'TEST-64');
+  assert.equal(await page.locator('#startOverlay').isVisible(), false);
+  assert.equal(await page.evaluate(() => startOverlayReady), true);
+});
+
+test('important system buttons use inline SVG instead of problematic Unicode glyphs', async t => {
+  const { page } = await setup(t, settingsFixture);
+  for (const id of ['#openSettings', '#openPowerModal', '#deviceRefresh', '#caseStart', '#caseStop', '#updateCheck']) {
+    const hasSvg = await page.locator(id).evaluate(node => node.querySelector('svg') !== null);
+    assert.equal(hasSvg, true, `${id} should contain an SVG icon`);
+  }
+  for (const id of ['#openSettings', '#openPowerModal']) {
+    const text = await page.locator(id).innerText();
+    assert.doesNotMatch(text, /[⚙⏻↻▶■]/);
+  }
+});
+
+test('profile master-detail supports create, edit, duplicate, add and remove keywords', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/profiles' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      return { status: 201, json: { profile: { id: payload.id || 'neu', name: payload.name, keywords: payload.keywords, version: '1.0' } } };
+    }
+    return settingsFixture(url);
+  });
+  await page.locator('#openSettings').click();
+  assert.equal(await page.locator('#profileDetailEmpty').isVisible(), true);
+  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  assert.equal(await page.locator('#profileDetailName').inputValue(), 'Allgemein');
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 2);
+  await page.locator('#profileDetailDuplicate').click();
+  assert.match(await page.locator('#profileDetailName').inputValue(), /Kopie/);
+  assert.equal(await page.evaluate(() => profileEditorId), null);
+  await page.locator('#createProfile').click();
+  await page.locator('#profileDetailName').fill('Sonderprofil');
+  await page.locator('#profileDetailNewInput').fill('verdacht');
+  await page.locator('#profileDetailAddKeyword').click();
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 1);
+  await page.locator('#profileDetailOptions [data-remove-keyword]').click();
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 0);
+  await page.locator('#profileDetailNewInput').fill('beweis');
+  await page.locator('#profileDetailNewInput').press('Enter');
+  assert.equal(await page.locator('#profileDetailOptions input').count(), 1);
+  await page.locator('#profileDetailSave').click();
+  await page.waitForFunction(() => document.getElementById('profileDetailMessage').textContent.includes('GESPEICHERT'));
+  assert.ok(requests.some(r => r.path === '/api/profiles' && r.method === 'POST'));
+});
+
+test('profile selection for next scans stays separate from saving the profile', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  await page.locator('#profileDetailClearAll').click();
+  await page.locator('#profileDetailApply').click();
+  await page.waitForFunction(() => document.getElementById('profileDetailMessage').textContent.includes('NÄCHSTE SCANS'));
+  assert.equal(await page.evaluate(() => selectedByProfile.get('default')?.size), 0);
+});
+
+test('platform status badges are plain text without visible circle or badge', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  const cell = page.locator('#detectionRows tr[data-id="wallet"] .platform-id-status').first();
+  assert.equal(await cell.innerText(), '✓');
+  const style = await cell.evaluate(node => ({ borderRadius: getComputedStyle(node).borderRadius, borderWidth: getComputedStyle(node).borderWidth, background: getComputedStyle(node).backgroundColor }));
+  assert.equal(style.borderRadius, '0px');
+  assert.equal(style.borderWidth, '0px');
+  assert.equal(style.background, 'rgba(0, 0, 0, 0)');
+});
+
+test('platform status tooltip still explains verification state', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  const trigger = page.locator('#detectionRows tr[data-id="wallet"] .platform-id-status').first();
+  await trigger.focus();
+  const tooltip = page.locator('#settingsTooltipLayer');
+  await tooltip.waitFor({ state: 'visible' });
+  assert.match(await tooltip.innerText(), /ID VERIFIZIERT/);
+});
+
+test('custom scrollbar CSS does not break layout or hide footer buttons', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  const modal = await page.locator('#settingsModal').evaluate(node => ({ scrollWidth: node.scrollWidth, clientWidth: node.clientWidth }));
+  assert.ok(modal.scrollWidth <= modal.clientWidth + 1);
+  const footer = await page.locator('.detection-footer').evaluate(node => node.getBoundingClientRect());
+  const modalBox = await page.locator('#settingsModal').evaluate(node => node.getBoundingClientRect());
+  assert.ok(footer.bottom <= modalBox.bottom + 1);
+  assert.ok(footer.height > 0);
 });

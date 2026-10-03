@@ -1,14 +1,22 @@
 # Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates
 
-Seit `v0.2.0-alpha.44` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall.
+Seit `v0.2.0-alpha.64` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog.
 
 ## Stichwortprofile
 
+Seit `v0.2.0-alpha.64` werden Stichwortprofile in der Einstellungs-Arbeitsfläche als Master-Detail-Ansicht verwaltet: links die Profilliste, rechts der Editor für das ausgewählte Profil. Das bisherige separate `keywordModal` wurde entfernt.
+
+### Master-Detail-Ansicht
+
+- **Profilliste (links):** zeigt Name und Anzahl der gespeicherten Begriffe. Ein Klick wählt ein Profil. Unbekanntes „Custom“-Profil wird mit einem separaten Eingabefeld benannt.
+- **Editor (rechts):** zeigt den Profilnamen, alle gespeicherten Begriffe und den Bereich für die Scan-Auswahl.
+- **Neues Profil:** legt ein leeres Profil im Editor an und aktiviert die Namenseingabe.
+- **Duplizieren:** übernimmt alle Begriffe des ausgewählten Profils in ein neues, unabhängig zu speicherndes Profil.
 - **Bearbeiten:** Profilname und Suchbegriffe ändern, Begriffe hinzufügen oder entfernen.
-- **Duplizieren:** vorhandene Begriffe in ein neues, unabhängig gespeichertes Profil übernehmen.
-- **Neues Profil:** eigenes Profil anlegen.
-- **Profil speichern:** Namen und vollständige Begriffsliste dauerhaft speichern.
-- **Auswahl für nächste Scans:** nur die angehakten vorhandenen Begriffe für kommende Scans auswählen; die gespeicherte Begriffsliste bleibt unverändert.
+- **Profil speichern:** speichert Namen und die vollständige Begriffsliste dauerhaft.
+- **Auswahl für nächste Scans:** hakt einzelne Begriffe für kommende Scans an; die gespeicherte Begriffsliste bleibt dabei unverändert.
+
+Ungespeicherte Editor-Änderungen werden beim Wechsel zu einem anderen Profil oder beim Schließen der Einstellungen nicht still verworfen; der Editor zeigt weiterhin den bearbeiteten Entwurf an. Erst das explizite Speichern schreibt die Änderungen in die Datei; beim Verlassen mit ungespeicherten Änderungen erscheint keine zusätzliche Rückfrage, solange der Entwurf im Editor sichtbar bleibt.
 
 Im Fallfenster werden weiterhin die Profile für den Einsatz ausgewählt. Dort gibt es keine Profilverwaltung mehr. Neu angelegte oder duplizierte Profile werden bei bereits vorhandener Auswahl nicht automatisch aktiviert. Profile werden über Namen und Pfade gesucht; die Einstellung löst keine Inhaltsanalyse aus.
 
@@ -35,7 +43,7 @@ Der Bereich **Erkennungsregeln** ersetzt die bisherigen „Krypto-Regeln“ durc
 
 ### Arbeitsfläche
 
-Auf Desktop nutzt der Dialog fast die gesamte Browserfläche. Kopfzeile, Haupttabs, Untertabs und der Footer bleiben während des Scrollens sichtbar; nur die Listen- und Editor-Inhalte scrollen in ihren eigenen Bereichen. Links erscheint die Regelliste (ca. 55 %), rechts der Editor (ca. 45 %). Wenn keine Regel ausgewählt ist, zeigt der Editor einen Hilfstext statt einer leeren Fläche.
+Auf Desktop nutzt der Dialog fast die gesamte Browserfläche. Kopfzeile, Haupttabs, Untertabs und der Footer bleiben während des Scrollens sichtbar; nur die Listen- und Editor-Inhalte scrollen in ihren eigenen Bereichen. Links erscheint die Regelliste (ca. 55 %), rechts der Editor (ca. 45 %). Wenn keine Regel ausgewählt ist, zeigt der Editor einen Hilfstext statt einer leeren Fläche. Die Profil-Master-Detail-Ansicht verwendet dasselbe Layout-Prinzip.
 
 ### Master-Detail-Ansicht
 
