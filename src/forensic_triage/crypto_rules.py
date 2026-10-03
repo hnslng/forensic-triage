@@ -27,6 +27,7 @@ CATEGORIES = {
 CRYPTO_CATEGORIES = frozenset(("wallet", "hardware_wallet", "exchange", "portfolio", "payment", "market"))
 RELEVANCE = frozenset(("high", "medium", "low", "neutral"))
 STATUS = frozenset(("active", "legacy"))
+PLATFORM_ID_STATUS = frozenset(("verified", "unverified", "not_applicable"))
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,49}$")
 MAX_APP_RULES = 2000
 MAX_FILE_RULES = 500
@@ -132,9 +133,33 @@ def snapshot(value: Any, version: Any = 1) -> dict[str, Any]:
                 ios_bundle_ids = entry.get("ios_bundle_ids", legacy_bundle_ids)
                 aliases = _optional_strings(entry.get("aliases", []), "aliases")
                 former_names = _optional_strings(entry.get("former_names", []), "former_names")
+                normalized_ios_ids = _strings(ios_bundle_ids, "ios_bundle_ids")
+                normalized_android_ids = _optional_strings(entry.get("android_package_ids", []), "android_package_ids")
+                ios_id_status = _text(
+                    entry.get("ios_id_status", "verified" if normalized_ios_ids and common["verified"] else "unverified"),
+                    "ios_id_status",
+                )
+                android_id_status = _text(
+                    entry.get("android_id_status", "verified" if normalized_android_ids and common["verified"] else "unverified"),
+                    "android_id_status",
+                )
+                if ios_id_status not in PLATFORM_ID_STATUS or android_id_status not in PLATFORM_ID_STATUS:
+                    raise ValueError(f"{rule_id}: Plattform-ID-Status ungültig.")
+                if ios_id_status == "verified" and not normalized_ios_ids:
+                    raise ValueError(f"{rule_id}: iOS-ID kann ohne Bundle-ID nicht verifiziert sein.")
+                if android_id_status == "verified" and not normalized_android_ids:
+                    raise ValueError(f"{rule_id}: Android-ID kann ohne Package-ID nicht verifiziert sein.")
+                if ios_id_status == "not_applicable" and normalized_ios_ids:
+                    raise ValueError(f"{rule_id}: iOS kann mit vorhandener Bundle-ID nicht unzutreffend sein.")
+                if android_id_status == "not_applicable" and normalized_android_ids:
+                    raise ValueError(f"{rule_id}: Android kann mit vorhandener Package-ID nicht unzutreffend sein.")
                 common.update({
-                    "ios_bundle_ids": _strings(ios_bundle_ids, "ios_bundle_ids"),
-                    "android_package_ids": _optional_strings(entry.get("android_package_ids", []), "android_package_ids"),
+                    "ios_bundle_ids": normalized_ios_ids,
+                    "android_package_ids": normalized_android_ids,
+                    "ios_id_status": ios_id_status,
+                    "android_id_status": android_id_status,
+                    "ios_id_note": _optional_text(entry.get("ios_id_note", ""), "ios_id_note", max_length=500),
+                    "android_id_note": _optional_text(entry.get("android_id_note", ""), "android_id_note", max_length=500),
                     "aliases": aliases,
                     "former_names": former_names,
                     "terms": _optional_strings(entry.get("terms", []), "terms"),
@@ -199,7 +224,28 @@ def load_rules(path: Path) -> dict[str, Any]:
             isinstance(rule, dict) and "ios_bundle_ids" not in rule and "android_package_ids" not in rule
             for rule in data.get("app_rules", [])
         )
-        if not legacy_schema and int(data.get("version", 0)) >= 3:
+        platform_status_schema = all(
+            isinstance(rule, dict)
+            and "ios_id_status" not in rule
+            and "android_id_status" not in rule
+            and "ios_id_note" not in rule
+            and "android_id_note" not in rule
+            for rule in data.get("app_rules", [])
+        )
+        legacy_platform_data = json.loads(json.dumps({
+            key: value for key, value in result.items() if key != "sha256"
+        }, ensure_ascii=False))
+        for rule in legacy_platform_data["app_rules"]:
+            for field in ("ios_id_status", "android_id_status", "ios_id_note", "android_id_note"):
+                rule.pop(field, None)
+        legacy_platform_raw = json.dumps(
+            legacy_platform_data, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+        valid_platform_migration = (
+            platform_status_schema
+            and data.get("sha256") == hashlib.sha256(legacy_platform_raw).hexdigest()
+        )
+        if not legacy_schema and not valid_platform_migration and int(data.get("version", 0)) >= 3:
             raise ValueError("Krypto-Regeln wurden außerhalb der Einstellungen verändert oder sind beschädigt.")
     return result
 
@@ -336,13 +382,25 @@ def seed_rules(path: Path, legacy_path: Path | None = None) -> dict[str, Any]:
     """
     defaults = bundled_rules()
     if path.exists():
+        needs_platform_migration = False
         try:
+            raw_local = json.loads(path.read_text(encoding="utf-8"))
+            needs_platform_migration = all(
+                isinstance(rule, dict)
+                and "ios_id_status" not in rule
+                and "android_id_status" not in rule
+                and "ios_id_note" not in rule
+                and "android_id_note" not in rule
+                for rule in raw_local.get("app_rules", [])
+            )
             local = load_rules(path)
-        except (OSError, ValueError):
+        except (OSError, ValueError, json.JSONDecodeError):
             local = snapshot({"app_rules": [], "file_rules": [], "backup_rules": []}, defaults["version"])
         merged = merge_rules(local, defaults)
         # Preserve local version if nothing changed to avoid unnecessary writes.
         if (
+            not needs_platform_migration
+            and
             {rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in local.get(kind, [])}
             == {rule["id"] for kind in ("app_rules", "file_rules", "backup_rules") for rule in merged[kind]}
             and set(local.get("deleted_default_rule_ids", [])) == set(merged["deleted_default_rule_ids"])

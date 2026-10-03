@@ -2,6 +2,19 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.63] – 2026-10-03
+
+- Kritischen Dialogfehler behoben: Der native Einstellungsdialog ist ohne `open`-Attribut nun mit `.settings-modal:not([open]) { display: none; }` vollständig unsichtbar und belegt keine Layoutfläche; nur `.settings-modal[open]` verwendet das große Flex-Layout.
+- Filter und Sortierung in den Erkennungsregeln klar mit **FILTER** und **SORTIEREN NACH** beschriftet; verständliche ARIA-Labels ergänzt.
+- Rückwärtskompatible Plattform-ID-Status für App-Regeln ergänzt: `verified`, `unverified` und ausschließlich bei explizitem Nachweis `not_applicable`, jeweils getrennt für iOS und Android und optional mit plattformspezifischer Notiz.
+- Alpha-62-Regeln werden deterministisch migriert: vorhandene ID plus bisheriger Prüfstatus wird plattformspezifisch `verified`; fehlende oder bisher nicht verifizierte IDs werden `unverified`. Fehlende IDs bedeuten ausdrücklich nicht, dass keine App für die Plattform existiert.
+- Regeltabelle erklärt die Plattformzustände einheitlich: grünes `✓` = ID verifiziert, amberfarbenes `?` = noch keine verifizierte ID hinterlegt, graues `—` = nachweislich nicht anwendbar. Tastatur-, Touch- und Hover-Tooltips laufen über die globale Tooltip-Schicht.
+- Irreführendes allgemeines Häkchen hinter dem App-Namen entfernt; die konkrete Verifikation steht in den iOS-/Android-Spalten.
+- App-Regel-Editor zeigt pro Plattform ID-Feld, Status, Erklärung und optionale Notiz; gemeinsame Quelle und Prüfdatum bleiben kompatibel erhalten.
+- Schreibfehler **PFAde** im Backup-Regel-Editor zu **PFADE** korrigiert; die Backup-Erkennungslogik blieb unverändert.
+- Python-Tests für Alpha-62-Migration, konservative Defaults, explizites `not_applicable`, eigene Regeln und Tombstones ergänzt; Browsertests decken Dialogzustände, Labels, alle Plattformstatus, Tooltips, Android-only-/ID-lose Regeln und die korrigierten Beschriftungen ab.
+- Version auf `0.2.0-alpha.63` (`0.2.0a63`) angehoben.
+
 ## [0.2.0-alpha.62] – 2026-10-03
 
 - Automatische Regel-Migration bei Programmupdates: mitgelieferte neue Standardregeln (App-, Datei- und Backup-Regeln) werden in bestehende lokale `crypto-rules.json` ergänzt, ohne lokale Änderungen zu überschreiben und ohne eigene Benutzerregeln zu verlieren.

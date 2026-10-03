@@ -119,8 +119,11 @@ Nach der Übernahme schreibt der Profileditor nur in den Einstellungen-Ordner. D
 - **Neue Standardregeln werden ergänzt:** Noch nicht vorhandene App-, Datei- und Backup-Regeln der neuen Version werden hinzugefügt.
 - **Eigene Regeln bleiben erhalten:** Vom Benutzer angelegte Regeln, die nicht zum Standard gehören, werden niemals entfernt.
 - **Bewusst gelöschte Standardregeln bleiben entfernt:** Ab `v0.2.0-alpha.62` merkt sich `deleted_default_rule_ids` gelöschte Standardregeln. Sie werden bei künftigen Updates nicht wiederhergestellt. Regeln, die vor Alpha 62 gelöscht wurden, können einmalig wieder auftauchen, weil diese Information noch nicht existierte.
+- **Plattform-ID-Status werden konservativ migriert:** Ab `v0.2.0-alpha.63` hat jede App-Regel getrennte Status für iOS und Android. `✓` bedeutet verifizierte ID, `?` noch keine verifizierte ID und `—` nachweislich nicht anwendbar. Eine leere ID-Liste wird immer zu `?`, niemals automatisch zu „App nicht vorhanden“.
 
 Diese Migration ist deterministisch: Sie verändert keine historischen Scan-Snapshots, klassifiziert alte Fälle nicht neu und verändert die Fallindex-`sqlite3` nicht.
+
+Im Master-Detail-Editor sind Suche, **FILTER** und **SORTIEREN NACH** ausdrücklich beschriftet. Die Hilfen in den Spaltenüberschriften und an jedem Statussymbol sind per Maus, Tastatur und Touch erreichbar. Pro Plattform zeigt der Editor das ID-Feld, den Status, eine kurze Erklärung und eine optionale Notiz; Quelle und Prüfdatum dokumentieren die Prüfung. `NICHT ANWENDBAR` darf nur gewählt werden, wenn dies zuverlässig belegt ist.
 
 Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT` in ihrer Umgebung gesetzt ist; andernfalls verwendet sie den mitgelieferten Standard. Auch CLI-Scans speichern ihren Katalogstand.
 

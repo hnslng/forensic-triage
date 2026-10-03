@@ -1,6 +1,8 @@
 # Testplan / Test plan
 
-Stand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.62`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
+Stand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.63`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
+
+Für den Alpha-63-Pi-Nachtest zuerst in Safari/macOS die Hauptseite laden, ohne Einstellungen zu öffnen: Unterhalb der Hauptoberfläche darf kein Einstellungsinhalt erscheinen und die Seite darf dadurch nicht länger werden. Danach Einstellungen öffnen, Erkennungsregeln wählen und wieder schließen. Filter und Sortierung müssen beschriftet sein. Bei einer Regel mit nur Android-ID muss Android `✓` und iOS `?` zeigen; eine Regel ohne verifizierte IDs muss `? / ?` zeigen. `?` darf niemals als Aussage verstanden werden, dass keine App existiert. Tooltips per Maus, Tabulator und Touch prüfen und die migrierten lokalen Regeln, eigenen Regeln und gelöschten Standardregeln mit dem Alpha-62-Bestand vergleichen.
 
 Für Alpha 61 zusätzlich prüfen: Erkennungsregeln im neuen Master-Detail-Editor bearbeiten, suchen, filtern, duplizieren, löschen und per JSON exportieren/importieren. Regeländerungen speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `backup-hints.json`, `summary.json` und Fall-ZIP vergleichen. Bestehende Sichtungen müssen unverändert bleiben. Banking-/Finanz-Apps dürfen nicht als Krypto-Hinweis zählen. Geräte-Backup-Strukturen müssen in `backup-hints.json` und der Oberfläche sichtbar sein, ohne dass Backup-Inhalte analysiert werden. Telefonläufe müssen ein leeres `files.csv` erzeugen und dürfen keine AFC-/MTP-/Dateiinventarisierung starten. Bei iPhones/iPads Seriennummer und UDID getrennt prüfen. Bei Android müssen unvollständige Profile und nicht sichtbare geschützte Bereiche einen unbekannten Status statt eines Negativbefunds erhalten.
 
@@ -28,6 +30,7 @@ Abgedeckt sind insbesondere:
 - iPhone-App-only-Lauf ohne Datei-Mount und mit getrennten Phasenzeiten
 - Android-USB-Vorerkennung ohne ADB, fehlendes `adb`, Autorisierungszustände, mehrere sichtbare Profile und gemeinsamer Erkennungsregelstand
 - skalierbare Regellisten, Migration alter Regeln, Banking-Neutralität, iOS-/Android-/Alias-Matching, Legacy-Regeln, unbekannte Krypto-Kandidaten
+- Alpha-62-Plattformstatus-Migration: vorhandene verifizierte IDs, fehlende IDs als `unverified`, explizites `not_applicable`, eigene Regeln, Tombstones und Snapshot-Kompatibilität
 - Geräte-Backup-Signaturen, falsche/incomplete Backup-Strukturen, mehrere Backups auf einem Datenträger
 
 ### Browser-Regressionsprüfungen
@@ -42,9 +45,9 @@ Bei vorhandenem Google Chrome kann `TRIAGE_BROWSER_CHANNEL=chrome` gesetzt werde
 
 Geprüft werden Medien- und Filterwechsel mit absichtlich verspäteten Antworten, Rückkehr zum Dashboard, A–B–A-Wechsel, Archiv-Unterordner und Pagination in beiden Ansichten, Wiederholung fehlgeschlagener Archivabrufe sowie numerische Sichtungssortierung. Dazu kommen Archivstatusfilter, exakte Dateiauswahl, Fallende im Updatefenster, der signierte Offline-Upload, die flackerfreie Wiederherstellung des Updatefensters und die Strom-/Systemansicht einschließlich Sperr- und Bestätigungszustand. Die Entscheidungszentrale wird mit drei gleichzeitig entfernten synthetischen Medien, verhindertem Dialogstapeln, eindeutiger Zuordnung und Rückkehr aus der Sichtung geprüft. Eine reine Navigation darf keine schreibenden API-Aufrufe auslösen.
 
-Für die Erkennungsregeln werden zusätzlich geprüft: neue Einstellungsnavigation, Regel-Suche, Filter, Sortierung, Regel-Auswahl, Editor, Speichern, Abbrechen, Aktiv/Inaktiv, Legacy, fehlende ID, Tooltips per Hover und Klick/Touch, JSON-Import/Export, große Regellisten und Backup-Ergebnisdarstellung.
+Für die Erkennungsregeln werden zusätzlich geprüft: geschlossener/ geöffneter/ wieder geschlossener Einstellungsdialog ohne Layoutfläche, Regel-Suche, beschriftete Filter und Sortierung, alle drei Plattform-ID-Status, Android-only- und ID-lose Regeln, kein allgemeines Häkchen hinter App-Namen, Regel-Auswahl, Editor, Speichern, Abbrechen, Tooltips per Hover/Fokus/Klick, JSON-Import/Export, große Regellisten und Backup-Ergebnisdarstellung.
 
-Für den aktuellen Alpha-61-Arbeitsstand sind 157+ Python-Tests und 36+ isolierte Browserprüfungen mit dem vorhandenen Chrome-Kanal erfolgreich. Installer und Updater führen Python-Tests aus, nicht Browser- oder Hardwareprüfungen. Diese automatisierten Ergebnisse sind kein Nachweis für den noch offenen realen Android-/Samsung-Test.
+Für den aktuellen Alpha-63-Arbeitsstand sind 178 Python-Tests und 44 isolierte Browserprüfungen mit Chromium erfolgreich. Installer und Updater führen Python-Tests aus, nicht Browser- oder Hardwareprüfungen. Diese automatisierten Ergebnisse ersetzen den Alpha-63-Pi-/Safari-Nachtest nicht.
 
 ## Telefon-Schnellscan
 

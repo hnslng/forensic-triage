@@ -64,8 +64,11 @@ const defaultCryptoRules = {
   version: 3,
   sha256: 'crypto-defaults',
   app_rules: [
-    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: ['io.test.wallet'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
-    { id: 'bank', name: 'Test Bank', category: 'banking', relevance: 'neutral', enabled: true, ios_bundle_ids: ['com.test.bank'], android_package_ids: [], aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+    { id: 'wallet', name: 'Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: ['io.test.wallet'], android_package_ids: [], ios_id_status: 'verified', android_id_status: 'unverified', ios_id_note: '', android_id_note: '', aliases: [], former_names: [], terms: [], status: 'active', verified: true, source: 'Apple App Store', last_verified: '2026-10-03', regions: [], comment: '' },
+    { id: 'android-only', name: 'Android Test Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: [], android_package_ids: ['org.test.android'], ios_id_status: 'unverified', android_id_status: 'verified', ios_id_note: '', android_id_note: '', aliases: [], former_names: [], terms: [], status: 'active', verified: true, source: 'Google Play', last_verified: '2026-10-03', regions: [], comment: '' },
+    { id: 'unknown-ids', name: 'Unknown IDs Wallet', category: 'wallet', relevance: 'high', enabled: true, ios_bundle_ids: [], android_package_ids: [], ios_id_status: 'unverified', android_id_status: 'unverified', ios_id_note: 'Noch zu prüfen', android_id_note: '', aliases: [], former_names: [], terms: ['unknown wallet'], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
+    { id: 'desktop-only', name: 'Desktop Tool', category: 'wallet', relevance: 'low', enabled: true, ios_bundle_ids: [], android_package_ids: [], ios_id_status: 'not_applicable', android_id_status: 'not_applicable', ios_id_note: 'Reines Desktopprodukt', android_id_note: 'Reines Desktopprodukt', aliases: [], former_names: [], terms: ['desktop tool'], status: 'active', verified: false, source: 'Herstellerdokumentation', last_verified: '2026-10-03', regions: [], comment: '' },
+    { id: 'bank', name: 'Test Bank', category: 'banking', relevance: 'neutral', enabled: true, ios_bundle_ids: ['com.test.bank'], android_package_ids: [], ios_id_status: 'unverified', android_id_status: 'unverified', ios_id_note: '', android_id_note: '', aliases: [], former_names: [], terms: [], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
   ],
   file_rules: [
     { id: 'seed-phrase', name: 'Seed Phrase', category: 'wallet', relevance: 'high', enabled: true, filename_equals: [], terms: ['seed'], context_terms: [], extensions: ['txt'], status: 'active', verified: false, source: '', last_verified: '', regions: [], comment: '' },
@@ -81,6 +84,30 @@ function settingsFixture(url) {
   if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein', version: '1.0', keyword_count: 2 }] } };
   if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
 }
+
+test('closed settings dialog occupies no layout space and returns to that state after closing', async t => {
+  const { page } = await setup(t, settingsFixture);
+  const before = await page.locator('#settingsModal').evaluate(node => ({
+    open: node.hasAttribute('open'),
+    display: getComputedStyle(node).display,
+    box: node.getBoundingClientRect().toJSON(),
+    bodyHeight: document.body.scrollHeight,
+  }));
+  assert.equal(before.open, false);
+  assert.equal(before.display, 'none');
+  assert.equal(before.box.width, 0);
+  assert.equal(before.box.height, 0);
+  await page.locator('#openSettings').click();
+  const opened = await page.locator('#settingsModal').evaluate(node => ({ display: getComputedStyle(node).display, box: node.getBoundingClientRect().toJSON() }));
+  assert.equal(opened.display, 'flex');
+  assert.ok(opened.box.width > 1000 && opened.box.height > 800);
+  await page.locator('#closeSettings').click();
+  const closed = await page.locator('#settingsModal').evaluate(node => ({ display: getComputedStyle(node).display, box: node.getBoundingClientRect().toJSON(), bodyHeight: document.body.scrollHeight }));
+  assert.equal(closed.display, 'none');
+  assert.equal(closed.box.width, 0);
+  assert.equal(closed.box.height, 0);
+  assert.equal(closed.bodyHeight, before.bodyHeight);
+});
 
 test('settings are outside the case dialog and profile editor uses only one backdrop', async t => {
   const { page, requests } = await setup(t, settingsFixture);
@@ -179,6 +206,49 @@ test('detection rules workspace is large and both columns are visible on desktop
   assert.ok(footer.height > 20 && footer.bottom <= modal.bottom, 'save footer must be visible');
   const empty = await page.locator('#detectionEditorEmpty');
   assert.equal(await empty.isVisible(), true);
+});
+
+test('detection rule controls and platform ID states are explicit and accessible', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  assert.equal(await page.locator('label[for="detectionFilter"]').innerText().then(text => text.includes('FILTER')), true);
+  assert.equal(await page.locator('label[for="detectionSort"]').innerText().then(text => text.includes('SORTIEREN NACH')), true);
+
+  const symbols = async id => page.locator(`#detectionRows tr[data-id="${id}"] .platform-id-status`).allInnerTexts();
+  assert.deepEqual(await symbols('wallet'), ['✓', '?']);
+  assert.deepEqual(await symbols('android-only'), ['?', '✓']);
+  assert.deepEqual(await symbols('unknown-ids'), ['?', '?']);
+  assert.deepEqual(await symbols('desktop-only'), ['—', '—']);
+  assert.doesNotMatch(await page.locator('#detectionRows tr[data-id="wallet"] td').first().innerText(), /✓/);
+
+  const iosUnknown = page.locator('#detectionRows tr[data-id="android-only"] .platform-id-status').first();
+  await iosUnknown.focus();
+  const tooltip = page.locator('#settingsTooltipLayer');
+  await tooltip.waitFor({ state: 'visible' });
+  assert.match(await tooltip.innerText(), /ID NICHT VERIFIZIERT/);
+  assert.match(await tooltip.innerText(), /bedeutet nicht, dass keine iOS-App existiert/i);
+  const box = await tooltip.evaluate(node => node.getBoundingClientRect());
+  assert.ok(box.top >= 0 && box.left >= 0 && box.right <= 1512 && box.bottom <= 982);
+
+  await page.locator('#detectionRows tr[data-id="android-only"]').click();
+  assert.equal(await page.locator('[data-field="ios_id_status"]').inputValue(), 'unverified');
+  assert.equal(await page.locator('[data-field="android_id_status"]').inputValue(), 'verified');
+  assert.match(await page.locator('.platform-id-editor[data-platform="ios"]').innerText(), /Das bedeutet nicht/);
+  assert.equal(await page.locator('#detectionEditorFields').innerText().then(text => text.includes('VERIFIZIERT ✓')), false);
+});
+
+test('backup editor uses correct PFADE labels', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.locator('#openSettings').click();
+  await page.locator('#settingsCryptoTab').click();
+  await page.locator('#detectionBackupsTab').click();
+  await page.locator('#detectionRows tr[data-id="apple-finder"]').click();
+  const text = await page.locator('#detectionEditorFields').innerText();
+  assert.match(text, /ERFORDERLICHE PFADE \/ ORDNER/);
+  assert.match(text, /TYPISCHE PFADE/);
+  assert.doesNotMatch(text, /PFAde/);
 });
 
 test('detection rules glossary opens as separate dialog without shifting layout', async t => {
@@ -723,7 +793,7 @@ test('detection rules editor and shared hints remain separate from neutral apps'
   const { page } = await setup(t, settingsFixture);
   await page.locator('#openSettings').click();
   await page.locator('#settingsCryptoTab').click();
-  await page.locator('#detectionRows tr[data-id]').click();
+  await page.locator('#detectionRows tr[data-id]').first().click();
   assert.equal(await page.locator('#detectionEditor').isHidden(), false);
   await page.locator('#detectionEditorFields [data-field="name"]').fill('Test Wallet 2');
   assert.equal(await page.locator('#detectionApply').isEnabled(), true);

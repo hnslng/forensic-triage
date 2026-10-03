@@ -607,6 +607,61 @@ function joinList(value) {
   return (value || []).join(", ");
 }
 
+function platformIdStatus(rule, platform, ids) {
+  const stored = rule[`${platform}_id_status`];
+  if (["verified", "unverified", "not_applicable"].includes(stored)) return stored;
+  return ids.length && rule.verified ? "verified" : "unverified";
+}
+
+function platformStatusTooltip(rule, platform, ids, status) {
+  const label = platform === "ios" ? "IOS" : "ANDROID";
+  const idLabel = platform === "ios" ? "Bundle-ID" : "Package-ID";
+  const note = rule[`${platform}_id_note`] ? `\n\nNotiz: ${rule[`${platform}_id_note`]}` : "";
+  if (status === "verified") {
+    const source = rule.source ? `\nQuelle: ${rule.source}` : "";
+    const checked = rule.last_verified ? `\nGeprüft: ${rule.last_verified.split("-").reverse().join(".")}` : "";
+    return `${label} · ID VERIFIZIERT\n\n${idLabel}:\n${ids.join("\n")}${source}${checked}${note}`;
+  }
+  if (status === "not_applicable") {
+    return `${label} · NICHT ANWENDBAR\n\nFür diese Regel ist keine ${label === "IOS" ? "iOS" : "Android"}-App vorgesehen.${note}`;
+  }
+  return `${label} · ID NICHT VERIFIZIERT\n\nFür diese App ist derzeit keine verlässlich geprüfte ${platform === "ios" ? "iOS Bundle-ID" : "Android Package-ID"} im Katalog hinterlegt.\n\nDas bedeutet nicht, dass keine ${platform === "ios" ? "iOS" : "Android"}-App existiert. Erkennung erfolgt derzeit über Name/Alias, soweit die Regel dies vorsieht.${note}`;
+}
+
+function platformStatusSymbol(status) {
+  return status === "verified" ? "✓" : status === "not_applicable" ? "—" : "?";
+}
+
+function platformStatusLabel(status) {
+  return status === "verified" ? "ID verifiziert" : status === "not_applicable" ? "nicht anwendbar" : "ID noch nicht verifiziert";
+}
+
+function platformStatusEditor(rule, platform, ids) {
+  const isIos = platform === "ios";
+  const status = platformIdStatus(rule, platform, ids);
+  const idLabel = isIos ? "IOS BUNDLE-IDS" : "ANDROID PACKAGE-IDS";
+  const idField = isIos ? "ios_bundle_ids" : "android_package_ids";
+  const idHelp = isIos
+    ? "Eindeutige technische Kennung einer iPhone-/iPad-App. Nur aus überprüfbarer Quelle übernehmen."
+    : "Eindeutige technische Kennung einer Android-App. Im offiziellen Google-Play-Eintrag häufig in der URL hinter id=. Nicht raten.";
+  const statusText = status === "verified" ? "ID VERIFIZIERT" : status === "not_applicable" ? "NICHT ANWENDBAR" : "ID NOCH NICHT VERIFIZIERT";
+  const explanation = status === "verified"
+    ? `Technische ${isIos ? "Bundle" : "Package"}-ID ist anhand der angegebenen Quelle geprüft.`
+    : status === "not_applicable"
+      ? "Nur wählen, wenn zuverlässig belegt ist, dass diese Regel für die Plattform nicht zutrifft."
+      : `Für diese Plattform ist derzeit keine verlässlich geprüfte ${isIos ? "Bundle" : "Package"}-ID hinterlegt. Das bedeutet nicht, dass dort keine App existiert.`;
+  return `<section class="platform-id-editor" data-platform="${platform}">
+    <label>${idLabel}${tooltip(idHelp)}<textarea data-field="${idField}" data-platform-ids="${platform}" rows="2" spellcheck="false">${escapeHtml(joinList(ids))}</textarea></label>
+    <label>PLATTFORMSTATUS<select data-field="${platform}_id_status">
+      <option value="verified" ${status === "verified" ? "selected" : ""}>VERIFIZIERT</option>
+      <option value="unverified" ${status === "unverified" ? "selected" : ""}>NOCH NICHT VERIFIZIERT</option>
+      <option value="not_applicable" ${status === "not_applicable" ? "selected" : ""}>NICHT ANWENDBAR</option>
+    </select></label>
+    <p class="platform-id-explanation"><strong>STATUS: ${statusText}</strong>${escapeHtml(explanation)}</p>
+    <label class="platform-id-note">PLATTFORMSPEZIFISCHE NOTIZ<textarea data-field="${platform}_id_note" rows="2" maxlength="500" spellcheck="false">${escapeHtml(rule[`${platform}_id_note`] || "")}</textarea></label>
+  </section>`;
+}
+
 function selectDetectionSection(section) {
   detectionSection = section;
   for (const [key, label] of Object.entries(detectionSectionLabels)) {
@@ -697,19 +752,20 @@ function renderDetectionRules() {
     const isApp = kind === "app_rules";
     const iosIds = isApp ? (rule.ios_bundle_ids?.length ? rule.ios_bundle_ids : rule.bundle_ids || []) : [];
     const androidIds = isApp ? (rule.android_package_ids || []) : [];
-    const ios = isApp ? (iosIds.length ? "✓" : "—") : "";
-    const android = isApp ? (androidIds.length ? "✓" : "—") : "";
+    const iosStatus = isApp ? platformIdStatus(rule, "ios", iosIds) : "";
+    const androidStatus = isApp ? platformIdStatus(rule, "android", androidIds) : "";
     const category = appCategoryLabels[rule.category] || rule.category || "—";
     const statusClass = rule.status === "legacy" ? "status-legacy" : "status-active";
     const statusText = rule.status === "legacy" ? "LEGACY" : (rule.enabled ? "AKTIV" : "INAKTIV");
     return `<tr data-id="${escapeHtml(rule.id)}" data-name="${escapeHtml(rule.name)}" data-category="${escapeHtml(category)}" data-status="${escapeHtml(rule.status || "active")}" data-enabled="${rule.enabled}" data-verified="${rule.verified || false}" data-ios="${escapeHtml(isApp ? (iosIds.join(",") || "") : "")}" data-android="${escapeHtml(isApp ? (androidIds.join(",") || "") : "")}" data-aliases="${escapeHtml((rule.aliases || []).concat(rule.former_names || []).join(","))}">
-      <td>${escapeHtml(rule.name || rule.id)}${rule.verified ? ' <span class="id-present" title="verifiziert">✓</span>' : ""}</td>
+      <td>${escapeHtml(rule.name || rule.id)}</td>
       <td>${escapeHtml(category)}</td>
-      <td class="${ios === "—" ? "id-missing" : "id-present"}">${escapeHtml(ios)}</td>
-      <td class="${android === "—" ? "id-missing" : "id-present"}">${escapeHtml(android)}</td>
+      <td class="platform-status-cell">${isApp ? `<button type="button" class="platform-id-status info-tooltip status-${iosStatus}" aria-label="iOS: ${platformStatusLabel(iosStatus)}" data-tooltip="${escapeHtml(platformStatusTooltip(rule, "ios", iosIds, iosStatus))}">${platformStatusSymbol(iosStatus)}</button>` : ""}</td>
+      <td class="platform-status-cell">${isApp ? `<button type="button" class="platform-id-status info-tooltip status-${androidStatus}" aria-label="Android: ${platformStatusLabel(androidStatus)}" data-tooltip="${escapeHtml(platformStatusTooltip(rule, "android", androidIds, androidStatus))}">${platformStatusSymbol(androidStatus)}</button>` : ""}</td>
       <td class="${statusClass}">${escapeHtml(statusText)}</td>
     </tr>`;
   }).join("") || `<tr><td colspan="5" class="iphone-empty">KEINE REGELN IN DIESEM BEREICH</td></tr>`;
+  initTooltips($("detectionRows"));
   filterDetectionRules();
   sortDetectionRules();
   $("detectionRows").querySelectorAll("tr").forEach(row => row.classList.toggle("active", row.dataset.id === detectionSelectedRuleId));
@@ -756,9 +812,11 @@ function renderDetectionEditor() {
     </div>`;
   }
   if (isApp) {
+    const iosIds = rule.ios_bundle_ids || rule.bundle_ids || [];
+    const androidIds = rule.android_package_ids || [];
     fields += `
-      <label>IOS BUNDLE-IDS${tooltip("Eindeutige technische Kennung einer iPhone-/iPad-App. Beispiel: com.hersteller.app. Nur aus überprüfbarer Quelle übernehmen.")}<textarea data-field="ios_bundle_ids" rows="2" spellcheck="false">${escapeHtml(joinList(rule.ios_bundle_ids || rule.bundle_ids))}</textarea></label>
-      <label>ANDROID PACKAGE-IDS${tooltip("Eindeutige technische Kennung einer Android-App. Beispiel: io.metamask. Zu finden z. B. im offiziellen Google-Play-Eintrag, häufig in der URL hinter id=. Nicht raten.")}<textarea data-field="android_package_ids" rows="2" spellcheck="false">${escapeHtml(joinList(rule.android_package_ids))}</textarea></label>
+      ${platformStatusEditor(rule, "ios", iosIds)}
+      ${platformStatusEditor(rule, "android", androidIds)}
       <label>ALIASSE${tooltip("Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.")}<textarea data-field="aliases" rows="2" spellcheck="false">${escapeHtml(joinList(rule.aliases))}</textarea></label>
       <label>FRÜHERE NAMEN${tooltip("Ehemalige Markennamen derselben App, z. B. BitKeep vor der Umbenennung in Bitget Wallet.")}<textarea data-field="former_names" rows="2" spellcheck="false">${escapeHtml(joinList(rule.former_names))}</textarea></label>
       <label>VORSICHTIGE SUCHBEGRIFFE${tooltip("Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: metamask. Unscharfe Suchbegriffe können Fehlalarme erzeugen.")}<textarea data-field="terms" rows="2" spellcheck="false">${escapeHtml(joinList(rule.terms))}</textarea></label>
@@ -766,10 +824,7 @@ function renderDetectionEditor() {
         <label>STATUS<select data-field="status">${[["active","AKTIV"],["legacy","LEGACY"]].map(([id,label])=>`<option value="${id}" ${(rule.status||"active")===id?"selected":""}>${label}</option>`).join("")}</select></label>
         <label class="checkbox-row"><input data-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> AKTIV ${tooltip("Nur aktive Regeln werden für neue Scans verwendet.")}</label>
       </div>
-      <div class="field-row">
-        <label class="checkbox-row"><input data-field="verified" type="checkbox" ${rule.verified ? "checked" : ""} /> VERIFIZIERT ${tooltip("Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.")}</label>
-        <label>QUELLE<input data-field="source" value="${escapeHtml(rule.source || "")}" autocomplete="off" /></label>
-      </div>
+      <label>QUELLE DER ID-PRÜFUNG<input data-field="source" value="${escapeHtml(rule.source || "")}" autocomplete="off" /></label>
       <div class="field-row">
         <label>PRÜFDATUM (YYYY-MM-DD)<input data-field="last_verified" value="${escapeHtml(rule.last_verified || "")}" autocomplete="off" /></label>
         <label>REGIONEN (kommagetrennt, z. B. AT,DE)<input data-field="regions" value="${escapeHtml(joinList(rule.regions))}" autocomplete="off" /></label>
@@ -790,10 +845,10 @@ function renderDetectionEditor() {
     fields += `
       <label>PLATTFORM${tooltip("Betriebssystem oder Hersteller, auf den sich die Regel bezieht.")}<input data-field="platform" value="${escapeHtml(rule.platform || "")}" autocomplete="off" /></label>
       <label>ERKENNUNGSSICHERHEIT<select data-field="confidence">${[["high","HOCH"],["medium","MITTEL"],["low","NIEDRIG"]].map(([id,label])=>`<option value="${id}" ${(rule.confidence||"medium")===id?"selected":""}>${label}</option>`).join("")}</select></label>
-      <label>ERFORDERLICHE PFAde / ORDNER${tooltip("Pfad-Merkmale, die zusammen auftreten müssen. Beispiel: MobileSync/Backup.")}<textarea data-field="required_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_paths))}</textarea></label>
+      <label>ERFORDERLICHE PFADE / ORDNER${tooltip("Pfad-Merkmale, die zusammen auftreten müssen. Beispiel: MobileSync/Backup.")}<textarea data-field="required_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_paths))}</textarea></label>
       <label>ERFORDERLICHE DATEIEN${tooltip("Dateinamen, deren Vorhandensein die Erkennung stützt. Beispiel: Manifest.db, Info.plist.")}<textarea data-field="required_files" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_files))}</textarea></label>
       <label>ERFORDERLICHE ENDUNGEN${tooltip("Dateiendungen, die zusätzlich vorkommen müssen.")}<textarea data-field="required_extensions" rows="2" spellcheck="false">${escapeHtml(joinList(rule.required_extensions))}</textarea></label>
-      <label>TYPISCHE PFAde${tooltip("Beispielpfade zur Orientierung; werden nicht direkt geprüft.")}<textarea data-field="typical_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.typical_paths))}</textarea></label>
+      <label>TYPISCHE PFADE${tooltip("Beispielpfade zur Orientierung; werden nicht direkt geprüft.")}<textarea data-field="typical_paths" rows="2" spellcheck="false">${escapeHtml(joinList(rule.typical_paths))}</textarea></label>
       <div class="field-row">
         <label>STATUS<select data-field="status">${[["active","AKTIV"],["legacy","LEGACY"]].map(([id,label])=>`<option value="${id}" ${(rule.status||"active")===id?"selected":""}>${label}</option>`).join("")}</select></label>
         <label class="checkbox-row"><input data-field="enabled" type="checkbox" ${rule.enabled ? "checked" : ""} /> AKTIV</label>
@@ -832,6 +887,11 @@ function readDetectionEditor() {
   }
   if (kind === "app_rules") {
     rule.bundle_ids = rule.ios_bundle_ids;
+    if (!rule.ios_bundle_ids.length && rule.ios_id_status === "verified") rule.ios_id_status = "unverified";
+    if (rule.ios_bundle_ids.length && rule.ios_id_status === "not_applicable") rule.ios_id_status = "unverified";
+    if (!rule.android_package_ids.length && rule.android_id_status === "verified") rule.android_id_status = "unverified";
+    if (rule.android_package_ids.length && rule.android_id_status === "not_applicable") rule.android_id_status = "unverified";
+    rule.verified = rule.ios_id_status === "verified" || rule.android_id_status === "verified";
   }
   return rule;
 }
@@ -2412,7 +2472,7 @@ $("detectionAdd").addEventListener("click", () => {
   if (kind === "app_rules") {
     const category = detectionSection === "banking" ? "banking" : "wallet";
     const relevance = detectionSection === "banking" ? "neutral" : "high";
-    newRule = { id: baseId, name: "Neue Regel", category, relevance, enabled: true, ios_bundle_ids: [], android_package_ids: [], aliases: [], former_names: [], terms: [], comment: "", status: "active", verified: false, source: "", last_verified: "", regions: [] };
+    newRule = { id: baseId, name: "Neue Regel", category, relevance, enabled: true, ios_bundle_ids: [], android_package_ids: [], ios_id_status: "unverified", android_id_status: "unverified", ios_id_note: "", android_id_note: "", aliases: [], former_names: [], terms: [], comment: "", status: "active", verified: false, source: "", last_verified: "", regions: [] };
   } else if (kind === "file_rules") {
     newRule = { id: baseId, name: "Neue Dateiregel", category: "portfolio", relevance: "medium", enabled: true, filename_equals: [], terms: [], context_terms: [], extensions: [], comment: "", status: "active", verified: false, source: "", last_verified: "", regions: [] };
   } else {
@@ -2512,6 +2572,7 @@ document.addEventListener("scroll", () => hideTooltip(), true);
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && activeTooltipTrigger) hideTooltip();
 });
+initTooltips(document);
 $("settingsProfilesList").addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-profile]");
   const copy = event.target.closest("[data-copy-profile]");

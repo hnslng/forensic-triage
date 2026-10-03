@@ -14,7 +14,17 @@ App-Regeln gelten für iPhones, iPads und Android-Geräte im Krypto-Schnellscan 
 - `aliases` / `former_names` – alternative oder frühere Namen
 - `terms` – zusätzliche, vorsichtige Suchbegriffe im App-Namen
 - `category` und `relevance`
+- `ios_id_status` / `android_id_status` – Status der technischen ID: `verified`, `unverified` oder explizit `not_applicable`
+- `ios_id_note` / `android_id_note` – optionale plattformspezifische Erläuterung
 - Metadaten: `status`, `verified`, `source`, `last_verified`, `regions`
+
+Das ältere allgemeine Feld `verified` bleibt für die Kompatibilität erhalten. In der Oberfläche wird die konkrete Aussage getrennt je Plattform dargestellt:
+
+| Symbol | Status | Bedeutung |
+|---|---|---|
+| `✓` | `verified` | Mindestens eine technische ID dieser Plattform ist anhand einer nachvollziehbaren Quelle verifiziert. |
+| `?` | `unverified` | Derzeit ist keine verlässlich geprüfte ID dieser Plattform hinterlegt. Das bedeutet **nicht**, dass dort keine App existiert. |
+| `—` | `not_applicable` | Die Regel ist für diese Plattform nachweislich nicht anwendbar. Dieser Status wird nie aus einer leeren ID-Liste geraten. |
 
 ### Datei-Regeln
 
@@ -53,7 +63,7 @@ Banking, Messenger und Cloud sind immer neutral und erzeugen keinen Krypto-Hinwe
 
 ## Vollständigkeit
 
-Der mitgelieferte Katalog ist bewusst ein breiter, lokal gepflegter und erweiterbarer Katalog – keine mathematisch vollständige Liste aller Apps. Nicht verifizierte App-IDs bleiben leer und werden als „ID fehlt“ gekennzeichnet.
+Der mitgelieferte Katalog ist bewusst ein breiter, lokal gepflegter und erweiterbarer Katalog – keine mathematisch vollständige Liste aller Apps. Nicht verifizierte App-IDs bleiben leer und werden mit `?` als noch nicht verifiziert gekennzeichnet. Die Erkennung kann, soweit die Regel dies vorsieht, weiterhin über exakten Namen, Alias, früheren Namen oder vorsichtigen Suchbegriff erfolgen.
 
 ## Migration
 
@@ -63,5 +73,6 @@ Beim Start wird `crypto-rules.json` automatisch mit dem mitgelieferten Standardk
 - Neue Standardregeln werden ergänzt.
 - Eigene Benutzerregeln bleiben erhalten.
 - Ab `v0.2.0-alpha.62` werden bewusst gelöschte Standardregeln in `deleted_default_rule_ids` vermerkt und bei künftigen Updates nicht wiederhergestellt.
+- Ab `v0.2.0-alpha.63` werden die getrennten Plattformstatus ergänzt. Eine vorhandene ID wird nur mit bisherigem `verified: true` als `verified` übernommen; fehlende IDs werden `unverified`. `not_applicable` entsteht ausschließlich durch eine explizite, belegte Angabe.
 
-Das lokale Regelschema ist ab Alpha 62 Version 3. Alpha-61-Bestände (Version 2) werden automatisch auf Version 3 migriert. Scans speichern den jeweiligen Regelstand als Snapshot; historische Sichtungen werden nicht nachträglich neu klassifiziert. Alte `iphone-triage.json`-Dateien werden weiterhin einmalig migriert.
+Das lokale Regelschema bleibt in Alpha 63 auf Version 3; die neuen Felder werden beim ersten Start deterministisch ergänzt und die lokale Regelversion fortgeschrieben. Lokale Änderungen, eigene Regeln und Tombstones bleiben erhalten. Scans speichern den jeweiligen Regelstand als Snapshot; historische Sichtungen werden weder umgeschrieben noch nachträglich neu klassifiziert. Alte `iphone-triage.json`-Dateien werden weiterhin einmalig migriert.

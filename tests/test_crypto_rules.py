@@ -1,5 +1,6 @@
 """Conservative shared metadata rules and persisted snapshots."""
 
+import hashlib
 import json
 
 import pytest
@@ -8,6 +9,76 @@ from forensic_triage.crypto_rules import (
     bundled_rules, classify_app, classify_file, find_file_hints, load_rules, merge_rules, save_rules, seed_rules, snapshot,
 )
 from forensic_triage.settings import SettingsConflict
+
+
+def alpha62_snapshot(value, version=3):
+    """Build the exact pre-platform-status representation used by Alpha 62."""
+    current = snapshot(value, version)
+    legacy = {key: value for key, value in current.items() if key != "sha256"}
+    for rule in legacy["app_rules"]:
+        for field in ("ios_id_status", "android_id_status", "ios_id_note", "android_id_note"):
+            rule.pop(field, None)
+    raw = json.dumps(legacy, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    return {**legacy, "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def test_alpha62_platform_status_migration_is_conservative(tmp_path):
+    legacy = alpha62_snapshot({
+        "app_rules": [
+            {"id": "ios", "name": "iOS", "category": "wallet", "relevance": "high", "enabled": True,
+             "ios_bundle_ids": ["org.example.ios"], "android_package_ids": [], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": True, "source": "Store", "last_verified": "2026-10-03", "regions": []},
+            {"id": "android", "name": "Android", "category": "wallet", "relevance": "high", "enabled": True,
+             "ios_bundle_ids": [], "android_package_ids": ["org.example.android"], "aliases": [], "former_names": [], "terms": [],
+             "status": "active", "verified": True, "source": "Store", "last_verified": "2026-10-03", "regions": []},
+            {"id": "unknown", "name": "Unknown", "category": "wallet", "relevance": "low", "enabled": True,
+             "ios_bundle_ids": [], "android_package_ids": [], "aliases": [], "former_names": [], "terms": ["unknown"],
+             "status": "active", "verified": False, "source": "", "last_verified": "", "regions": []},
+        ],
+        "file_rules": [], "backup_rules": [], "deleted_default_rule_ids": ["metamask"],
+    })
+    path = tmp_path / "crypto-rules.json"
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+    migrated = load_rules(path)
+    ios, android, unknown = migrated["app_rules"]
+    assert (ios["ios_id_status"], ios["android_id_status"]) == ("verified", "unverified")
+    assert (android["ios_id_status"], android["android_id_status"]) == ("unverified", "verified")
+    assert (unknown["ios_id_status"], unknown["android_id_status"]) == ("unverified", "unverified")
+    assert migrated["deleted_default_rule_ids"] == ["metamask"]
+    assert "ios_id_status" not in legacy["app_rules"][0]  # historical snapshot object was not rewritten
+
+
+def test_platform_status_not_applicable_must_be_explicit_and_consistent():
+    base = {
+        "id": "desktop", "name": "Desktop", "category": "wallet", "relevance": "low", "enabled": True,
+        "ios_bundle_ids": [], "android_package_ids": [], "aliases": [], "former_names": [], "terms": ["desktop"],
+        "status": "active", "verified": False, "source": "Hersteller", "last_verified": "", "regions": [],
+        "ios_id_status": "not_applicable", "android_id_status": "not_applicable",
+        "ios_id_note": "Desktopprodukt", "android_id_note": "Desktopprodukt",
+    }
+    result = snapshot({"app_rules": [base], "file_rules": [], "backup_rules": []})
+    assert result["app_rules"][0]["ios_id_status"] == "not_applicable"
+    with pytest.raises(ValueError):
+        snapshot({"app_rules": [{**base, "ios_bundle_ids": ["org.example.app"]}], "file_rules": [], "backup_rules": []})
+
+
+def test_seed_writes_platform_migration_without_losing_local_rules_or_tombstones(tmp_path):
+    path = tmp_path / "crypto-rules.json"
+    legacy = alpha62_snapshot({
+        "app_rules": [{"id": "own-wallet", "name": "Own Wallet", "category": "wallet", "relevance": "high", "enabled": True,
+                       "ios_bundle_ids": ["org.example.own"], "android_package_ids": [], "aliases": [], "former_names": [], "terms": [],
+                       "status": "active", "verified": True, "source": "Eigene Prüfung", "last_verified": "2026-10-03", "regions": []}],
+        "file_rules": [], "backup_rules": [], "deleted_default_rule_ids": ["metamask"],
+    })
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+    result = seed_rules(path)
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    own = next(rule for rule in result["app_rules"] if rule["id"] == "own-wallet")
+    assert own["ios_id_status"] == "verified"
+    assert own["name"] == "Own Wallet"
+    assert "metamask" in result["deleted_default_rule_ids"]
+    assert "ios_id_status" in stored["app_rules"][0]
+    assert result["version"] == legacy["version"] + 1
 
 
 def test_bundled_app_categories_and_neutral_matches():
@@ -120,6 +191,8 @@ def test_large_rule_set_scales_without_validation_error():
             "name": f"Scale App {index}",
             "ios_bundle_ids": [],
             "android_package_ids": [f"com.scale.app{index}"],
+            "ios_id_status": "unverified",
+            "android_id_status": "verified",
             "aliases": [],
             "former_names": [],
             "terms": [],

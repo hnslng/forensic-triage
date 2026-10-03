@@ -351,26 +351,26 @@
             <div class="detection-list-panel">
               <div class="detection-toolbar">
                 <label for="detectionSearch">REGEL SUCHEN<input id="detectionSearch" type="search" placeholder="NAME, ALIAS, BUNDLE-ID, PACKAGE-ID …" /></label>
-                <select id="detectionFilter" aria-label="Filter">
-                  <option value="">ALLE REGELN</option>
-                  <option value="active">AKTIV</option>
-                  <option value="inactive">INAKTIV</option>
-                  <option value="legacy">LEGACY</option>
-                  <option value="verified">VERIFIZIERT</option>
-                  <option value="unverified">NICHT VERIFIZIERT</option>
-                  <option value="missing_ios">IOS-ID FEHLT</option>
-                  <option value="missing_android">ANDROID-ID FEHLT</option>
-                </select>
-                <select id="detectionSort" aria-label="Sortierung">
-                  <option value="name">NAME</option>
-                  <option value="category">KATEGORIE</option>
-                  <option value="status">STATUS</option>
-                </select>
+                <label for="detectionFilter">FILTER<select id="detectionFilter" aria-label="Erkennungsregeln filtern">
+                    <option value="">ALLE REGELN</option>
+                    <option value="active">AKTIV</option>
+                    <option value="inactive">INAKTIV</option>
+                    <option value="legacy">LEGACY</option>
+                    <option value="verified">VERIFIZIERTE ID VORHANDEN</option>
+                    <option value="unverified">ID NOCH NICHT VERIFIZIERT</option>
+                    <option value="missing_ios">IOS-ID FEHLT</option>
+                    <option value="missing_android">ANDROID-ID FEHLT</option>
+                  </select></label>
+                <label for="detectionSort">SORTIEREN NACH<select id="detectionSort" aria-label="Erkennungsregeln sortieren nach">
+                    <option value="name">NAME</option>
+                    <option value="category">KATEGORIE</option>
+                    <option value="status">STATUS</option>
+                  </select></label>
                 <span id="detectionCount" class="detection-count">0 REGELN</span>
               </div>
               <div class="detection-table-wrap" id="detectionTableWrap">
                 <table class="detection-table" id="detectionTable">
-                  <thead><tr><th>NAME</th><th>KATEGORIE</th><th>IOS</th><th>ANDROID</th><th>STATUS</th></tr></thead>
+                  <thead><tr><th>NAME</th><th>KATEGORIE</th><th>IOS <button type="button" class="info-tooltip" aria-label="iOS-ID-Status erklären" data-tooltip="Zeigt den Status der technischen iOS Bundle-ID.&#10;✓ = verifiziert&#10;? = noch keine verifizierte ID hinterlegt&#10;— = für diese Plattform nicht anwendbar.">?</button></th><th>ANDROID <button type="button" class="info-tooltip" aria-label="Android-ID-Status erklären" data-tooltip="Zeigt den Status der technischen Android Package-ID.&#10;✓ = verifiziert&#10;? = noch keine verifizierte ID hinterlegt&#10;— = für diese Plattform nicht anwendbar.">?</button></th><th>STATUS</th></tr></thead>
                   <tbody id="detectionRows"></tbody>
                 </table>
               </div>
@@ -421,6 +421,7 @@
           <dt>ALIAS</dt><dd>Alternativer oder früherer Name derselben App. Beispiel: Xumm als früherer Name von Xaman. Quelle: Herstellerseite, Store oder dokumentierte Umbenennung.</dd>
           <dt>SUCHBEGRIFF</dt><dd>Zusätzlicher Begriff für eine vorsichtige Erkennung, falls keine eindeutige App-ID greift. Beispiel: <code>metamask</code>. Unscharfe Suchbegriffe können Fehlalarme erzeugen.</dd>
           <dt>ID FEHLT</dt><dd>Für diese Plattform ist noch keine verifizierte technische App-ID gespeichert. Die App kann gegebenenfalls nur über ihren Namen oder Alias erkannt werden.</dd>
+          <dt>PLATTFORM-ID-STATUS</dt><dd><strong>✓</strong> = ID verifiziert; <strong>?</strong> = noch keine verifizierte ID hinterlegt; <strong>—</strong> = nachweislich nicht anwendbar. Eine fehlende ID bedeutet nicht, dass keine App für die Plattform existiert.</dd>
           <dt>LEGACY</dt><dd>Ältere, umbenannte oder eingestellte App, die auf vorhandenen älteren Geräten noch installiert sein kann.</dd>
           <dt>VERIFIZIERT</dt><dd>Die technische Kennung wurde anhand einer nachvollziehbaren Quelle geprüft.</dd>
           <dt>RELEVANZ</dt><dd>HOCH = starker Krypto-Hinweis (Wallet/Börse); MITTEL = Portfolio/Steuer/Zahlung; NIEDRIG = vage Hinweise; NEUTRAL = Banking/Messenger/Cloud erzeugt keinen Krypto-Hinweis.</dd>
