@@ -542,14 +542,15 @@ test('iphone card and app-only result distinguish hints from incomplete collecti
   assert.match(await page.locator('#iphoneSummary').innerText(), /KRYPTO-HINWEIS ERKANNT/i);
   assert.match(await page.locator('#iphoneTriageApps').innerText(), /TEST WALLET/i);
   assert.equal(await page.locator('#cryptoFindings').isHidden(), true);
-  assert.match(await page.locator('#decisionTitle').innerText(), /TELEFON/);
+  assert.match(await page.locator('#decisionTitle').innerText(), /FACHPERSON DOKUMENTIEREN|TELEFON|MOBILGERÄT/i);
   if (process.env.TRIAGE_SCREENSHOT) await page.locator('#results').screenshot({ path: process.env.TRIAGE_SCREENSHOT });
   assert.doesNotMatch(await page.locator('#iphoneNotice').textContent(), /FILE SHARING|AFC/);
   assert.match(await page.locator('#phoneCoverage').innerText(), /Benutzer-App-Liste/i);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
   assert.equal(await page.locator('#classicHome').isHidden(), true);
   assert.equal(await page.locator('#inventoryPanel').getAttribute('open'), null);
-  assert.match(await page.locator('#iphoneCategories').innerText(), /TEST WALLET/i);
+  await page.locator('#iphoneCategories .iphone-category.crypto summary').click();
+  assert.match(await page.locator('#iphoneCategories .iphone-category.crypto').innerText(), /TEST WALLET/i);
   assert.equal(await page.locator('#iphoneCategories .iphone-category.crypto').isVisible(), true);
 });
 
@@ -582,7 +583,9 @@ test('android card guides authorization and result shows profile coverage', asyn
     },
   }));
   assert.match(await page.locator('#iphoneSystem').innerText(), /ANDROID 16/);
-  assert.match(await page.locator('#iphoneCategories').innerText(), /MetaMask/i);
+  await page.locator('#iphoneCategories .iphone-category.crypto summary').click();
+  assert.match(await page.locator('#iphoneCategories .iphone-category.crypto').innerText(), /MetaMask/i);
+  await page.locator('#iphoneSummary .iphone-technical summary').click();
   assert.match(await page.locator('#phoneCoverage').innerText(), /Secure Folder/i);
   assert.match(await page.locator('#phoneCoverage').innerText(), /NICHT VOLLSTÄNDIG PRÜFBAR/);
 });
@@ -601,7 +604,9 @@ test('phone app groups show recognized names and search only the collapsed other
   });
   assert.match(await page.locator('#iphoneTriageLevel').innerText(), /KEIN KRYPTO-HINWEIS/);
   assert.match(await page.locator('#iphoneTriageText').innerText(), /nicht aus/);
-  assert.match(await page.locator('#iphoneCategories .iphone-category:not(.iphone-category-other)').innerText(), /SIGNAL/i);
+  const messengerCategory = page.locator('#iphoneCategories .iphone-category:not(.iphone-category-other)');
+  await messengerCategory.locator('summary').click();
+  assert.match(await messengerCategory.innerText(), /SIGNAL/i);
   assert.equal(await page.locator('#iphoneCategories .iphone-category-other').getAttribute('open'), null);
   await page.locator('#iphoneCategories .iphone-category-other summary').click();
   await page.locator('#iphoneOtherSearch').fill('Unbekannt B');
