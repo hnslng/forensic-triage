@@ -1,22 +1,26 @@
 # Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates
 
-Seit `v0.2.0-alpha.64` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog.
+Seit `v0.2.0-alpha.65` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog.
 
 ## Stichwortprofile
 
-Seit `v0.2.0-alpha.64` werden Stichwortprofile in der Einstellungs-Arbeitsfläche als Master-Detail-Ansicht verwaltet: links die Profilliste, rechts der Editor für das ausgewählte Profil. Das bisherige separate `keywordModal` wurde entfernt.
+Seit `v0.2.0-alpha.65` werden Stichwortprofile in der Einstellungs-Arbeitsfläche als Master-Detail-Ansicht verwaltet: links die Profilliste, rechts der Editor für das ausgewählte Profil. Das bisherige separate `keywordModal` wurde entfernt.
 
 ### Master-Detail-Ansicht
 
-- **Profilliste (links):** zeigt Name und Anzahl der gespeicherten Begriffe. Ein Klick wählt ein Profil. Unbekanntes „Custom“-Profil wird mit einem separaten Eingabefeld benannt.
+- **Profilliste (links):** ruhige Listen-/Tabellenansicht mit den Spalten Profilname, Anzahl Stichwörter und Version. Ein Klick auf eine Zeile wählt das Profil aus und öffnet es rechts im Editor. Es gibt keinen permanenten **Bearbeiten**- oder **Duplizieren**-Button pro Zeile. Das aktive Profil wird farblich markiert, Profilnamen werden nicht gequetscht.
 - **Editor (rechts):** zeigt den Profilnamen, alle gespeicherten Begriffe und den Bereich für die Scan-Auswahl.
-- **Neues Profil:** legt ein leeres Profil im Editor an und aktiviert die Namenseingabe.
-- **Duplizieren:** übernimmt alle Begriffe des ausgewählten Profils in ein neues, unabhängig zu speicherndes Profil.
+- **Neues Profil:** „+ NEUES PROFIL" im Kopf der Liste legt ein leeres Profil im Editor an und aktiviert die Namenseingabe.
+- **Duplizieren:** befindet sich nur im Editor und übernimmt alle Begriffe des ausgewählten Profils in ein neues, unabhängig zu speicherndes Profil mit sinnvoller Namensgebung.
 - **Bearbeiten:** Profilname und Suchbegriffe ändern, Begriffe hinzufügen oder entfernen.
 - **Profil speichern:** speichert Namen und die vollständige Begriffsliste dauerhaft.
-- **Auswahl für nächste Scans:** hakt einzelne Begriffe für kommende Scans an; die gespeicherte Begriffsliste bleibt dabei unverändert.
+- **Auswahl für nächste Scans:** hakt einzelne Begriffe für kommende Scans an; die gespeicherte Begriffsliste bleibt dabei unverändert. Eine leere Auswahl wird als leere Menge gespeichert und nicht automatisch wieder mit allen Begriffen gefüllt.
 
-Ungespeicherte Editor-Änderungen werden beim Wechsel zu einem anderen Profil oder beim Schließen der Einstellungen nicht still verworfen; der Editor zeigt weiterhin den bearbeiteten Entwurf an. Erst das explizite Speichern schreibt die Änderungen in die Datei; beim Verlassen mit ungespeicherten Änderungen erscheint keine zusätzliche Rückfrage, solange der Entwurf im Editor sichtbar bleibt.
+### Vertikale Keyword-Liste
+
+Die Stichwortliste im Editor ist eine vertikale Zeilenliste: Jede Zeile enthält eine Checkbox, den Begriff in Großbuchstaben und einen Entfernen-Button am rechten Rand. Es gibt keine zweispaltigen Kacheln. Oberhalb der Liste stehen die kompakten Schaltflächen **ALLE** und **KEINE**.
+
+Ungespeicherte Editor-Änderungen werden beim Wechsel zu einem anderen Profil oder beim Schließen der Einstellungen nicht still verworfen; beim Wechsel erscheint eine Rückfrage, solange der Entwurf ungespeichert ist. Erst das explizite Speichern schreibt die Änderungen in die Datei.
 
 Im Fallfenster werden weiterhin die Profile für den Einsatz ausgewählt. Dort gibt es keine Profilverwaltung mehr. Neu angelegte oder duplizierte Profile werden bei bereits vorhandener Auswahl nicht automatisch aktiviert. Profile werden über Namen und Pfade gesucht; die Einstellung löst keine Inhaltsanalyse aus.
 

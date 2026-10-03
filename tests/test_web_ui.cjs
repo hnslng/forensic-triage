@@ -48,6 +48,20 @@ async function open(page, id) {
   await page.evaluate(id => { activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' }; updateStartOverlay(); openMedia(id); }, id);
   await page.waitForFunction(id => inventoryTreeMediaId === id, id);
 }
+async function openSettingsFromAnywhere(page) {
+  if (await page.locator('#startOverlay').isVisible()) {
+    await page.locator('#startOverlaySettings').click();
+  } else {
+    await page.locator('#openSettings').click();
+  }
+}
+async function openPowerFromAnywhere(page) {
+  if (await page.locator('#startOverlay').isVisible()) {
+    await page.locator('#startOverlayPower').click();
+  } else {
+    await page.locator('#openPowerModal').click();
+  }
+}
 async function filter(page) {
   await page.locator('[data-inventory-category="Archive"]').click();
   await page.waitForFunction(() => document.getElementById('inventoryCount').textContent.includes('FUNDSTELLEN'));
@@ -97,7 +111,7 @@ test('closed settings dialog occupies no layout space and returns to that state 
   assert.equal(before.display, 'none');
   assert.equal(before.box.width, 0);
   assert.equal(before.box.height, 0);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   const opened = await page.locator('#settingsModal').evaluate(node => ({ display: getComputedStyle(node).display, box: node.getBoundingClientRect().toJSON() }));
   assert.equal(opened.display, 'flex');
   assert.ok(opened.box.width > 1000 && opened.box.height > 800);
@@ -111,12 +125,12 @@ test('closed settings dialog occupies no layout space and returns to that state 
 
 test('settings are outside the case dialog and profile editor uses only one backdrop', async t => {
   const { page, requests } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   assert.equal(await page.locator('#auftragModal').isVisible(), false);
   assert.equal(await page.locator('#settingsProfilesPane').isVisible(), true);
   assert.equal((await page.locator('#settingsTitle').locator('..').innerText()).includes('CFG'), false);
   assert.equal(await page.locator('#profileDetailEmpty').isVisible(), true);
-  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  await page.locator('#settingsProfilesList [data-select-profile]').click();
   assert.equal(await page.locator('#profileDetailEmpty').isVisible(), false);
   assert.equal(await page.locator('#profileDetailForm').isVisible(), true);
   assert.equal(await page.locator('#profileDetailName').inputValue(), 'Allgemein');
@@ -145,7 +159,7 @@ test('catalog filters, reports invalid saves, preserves draft and saves future-s
     }
     return settingsFixture(url);
   });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsFiletypesTab').click();
   await page.locator('[data-category="Dokumente"] textarea').fill('pdf, jpg');
   await page.locator('#catalogSave').click();
@@ -170,7 +184,7 @@ test('catalog filters, reports invalid saves, preserves draft and saves future-s
 
 test('settings remain readable on laptop and small screens', async t => {
   const { page } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.setViewportSize({ width: 800, height: 900 });
   const heights = [];
   for (const tab of ['#settingsProfilesTab', '#settingsFiletypesTab', '#settingsUpdatesTab']) {
@@ -192,7 +206,7 @@ test('settings remain readable on laptop and small screens', async t => {
 test('detection rules workspace is large and both columns are visible on desktop', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   assert.match(await page.locator('#settingsCryptoTab').innerText(), /ERKENNUNGSREGELN/);
   const modal = await page.locator('#settingsModal').evaluate(node => node.getBoundingClientRect());
@@ -212,7 +226,7 @@ test('detection rules workspace is large and both columns are visible on desktop
 test('detection rule controls and platform ID states are explicit and accessible', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   assert.equal(await page.locator('label[for="detectionFilter"]').innerText().then(text => text.includes('FILTER')), true);
   assert.equal(await page.locator('label[for="detectionSort"]').innerText().then(text => text.includes('SORTIEREN NACH')), true);
@@ -242,7 +256,7 @@ test('detection rule controls and platform ID states are explicit and accessible
 
 test('backup editor uses correct PFADE labels', async t => {
   const { page } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   await page.locator('#detectionBackupsTab').click();
   await page.locator('#detectionRows tr[data-id="apple-finder"]').click();
@@ -255,7 +269,7 @@ test('backup editor uses correct PFADE labels', async t => {
 test('detection rules glossary opens as separate dialog without shifting layout', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   const bodyBefore = await page.locator('.detection-body').evaluate(node => node.getBoundingClientRect());
   await page.locator('#detectionGlossaryButton').click();
@@ -273,7 +287,7 @@ test('detection rules glossary opens as separate dialog without shifting layout'
 test('detection rules tooltip stays fully inside viewport', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   await page.locator('#detectionRows tr[data-id="wallet"]').click();
   const trigger = page.locator('.detection-editor-fields .info-tooltip').first();
@@ -290,7 +304,7 @@ test('detection rules tooltip stays fully inside viewport', async t => {
 test('detection rules backup tab shows bundled backup rules', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   await page.locator('#detectionBackupsTab').click();
   const text = await page.locator('#detectionRows').innerText();
@@ -310,7 +324,7 @@ test('detection rules apply drafts and save all persist changes', async t => {
     return settingsFixture(url);
   });
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   await page.locator('#detectionRows tr[data-id="wallet"]').click();
   await page.locator('[data-field="name"]').fill('Renamed Wallet');
@@ -371,7 +385,7 @@ test('signed offline package uploads through the update dialog and observes comp
         : { json: { jobs: { offline: false }, update: { state: 'installed', current_version: '0.2.0a45' } } };
     }
   });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsUpdatesTab').click();
   await page.setViewportSize({ width: 470, height: 900 });
   const modalSize = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
@@ -406,7 +420,7 @@ test('power warning is compact and shutdown needs a deliberate second confirmati
   assert.match(await page.locator('#powerHealth').getAttribute('class'), /warning/);
   assert.match(await page.locator('#powerHealth').getAttribute('title'), /UNTERSPANNUNG AUFGETRETEN/);
   await page.setViewportSize({ width: 470, height: 900 });
-  await page.locator('#openPowerModal').click();
+  await openPowerFromAnywhere(page);
   assert.match(await page.locator('#powerModalTitle').innerText(), /NEUSTART/);
   const modalSize = await page.locator('#powerModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
   assert.ok(modalSize.scroll <= modalSize.client + 1);
@@ -432,7 +446,7 @@ test('normal power stays hidden and a successful update clears a stale offline e
   });
   assert.equal(await page.locator('#powerHealth').isHidden(), true);
   assert.equal(await page.locator('#offlineUpdateMessage').innerText(), '');
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsUpdatesTab').click();
   assert.equal(await page.locator('#updateSuccessNotice').isVisible(), true);
   assert.match(await page.locator('#updateSuccessNotice').innerText(), /ERFOLGREICH ABGESCHLOSSEN/);
@@ -659,9 +673,10 @@ test('multiple removed undecided media use one queue and return there from detai
   const pending = media.slice(0, 3);
   await page.evaluate(items => {
     activeCaseNumber = 'TEST'; activeOperator = 'HL'; currentCaseMedia = items;
+    startOverlayReady = true; updateStartOverlay();
     renderDevices(items.map((item, index) => ({ path: `/dev/test${index}`, serial: item.serial, model: item.model, size: 1024 * (index + 1), scan_supported: true })));
   }, pending);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.evaluate(() => renderDevices([]));
   await page.waitForTimeout(1400);
   assert.equal(await page.locator('#decisionQueueModal').isVisible(), false, 'Queue must not stack over another dialog');
@@ -795,7 +810,7 @@ test('phone app groups show recognized names and search only the collapsed other
 
 test('detection rules editor and shared hints remain separate from neutral apps', async t => {
   const { page } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   await page.locator('#detectionRows tr[data-id]').first().click();
   assert.equal(await page.locator('#detectionEditor').isHidden(), false);
@@ -984,13 +999,19 @@ test('start overlay blocks dashboard but leaves system controls reachable', asyn
   const { page } = await setup(t, settingsFixture);
   await page.waitForFunction(() => startOverlayReady);
   assert.equal(await page.locator('#startOverlay').isVisible(), true);
-  assert.equal(await page.locator('#dashboardView button').first().isEnabled(), true);
-  assert.equal(await page.locator('#openSettings').isEnabled(), true);
-  assert.equal(await page.locator('#openPowerModal').isEnabled(), true);
+  await page.locator('#startOverlaySettings').click();
+  assert.equal(await page.locator('#settingsModal').isVisible(), true);
+  await page.locator('#closeSettings').click();
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+  await page.locator('#startOverlayPower').click();
+  assert.equal(await page.locator('#powerModal').isVisible(), true);
+  await page.locator('#closePowerModal').click();
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
   await page.locator('#startOpenCase').click();
   assert.equal(await page.locator('#auftragModal').isVisible(), true);
   assert.equal(await page.locator('#startOverlay').isVisible(), true);
   await page.locator('#closeAuftragModal').click();
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
 });
 
 test('starting a case hides the overlay and ending it shows it again', async t => {
@@ -1045,9 +1066,9 @@ test('profile master-detail supports create, edit, duplicate, add and remove key
     }
     return settingsFixture(url);
   });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   assert.equal(await page.locator('#profileDetailEmpty').isVisible(), true);
-  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  await page.locator('#settingsProfilesList [data-select-profile]').click();
   assert.equal(await page.locator('#profileDetailName').inputValue(), 'Allgemein');
   assert.equal(await page.locator('#profileDetailOptions input').count(), 2);
   await page.locator('#profileDetailDuplicate').click();
@@ -1070,8 +1091,8 @@ test('profile master-detail supports create, edit, duplicate, add and remove key
 
 test('profile selection for next scans stays separate from saving the profile', async t => {
   const { page } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
-  await page.locator('#settingsProfilesList [data-edit-profile]').click();
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList [data-select-profile]').click();
   await page.locator('#profileDetailClearAll').click();
   await page.locator('#profileDetailApply').click();
   await page.waitForFunction(() => document.getElementById('profileDetailMessage').textContent.includes('NÄCHSTE SCANS'));
@@ -1080,7 +1101,7 @@ test('profile selection for next scans stays separate from saving the profile', 
 
 test('platform status badges are plain text without visible circle or badge', async t => {
   const { page } = await setup(t, settingsFixture);
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   const cell = page.locator('#detectionRows tr[data-id="wallet"] .platform-id-status').first();
   assert.equal(await cell.innerText(), '✓');
@@ -1093,7 +1114,7 @@ test('platform status badges are plain text without visible circle or badge', as
 test('platform status tooltip still explains verification state', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   const trigger = page.locator('#detectionRows tr[data-id="wallet"] .platform-id-status').first();
   await trigger.focus();
@@ -1105,7 +1126,7 @@ test('platform status tooltip still explains verification state', async t => {
 test('custom scrollbar CSS does not break layout or hide footer buttons', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.locator('#openSettings').click();
+  await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
   const modal = await page.locator('#settingsModal').evaluate(node => ({ scrollWidth: node.scrollWidth, clientWidth: node.clientWidth }));
   assert.ok(modal.scrollWidth <= modal.clientWidth + 1);
@@ -1113,4 +1134,86 @@ test('custom scrollbar CSS does not break layout or hide footer buttons', async 
   const modalBox = await page.locator('#settingsModal').evaluate(node => node.getBoundingClientRect());
   assert.ok(footer.bottom <= modalBox.bottom + 1);
   assert.ok(footer.height > 0);
+});
+
+test('start overlay branding uses acid spans for both slashes', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.waitForFunction(() => startOverlayReady);
+  const brand = await page.locator('.start-overlay-brand').evaluate(node => ({
+    text: node.textContent,
+    slashCount: node.querySelectorAll('.acid').length,
+  }));
+  assert.match(brand.text, /TRIAGE\/\/BOX/);
+  assert.equal(brand.slashCount, 2);
+  assert.match(await page.locator('.start-overlay-ready').innerText(), /BEREIT/);
+});
+
+test('profile list has no edit or duplicate buttons per row', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  assert.equal(await page.locator('#settingsProfilesList [data-edit-profile]').count(), 0);
+  assert.equal(await page.locator('#settingsProfilesList [data-copy-profile]').count(), 0);
+  assert.equal(await page.locator('#settingsProfilesList [data-select-profile]').count(), 1);
+});
+
+test('profile list row opens editor and empty selection stays empty after save', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/profiles' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      return { status: 200, json: { profile: { id: 'default', name: payload.name, keywords: payload.keywords, version: '1.1' } } };
+    }
+    return settingsFixture(url);
+  });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList [data-select-profile]').click();
+  assert.equal(await page.locator('#profileDetailForm').isVisible(), true);
+  await page.locator('#profileDetailClearAll').click();
+  await page.locator('#profileDetailSave').click();
+  await page.waitForFunction(() => document.getElementById('profileDetailMessage').textContent.includes('GESPEICHERT') && selectedByProfile.get('default')?.size === 0);
+  assert.equal(await page.evaluate(() => selectedByProfile.get('default')?.size), 0);
+});
+
+test('profile keyword list is vertical not two-column', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList [data-select-profile]').click();
+  const rows = await page.locator('#profileDetailOptions .keyword-option').all();
+  assert.ok(rows.length >= 1);
+  if (rows.length >= 2) {
+    const first = await rows[0].boundingBox();
+    const second = await rows[1].boundingBox();
+    assert.ok(first.y < second.y, 'keywords should stack vertically');
+    assert.ok(Math.abs(first.x - second.x) < 2, 'keywords should start at same x');
+  }
+});
+
+test('detection toolbar keeps search filter sort and count on one row on desktop', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1440, height: 982 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsCryptoTab').click();
+  const toolbar = await page.locator('.detection-toolbar').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth, height: node.getBoundingClientRect().height }));
+  assert.ok(toolbar.scroll <= toolbar.client + 1, 'toolbar must not wrap or overflow on desktop');
+  assert.ok(toolbar.height <= 80, 'toolbar must stay compact');
+  const labelTops = await page.locator('.detection-toolbar label').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().top));
+  assert.equal(new Set(labelTops).size, 1, 'all toolbar labels must share the same top baseline');
+  const count = await page.locator('#detectionCount').evaluate(node => node.getBoundingClientRect());
+  const toolbarBox = await page.locator('.detection-toolbar').evaluate(node => node.getBoundingClientRect());
+  assert.ok(count.right <= toolbarBox.right + 1, 'count must stay inside toolbar');
+});
+
+test('profile master-detail and detection toolbar wrap cleanly on small screens', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  for (const { width, height } of [{ width: 1280, height: 900 }, { width: 1000, height: 900 }, { width: 620, height: 900 }]) {
+    await page.setViewportSize({ width, height });
+    await page.locator('#settingsProfilesTab').click();
+    const profileWorkspace = await page.locator('.profile-workspace').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+    assert.ok(profileWorkspace.scroll <= profileWorkspace.client + 1, `profile workspace must not overflow at ${width}px`);
+    await page.locator('#settingsCryptoTab').click();
+    const toolbar = await page.locator('.detection-toolbar').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+    assert.ok(toolbar.scroll <= toolbar.client + 1, `detection toolbar must not overflow at ${width}px`);
+    const modal = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+    assert.ok(modal.scroll <= modal.client + 1, `settings modal must not overflow at ${width}px`);
+  }
 });

@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.65] – 2026-10-03
+
+- Startoverlay ohne aktiven Fall visuell geschärft: Hintergrund bleibt sichtbar, aber abgedunkelt und leicht geblurrt; Bedienelemente darunter sind nicht erreichbar. Branding zeigt `TRIAGE//BOX` mit separaten Acid-Grün-Spans für beide Slash-Zeichen und `BEREIT` darunter. Oben rechts im Overlay kompakte Utility-Controls für Einstellungen und Power, die dieselben lokalen Inline-SVGs wie die Systemleiste verwenden. Einstellungen- und Power-Dialog öffnen sich oberhalb des Overlays; nach dem Schließen kehrt der Startzustand zuverlässig zurück. Der bestehende `updateStartOverlay()`-Mechanismus gegen Aufblitzen beim Reload mit aktivem Fall bleibt erhalten.
+- Stichwortprofile komplett als Master-Detail-Ansicht neu geordnet: Linke Seite zeigt eine ruhige Listen-/Tabellenansicht mit Profilname, Anzahl Stichwörter und Version; keine permanenten Bearbeiten-/Duplizieren-Buttons pro Zeile. Klick auf eine Zeile öffnet den Editor rechts. "+ NEUES PROFIL" bleibt im Kopf der Liste. Ausgewähltes Profil wird klar markiert, Profilnamen nicht gequetscht. Rechte Seite bietet Leerzustand, Profilnamen-Eingabe, Duplizieren im Editor, vertikale Stichwort-Liste mit Checkbox, Begriff (uppercase) und Entfernen-Button pro Zeile, "ALLE"/"KEINE", Zähler und getrennte Footer-Buttons "AUSWAHL FÜR NÄCHSTE SCANS" sowie "PROFIL SPEICHERN".
+- Leere Stichwort-Auswahl bleibt beim Speichern leer: `saveProfileEditor()` setzt `selectedByProfile` direkt auf die gefilterte Auswahl, ohne bei leerer Menge wieder alle Keywords zu aktivieren.
+- Erkennungsregeln-Toolbar neu ausgerichtet: Suche, Filter, Sortierung und Regelanzahl stehen auf Desktop in einer gemeinsamen Zeile mit gleicher Label-Baseline und einheitlicher Eingabehöhe. Responsive Umbruch bei kleineren Viewports bleibt kontrolliert.
+- Browsertests erweitert und an die neue Oberfläche angepasst: Startoverlay-Branding, Utility-Controls, Profil-Liste ohne Einzelbuttons, vertikale Keyword-Liste, leere Auswahl nach Speichern, Toolbar-Layout und Responsive-Verhalten bei 1280/1000/620 px werden geprüft.
+- Version auf `0.2.0-alpha.65` (`0.2.0a65`) angehoben.
+
 ## [0.2.0-alpha.64] – 2026-10-03
 
 - Neuer Startzustand ohne aktiven Fall: Über dem Arbeitsbereich erscheint ein dezentres Overlay mit Hinweis und „Fall anlegen / öffnen“; Systemleiste (Einstellungen, Power, Status) bleibt erreichbar. Das Overlay verschwindet, sobald ein Fall aktiv ist, und erscheint automatisch wieder nach „Fall beenden“ oder Reload ohne Fall. Beim Reload mit serverseitig aktivem Fall blitzt es nicht auf.

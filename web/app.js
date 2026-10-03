@@ -539,12 +539,12 @@ function renderProfileList() {
   </label>`).join("");
   $("settingsProfilesList").innerHTML = availableProfiles.map((profile) => {
     const selected = profileDetailId && profile.id === profileDetailId;
-    return `<article class="settings-profile${selected ? " selected" : ""}">
-      <div><strong>${escapeHtml(profile.name)}</strong><small>${Number(profile.keyword_count)} Stichwörter · Version ${escapeHtml(profile.version)}</small></div>
-      <button type="button" data-edit-profile="${escapeHtml(profile.id)}">BEARBEITEN</button>
-      <button type="button" data-copy-profile="${escapeHtml(profile.id)}">DUPLIZIEREN</button>
-    </article>`;
-  }).join("") || '<p class="iphone-empty" style="padding:16px">Noch keine Profile vorhanden.</p>';
+    return `<button type="button" class="settings-profile-row${selected ? " selected" : ""}" data-select-profile="${escapeHtml(profile.id)}">
+      <span class="profile-row-name">${escapeHtml(profile.name)}</span>
+      <span class="profile-row-meta">${Number(profile.keyword_count)}</span>
+      <span class="profile-row-meta profile-row-version">${escapeHtml(profile.version)}</span>
+    </button>`;
+  }).join("") || '<p class="settings-empty-row">Noch keine Profile vorhanden.</p>';
 }
 
 function selectSettingsPane(pane = "profiles") {
@@ -2423,7 +2423,7 @@ async function saveProfileEditor() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Profil konnte nicht gespeichert werden");
     const savedSelection = new Set([...draftSelectedKeywords].filter((word) => data.profile.keywords.includes(word)));
-    selectedByProfile.set(data.profile.id, savedSelection.size ? savedSelection : new Set(data.profile.keywords));
+    selectedByProfile.set(data.profile.id, savedSelection);
     profileEditorId = data.profile.id;
     profileDetailId = data.profile.id;
     await loadProfiles(activeProfileIds);
@@ -2547,6 +2547,8 @@ $("cancelPowerAction").addEventListener("click", () => {
 $("confirmPowerAction").addEventListener("click", confirmPowerAction);
 $("openAuftragModal").addEventListener("click", openAuftrag);
 $("startOpenCase").addEventListener("click", openAuftrag);
+$("startOverlaySettings").addEventListener("click", () => openSettings());
+$("startOverlayPower").addEventListener("click", () => openPowerDialog());
 $("openSettings").addEventListener("click", () => openSettings());
 $("closeSettings").addEventListener("click", closeSettings);
 $("settingsModal").addEventListener("cancel", (event) => { event.preventDefault(); closeSettings(); });
@@ -2724,12 +2726,10 @@ $("evidenceModal").addEventListener("click", (event) => {
 });
 $("createProfile").addEventListener("click", () => { if (!canSwitchProfileDetail()) return; openProfileEditor(null); });
 $("settingsProfilesList").addEventListener("click", (event) => {
-  const edit = event.target.closest("[data-edit-profile]");
-  const copy = event.target.closest("[data-copy-profile]");
-  if (!edit && !copy) return;
+  const row = event.target.closest("[data-select-profile]");
+  if (!row) return;
   if (!canSwitchProfileDetail()) return;
-  if (edit) openProfileEditor(edit.dataset.editProfile);
-  if (copy) openProfileEditor(copy.dataset.copyProfile, true);
+  openProfileEditor(row.dataset.selectProfile);
 });
 $("profileDetailDuplicate").addEventListener("click", () => {
   if (!profileDetailId) return;
