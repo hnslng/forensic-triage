@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.65 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.66 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -197,9 +197,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a65` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.65`
-- automatisierte Tests: 157+ Python-Prüfungen und 36+ isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen, Regelmigration, Backup-Signaturen und skalierbarer Regellisten
+- Paketversion: `0.2.0a66` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.66`
+- automatisierte Tests: 178 Python-Prüfungen und 61 isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen, Regelmigration, Backup-Signaturen, skalierbarer Regellisten und UI-Lesbarkeitsregressionen
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: reale Android-/Samsung-Abnahme, erneuter iPhone-Zeitvergleich der neuen App-only-Version, vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
@@ -213,4 +213,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.65 searches removable-media names and paths, not file payloads. Its phone path is separate: paired Apple mobile devices and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. Banking/finance app matches are neutral indicators, never crypto alerts. Device-backup structures (e.g. iTunes/Finder, Samsung Smart Switch, Android ADB, Xiaomi, Huawei) are recognized on media from path and filename patterns only; backup contents are never opened. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).
+Version 0.2.0-alpha.66 improves UI readability with a native offline Monospace stack, larger small labels, calmer letter spacing and subtler scanlines; scanner and forensic logic are unchanged. TRIAGE//BOX searches removable-media names and paths, not file payloads. Its phone path is separate: paired Apple mobile devices and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. Banking/finance app matches are neutral indicators, never crypto alerts. Device-backup structures (e.g. iTunes/Finder, Samsung Smart Switch, Android ADB, Xiaomi, Huawei) are recognized on media from path and filename patterns only; backup contents are never opened. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).

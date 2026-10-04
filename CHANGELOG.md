@@ -2,6 +2,17 @@
 
 Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.66] – 2026-10-04
+
+- Lesbarkeit der Weboberfläche verbessert, ohne den technischen TRIAGE//BOX-Stil zu wechseln: Grundschrift bleibt Monospace, Farben, Panels, Großbuchstaben-Systemelemente und bestehende UI-Struktur bleiben erhalten.
+- Nativer, offlinefähiger Monospace-Font-Stack eingeführt: `ui-monospace`, `"SFMono-Regular"`, `Menlo`, `Monaco`, `"Cascadia Mono"`, `"Segoe UI Mono"`, `Consolas`, `monospace`. `Courier New` und der bisherige `Roboto Mono`-Fallback wurden entfernt; externe Font-Quellen, CDN-Abhängigkeiten und mitgelieferte Fontdateien werden nicht verwendet.
+- Sehr kleine UI-Texte in Fallfenster, Medienkarten, Stichwortprofilen, Dateitypen, Erkennungsregeln, System-/Updateflächen, Statuszeilen und technischen Hinweisen gezielt auf besser lesbare 11–12px angehoben. Ein kompakter 10px-Pfeilmarker bleibt als reine Explorer-Icon-Ausnahme bestehen.
+- Kleine Großbuchstaben-Labels ruhiger gemacht: mehrere `.08em`/`.10em`/`.12em`-Abstände in kleinteiligen Labels auf etwa `.02em`–`.06em` reduziert; große Branding-/Titel-Elemente behalten ihren Charakter.
+- Globale Scanlines deutlich abgeschwächt: Opacity von `.07` auf `.025`, damit der Effekt subtil bleibt und kleine Schrift nicht mehr optisch zerschneidet.
+- Font-Weights und Zeilenhöhen für kleine Labels, Buttons, Metadaten, Hilfe-/Erklärungstexte und technische Hinweise geglättet; wichtige Aktionen, Statusanzeigen und Branding bleiben kräftig.
+- Browsertests um Typografie-/Lesbarkeitsregressionen erweitert: nativer Font-Stack, keine externen Fonts, kein `Courier New`, reduzierte Scanlines und Sichtbarkeit/Layoutstabilität wichtiger UI-Flächen.
+- Version auf `0.2.0-alpha.66` (`0.2.0a66`) angehoben.
+
 ## [0.2.0-alpha.65] – 2026-10-03
 
 - Startoverlay ohne aktiven Fall visuell geschärft: Hintergrund bleibt sichtbar, aber abgedunkelt und leicht geblurrt; Bedienelemente darunter sind nicht erreichbar. Branding zeigt `TRIAGE//BOX` mit separaten Acid-Grün-Spans für beide Slash-Zeichen und `BEREIT` darunter. Oben rechts im Overlay kompakte Utility-Controls für Einstellungen und Power, die dieselben lokalen Inline-SVGs wie die Systemleiste verwenden. Einstellungen- und Power-Dialog öffnen sich oberhalb des Overlays; nach dem Schließen kehrt der Startzustand zuverlässig zurück. Der bestehende `updateStartOverlay()`-Mechanismus gegen Aufblitzen beim Reload mit aktivem Fall bleibt erhalten.

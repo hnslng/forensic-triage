@@ -1136,6 +1136,57 @@ test('custom scrollbar CSS does not break layout or hide footer buttons', async 
   assert.ok(footer.height > 0);
 });
 
+test('readability CSS keeps native monospace stack and subtle scanlines only', async () => {
+  const css = fs.readFileSync(path.join(root, 'web', 'styles.css'), 'utf8');
+  assert.match(css, /--mono-stack:\s*ui-monospace,\s*"SFMono-Regular",\s*Menlo,\s*Monaco,\s*"Cascadia Mono",\s*"Segoe UI Mono",\s*Consolas,\s*monospace;/);
+  assert.doesNotMatch(css, /Courier New|Roboto Mono/);
+  assert.doesNotMatch(css, /@import|fonts\.google|fonts\.gstatic|https?:\/\/[^"')]+\.(?:woff2?|ttf|otf)/i);
+  assert.match(css, /\.scanlines\s*\{[^}]*opacity:\s*\.025;/);
+  assert.doesNotMatch(css, /font-size:\s*[89]px|font:\s*[^;]*\s[89]px/);
+  const tenPixelLines = css.split('\n').filter(line => /font-size:\s*10px/.test(line));
+  assert.deepEqual(tenPixelLines, ['.tree-arrow { color: var(--acid); font-size: 10px; transition: transform .15s ease; }']);
+});
+
+test('important UI surfaces stay visible with readability typography', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1440, height: 980 });
+  await page.waitForFunction(() => startOverlayReady);
+  for (const selector of ['#startOverlay', '.start-overlay-brand', '#startOpenCase', '.scanlines']) {
+    assert.equal(await page.locator(selector).isVisible(), true, `${selector} should be visible`);
+  }
+  const scanlines = await page.locator('.scanlines').evaluate(node => getComputedStyle(node).opacity);
+  assert.equal(scanlines, '0.025');
+
+  await page.evaluate(items => {
+    activeCaseNumber = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'HL' };
+    updateStartOverlay();
+    renderDevices([{ path: '/dev/test', serial: 'SERIAL1', model: 'Testmedium', size: 1024, scan_supported: true }]);
+    renderMediaCards(items);
+  }, media);
+  assert.equal(await page.locator('#startOverlay').isVisible(), false);
+  for (const selector of ['#deviceList', '#openSettings']) {
+    assert.equal(await page.locator(selector).isVisible(), true, `${selector} should stay visible`);
+  }
+
+  await open(page, 1);
+  for (const selector of ['#results', '#inventoryPanel', '.result-stamp']) {
+    assert.equal(await page.locator(selector).isVisible(), true, `${selector} should stay visible in result view`);
+  }
+
+  await openSettingsFromAnywhere(page);
+  for (const tab of ['#settingsProfilesTab', '#settingsFiletypesTab', '#settingsCryptoTab', '#settingsUpdatesTab']) {
+    await page.locator(tab).click();
+    const pane = await page.locator('.settings-pane:not([hidden])').evaluate(node => ({
+      width: node.getBoundingClientRect().width,
+      height: node.getBoundingClientRect().height,
+      scroll: node.scrollWidth,
+      client: node.clientWidth,
+    }));
+    assert.ok(pane.width > 300 && pane.height > 300, `${tab} pane should have useful space`);
+    assert.ok(pane.scroll <= pane.client + 1, `${tab} pane must not overflow horizontally`);
+  }
+});
+
 test('start overlay branding uses acid spans for both slashes', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.waitForFunction(() => startOverlayReady);
