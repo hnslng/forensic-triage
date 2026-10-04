@@ -1,5 +1,5 @@
 name: Krypto / Wallets
-version: "1.0"
+version: "1.1"
 keywords:
   - wallet.dat
   - bitcoin
@@ -19,3 +19,17 @@ keywords:
   - UTC--
   - .keys
   - Local Extension Settings
+  - default_wallet
+  - wallet.json
+  - wallet-backup
+  - bip39
+  - privatekey
+  - xpub
+  - xprv
+  - sparrow wallet
+  - wasabi wallet
+  - coinomi
+  - atomic wallet
+  - phantom wallet
+  - rabby wallet
+  - nkbihfbeogaeaoehlefnkodbefgpgknn

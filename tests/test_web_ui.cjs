@@ -99,6 +99,186 @@ function settingsFixture(url) {
   if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein', version: '1.0', keywords: ['rechnung', 'wallet'] } };
 }
 
+// Alpha 68: keyword profiles as master-detail table with search and active counter.
+const a68Keywords = ['rechnung', 'marketingplan', 'gutschrift', 'vertragstechnik', 'plakat'];
+function a68Fixture(url, request) {
+  if (url.pathname === '/api/profiles' && request.method() === 'POST') {
+    const payload = request.postDataJSON();
+    return { json: { profile: { id: payload.id || 'default', name: payload.name, keywords: payload.keywords, version: '1.2' } } };
+  }
+  if (url.pathname === '/api/profiles') return { json: { profiles: [{ id: 'default', name: 'Allgemein / Wirtschaft', version: '1.1', keyword_count: a68Keywords.length }] } };
+  if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Allgemein / Wirtschaft', version: '1.1', keywords: [...a68Keywords] } };
+  return settingsFixture(url);
+}
+
+test('keyword profiles render as a master-detail table with search and an active counter', async t => {
+  const { page, requests } = await setup(t, a68Fixture);
+  await openSettingsFromAnywhere(page);
+  const rows = page.locator('#settingsProfilesList .settings-profile-row');
+  assert.equal(await rows.count(), 1, 'profile master list shows one row');
+  assert.match(await rows.first().innerText(), /allgemein \/ wirtschaft/i);
+  assert.match(await rows.first().innerText(), /5/);
+  await rows.first().click();
+  assert.equal(await page.locator('#profileDetailForm').isVisible(), true);
+  assert.equal(await page.locator('.keyword-table-head').isVisible(), true);
+  assert.equal(await page.locator('#profileDetailSearch').isVisible(), true);
+  assert.equal(await page.locator('#profileDetailOptions .keyword-option').count(), 5);
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '5 / 5 AKTIV');
+
+  await page.locator('#profileDetailSearch').fill('mar');
+  assert.equal(await page.locator('#profileDetailOptions .keyword-option').count(), 1);
+  assert.match(await page.locator('#profileDetailOptions').innerText(), /MARKETINGPLAN/);
+  await page.locator('#profileDetailOptions .keyword-option input').check();
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '5 / 5 AKTIV');
+  await page.locator('#profileDetailSearch').fill('plakat');
+  await page.locator('#profileDetailOptions .keyword-option input').uncheck();
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '4 / 5 AKTIV');
+  await page.locator('#profileDetailSearch').fill('nomatch');
+  assert.match(await page.locator('#profileDetailOptions').innerText(), /KEIN PASSENDER BEGRIFF/);
+  // Search is display-only: stored data is untouched.
+  assert.equal(await page.evaluate(() => keywordDraft.length), 5, 'stored keyword list unchanged by search');
+  assert.equal(await page.evaluate(() => draftSelectedKeywords.size), 4, 'hidden keywords keep their selection');
+
+  await page.locator('#profileDetailSearch').fill('');
+  assert.equal(await page.locator('#profileDetailOptions .keyword-option').count(), 5);
+  await page.locator('#profileDetailSelectAll').click();
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '5 / 5 AKTIV');
+  await page.locator('#profileDetailClearAll').click();
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '0 / 5 AKTIV');
+  assert.equal(requests.some(item => item.method !== 'GET'), false, 'select/search must not persist anything');
+
+  // Leere Auswahl bleibt wirklich leer.
+  await page.locator('#profileDetailApply').click();
+  assert.equal(await page.locator('#profileDetailMessage').innerText(), 'AUSWAHL FÜR NÄCHSTE SCANS ÜBERNOMMEN');
+  assert.equal(await page.evaluate(() => selectedByProfile.get('default')?.size), 0);
+
+  await page.locator('#profileDetailSelectAll').click();
+  await page.locator('#profileDetailOptions .keyword-option .keyword-remove').first().click();
+  assert.equal(await page.locator('#profileDetailCount').innerText(), '4 / 4 AKTIV');
+  await page.locator('#profileDetailSave').click();
+  await page.waitForFunction(() => document.getElementById('profileDetailMessage').textContent === 'GESPEICHERT');
+  const save = requests.find(item => item.method === 'POST' && item.path === '/api/profiles');
+  assert.ok(save, 'profile save persists the draft');
+  assert.equal(await page.locator('#profileDetailOptions .keyword-option').count(), 4);
+  await page.locator('#closeSettings').click();
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+});
+
+test('keyword list scrolls internally while editor header, search and footer stay visible', async t => {
+  const many = Array.from({ length: 90 }, (_, index) => `begriff-${String(index).padStart(3, '0')}`);
+  const { page } = await setup(t, (url, request) => {
+    if (url.pathname === '/api/profiles' && request.method() === 'GET') {
+      return { json: { profiles: [{ id: 'default', name: 'Langes Profil', version: '1.1', keyword_count: many.length }] } };
+    }
+    if (url.pathname === '/api/profile') return { json: { id: 'default', name: 'Langes Profil', version: '1.1', keywords: many } };
+    return a68Fixture(url, request);
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList .settings-profile-row').click();
+  const wrap = await page.locator('.keyword-table-wrap').evaluate(node => ({ client: node.clientHeight, scroll: node.scrollHeight }));
+  assert.ok(wrap.scroll > wrap.client, 'long keyword list must scroll inside its own area');
+  const box = await page.locator('#profileDetailSave').boundingBox();
+  const editor = await page.locator('#profileDetail').boundingBox();
+  assert.ok(box && editor && box.y > editor.y && box.height > 20, 'profile footer stays visible below the list');
+  for (const selector of ['#profileDetailName', '#profileDetailNewInput', '#profileDetailSearch', '.keyword-table-head']) {
+    const visible = await page.locator(selector).evaluate(node => node.getBoundingClientRect().bottom > 0);
+    assert.equal(visible, true, `${selector} stays visible`);
+  }
+  await page.locator('#profileDetailSearch').fill('begriff-00');
+  const counts = await page.locator('#profileDetailOptions .keyword-option').count();
+  assert.equal(counts, 10, 'search also filters very long lists');
+  const widths = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+  assert.ok(widths.scroll <= widths.client + 1, 'no horizontal scrollbar from the keyword table');
+});
+
+test('update tab shows a quiet, state-driven status without a permanent success banner', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/updates/check' && request.method() === 'POST') {
+      return { status: 403, json: { error: 'LAUFENDER SCAN' } };
+    }
+    return null;
+  });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsUpdatesTab').click();
+  assert.match(await page.locator('#settingsUpdatesTab').innerText(), /UPDATES/);
+  await page.evaluate(() => renderUpdateState({ state: 'current', current_version: '0.2.0a68', updated_at: new Date().toISOString() }));
+  assert.match(await page.locator('#updateStatus').innerText(), /AKTUELL/);
+  assert.match(await page.locator('#updateCurrentVersion').innerText(), /v0\.2\.0-alpha\.68/);
+  assert.notEqual(await page.locator('#updateCheckedAt').innerText(), '—');
+  assert.equal(await page.locator('#updateSuccessNotice').count(), 0, 'no permanent success banner in the markup');
+  assert.equal(await page.locator('#updateCheck').isVisible(), true);
+  const statusBox = await page.locator('.update-status-block').evaluate(node => node.getBoundingClientRect());
+  const check = await page.locator('#updateCheck').evaluate(node => node.getBoundingClientRect());
+  assert.ok(check.top >= statusBox.top && check.bottom <= statusBox.bottom + 2, 'JETZT PRÜFEN sits inside the combined status block');
+  assert.equal(await page.locator('.offline-update').isVisible(), true, 'offline update stays present');
+
+  // Update available: status shows the target version and offers install.
+  await page.evaluate(() => renderUpdateState({ state: 'available', current_version: '0.2.0a67', available_version: '0.2.0a68' }));
+  assert.match(await page.locator('#updateStatus').innerText(), /UPDATE VERFÜGBAR · v0\.2\.0-alpha\.68/);
+  assert.equal(await page.locator('#updateInstall').isVisible(), true);
+
+  // Installing: temporary state only.
+  await page.evaluate(() => renderUpdateState({ state: 'installing' }));
+  assert.match(await page.locator('#updateStatus').innerText(), /UPDATE WIRD INSTALLIER/);
+  assert.equal(await page.locator('#updateInstall').isVisible(), false);
+  await page.evaluate(() => renderUpdateState({ state: 'installed' }));
+  assert.match(await page.locator('#updateStatus').innerText(), /✓ AKTUELL/);
+
+  // Error: short concrete failure message and a quiet error status.
+  await page.evaluate(() => requestUpdate('check'));
+  await page.waitForFunction(() => document.getElementById('updateActionMessage').textContent.includes('FEHLER'));
+  assert.match(await page.locator('#updateActionMessage').innerText(), /FEHLER: LAUFENDER SCAN/);
+  assert.match(await page.locator('#updateStatus').innerText(), /UPDATE FEHLGESCHLAGEN/);
+  assert.equal(await page.locator('#updateSuccessNotice').count(), 0);
+  assert.equal(requests.filter(item => item.path === '/api/updates/check' && item.method === 'POST').length, 1);
+  await page.locator('#closeSettings').click();
+});
+
+test('start overlay stays calm and blur is slightly stronger', async t => {
+  const { page } = await setup(t);
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+  assert.match(await page.locator('.start-overlay-ready').innerText(), /BEREIT/);
+  assert.match(await page.locator('.start-overlay-button').innerText(), /FALL ANLEGEN \/ ÖFFNEN/);
+  const oldSentence = await page.locator('#startOverlay').innerText();
+  assert.doesNotMatch(oldSentence, /zuerst einen Fall anlegen/i);
+  const blur = await page.locator('#startOverlay').evaluate(node => getComputedStyle(node).backdropFilter);
+  const value = Number(String(blur).match(/blur\((\d+(?:\.\d+)?)px\)/)?.[1] || 0);
+  assert.ok(value >= 7 && value <= 8.5, `overlay blur should sit around 7–8px, got: ${blur}`);
+
+  // Active case without medium: short state, no helper paragraph.
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL'; devices = [];
+    startOverlayReady = true; updateStartOverlay(); updateDashboardState();
+  });
+  assert.equal(await page.locator('#startOverlay').isVisible(), false, 'active case hides the overlay');
+  assert.equal(await page.locator('#deviceEmptyTitle').innerText(), 'KEIN MEDIUM VERBUNDEN');
+  assert.equal(await page.locator('#deviceEmptyCopy').innerText(), '');
+
+  // After ending the case the overlay returns.
+  await page.evaluate(() => { activeCaseNumber = ''; serverActiveCase = null; updateStartOverlay(); });
+  assert.equal(await page.locator('#startOverlay').isVisible(), true);
+});
+
+test('filetype master list uses the same column structure as keyword profiles', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsFiletypesTab').click();
+  assert.equal(await page.locator('.catalog-list-header').isVisible(), true);
+  assert.match(await page.locator('.catalog-list-header').innerText(), /KATEGORIE/);
+  assert.match(await page.locator('.catalog-list-header').innerText(), /ENDUNGEN/);
+  const headerStyle = await page.locator('.catalog-list-header').evaluate(node => { const s = getComputedStyle(node); return { font: s.fontSize, lineHeight: s.lineHeight, paddingTop: s.paddingTop, borderBottom: s.borderBottomWidth }; });
+  const profileHeader = await page.locator('.profile-list-header').evaluate(node => { const s = getComputedStyle(node); return { font: s.fontSize, lineHeight: s.lineHeight, paddingTop: s.paddingTop, borderBottom: s.borderBottomWidth }; });
+  assert.deepEqual(headerStyle, profileHeader, 'master headers share the same visual line');
+  const rows = page.locator('#catalogRows [data-category]');
+  await rows.first().waitFor();
+  const first = await rows.first().innerText();
+  assert.match(first, /\d/, 'category rows show a right-hand count column');
+  await rows.first().click();
+  assert.equal(await page.locator('#filetypesDetailForm').isVisible(), true);
+  assert.equal(await page.locator('#filetypesDetailName').inputValue(), 'Bilder');
+});
+
 test('closed settings dialog occupies no layout space and returns to that state after closing', async t => {
   const { page } = await setup(t, settingsFixture);
   const before = await page.locator('#settingsModal').evaluate(node => ({
@@ -452,8 +632,10 @@ test('normal power stays hidden and a successful update clears a stale offline e
   assert.equal(await page.locator('#offlineUpdateMessage').innerText(), '');
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsUpdatesTab').click();
-  assert.equal(await page.locator('#updateSuccessNotice').isVisible(), true);
-  assert.match(await page.locator('#updateSuccessNotice').innerText(), /Update erfolgreich abgeschlossen/);
+  assert.equal(await page.locator('#updateSuccessNotice').count(), 0, 'No permanent success banner');
+  assert.match(await page.locator('#updateStatus').innerText(), /AKTUELL/);
+  assert.match(await page.locator('#systemVersion').innerText(), /v0\.2\.0-alpha\.49/);
+
   const widths = await page.locator('.utility-controls button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
   assert.equal(new Set(widths).size, 1);
 });
@@ -1280,7 +1462,7 @@ test('filetypes master-detail shows categories left and editor right', async t =
   await page.locator('#settingsFiletypesTab').click();
   assert.match(await page.locator('#settingsFiletypesTab').innerText(), /DATEITYPEN/);
   assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), true);
-  assert.match(await page.locator('[data-category="Bilder"] .catalog-row-count').innerText(), /2 Endungen/);
+  assert.match(await page.locator('[data-category="Bilder"] .catalog-row-count').innerText(), /^2$/);
   assert.equal(await page.locator('#filetypesDetailEmpty').isVisible(), true);
   await page.locator('[data-category="Bilder"]').click();
   assert.equal(await page.locator('#filetypesDetailEmpty').isVisible(), false);
@@ -1305,7 +1487,7 @@ test('filetypes editor can rename, add extensions and delete a category', async 
   await page.locator('#filetypesDetailApply').click();
   assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), false);
   assert.equal(await page.locator('[data-category="Bilder Neu"]').isVisible(), true);
-  assert.match(await page.locator('[data-category="Bilder Neu"] .catalog-row-count').innerText(), /3 Endungen/);
+  assert.match(await page.locator('[data-category="Bilder Neu"] .catalog-row-count').innerText(), /^3$/);
   await page.locator('#catalogAddCategory').click();
   assert.equal(await page.locator('#filetypesDetailName').inputValue(), 'Neue Kategorie');
   await page.locator('#filetypesDetailName').fill('Audio');
@@ -1383,17 +1565,17 @@ test('updates tab is renamed and shows compact status block', async t => {
   assert.equal(await page.locator('#offlineUpdateInstall').isVisible(), true);
 });
 
-test('update success notice is compact and shows installed version', async t => {
+test('update success is quiet: status simply returns to AKTUELL after install', async t => {
   const { page } = await setup(t);
   await page.evaluate(() => {
     renderUpdateState({ state: 'installed', current_version: '0.2.0a49' });
     document.getElementById('settingsModal').showModal();
     selectSettingsPane('updates');
   });
-  const notice = await page.locator('#updateSuccessNotice').evaluate(node => node.getBoundingClientRect());
-  assert.ok(notice.width <= 560, 'success notice should be compact');
-  assert.match(await page.locator('#updateSuccessNotice').innerText(), /Update erfolgreich abgeschlossen/);
-  assert.match(await page.locator('#updateSuccessVersion').innerText(), /v0\.2\.0-alpha\.49/);
+  assert.equal(await page.locator('#updateSuccessNotice').count(), 0, 'no permanent success banner after install');
+  assert.match(await page.locator('#updateStatus').innerText(), /✓ AKTUELL/);
+  assert.match(await page.locator('#updateCurrentVersion').innerText(), /v0\.2\.0-alpha\.49/);
+  assert.equal(await page.locator('#updateSuccessVersion').count(), 0, 'installed-version notice removed');
 });
 
 test('offline update section is separate and file field aligns with install button', async t => {

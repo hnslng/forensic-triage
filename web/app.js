@@ -295,24 +295,26 @@ function renderUpdateState(value = {}) {
   const state = updateState.state || "unknown";
   const available = updateState.available_version || "";
   const statusLabels = {
-    current: "KEIN UPDATE VERFÜGBAR",
-    installed: "UPDATE ERFOLGREICH INSTALLIERT",
-    available: "UPDATE VERFÜGBAR",
+    current: "✓ AKTUELL",
+    installed: "✓ AKTUELL",
     checking: "PRÜFUNG LÄUFT …",
-    installing: "INSTALLATION LÄUFT …",
+    installing: "UPDATE WIRD INSTALLIERT …",
+    error: "UPDATE FEHLGESCHLAGEN",
     unknown: "NOCH NICHT GEPRÜFT",
   };
-  $("updateStatus").textContent = statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
+  $("updateStatus").textContent = state === "available" && available
+    ? `UPDATE VERFÜGBAR · ${formatReleaseVersion(available)}`
+    : statusLabels[state] || updateState.message || "NOCH NICHT GEPRÜFT";
   $("updateCurrentVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("systemVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("updateCheckedAt").textContent = updateState.updated_at
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
-  $("updateSuccessNotice").hidden = state !== "installed";
-  $("updateSuccessVersion").textContent = formatReleaseVersion(updateState.current_version);
+  // The status line is fully state-driven: after a finished install it simply
+  // returns to "AKTUELL". No permanent historic success banner is kept.
   $("settingsUpdatesTab").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
-  $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
+  $("updateInstall").textContent = available ? `UPDATE INSTALLIEREN · ${formatReleaseVersion(available)}` : "UPDATE INSTALLIEREN";
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   const actionRunning = isUpdateBusy();
   $("updateModal").classList.toggle("update-busy", actionRunning);
@@ -334,6 +336,8 @@ function renderUpdateState(value = {}) {
   if (!updateActionInProgress) {
     if (caseSessionTransition) {
       $("updateActionMessage").textContent = "FALL WIRD BEENDET …";
+    } else if (state === "error") {
+      // Keep the concrete failure text set by the requesting action.
     } else if (activeCase && runningPaths.size > 0) {
       $("updateActionMessage").textContent = "FALL KANN NACH ABSCHLUSS DES LAUFENDEN SCANS BEENDET WERDEN";
     } else if (state === "available" && activeCase) {
@@ -416,7 +420,7 @@ async function requestUpdate(action) {
     }
   } catch (error) {
     if (action === "install") forgetUpdateDialog();
-    renderUpdateState(previousUpdateState);
+    renderUpdateState({ ...previousUpdateState, state: "error" });
     $("updateActionMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     updateActionInProgress = null;
@@ -477,7 +481,7 @@ async function installOfflineUpdate() {
     window.location.reload();
   } catch (error) {
     forgetUpdateDialog();
-    renderUpdateState(previousUpdateState);
+    renderUpdateState({ ...previousUpdateState, state: "error" });
     $("offlineUpdateMessage").textContent = `FEHLER: ${error.message}`;
   } finally {
     updateActionInProgress = null;
@@ -522,18 +526,30 @@ function updateKeywordSummary() {
   $("dockProfiles").textContent = names.length ? names.join(" + ").toUpperCase() : "KEIN SUCHPROFIL";
 }
 
-function renderKeywordOptions(container = $("profileDetailOptions")) {
+function keywordSearchQuery() {
+  const input = $("profileDetailSearch");
+  return input ? input.value.trim().toLocaleLowerCase("de") : "";
+}
+
+// Renders only the visible keyword table. Filtering is a pure UI filter over
+// the current draft; it never changes stored data or the scan selection.
+function renderKeywordOptions() {
+  const container = $("profileDetailOptions");
   if (!container) return;
-  container.innerHTML = keywordDraft.map((keyword) => `<label class="keyword-option">
+  const query = keywordSearchQuery();
+  const visible = query
+    ? keywordDraft.filter((keyword) => keyword.toLocaleLowerCase("de").includes(query))
+    : keywordDraft;
+  container.innerHTML = visible.map((keyword) => `<label class="keyword-option">
     <input type="checkbox" value="${escapeHtml(keyword)}" ${draftSelectedKeywords.has(keyword) ? "checked" : ""} />
     <span>${escapeHtml(keyword.toUpperCase())}</span>
     <button class="keyword-remove" type="button" data-remove-keyword="${escapeHtml(keyword)}" aria-label="${escapeHtml(keyword)} entfernen">×</button>
-  </label>`).join("");
+  </label>`).join("") || `<p class="keyword-empty-row">${query ? "KEIN PASSENDER BEGRIFF" : "NOCH KEINE STICHWÖRTER"}</p>`;
 }
 
 function updateProfileDetailCount() {
-  const count = keywordDraft.length;
-  $("profileDetailCount").textContent = `${count} STICHWORT${count === 1 ? "" : "ER"}`;
+  const active = keywordDraft.reduce((sum, keyword) => draftSelectedKeywords.has(keyword) ? sum + 1 : sum, 0);
+  $("profileDetailCount").textContent = `${active} / ${keywordDraft.length} AKTIV`;
 }
 
 function renderProfileList() {
@@ -603,7 +619,7 @@ function renderCatalog(categories) {
     const selected = catalogSelectedCategory && name === catalogSelectedCategory;
     return `<button type="button" class="catalog-row${selected ? " selected" : ""}" data-category="${escapeHtml(name)}" data-extensions="${escapeHtml(extensions.join(", "))}" role="option" aria-selected="${selected ? "true" : "false"}">
       <span class="catalog-row-name">${escapeHtml(name)}</span>
-      <span class="catalog-row-count">${extensions.length} Endungen</span>
+      <span class="catalog-row-count">${extensions.length}</span>
     </button>`;
   }).join("") || '<p class="filetypes-empty-row">Noch keine Kategorien vorhanden.</p>';
   filterCatalog();
@@ -1678,8 +1694,8 @@ function updateDashboardState() {
   const pending = pendingOfflineMedia().length;
   const offline = currentCaseMedia.filter((medium) => !devices.some((device) => deviceMatchesMedium(device, medium)) && !decisionIsOpen(medium)).length;
   $("deviceCount").textContent = `${online} ONLINE · ${pending} OFFEN · ${offline} OFFLINE`;
-  $("deviceEmptyTitle").textContent = "NOCH KEIN MEDIUM IN DIESEM FALL";
-  $("deviceEmptyCopy").textContent = "USB-Medium einstecken. Auto-Scan übernimmt die geschützte Grobsichtung.";
+  $("deviceEmptyTitle").textContent = "KEIN MEDIUM VERBUNDEN";
+  $("deviceEmptyCopy").textContent = "";
   $("deviceEmpty").hidden = online > 0;
 }
 
@@ -2488,6 +2504,7 @@ function openProfileEditor(profileId = null, duplicate = false) {
   $("profileDetailName").value = duplicate ? `${(detail?.name || "Profil").slice(0, 34)} Kopie` : detail?.name || "";
   $("profileDetailTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
   $("profileDetailNewInput").value = "";
+  $("profileDetailSearch").value = "";
   $("profileDetailMessage").textContent = "";
   $("profileDetailApply").hidden = createNew;
   profileDetailDirty = false;
@@ -2520,7 +2537,7 @@ function addKeywordFromInput() {
 }
 
 function selectedDraftFromControls() {
-  return new Set([...$("profileDetailOptions").querySelectorAll("input:checked")].map((input) => input.value));
+  return new Set(keywordDraft.filter((keyword) => draftSelectedKeywords.has(keyword)));
 }
 
 function markProfileDetailDirty() {
@@ -2583,6 +2600,8 @@ function resetProfileDetail() {
   profileDetailDirty = false;
   keywordDraft = [];
   draftSelectedKeywords = new Set();
+  $("profileDetailSearch").value = "";
+  updateProfileDetailCount();
   renderProfileList();
 }
 
@@ -2852,12 +2871,25 @@ $("profileDetailDuplicate").addEventListener("click", () => {
   openProfileEditor(profileDetailId, true);
 });
 $("profileDetailSelectAll").addEventListener("click", () => {
-  for (const checkbox of $("profileDetailOptions").querySelectorAll("input")) checkbox.checked = true;
+  for (const keyword of keywordDraft) draftSelectedKeywords.add(keyword);
   profileDetailDirty = true;
+  renderKeywordOptions();
+  updateProfileDetailCount();
 });
 $("profileDetailClearAll").addEventListener("click", () => {
-  for (const checkbox of $("profileDetailOptions").querySelectorAll("input")) checkbox.checked = false;
+  draftSelectedKeywords = new Set();
   profileDetailDirty = true;
+  renderKeywordOptions();
+  updateProfileDetailCount();
+});
+$("profileDetailSearch").addEventListener("input", renderKeywordOptions);
+$("profileDetailOptions").addEventListener("change", (event) => {
+  const checkbox = event.target.closest('input[type="checkbox"]');
+  if (!checkbox) return;
+  if (checkbox.checked) draftSelectedKeywords.add(checkbox.value);
+  else draftSelectedKeywords.delete(checkbox.value);
+  markProfileDetailDirty();
+  updateProfileDetailCount();
 });
 $("profileDetailApply").addEventListener("click", applyProfileSelection);
 $("profileDetailAddKeyword").addEventListener("click", addKeywordFromInput);

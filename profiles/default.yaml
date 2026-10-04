@@ -1,13 +1,41 @@
 name: Allgemein / Wirtschaft
-version: "1.0"
+version: "1.1"
 keywords:
   - rechnung
+  - eingangsrechnung
+  - ausgangsrechnung
+  - gutschrift
+  - mahnung
+  - honorarnote
   - buchhaltung
   - fibu
   - datev
+  - kassenbuch
   - kassabuch
+  - kassajournal
+  - kontoauszug
+  - bankauszug
+  - zahlungsbeleg
+  - buchungsbeleg
+  - bwa
+  - summen- und saldenliste
+  - kontenblatt
+  - sachkonto
+  - debitoren
+  - kreditoren
+  - offene posten
+  - opos
+  - bilanz
+  - guv
+  - jahresabschluss
+  - einnahmen-ausgaben-rechnung
+  - eür
+  - ustva
+  - umsatzsteuervoranmeldung
+  - lohnverrechnung
+  - gehaltsabrechnung
+  - steuerberater
   - kunden
   - lieferanten
   - provision
   - umsatz
-  - steuerberater

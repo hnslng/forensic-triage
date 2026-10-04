@@ -46,7 +46,6 @@
         <div class="start-overlay-card" role="region" aria-label="Startbereitschaft">
           <h2 class="start-overlay-brand">TRIAGE<span class="acid">/</span><span class="acid">/</span>BOX</h2>
           <strong class="start-overlay-ready">BEREIT</strong>
-          <p>Für eine Grobsichtung zuerst einen Fall anlegen oder einen Fall öffnen.</p>
           <button id="startOpenCase" type="button" class="start-overlay-button"><span class="icon-text" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> FALL ANLEGEN / ÖFFNEN</button>
         </div>
       </div>
@@ -348,7 +347,7 @@
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane profile-pane" aria-labelledby="settingsProfilesTab">
-        <p class="pane-intro">Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
+        <p class="pane-intro">Suchbegriffe für Sichtungen verwalten.</p>
         <div class="profile-workspace">
           <div class="profile-master">
             <div class="profile-master-head">
@@ -378,15 +377,24 @@
                 <input id="profileDetailName" maxlength="40" autocomplete="off" spellcheck="false" />
               </label>
               <div class="keyword-add-row">
-                <input id="profileDetailNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" />
+                <input id="profileDetailNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" aria-label="Neues Stichwort oder Dateiname" />
                 <button id="profileDetailAddKeyword" type="button">+ HINZUFÜGEN</button>
               </div>
+              <label class="keyword-search-field" for="profileDetailSearch">
+                <span>BEGRIFF SUCHEN</span>
+                <input id="profileDetailSearch" type="search" placeholder="Begriff suchen …" autocomplete="off" spellcheck="false" aria-label="Stichwortliste filtern" />
+              </label>
               <div class="keyword-bulk-actions">
                 <button id="profileDetailSelectAll" type="button">ALLE</button>
                 <button id="profileDetailClearAll" type="button">KEINE</button>
-                <span id="profileDetailCount" class="profile-detail-count">0 STICHWÖRTER</span>
+                <span id="profileDetailCount" class="profile-detail-count">0 / 0 AKTIV</span>
               </div>
-              <div id="profileDetailOptions" class="keyword-options"></div>
+              <div class="keyword-table-head" aria-hidden="true">
+                <span>AKTIV</span><span>STICHWORT / DATEINAME</span><span>ENTFERNEN</span>
+              </div>
+              <div class="keyword-table-wrap">
+                <div id="profileDetailOptions" class="keyword-options"></div>
+              </div>
               <p id="profileDetailMessage" class="keyword-message"></p>
               <div class="profile-detail-footer">
                 <button id="profileDetailApply" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
@@ -399,7 +407,7 @@
       <section id="settingsCryptoPane" class="settings-pane detection-rules-pane" aria-labelledby="settingsCryptoTab" hidden>
         <div class="detection-workspace">
           <header class="detection-header">
-            <p class="detection-intro">Erkennungsregeln für Krypto-Apps, Banking-/Finanz-Apps, Geräte-Backups und Dateihinweise. Änderungen gelten für neue Sichtungen; jede Sichtung speichert ihren Regelstand.</p>
+            <p class="detection-intro">Regeln für Apps, Backups und Dateihinweise verwalten.</p>
             <nav class="detection-tabs" aria-label="Erkennungsregel-Bereich">
               <button id="detectionCryptoTab" type="button" aria-pressed="true" data-detection="crypto">KRYPTO-APPS</button>
               <button id="detectionBankingTab" type="button" aria-pressed="false" data-detection="banking">BANKING &amp; FINANZEN</button>
@@ -491,7 +499,7 @@
         </dl>
       </dialog>
       <section id="settingsFiletypesPane" class="settings-pane filetypes-pane" aria-labelledby="settingsFiletypesTab" hidden>
-        <p class="pane-intro">Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
+        <p class="pane-intro">Dateiendungen werden Kategorien zugeordnet.</p>
         <div class="filetypes-workspace">
           <div class="filetypes-master">
             <div class="filetypes-master-head">
@@ -501,6 +509,7 @@
               <button id="catalogAddCategory" class="ft-master-create" type="button" title="Neue Kategorie"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUE KATEGORIE</button>
             </div>
             <div id="catalogVersion" class="filetypes-version" aria-label="Katalogversion"></div>
+            <div class="catalog-list-header" aria-hidden="true"><span>KATEGORIE</span><span>ENDUNGEN</span></div>
             <div id="catalogRows" class="catalog-rows" role="listbox" aria-label="Dateityp-Kategorien"></div>
           </div>
           <div class="filetypes-detail">
@@ -537,7 +546,7 @@
         <p id="catalogMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsUpdatesPane" class="settings-pane settings-updates-pane" aria-labelledby="settingsUpdatesTab" hidden>
-        <p class="pane-intro">TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
+        <p class="pane-intro">Installierte Version prüfen oder Update installieren.</p>
         <div id="updateModal" class="update-modal update-embedded">
           <div class="update-modal-body">
             <div class="update-status-block">
@@ -551,10 +560,6 @@
                 <button id="updateStopCase" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
                 <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
               </div>
-            </div>
-            <div id="updateSuccessNotice" class="update-success-notice" role="status" aria-live="polite" hidden>
-              <span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-              <span>Update erfolgreich abgeschlossen · <span id="updateSuccessVersion">—</span></span>
             </div>
             <p id="updateActionMessage" class="update-action-message"></p>
             <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>

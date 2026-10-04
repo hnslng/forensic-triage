@@ -2,6 +2,23 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.68] – 2026-10-04
+
+- Stichwortprofile als konsistente Master-Detail-Tabelle: Die Profilliste nutzt exakt die Spaltenlogik der Dateitypen-Masterliste (PROFIL · STICHWÖRTER · VERSION rechtsbündig, gleiche Master-Breite, Zeilenhöhe, aktive Markierung und Trennlinien). Der rechte Editor erhielt die gemeinsame Editor-Hülle mit festem Footer.
+- Stichwortliste zur einzeiligen Tabellenansicht umgebaut: Spalten **AKTIV**, **STICHWORT / DATEINAME**, **ENTFERNEN**; Checkbox links ausgerichtet, Entfernen rechts, feine Trennlinien, gleiche Zeilenhöhe, kein Kachel-Look. Semantik unverändert: „PROFIL SPEICHERN", „AUSWAHL FÜR NÄCHSTE SCANS", leere Auswahl bleibt leer, Duplizieren und Versionierung arbeiten wie zuvor.
+- Neue Stichwortsuche (**BEGRIFF SUCHEN …**) über der Liste: filtert rein die Anzeige der sichtbaren Begriffe des geöffneten Profils, verändert keine gespeicherten Daten und keine Scan-Auswahl; Leerfeld zeigt wieder alle Begriffe.
+- Neuer Aktivzähler `8 / 10 AKTIV` neben **ALLE**/**KEINE**, sofortige Aktualisierung bei jeder Checkbox-Änderung.
+- Eigener vertikaler Scrollbereich für die Stichwortliste: Editor-Kopf, Profilname, Hinzufügen, Suche, ALLE/KEINE und Footer bleiben sichtbar; Profile mit 100–250 Begriffen bleiben bedienbar.
+- Standardprofile ohne Matcher-/Schema-Änderung erweitert (Seed-Logik füllt nur fehlende Dateien, lokale Operator-Profile werden nicht überschrieben): **Allgemein / Wirtschaft** von 10 auf 38 Begriffe (Unternehmens-/Buchhaltungskontext wie Eingangs-/Ausgangsrechnung, Gutschrift, Mahnung, Kassenbuch/Journal, Konto- und Bankauszug, Zahlungs- und Buchungsbelege, BWA, Summen- und Saldenliste, Debitoren/Kreditoren, offene Posten, Bilanz, GuV, Jahresabschluss, EÜR, UStVA, Lohnverrechnung u. a.), **Krypto / Wallets** von 18 auf 32 Begriffe (technisch charakteristische Artefakte und Produktnamen wie wallet.json, default_wallet, wallet-backup, bip39, xpub, xprv, privatekey, Sparrow/Wasabi/Coinomi/Atomic/Phantom/Rabby Wallet und die MetaMask-Erweiterungs-ID). Zu generische oder redundanten Teilstring-Begriffe wurden verworfen (beispielsweise „susa" wegen Treffern in Namen wie „Susanne", „bitcoin core" wegen redundanter Teilübereinstimmung).
+- Dateitypen-Masterliste mit Spaltenkopf **KATEGORIE**/**ENDUNGEN**; Endungsanzahl als rechtsbündige Zahl. Semantik des Katalogs unverändert.
+- Erkennungsregeln bleiben Master-Detail; Inspector weitgehend unverändert (keine Regression des Sticky-Header-Fixes).
+- Updates ohne dauerhafte Erfolgsmeldung: Der gemeinsame Statusblock (VERSION · STATUS · LETZTE PRÜFUNG · JETZT PRÜFEN) ist rein zustandsorientiert — Normalzustand ist nur `✓ AKTUELL`, verfügbar zeigt `UPDATE VERFÜGBAR · <Zielversion>` mit Primärknopf, Prüfung/Installation den laufenden Zustand, Fehler `UPDATE FEHLGESCHLAGEN` mit konkreter Ursache. Offline-Update bleibt eigenständig und unverändert im Backend.
+- Meta-Texte reduziert: Startoverlay ohne Erklärungssatz, Medien-Dashboard zeigt „KEIN MEDIUM VERBUNDEN" statt mehrzeiliger Hilfe, kürzere Introzeilen in allen vier Settings-Tabs.
+- Startoverlay-Blur von 5 px auf ca. 7,5 px erhöht; Hintergrund bleibt als Oberfläche erkennbar.
+- Responsive Korrektur: Im Master-Detail-Umbruch unterhalb 860 px zeigten Dateitypen- und Profilliste ihre Zeilen im bisherigen Zeilenmodell zum Teil gar nicht, und der Editor konnte die Liste überlagern — die Definition von Grid-Zeilen und Master-Scrollbereich ist jetzt explizit; beide Bereiche werden sinnvoll untereinander angeordnet.
+- Browsertests erweitert (Stichwort-Tabelle/Suche/Zähler/Scroll, zustandsorientierte Updates, ruhiges Overlay, Dateitypen-Spalten) und Tests an die entfernte Erfolgsmeldung angepasst; Python-Tests um Standardprofil-Prüfungen erweitert. Bestehende Tests wurden nicht entfernt oder abgeschwächt.
+- Version auf `0.2.0-alpha.68` (`0.2.0a68`) angehoben.
+
 ## [0.2.0-alpha.67] – 2026-10-04
 
 - Gemeinsame Settings-Designsprache für Stichwortprofile, Dateitypen, Erkennungsregeln und Updates: vereinheitlichte Input-/Select-/Button-Höhen (ca. 36 px), gemeinsame Padding- und Border-Logik, gleiche Intro-Abstände und ruhige Hintergrundflächen. Die Alpha-66-Typografieänderungen bleiben vollständig erhalten.

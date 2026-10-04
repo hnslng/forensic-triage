@@ -1,6 +1,6 @@
 # Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates
 
-Seit `v0.2.0-alpha.65` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile und Dateitypen werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog. Ab `v0.2.0-alpha.67` verwenden alle vier Tabs eine vereinheitlichte Designsprache mit gemeinsamen Control-Größen, Höhen und Abständen.
+Seit `v0.2.0-alpha.65` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile und Dateitypen werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog. Ab `v0.2.0-alpha.67` verwenden alle vier Tabs eine vereinheitlichte Designsprache mit gemeinsamen Control-Größen, Höhen und Abständen. Diese Designsprache wurde in `v0.2.0-alpha.68` weiter vereinheitlicht: Master-Spalten, aktive Zeilen, Trennlinien und Editor-Hüllen von Stichwortprofilen, Dateitypen und Erkennungsregeln verwenden dieselbe Grundstruktur. Meta-/Erklärungstexte wurden auf Problem- und Ausnahmezustände reduziert.
 
 ## Stichwortprofile
 
@@ -8,8 +8,8 @@ Seit `v0.2.0-alpha.65` werden Stichwortprofile in der Einstellungs-Arbeitsfläch
 
 ### Master-Detail-Ansicht
 
-- **Profilliste (links):** ruhige Listen-/Tabellenansicht mit den Spalten Profilname, Anzahl Stichwörter und Version. Ein Klick auf eine Zeile wählt das Profil aus und öffnet es rechts im Editor. Es gibt keinen permanenten **Bearbeiten**- oder **Duplizieren**-Button pro Zeile. Das aktive Profil wird farblich markiert, Profilnamen werden nicht gequetscht.
-- **Editor (rechts):** zeigt den Profilnamen, alle gespeicherten Begriffe und den Bereich für die Scan-Auswahl.
+- **Profilliste (links):** ruhige Tabellenansicht mit den Spalten **PROFIL**, **STICHWÖRTER** und **VERSION**. Die Spalten stehen rechtsbündig ausgerichtet und nutzen dieselbe Master-Breite, Zeilenhöhe, aktive Markierung und dieselben feinen Trennlinien wie die Kategorienliste der Dateitypen. Ein Klick auf eine Zeile wählt das Profil aus und öffnet es rechts im Editor. Es gibt keinen permanenten **Bearbeiten**- oder **Duplizieren**-Button pro Zeile. Das aktive Profil wird farblich markiert, Profilnamen werden nicht gequetscht.
+- **Editor (rechts):** zeigt den Profilnamen, alle gespeicherten Begriffe und den Bereich für die Scan-Auswahl. Er verwendet dieselbe Grundhülle wie der Kategorie-Editor der Dateitypen (Kopfbereich, gleiche Eingabehöhen, Footer am unteren Rand).
 - **Neues Profil:** „+ NEUES PROFIL" im Kopf der Liste legt ein leeres Profil im Editor an und aktiviert die Namenseingabe.
 - **Duplizieren:** befindet sich nur im Editor und übernimmt alle Begriffe des ausgewählten Profils in ein neues, unabhängig zu speicherndes Profil mit sinnvoller Namensgebung.
 - **Bearbeiten:** Profilname und Suchbegriffe ändern, Begriffe hinzufügen oder entfernen.
@@ -18,7 +18,9 @@ Seit `v0.2.0-alpha.65` werden Stichwortprofile in der Einstellungs-Arbeitsfläch
 
 ### Vertikale Keyword-Liste
 
-Die Stichwortliste im Editor ist eine vertikale Zeilenliste: Jede Zeile enthält eine Checkbox, den Begriff in Großbuchstaben und einen Entfernen-Button am rechten Rand. Es gibt keine zweispaltigen Kacheln. Oberhalb der Liste stehen die kompakten Schaltflächen **ALLE** und **KEINE**.
+Seit `v0.2.0-alpha.68` ist die Stichwortliste eine kompakte Tabellen-/Listenansicht mit den Spalten **AKTIV**, **STICHWORT / DATEINAME** und **ENTFERNEN**: jede Zeile enthält eine sauber ausgerichtete Checkbox, den Begriff in Großbuchstaben und rechts den Entfernen-Knopf. **ALLE** und **KEINE** stehen oberhalb der Liste; daneben zeigt ein Zähler die aktive Auswahl im Format `8 / 10 AKTIV`, der sich sofort bei jeder Änderung aktualisiert. Die Liste scrollt in einem eigenen vertikalen Bereich, während Profilname, Hinzufügen, Suche, ALLE/KEINE und Footer sichtbar bleiben; auch Profile mit 100–250 Begriffen bleiben so bedienbar.
+
+Oberhalb der Liste steht eine Suchleiste (**BEGRIFF SUCHEN …**). Sie filtert ausschließlich die sichtbare Begriffsliste des aktuell geöffneten Profils; gespeicherte Daten und die Scan-Auswahl werden dadurch nicht verändert. Bei leerem Suchfeld werden wieder alle Begriffe angezeigt. Eine leere Suchergebnisliste wird als kurzer Hinweis `KEIN PASSENDER BEGRIFF` dargestellt.
 
 Ungespeicherte Editor-Änderungen werden beim Wechsel zu einem anderen Profil oder beim Schließen der Einstellungen nicht still verworfen; beim Wechsel erscheint eine Rückfrage, solange der Entwurf ungespeichert ist. Erst das explizite Speichern schreibt die Änderungen in die Datei.
 
@@ -30,7 +32,7 @@ Seit `v0.2.0-alpha.67` werden Dateitypen wie die Stichwortprofile als Master-Det
 
 ### Master-Detail-Ansicht
 
-- **Kategorienliste (links):** ruhige Listenansicht mit Kategoriename und Anzahl der Endungen. Ein Klick auf eine Kategorie öffnet rechts den Editor. Die Katalogversion ist klein im linken Bereich sichtbar.
+- **Kategorienliste (links):** ruhige Tabellenansicht mit den Spalten **KATEGORIE** und **ENDUNGEN**; die Endungsanzahl steht rechtsbündig als Zahl. Ein Klick auf eine Kategorie öffnet rechts den Editor. Die Katalogversion ist klein im linken Bereich sichtbar. Die Liste verwendet dieselbe Master-Breite, Zeilenhöhe und aktive Markierung wie die Profilliste.
 - **Editor (rechts):** zeigt den Kategorienamen und das Endungen-Feld. Endungen werden kommasepariert eingetragen. Eine Kategorie kann im Editor gelöscht werden.
 - **Neue Kategorie:** „+ NEUE KATEGORIE" legt eine neue, leere Kategorie an und öffnet sie im Editor.
 - **Änderungen übernehmen:** schreibt die Editor-Eingaben in den lokalen Entwurf.
@@ -113,7 +115,7 @@ Das Speichern validiert IDs, Kategorien, Hinweisstärken, Listen und konkurriere
 
 Der vierte Einstellungsbereich hieß früher **System & Updates** und enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird beim Neuladen bereits vor dem ersten Statusabruf direkt in dieser Registerkarte wiederhergestellt. Dadurch erscheint nicht kurz das Dashboard zwischen zwei Updatephasen.
 
-Ab `v0.2.0-alpha.67` ist der Tab auf **UPDATES** reduziert und kompakter angeordnet: Version, Status und letzte Prüfung bilden einen gemeinsamen Statusblock, „Jetzt prüfen" ist direkt damit verbunden, die Erfolgsmeldung ist kompakt und der Offline-Update-Bereich ist als separater Abschnitt darunter angeordnet. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben. Nach erfolgreichem Abschluss erscheint eine kompakte Erfolgsmeldung mit der installierten Version.
+Ab `v0.2.0-alpha.68` ist der Statusblock rein zustandsorientiert: Version, Status und letzte Prüfung bilden einen gemeinsamen Statusblock, „Jetzt prüfen" ist direkt damit verbunden. Ist ein Update verfügbar, zeigt der Status `UPDATE VERFÜGBAR · <Zielversion>` und einen Primärknopf **UPDATE INSTALLIEREN**. Während der Prüfung/Installation zeigt der Status ausschließlich den laufenden Zustand, bei einem Fehler `UPDATE FEHLGESCHLAGEN` mit dem konkreten Fehlertext. Nach erfolgreichem Abschluss kehrt der Status ohne dauerhafte Erfolgsmeldung einfach zu `✓ AKTUELL` zurück; keine historische Erfolgsmeldung bleibt stehen. Der Offline-Update-Bereich ist als separater Abschnitt darunter angeordnet. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben.
 
 ## Nachvollziehbarkeit
 
