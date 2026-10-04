@@ -161,11 +161,14 @@ test('catalog filters, reports invalid saves, preserves draft and saves future-s
   });
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsFiletypesTab').click();
-  await page.locator('[data-category="Dokumente"] textarea').fill('pdf, jpg');
+  await page.locator('[data-category="Dokumente"]').click();
+  await page.locator('#filetypesDetailExtensions').fill('pdf, jpg');
+  await page.locator('#filetypesDetailApply').click();
   await page.locator('#catalogSave').click();
   await page.waitForFunction(() => document.getElementById('catalogMessage').textContent.includes('doppelt'));
-  assert.equal(await page.locator('[data-category="Dokumente"] textarea').inputValue(), 'pdf, jpg');
-  await page.locator('[data-category="Dokumente"] textarea').fill('pdf, docm');
+  assert.equal(await page.locator('#filetypesDetailExtensions').inputValue(), 'pdf, jpg');
+  await page.locator('#filetypesDetailExtensions').fill('pdf, docm');
+  await page.locator('#filetypesDetailApply').click();
   await page.locator('#catalogSearch').fill('.docm');
   assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), false);
   assert.equal(await page.locator('[data-category="Dokumente"]').isVisible(), true);
@@ -174,7 +177,8 @@ test('catalog filters, reports invalid saves, preserves draft and saves future-s
   assert.equal(await page.locator('#catalogVersion').innerText(), 'KATALOG V2');
   assert.equal(await page.locator('#catalogSave').isDisabled(), true);
   await page.locator('#catalogReset').click();
-  assert.equal(await page.locator('[data-category="Dokumente"] textarea').inputValue(), 'pdf');
+  await page.locator('[data-category="Dokumente"]').click();
+  assert.equal(await page.locator('#filetypesDetailExtensions').inputValue(), 'pdf');
   assert.equal(await page.locator('#catalogSave').isEnabled(), true);
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('#closeSettings').click();
@@ -193,7 +197,7 @@ test('settings remain readable on laptop and small screens', async t => {
   }
   assert.equal(new Set(heights).size, 1, 'Settings dialog height must stay stable between tabs');
   await page.locator('#settingsFiletypesTab').click();
-  await page.locator('[data-category="Bilder"] textarea').waitFor();
+  await page.locator('#catalogRows .catalog-row').first().waitFor();
   for (const width of [1440, 800, 470]) {
     await page.setViewportSize({ width, height: 900 });
     const sizes = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth, width: node.getBoundingClientRect().width }));
@@ -449,7 +453,7 @@ test('normal power stays hidden and a successful update clears a stale offline e
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsUpdatesTab').click();
   assert.equal(await page.locator('#updateSuccessNotice').isVisible(), true);
-  assert.match(await page.locator('#updateSuccessNotice').innerText(), /ERFOLGREICH ABGESCHLOSSEN/);
+  assert.match(await page.locator('#updateSuccessNotice').innerText(), /Update erfolgreich abgeschlossen/);
   const widths = await page.locator('.utility-controls button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
   assert.equal(new Set(widths).size, 1);
 });
@@ -1267,4 +1271,141 @@ test('profile master-detail and detection toolbar wrap cleanly on small screens'
     const modal = await page.locator('#settingsModal').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth }));
     assert.ok(modal.scroll <= modal.client + 1, `settings modal must not overflow at ${width}px`);
   }
+});
+
+test('filetypes master-detail shows categories left and editor right', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsFiletypesTab').click();
+  assert.match(await page.locator('#settingsFiletypesTab').innerText(), /DATEITYPEN/);
+  assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), true);
+  assert.match(await page.locator('[data-category="Bilder"] .catalog-row-count').innerText(), /2 Endungen/);
+  assert.equal(await page.locator('#filetypesDetailEmpty').isVisible(), true);
+  await page.locator('[data-category="Bilder"]').click();
+  assert.equal(await page.locator('#filetypesDetailEmpty').isVisible(), false);
+  assert.equal(await page.locator('#filetypesDetailForm').isVisible(), true);
+  assert.equal(await page.locator('#filetypesDetailName').inputValue(), 'Bilder');
+  assert.equal(await page.locator('#filetypesDetailExtensions').inputValue(), 'jpg, png');
+});
+
+test('filetypes editor can rename, add extensions and delete a category', async t => {
+  const { page } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/settings/filetypes' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      return { json: { catalog: { categories: payload.categories, version: 2, sha256: 'second' } } };
+    }
+    return settingsFixture(url);
+  });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('[data-category="Bilder"]').click();
+  await page.locator('#filetypesDetailName').fill('Bilder Neu');
+  await page.locator('#filetypesDetailExtensions').fill('jpg, png, gif');
+  await page.locator('#filetypesDetailApply').click();
+  assert.equal(await page.locator('[data-category="Bilder"]').isVisible(), false);
+  assert.equal(await page.locator('[data-category="Bilder Neu"]').isVisible(), true);
+  assert.match(await page.locator('[data-category="Bilder Neu"] .catalog-row-count').innerText(), /3 Endungen/);
+  await page.locator('#catalogAddCategory').click();
+  assert.equal(await page.locator('#filetypesDetailName').inputValue(), 'Neue Kategorie');
+  await page.locator('#filetypesDetailName').fill('Audio');
+  await page.locator('#filetypesDetailExtensions').fill('mp3, wav');
+  await page.locator('#filetypesDetailApply').click();
+  assert.equal(await page.locator('[data-category="Audio"]').isVisible(), true);
+  await page.locator('[data-category="Dokumente"]').click();
+  await page.locator('#filetypesDetailDelete').click();
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#filetypesDetailDelete').click();
+  assert.equal(await page.locator('[data-category="Dokumente"]').isVisible(), false);
+});
+
+test('filetypes has no inline textarea per category row', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsFiletypesTab').click();
+  assert.equal(await page.locator('#catalogRows > textarea').count(), 0);
+  assert.equal(await page.locator('#catalogRows .catalog-row textarea').count(), 0);
+});
+
+test('detection table sticky header covers scrolling rows and platform status', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsCryptoTab').click();
+  const ths = await page.locator('.detection-table th').all();
+  assert.ok(ths.length >= 4, 'header cells must exist');
+  for (const th of ths) {
+    const style = await th.evaluate(node => ({ position: getComputedStyle(node).position, zIndex: Number(getComputedStyle(node).zIndex) }));
+    assert.equal(style.position, 'sticky', 'header cells must be sticky');
+    assert.ok(style.zIndex > 0, 'each header cell must have positive z-index');
+  }
+  const wrapStyle = await page.locator('.detection-table-wrap').evaluate(node => ({ zIndex: Number(getComputedStyle(node).zIndex), isolation: getComputedStyle(node).isolation }));
+  assert.ok(wrapStyle.zIndex > 0 || wrapStyle.isolation === 'isolate', 'table wrap must establish stacking context');
+  const firstRow = await page.locator('#detectionRows tr').first().evaluate(node => node.getBoundingClientRect());
+  const headerBottom = await page.locator('.detection-table th').first().evaluate(node => node.getBoundingClientRect().bottom);
+  assert.ok(firstRow.top >= headerBottom - 1, 'first data row must start below sticky header');
+});
+
+test('detection editor uses full height with fixed footer and compact buttons', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsCryptoTab').click();
+  await page.locator('#detectionRows tr[data-id="wallet"]').click();
+  await page.locator('#detectionEditorForm').waitFor();
+  const editor = await page.locator('.detection-editor-panel').evaluate(node => node.getBoundingClientRect());
+  const body = await page.locator('.detection-body').evaluate(node => node.getBoundingClientRect());
+  assert.ok(editor.height >= body.height - 1, 'editor panel should fill detection body height');
+  const footer = await page.locator('.detection-editor-form-actions').evaluate(node => node.getBoundingClientRect());
+  assert.ok(footer.bottom <= editor.bottom + 1, 'editor footer must stay at bottom of panel');
+  assert.ok(footer.height <= 70, 'editor footer buttons must be compact');
+  const buttons = await page.locator('.detection-editor-form-actions button').all();
+  assert.equal(buttons.length, 2);
+  for (const button of buttons) {
+    const height = await button.evaluate(node => node.getBoundingClientRect().height);
+    assert.ok(height <= 44, 'editor action buttons must be compact');
+  }
+  assert.equal(await page.locator('#detectionApply').isVisible(), true);
+  assert.equal(await page.locator('#detectionCancel').isVisible(), true);
+});
+
+test('updates tab is renamed and shows compact status block', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsUpdatesTab').click();
+  assert.match(await page.locator('#settingsUpdatesTab').innerText(), /UPDATES/);
+  assert.doesNotMatch(await page.locator('.settings-tabs').innerText(), /SYSTEM\s*&\s*UPDATES/i);
+  assert.equal(await page.locator('#updateCurrentVersion').isVisible(), true);
+  assert.equal(await page.locator('#updateStatus').isVisible(), true);
+  assert.equal(await page.locator('#updateCheckedAt').isVisible(), true);
+  assert.equal(await page.locator('#updateCheck').isVisible(), true);
+  assert.equal(await page.locator('#offlineUpdateFile').isVisible(), true);
+  assert.equal(await page.locator('#offlineUpdateInstall').isVisible(), true);
+});
+
+test('update success notice is compact and shows installed version', async t => {
+  const { page } = await setup(t);
+  await page.evaluate(() => {
+    renderUpdateState({ state: 'installed', current_version: '0.2.0a49' });
+    document.getElementById('settingsModal').showModal();
+    selectSettingsPane('updates');
+  });
+  const notice = await page.locator('#updateSuccessNotice').evaluate(node => node.getBoundingClientRect());
+  assert.ok(notice.width <= 560, 'success notice should be compact');
+  assert.match(await page.locator('#updateSuccessNotice').innerText(), /Update erfolgreich abgeschlossen/);
+  assert.match(await page.locator('#updateSuccessVersion').innerText(), /v0\.2\.0-alpha\.49/);
+});
+
+test('offline update section is separate and file field aligns with install button', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsUpdatesTab').click();
+  const offline = await page.locator('.offline-update').evaluate(node => node.getBoundingClientRect());
+  const online = await page.locator('.update-status-block').evaluate(node => node.getBoundingClientRect());
+  assert.ok(offline.top >= online.bottom + 8, 'offline section must be below online status block');
+  const row = await page.locator('.offline-update-row').evaluate(node => node.getBoundingClientRect());
+  const file = await page.locator('#offlineUpdateFile').evaluate(node => node.getBoundingClientRect());
+  const button = await page.locator('#offlineUpdateInstall').evaluate(node => node.getBoundingClientRect());
+  assert.ok(file.top >= row.top - 1 && file.bottom <= row.bottom + 1, 'file input must stay in offline row');
+  assert.ok(button.top >= row.top - 1 && button.bottom <= row.bottom + 1, 'install button must stay in offline row');
 });

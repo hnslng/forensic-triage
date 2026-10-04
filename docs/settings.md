@@ -1,6 +1,6 @@
 # Einstellungen: Stichwortprofile, Dateitypen, Erkennungsregeln und Updates
 
-Seit `v0.2.0-alpha.65` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog.
+Seit `v0.2.0-alpha.65` öffnet **Einstellungen** in der oberen Systemleiste einen eigenen Bereich außerhalb des Fallfensters. Er funktioniert auch ohne aktiven Fall. Stichwortprofile und Dateitypen werden als Master-Detail-Ansicht verwaltet; die Profilverwaltung ist nicht mehr in einem separaten Modal-Dialog. Ab `v0.2.0-alpha.67` verwenden alle vier Tabs eine vereinheitlichte Designsprache mit gemeinsamen Control-Größen, Höhen und Abständen.
 
 ## Stichwortprofile
 
@@ -26,9 +26,22 @@ Im Fallfenster werden weiterhin die Profile für den Einsatz ausgewählt. Dort g
 
 ## Dateitypen
 
-Die Suche findet Kategorien oder Endungen. Jede Zeile enthält einen Kategorienamen und die dazugehörigen Endungen. Endungen mit Komma, Leerzeichen oder Zeilenumbruch trennen; ein führender Punkt und Großbuchstaben werden normalisiert. Beispielsweise werden `.JPG` und `jpg` gleich behandelt.
+Seit `v0.2.0-alpha.67` werden Dateitypen wie die Stichwortprofile als Master-Detail-Ansicht verwaltet.
 
-Endungen können ergänzt, entfernt oder zwischen Kategorien verschoben werden. **Neue Kategorie** ergänzt eine Zeile; das × entfernt eine Kategorie aus dem Entwurf. Eine Endung darf nur einer Kategorie zugeordnet sein. Doppelte oder ungültige Einträge verhindern das Speichern des gesamten Entwurfs. Nicht zugeordnete oder fehlende Endungen ergeben automatisch **Unbekannt**.
+### Master-Detail-Ansicht
+
+- **Kategorienliste (links):** ruhige Listenansicht mit Kategoriename und Anzahl der Endungen. Ein Klick auf eine Kategorie öffnet rechts den Editor. Die Katalogversion ist klein im linken Bereich sichtbar.
+- **Editor (rechts):** zeigt den Kategorienamen und das Endungen-Feld. Endungen werden kommasepariert eingetragen. Eine Kategorie kann im Editor gelöscht werden.
+- **Neue Kategorie:** „+ NEUE KATEGORIE" legt eine neue, leere Kategorie an und öffnet sie im Editor.
+- **Änderungen übernehmen:** schreibt die Editor-Eingaben in den lokalen Entwurf.
+- **Zurücksetzen:** stellt den ursprünglichen Zustand der Kategorie aus dem Entwurf wieder her.
+- **Änderungen speichern:** speichert den gesamten Entwurf dauerhaft.
+
+### Endungen bearbeiten
+
+Die Suche findet Kategorien oder Endungen. Endungen mit Komma, Leerzeichen oder Zeilenumbruch trennen; ein führender Punkt und Großbuchstaben werden normalisiert. Beispielsweise werden `.JPG` und `jpg` gleich behandelt.
+
+Endungen können ergänzt, entfernt oder zwischen Kategorien verschoben werden. Eine Endung darf nur einer Kategorie zugeordnet sein. Doppelte oder ungültige Einträge verhindern das Speichern des gesamten Entwurfs. Nicht zugeordnete oder fehlende Endungen ergeben automatisch **Unbekannt**.
 
 **Standard laden** lädt den mit dieser Programmversion gelieferten Katalog in den Entwurf. Erst **Änderungen speichern** übernimmt ihn. Schließen mit ungespeicherten Änderungen verlangt eine Verwerfbestätigung. Hat ein anderer Browser den Katalog zwischenzeitlich gespeichert, wird ein veralteter Schreibversuch abgelehnt; Einstellungen erneut öffnen und Änderungen neu eintragen.
 
@@ -38,7 +51,7 @@ Es wird die letzte Endung ausgewertet: `backup.tar.gz` wird über `gz` eingeordn
 
 ## Erkennungsregeln
 
-Der Bereich **Erkennungsregeln** ersetzt die bisherigen „Krypto-Regeln“ durch eine skalierbare, master-detail-basierte Verwaltung. Er ist in vier Unterbereiche gegliedert:
+Der Bereich **Erkennungsregeln** ersetzt die bisherigen „Krypto-Regeln" durch eine skalierbare, master-detail-basierte Verwaltung. Ab `v0.2.0-alpha.67` bleibt der Tabellenkopf beim Scrollen deckend sticky, der rechte Editor nutzt die gesamte Workspace-Höhe und der Footer mit **Übernehmen** und **Abbrechen** sitzt fest am unteren Rand. Er ist in vier Unterbereiche gegliedert:
 
 - **Krypto-Apps** – Self-Custody-Wallets, Hardware-Wallet-Begleiter, Börsen/Broker, Portfolio-/Steuer- und Zahlungsdienste
 - **Banking & Finanzen** – Banken, Neobanken, Broker und Finanzdienste (immer neutral, niemals Krypto-Hinweis)
@@ -96,9 +109,11 @@ Das Speichern validiert IDs, Kategorien, Hinweisstärken, Listen und konkurriere
 
 **? Begriffe erklären** öffnet einen eigenen Hilfe-Dialog über der Einstellungsoberfläche. Das Master-Detail-Layout wird nicht verschoben. Kleine **?**-Tooltips neben den Editorfeldern werden in einer globalen Tooltip-Schicht außerhalb der scrollbaren Bereiche gerendert, sodass sie nicht durch `overflow:hidden` abgeschnitten werden.
 
-## System & Updates
+## Updates
 
-Der vierte Einstellungsbereich enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird beim Neuladen bereits vor dem ersten Statusabruf direkt in dieser Registerkarte wiederhergestellt. Dadurch erscheint nicht kurz das Dashboard zwischen zwei Updatephasen. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben. Nach erfolgreichem Abschluss erscheint im Fenster zusätzlich eine klar erkennbare Erfolgsmeldung mit der installierten Version.
+Der vierte Einstellungsbereich hieß früher **System & Updates** und enthält unmittelbar die vollständige Updateverwaltung für Online-Prüfung und signierte `.tbu`-Pakete; ein zweites Fenster oder ein weiterer Öffnungsschritt ist nicht erforderlich. Updates werden nie automatisch installiert. Während Prüfung, Upload, Installation und anschließendem Dienstneustart bleibt das Einstellungsfenster geöffnet beziehungsweise wird beim Neuladen bereits vor dem ersten Statusabruf direkt in dieser Registerkarte wiederhergestellt. Dadurch erscheint nicht kurz das Dashboard zwischen zwei Updatephasen.
+
+Ab `v0.2.0-alpha.67` ist der Tab auf **UPDATES** reduziert und kompakter angeordnet: Version, Status und letzte Prüfung bilden einen gemeinsamen Statusblock, „Jetzt prüfen" ist direkt damit verbunden, die Erfolgsmeldung ist kompakt und der Offline-Update-Bereich ist als separater Abschnitt darunter angeordnet. Ein laufender Balken zeigt die aktuelle Phase; ein Prozentwert wird nur für die tatsächlich messbare Paketübertragung angegeben. Nach erfolgreichem Abschluss erscheint eine kompakte Erfolgsmeldung mit der installierten Version.
 
 ## Nachvollziehbarkeit
 
@@ -141,4 +156,4 @@ Die CLI verwendet den gespeicherten Katalog, wenn `FORENSIC_TRIAGE_SETTINGS_ROOT
 
 ## English summary
 
-Settings has separate keyword-profile, file-type, detection-rule, and system-update sections outside the case dialog. Detection rules cover crypto apps, banking/finance apps, device-backup structures and file-name hints. Operators can edit or duplicate profiles, maintain an extension catalog and shared metadata rules, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores immutable catalog, crypto-rule and backup-hint snapshots; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Neither extension categories nor rule hits confirm file contents or assets.
+Settings has separate keyword-profile, file-type, detection-rule, and update sections outside the case dialog. Keyword profiles and file types use a master-detail layout. Detection rules cover crypto apps, banking/finance apps, device-backup structures and file-name hints. The detection editor now uses the full workspace height with a fixed footer and a sticky table header that covers scrolling rows. The Updates tab is compact and renamed from SYSTEM & UPDATES. Operators can edit or duplicate profiles, maintain an extension catalog and shared metadata rules, and deliberately open online or signed offline updates. Duplicate extensions and stale concurrent saves are rejected. Each new scan stores immutable catalog, crypto-rule and backup-hint snapshots; historical results are unchanged. Operator settings are kept outside release checkouts and should be included in backups. Neither extension categories nor rule hits confirm file contents or assets.

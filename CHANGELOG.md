@@ -1,6 +1,17 @@
 # Änderungshistorie / Changelog
 
-Das Format orientiert sich an „Keep a Changelog“. Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
+Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
+
+## [0.2.0-alpha.67] – 2026-10-04
+
+- Gemeinsame Settings-Designsprache für Stichwortprofile, Dateitypen, Erkennungsregeln und Updates: vereinheitlichte Input-/Select-/Button-Höhen (ca. 36 px), gemeinsame Padding- und Border-Logik, gleiche Intro-Abstände und ruhige Hintergrundflächen. Die Alpha-66-Typografieänderungen bleiben vollständig erhalten.
+- Dateitypen auf Master-Detail umbgebaut: links die Kategorienliste mit Name und Endungsanzahl, rechts der Editor für Kategoriename und Endungen. Neue Kategorien werden im Kopf der Liste angelegt; Löschen erfolgt als Danger-Aktion im Editor. Suche, Katalogversion, Standard laden und Speichern bleiben erhalten.
+- Stichwortprofile optisch nachgezogen: Master-Detail-Struktur beibehalten, Control-Höhen vereinheitlicht, Footer-Buttons kompakter, vertikale Keyword-Liste weiterhin ohne Kacheln.
+- Erkennungsregeln: Sticky-Header-Layerfehler behoben durch `z-index: 2` auf den Header-Zellen und `isolation: isolate` auf dem scrollenden Tabellenbereich; Tabellenkopf bleibt beim Scrollen deckend über allen Zeilen und Statussymbolen.
+- Erkennungsregeln: rechter Editor nutzt die gesamte Workspace-Höhe (`grid-template-rows: minmax(0, 1fr)`); der Footer mit **Übernehmen** und **Abbrechen** sitzt fest am unteren Rand und ist kompakter (ca. 36 px Höhe).
+- Updates: Tab von **SYSTEM & UPDATES** auf **UPDATES** reduziert; aria-labels, Tabtext und Dokumentation angepasst. Statusblock mit Version, Status und letzter Prüfung kompakter gestaltet; „Jetzt prüfen" direkt damit verbunden; Erfolgsmeldung kompakt; Offline-Update als separater Abschnitt darunter.
+- Browsertests erweitert um Dateitypen-Master-Detail, Sticky-Header-Fix, Editor-Full-Höhe, Updates-Umbenennung und kompakte Erfolgsmeldung.
+- Version auf `0.2.0-alpha.67` (`0.2.0a67`) angehoben.
 
 ## [0.2.0-alpha.66] – 2026-10-04
 

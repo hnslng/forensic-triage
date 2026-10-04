@@ -345,7 +345,7 @@
         <button id="settingsProfilesTab" type="button" aria-pressed="true" aria-controls="settingsProfilesPane">STICHWORTPROFILE</button>
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
         <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">ERKENNUNGSREGELN</button>
-        <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">SYSTEM &amp; UPDATES</button>
+        <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane profile-pane" aria-labelledby="settingsProfilesTab">
         <p class="pane-intro">Suchbegriffe verwalten. Welche Profile beim Einsatz verwendet werden, wählen Sie im Fallfenster.</p>
@@ -493,12 +493,39 @@
       <section id="settingsFiletypesPane" class="settings-pane filetypes-pane" aria-labelledby="settingsFiletypesTab" hidden>
         <p class="pane-intro">Dateien werden anhand ihrer letzten Endung eingeordnet. Änderungen gelten für neue Scans; vorhandene Sichtungen behalten ihre Zuordnung.</p>
         <div class="filetypes-workspace">
-          <div class="filetypes-toolbar">
-            <label for="catalogSearch">KATEGORIE / ENDUNG SUCHEN<input id="catalogSearch" type="search" placeholder="Z. B. BILDER ODER HEIC …" /></label>
-            <span id="catalogVersion" class="filetypes-version"></span>
-            <div class="catalog-add"><input id="catalogNewCategory" maxlength="50" aria-label="Neue Kategorie" placeholder="NEUE KATEGORIE …" /><button id="catalogAddCategory" type="button">+ HINZUFÜGEN</button></div>
+          <div class="filetypes-master">
+            <div class="filetypes-master-head">
+              <label class="ft-search-label" for="catalogSearch">DATEITYPEN
+                <input id="catalogSearch" type="search" placeholder="Kategorie oder Endung suchen …" />
+              </label>
+              <button id="catalogAddCategory" class="ft-master-create" type="button" title="Neue Kategorie"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUE KATEGORIE</button>
+            </div>
+            <div id="catalogVersion" class="filetypes-version" aria-label="Katalogversion"></div>
+            <div id="catalogRows" class="catalog-rows" role="listbox" aria-label="Dateityp-Kategorien"></div>
           </div>
-          <div id="catalogRows" class="catalog-rows"></div>
+          <div class="filetypes-detail">
+            <div class="filetypes-detail-empty" id="filetypesDetailEmpty">
+              <strong>KATEGORIE AUSWÄHLEN</strong>
+              <p>Wählen Sie links eine Kategorie aus, um die Endungen zu bearbeiten.</p>
+            </div>
+            <div class="filetypes-detail-form" id="filetypesDetailForm" hidden>
+              <div class="filetypes-detail-head">
+                <strong id="filetypesDetailTitle">KATEGORIE BEARBEITEN</strong>
+              </div>
+              <label class="ft-field" for="filetypesDetailName">KATEGORIENAME
+                <input id="filetypesDetailName" maxlength="50" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="ft-field" for="filetypesDetailExtensions">ENDUNGEN
+                <textarea id="filetypesDetailExtensions" rows="6" spellcheck="false" placeholder="arw, avif, bmp, cr2, cr3, dng, gif, heic, …"></textarea>
+              </label>
+              <p class="ft-hint">Endungen kommasepariert.</p>
+              <button id="filetypesDetailDelete" class="ft-delete" type="button">KATEGORIE LÖSCHEN</button>
+              <div class="filetypes-detail-footer">
+                <button id="filetypesDetailReset" type="button">ZURÜCKSETZEN</button>
+                <button id="filetypesDetailApply" type="button">ÄNDERUNGEN ÜBERNEHMEN</button>
+              </div>
+            </div>
+          </div>
           <footer class="filetypes-footer">
             <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“. „Mehrdeutig“ und „Schutz-/Schlüsseldateien" beschreiben die Endung, keine bestätigten Inhalte oder Verschlüsselung.</p>
             <div class="catalog-actions">
@@ -513,24 +540,30 @@
         <p class="pane-intro">TRIAGE//BOX prüft automatisch auf freigegebene Versionen, installiert aber niemals selbstständig. Eine Installation ist nur ohne aktiven Fall und ohne laufenden Scan möglich.</p>
         <div id="updateModal" class="update-modal update-embedded">
           <div class="update-modal-body">
-            <div class="update-version-grid">
-              <div><span>INSTALLIERTE VERSION</span><strong id="updateCurrentVersion">—</strong></div>
-              <div><span>UPDATE-STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
-              <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
+            <div class="update-status-block">
+              <div class="update-version-grid">
+                <div><span>VERSION</span><strong id="updateCurrentVersion">—</strong></div>
+                <div><span>STATUS</span><strong id="updateStatus">NOCH NICHT GEPRÜFT</strong></div>
+                <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
+              </div>
+              <div class="update-primary-actions">
+                <button id="updateCheck" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
+                <button id="updateStopCase" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
+                <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
+              </div>
             </div>
-            <div id="updateSuccessNotice" class="update-success-notice" role="status" aria-live="polite" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> UPDATE ERFOLGREICH ABGESCHLOSSEN</div>
+            <div id="updateSuccessNotice" class="update-success-notice" role="status" aria-live="polite" hidden>
+              <span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span>Update erfolgreich abgeschlossen · <span id="updateSuccessVersion">—</span></span>
+            </div>
             <p id="updateActionMessage" class="update-action-message"></p>
             <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
-            <div class="update-actions">
-              <button id="updateStopCase" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
-              <button id="updateCheck" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
-              <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
-            </div>
             <section class="offline-update">
-              <div><strong>OFFLINE ÜBER TRIAGEBOX-WLAN</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt dabei kein Internet.</small></div>
-              <label for="offlineUpdateFile">UPDATEPAKET AUSWÄHLEN</label>
-              <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" />
-              <button id="offlineUpdateInstall" type="button" disabled>PAKET HOCHLADEN &amp; INSTALLIEREN</button>
+              <div><strong>OFFLINE-UPDATE</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt kein Internet.</small></div>
+              <div class="offline-update-row">
+                <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" aria-label="Updatepaket auswählen" />
+                <button id="offlineUpdateInstall" type="button" disabled>PAKET INSTALLIEREN</button>
+              </div>
               <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
             </section>
           </div>

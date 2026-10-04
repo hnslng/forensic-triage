@@ -58,6 +58,10 @@ let catalogState = null;
 let catalogDefaults = null;
 let catalogBusy = false;
 let catalogDirty = false;
+let catalogSelectedCategory = null;
+let catalogDetailDraftName = "";
+let catalogDetailDraftExtensions = "";
+let catalogDetailDirty = false;
 let settingsRevision = 0;
 let cryptoState = null;
 let bundledCryptoRules = { app_rules: [], file_rules: [], backup_rules: [] };
@@ -305,7 +309,7 @@ function renderUpdateState(value = {}) {
     ? new Date(updateState.updated_at).toLocaleString("de-AT")
     : "—";
   $("updateSuccessNotice").hidden = state !== "installed";
-  $("updateSuccessNotice").textContent = `✓ UPDATE ERFOLGREICH ABGESCHLOSSEN · ${formatReleaseVersion(updateState.current_version)}`;
+  $("updateSuccessVersion").textContent = formatReleaseVersion(updateState.current_version);
   $("settingsUpdatesTab").classList.toggle("update-available", state === "available");
   $("updateInstall").hidden = state !== "available";
   $("updateInstall").textContent = available ? `${available.toUpperCase()} INSTALLIEREN` : "UPDATE INSTALLIEREN";
@@ -562,6 +566,9 @@ async function openSettings(initialPane = "profiles") {
   resetProfileDetail();
   const revision = ++settingsRevision;
   catalogState = null; catalogDirty = false;
+  catalogSelectedCategory = null;
+  catalogDetailDirty = false;
+  renderFiletypeDetail();
   $("catalogRows").innerHTML = "";
   $("catalogSave").disabled = true;
   $("catalogReset").disabled = true;
@@ -576,8 +583,11 @@ async function openSettings(initialPane = "profiles") {
     if (!response.ok) throw new Error(data.error || "Katalog nicht verfügbar");
     if (revision !== settingsRevision || !$("settingsModal").open) return;
     catalogState = data.catalog; catalogDefaults = data.defaults;
+    catalogSelectedCategory = null;
+    catalogDetailDirty = false;
     $("catalogSearch").value = "";
     renderCatalog(catalogState.categories);
+    renderFiletypeDetail();
     $("catalogVersion").textContent = `KATALOG V${catalogState.version}`;
     $("catalogMessage").textContent = "";
     $("catalogReset").disabled = false;
@@ -588,23 +598,130 @@ async function openSettings(initialPane = "profiles") {
 }
 
 function renderCatalog(categories) {
-  $("catalogRows").innerHTML = Object.entries(categories).map(([name, extensions], index) => `<div class="catalog-row" data-category="${escapeHtml(name)}">
-    <div class="catalog-category"><label for="catalogExtensions${index}">${escapeHtml(name)}<small>${extensions.length} Endungen</small></label><button type="button" class="catalog-remove" aria-label="Kategorie ${escapeHtml(name)} entfernen">×</button></div>
-    <textarea id="catalogExtensions${index}" aria-label="Endungen für ${escapeHtml(name)}" rows="2" spellcheck="false">${escapeHtml(extensions.join(", "))}</textarea>
-  </div>`).join("");
+  const entries = Object.entries(categories);
+  $("catalogRows").innerHTML = entries.map(([name, extensions]) => {
+    const selected = catalogSelectedCategory && name === catalogSelectedCategory;
+    return `<button type="button" class="catalog-row${selected ? " selected" : ""}" data-category="${escapeHtml(name)}" data-extensions="${escapeHtml(extensions.join(", "))}" role="option" aria-selected="${selected ? "true" : "false"}">
+      <span class="catalog-row-name">${escapeHtml(name)}</span>
+      <span class="catalog-row-count">${extensions.length} Endungen</span>
+    </button>`;
+  }).join("") || '<p class="filetypes-empty-row">Noch keine Kategorien vorhanden.</p>';
   filterCatalog();
 }
 
 function catalogDraft() {
-  return Object.fromEntries([...$("catalogRows").querySelectorAll(".catalog-row")].map(row => [row.dataset.category,
-    row.querySelector("textarea").value.split(/[,;\s]+/).map(value => value.replace(/^\./, "").toLowerCase()).filter(Boolean)]));
+  if (!catalogState) return {};
+  return Object.fromEntries(Object.entries(catalogState.categories).map(([name, extensions]) => [name,
+    extensions.map(value => String(value).replace(/^\./, "").toLowerCase()).filter(Boolean)]));
 }
 
 function filterCatalog() {
   const search = $("catalogSearch").value.trim().toLocaleLowerCase("de").replace(/^\./, "");
   for (const row of $("catalogRows").children) {
-    row.hidden = !`${row.dataset.category} ${row.querySelector("textarea").value}`.toLocaleLowerCase("de").includes(search);
+    if (row.classList.contains("filetypes-empty-row")) continue;
+    row.hidden = !`${row.dataset.category} ${row.dataset.extensions}`.toLocaleLowerCase("de").includes(search);
   }
+}
+
+function canSwitchFiletypeDetail() {
+  if (!catalogDetailDirty) return true;
+  return window.confirm("Ungespeicherte Änderungen an der Kategorie verwerfen?");
+}
+
+function selectFiletypeCategory(name) {
+  if (!canSwitchFiletypeDetail()) return;
+  catalogSelectedCategory = name || null;
+  catalogDetailDirty = false;
+  renderFiletypeDetail();
+  renderCatalog(catalogState.categories);
+}
+
+function renderFiletypeDetail() {
+  const empty = $("filetypesDetailEmpty");
+  const form = $("filetypesDetailForm");
+  if (!empty || !form) return;
+  if (!catalogSelectedCategory || !catalogState) {
+    empty.hidden = false;
+    form.hidden = true;
+    return;
+  }
+  const extensions = catalogState.categories[catalogSelectedCategory] || [];
+  catalogDetailDraftName = catalogSelectedCategory;
+  catalogDetailDraftExtensions = extensions.join(", ");
+  $("filetypesDetailName").value = catalogDetailDraftName;
+  $("filetypesDetailExtensions").value = catalogDetailDraftExtensions;
+  $("filetypesDetailTitle").textContent = catalogSelectedCategory === "" ? "NEUE KATEGORIE" : "KATEGORIE BEARBEITEN";
+  $("filetypesDetailDelete").disabled = !catalogSelectedCategory;
+  empty.hidden = true;
+  form.hidden = false;
+}
+
+function markCatalogDetailDirty() {
+  catalogDetailDirty = true;
+  $("catalogMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN IM EDITOR";
+}
+
+function applyFiletypeDetail() {
+  if (!catalogState || !catalogSelectedCategory) return;
+  const newName = $("filetypesDetailName").value.trim();
+  if (!newName) {
+    $("catalogMessage").textContent = "KATEGORIENAME ERFORDERLICH";
+    $("filetypesDetailName").focus();
+    return;
+  }
+  const normalized = $("filetypesDetailExtensions").value.split(/[,;\s]+/).map(value => value.replace(/^\./, "").toLowerCase()).filter(Boolean);
+  const categories = { ...catalogState.categories };
+  delete categories[catalogSelectedCategory];
+  if (Object.prototype.hasOwnProperty.call(categories, newName) && newName !== catalogSelectedCategory) {
+    $("catalogMessage").textContent = "KATEGORIE EXISTIERT BEREITS";
+    $("filetypesDetailName").focus();
+    return;
+  }
+  categories[newName] = normalized;
+  catalogState = { ...catalogState, categories };
+  catalogSelectedCategory = newName;
+  catalogDetailDirty = false;
+  markCatalogDirty();
+  renderCatalog(catalogState.categories);
+  renderFiletypeDetail();
+  $("catalogMessage").textContent = "KATEGORIE IM ENTWURF ÜBERNOMMEN";
+}
+
+function resetFiletypeDetail() {
+  catalogDetailDirty = false;
+  renderFiletypeDetail();
+  $("catalogMessage").textContent = "";
+}
+
+function deleteFiletypeCategory() {
+  if (!catalogState || !catalogSelectedCategory) return;
+  if (!window.confirm(`Kategorie „${catalogSelectedCategory}" aus dem Entwurf entfernen?`)) return;
+  const categories = { ...catalogState.categories };
+  delete categories[catalogSelectedCategory];
+  catalogState = { ...catalogState, categories };
+  catalogSelectedCategory = null;
+  catalogDetailDirty = false;
+  markCatalogDirty();
+  renderCatalog(catalogState.categories);
+  renderFiletypeDetail();
+}
+
+function addFiletypeCategory() {
+  if (!catalogState || catalogBusy) return;
+  if (!canSwitchFiletypeDetail()) return;
+  let name = "Neue Kategorie";
+  let suffix = 1;
+  while (Object.prototype.hasOwnProperty.call(catalogState.categories, name)) {
+    name = `Neue Kategorie ${suffix}`;
+    suffix += 1;
+  }
+  catalogState = { ...catalogState, categories: { ...catalogState.categories, [name]: [] } };
+  catalogSelectedCategory = name;
+  catalogDetailDirty = false;
+  markCatalogDirty();
+  renderCatalog(catalogState.categories);
+  renderFiletypeDetail();
+  $("filetypesDetailName").focus();
 }
 
 function markCatalogDirty() {
@@ -627,7 +744,10 @@ async function saveCatalog() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Speichern fehlgeschlagen");
     catalogState = data.catalog; catalogDirty = false;
+    catalogSelectedCategory = null;
+    catalogDetailDirty = false;
     renderCatalog(catalogState.categories);
+    renderFiletypeDetail();
     $("catalogVersion").textContent = `KATALOG V${catalogState.version}`;
     $("catalogMessage").textContent = "GESPEICHERT · GILT FÜR NEUE SCANS";
   } catch (error) {
@@ -2686,31 +2806,26 @@ document.addEventListener("keydown", event => {
 initTooltips(document);
 $("catalogSearch").addEventListener("input", filterCatalog);
 $("catalogRows").addEventListener("click", (event) => {
-  const remove = event.target.closest(".catalog-remove");
-  if (!remove || catalogBusy) return;
-  remove.closest(".catalog-row").remove(); markCatalogDirty();
-});
-$("catalogRows").addEventListener("input", (event) => {
   const row = event.target.closest(".catalog-row");
-  if (row) row.querySelector("small").textContent = `${catalogDraft()[row.dataset.category].length} Endungen`;
-  markCatalogDirty();
+  if (!row || catalogBusy) return;
+  selectFiletypeCategory(row.dataset.category);
 });
-$("catalogAddCategory").addEventListener("click", () => {
-  const name = $("catalogNewCategory").value.trim();
-  const draft = catalogDraft();
-  if (!name || name.toLocaleLowerCase("de") === "unbekannt" || Object.keys(draft).some(value => value.toLocaleLowerCase("de") === name.toLocaleLowerCase("de"))) {
-    $("catalogMessage").textContent = "BITTE EINEN NEUEN, EINDEUTIGEN KATEGORIENAMEN EINGEBEN"; return;
-  }
-  $("catalogSearch").value = "";
-  renderCatalog({ ...draft, [name]: [] });
-  $("catalogNewCategory").value = "";
-  markCatalogDirty();
-  $("catalogRows").lastElementChild.querySelector("textarea").focus();
-});
+$("catalogAddCategory").addEventListener("click", addFiletypeCategory);
+$("filetypesDetailName").addEventListener("input", markCatalogDetailDirty);
+$("filetypesDetailExtensions").addEventListener("input", markCatalogDetailDirty);
+$("filetypesDetailApply").addEventListener("click", applyFiletypeDetail);
+$("filetypesDetailReset").addEventListener("click", resetFiletypeDetail);
+$("filetypesDetailDelete").addEventListener("click", deleteFiletypeCategory);
 $("catalogReset").addEventListener("click", () => {
   if (!catalogDefaults || catalogBusy) return;
+  if (catalogDetailDirty && !window.confirm("Ungespeicherte Kategorieänderungen verwerfen?")) return;
   $("catalogSearch").value = "";
-  renderCatalog(catalogDefaults.categories); markCatalogDirty();
+  catalogState = { ...catalogState, categories: catalogDefaults.categories };
+  catalogSelectedCategory = null;
+  catalogDetailDirty = false;
+  renderCatalog(catalogState.categories);
+  renderFiletypeDetail();
+  markCatalogDirty();
   $("catalogMessage").textContent = "STANDARD GELADEN · ZUM ÜBERNEHMEN SPEICHERN";
 });
 $("catalogSave").addEventListener("click", saveCatalog);
