@@ -345,6 +345,7 @@
         <button id="settingsFiletypesTab" type="button" aria-pressed="false" aria-controls="settingsFiletypesPane">DATEITYPEN</button>
         <button id="settingsCryptoTab" type="button" aria-pressed="false" aria-controls="settingsCryptoPane">ERKENNUNGSREGELN</button>
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">UPDATES</button>
+        <button id="settingsDiagnoseTab" type="button" aria-pressed="false" aria-controls="settingsDiagnosePane">DIAGNOSE</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane profile-pane" aria-labelledby="settingsProfilesTab">
         <div class="profile-workspace master-detail">
@@ -575,6 +576,38 @@
               </div>
               <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
             </section>
+          </div>
+        </div>
+      </section>
+      <section id="settingsDiagnosePane" class="settings-pane diagnose-pane" aria-labelledby="settingsDiagnoseTab" hidden>
+        <div class="diagnose-workspace">
+          <div class="diagnose-toolbar">
+            <div class="diagnose-modes" role="group" aria-label="Diagnosemodus">
+              <button id="diagModeNormal" class="s-btn small" type="button" aria-pressed="true">NORMAL</button>
+              <button id="diagModeDebug" class="s-btn small" type="button" aria-pressed="false">DEBUG</button>
+            </div>
+            <select id="diagCategoryFilter" aria-label="Bereich filtern">
+              <option value="ALL">ALLE</option>
+              <option value="USB">USB</option>
+              <option value="ANDROID">ANDROID</option>
+              <option value="IPHONE">IPHONE</option>
+              <option value="SCAN">SCAN</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="SYSTEM">SYSTEM</option>
+            </select>
+            <div class="diagnose-toolbar-actions">
+              <button id="diagPause" class="s-btn small" type="button">PAUSE</button>
+              <button id="diagClear" class="s-btn small" type="button">LEEREN</button>
+              <button id="diagCopy" class="s-btn small" type="button">KOPIEREN</button>
+            </div>
+          </div>
+          <div id="diagConsole" class="diagnose-console" role="log" aria-live="off" aria-label="Diagnosekonsole" tabindex="0">
+            <div id="diagEmpty" class="diagnose-empty">NOCH KEINE DIAGNOSEEREIGNISSE</div>
+            <div id="diagRows" class="diagnose-rows"></div>
+          </div>
+          <div class="diagnose-footer">
+            <span id="diagStatus" class="diagnose-status" role="status" aria-live="polite"></span>
+            <button id="diagScrollEnd" class="s-btn small" type="button" hidden>↓ ZUM ENDE</button>
           </div>
         </div>
       </section>

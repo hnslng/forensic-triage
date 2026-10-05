@@ -568,11 +568,15 @@ function renderProfileList() {
 }
 
 function selectSettingsPane(pane = "profiles") {
-  for (const name of ["Profiles", "Filetypes", "Crypto", "Updates"]) {
+  // Defensive lookups: a missing pane must not abort pane switching.
+  for (const name of ["Profiles", "Filetypes", "Crypto", "Updates", "Diagnose"]) {
     const active = name.toLowerCase() === pane.toLowerCase();
-    $(`settings${name}Pane`).hidden = !active;
-    $(`settings${name}Tab`).setAttribute("aria-pressed", String(active));
+    const paneElement = $(`settings${name}Pane`);
+    const tabElement = $(`settings${name}Tab`);
+    if (paneElement) paneElement.hidden = !active;
+    if (tabElement) tabElement.setAttribute("aria-pressed", String(active));
   }
+  if (pane.toLowerCase() === "diagnose") diagOnActivate();
 }
 
 async function openSettings(initialPane = "profiles") {
@@ -2739,6 +2743,7 @@ $("settingsProfilesTab").addEventListener("click", () => selectSettingsPane("pro
 $("settingsFiletypesTab").addEventListener("click", () => selectSettingsPane("filetypes"));
 $("settingsCryptoTab").addEventListener("click", () => selectSettingsPane("crypto"));
 $("settingsUpdatesTab").addEventListener("click", () => selectSettingsPane("updates"));
+$("settingsDiagnoseTab").addEventListener("click", () => selectSettingsPane("diagnose"));
 for (const [key] of Object.entries(detectionSectionLabels)) {
   const tab = $(`detection${key[0].toUpperCase()}${key.slice(1)}Tab`);
   if (tab) tab.addEventListener("click", () => selectDetectionSection(key));
@@ -3192,3 +3197,232 @@ const restoreUpdateView = sessionStorage.getItem(UPDATE_DIALOG_RESTORE_KEY) === 
 if (restoreUpdateView) openSettings("updates");
 refresh().finally(() => { if (restoreUpdateView) forgetUpdateDialog(); });
 setInterval(() => refresh(false), 2500);
+setInterval(diagTick, 1000);
+
+// ── DIAGNOSE-Konsole (Alpha 70): RAM-only Ringbuffer, reines Polling ──
+const DIAG_MAX_ROWS = 500;
+let diagEntries = [];
+let diagCursor = 0;
+let diagLatestSeq = 0;
+let diagPaused = false;
+let diagDisplayMode = "normal";
+let diagServerMode = "normal";
+let diagAutoScroll = true;
+let diagPollRevision = 0;
+let diagStatusHold = 0;
+
+function diagConsoleVisible() {
+  return document.visibilityState !== "hidden"
+    && $("settingsModal").open
+    && !$("settingsDiagnosePane").hidden;
+}
+
+function diagTick() {
+  if (!diagConsoleVisible() || diagPaused) return;
+  diagPoll();
+}
+
+function diagOnActivate() {
+  if (diagConsoleVisible()) diagPoll();
+}
+
+function diagBaseMessage(entry) {
+  let text = String(entry.message || "");
+  const details = entry.details || {};
+  for (const [key, value] of Object.entries(details)) {
+    text += ` ${key}=${value}`;
+  }
+  return text;
+}
+
+function diagClock(entry) {
+  const moment = new Date(entry.timestamp);
+  if (Number.isNaN(moment.getTime())) return "";
+  const pad = (value, size = 2) => String(value).padStart(size, "0");
+  return `${pad(moment.getHours())}:${pad(moment.getMinutes())}:${pad(moment.getSeconds())}.${pad(moment.getMilliseconds(), 3)}`;
+}
+
+function diagFilter(entries) {
+  return entries.filter((entry) => (
+    (diagDisplayMode === "debug" || entry.level !== "DEBUG")
+    && ($("diagCategoryFilter").value === "ALL" || entry.category === $("diagCategoryFilter").value)
+  ));
+}
+
+function diagVisibleEntries() {
+  return diagFilter(diagEntries);
+}
+
+function diagRow(entry) {
+  const row = document.createElement("div");
+  row.className = `diag-row lvl-${entry.level.toLowerCase()} cat-${entry.category.toLowerCase()}`;
+  const time = document.createElement("time");
+  time.textContent = diagClock(entry);
+  const level = document.createElement("span");
+  level.className = "diag-level";
+  level.textContent = entry.level;
+  const category = document.createElement("span");
+  category.className = "diag-category";
+  category.textContent = entry.category;
+  const message = document.createElement("span");
+  message.className = "diag-message";
+  message.textContent = diagBaseMessage(entry);
+  row.append(time, level, category, message);
+  return row;
+}
+
+function diagRenderAll() {
+  const container = $("diagRows");
+  const entries = diagVisibleEntries();
+  container.replaceChildren(...entries.slice(-DIAG_MAX_ROWS).map(diagRow));
+  diagSyncEmpty();
+  if (diagAutoScroll) { $("diagConsole").scrollTop = $("diagConsole").scrollHeight; diagFollow(); }
+}
+
+function diagFollow() {
+  const console = $("diagConsole");
+  const atBottom = console.scrollHeight - console.scrollTop - console.clientHeight < 8;
+  diagAutoScroll = atBottom;
+  $("diagScrollEnd").hidden = atBottom;
+}
+
+function diagSyncEmpty() {
+  $("diagEmpty").hidden = $("diagRows").children.length > 0;
+  if (diagStatusHold <= Date.now()) {
+    $("diagStatus").textContent = diagPaused
+      ? "ANGEHALTEN"
+      : `${diagVisibleEntries().length} EINTRÄGE (${diagServerMode === "debug" ? "DEBUG" : "NORMAL"})`;
+  }
+}
+
+function diagAppend(entries) {
+  const container = $("diagRows");
+  const visible = diagFilter(entries);
+  const following = diagAutoScroll;
+  const fragment = document.createDocumentFragment();
+  for (const entry of visible) fragment.append(diagRow(entry));
+  container.append(fragment);
+  let overflow = container.children.length - DIAG_MAX_ROWS;
+  while (overflow-- > 0) container.firstChild.remove();
+  diagEntries.push(...entries);
+  if (diagEntries.length > DIAG_MAX_ROWS) diagEntries = diagEntries.slice(-DIAG_MAX_ROWS);
+  diagSyncEmpty();
+  if (following && diagAutoScroll) $("diagConsole").scrollTop = $("diagConsole").scrollHeight;
+}
+
+async function diagPoll() {
+  const revision = ++diagPollRevision;
+  try {
+    const stale = diagCursor && diagLatestSeq && diagLatestSeq - diagCursor >= DIAG_MAX_ROWS;
+    const url = stale || diagCursor < 1
+      ? "/api/logs/recent?limit=200"
+      : `/api/logs/recent?since=${diagCursor}&limit=200`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Diagnose-Protokoll nicht verfügbar");
+    const data = await response.json();
+    if (revision !== diagPollRevision || !diagConsoleVisible() || diagPaused) return;
+    if (data.mode === "debug" || data.mode === "normal") diagServerMode = data.mode;
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+    const newest = Number(entries.at(-1)?.seq) || diagCursor;
+    if (newest > diagCursor) diagCursor = newest;
+    diagLatestSeq = Number(data.latest) || Math.max(diagLatestSeq, newest);
+    if (entries.length) diagAppend(entries);
+    diagSyncEmpty();
+  } catch (_) {
+    if (revision === diagPollRevision && diagStatusHold <= Date.now()) {
+      $("diagStatus").textContent = "DIAGNOSEQUELLE NICHT ERREICHBAR";
+    }
+  }
+}
+
+async function diagSetMode(mode) {
+  if (mode === diagDisplayMode) return;
+  try {
+    const response = await fetch("/api/logs/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode }),
+    });
+    if (!response.ok) throw new Error((await response.json()).error || "Modus nicht übernommen");
+    diagDisplayMode = mode;
+    applyDiagModeButtons();
+    if (mode === "debug") { /* server records DEBUG from now on */ }
+    diagRenderAll();
+    diagStatusFlash(mode === "debug" ? "DEBUG-MODUS AKTIV" : "NORMAL-MODUS AKTIV");
+    diagPoll();
+  } catch (error) {
+    diagStatusFlash(`FEHLER: ${error.message}`);
+  }
+}
+
+function applyDiagModeButtons() {
+  $("diagModeNormal").setAttribute("aria-pressed", String(diagDisplayMode === "normal"));
+  $("diagModeDebug").setAttribute("aria-pressed", String(diagDisplayMode === "debug"));
+}
+
+function diagStatusFlash(text) {
+  $("diagStatus").textContent = text;
+  diagStatusHold = Date.now() + 4000;
+  setTimeout(() => { if (diagStatusHold <= Date.now()) diagSyncEmpty(); }, 4100);
+}
+
+function diagClearView() {
+  diagEntries = [];
+  $("diagRows").replaceChildren();
+  if (diagLatestSeq) diagCursor = Math.max(diagCursor, diagLatestSeq);
+  diagSyncEmpty();
+  diagStatusFlash("ANZEIGE GELEERT · QUELLE LÄUFT WEITER");
+}
+
+function diagCopyLines() {
+  return diagVisibleEntries().slice(-DIAG_MAX_ROWS).map((entry) => {
+    const moment = new Date(entry.timestamp);
+    const pad = (value, size = 2) => String(value).padStart(size, "0");
+    const stamp = Number.isNaN(moment.getTime()) ? "" : (
+      `${moment.getFullYear()}-${pad(moment.getMonth() + 1)}-${pad(moment.getDate())} `
+      + `${pad(moment.getHours())}:${pad(moment.getMinutes())}:${pad(moment.getSeconds())}.${pad(moment.getMilliseconds(), 3)}`
+    );
+    return `${stamp} ${entry.level} ${entry.category} ${diagBaseMessage(entry)}`;
+  });
+}
+
+async function diagCopy() {
+  const lines = diagCopyLines();
+  if (!lines.length) { diagStatusFlash("KEINE ZEILEN ZUM KOPIEREN"); return; }
+  try {
+    await navigator.clipboard.writeText(lines.join("\n") + "\n");
+    diagStatusFlash(`KOPIIERT · ${lines.length} ZEILEN`);
+  } catch (_) {
+    diagStatusFlash("ZWISCHENABLAGE NICHT VERFÜGBAR");
+  }
+  diagHoldClear();
+}
+
+function diagHoldClear() {
+  setTimeout(() => { if (diagStatusHold <= Date.now()) diagSyncEmpty(); }, 4100);
+}
+
+$("diagModeNormal").addEventListener("click", () => diagSetMode("normal"));
+$("diagModeDebug").addEventListener("click", () => diagSetMode("debug"));
+$("diagCategoryFilter").addEventListener("change", () => { diagRenderAll(); });
+$("diagPause").addEventListener("click", () => {
+  diagPaused = !diagPaused;
+  $("diagPause").textContent = diagPaused ? "FORTSETZEN" : "PAUSE";
+  if (!diagPaused) diagPoll();
+  diagStatusHold = 0;
+  diagSyncEmpty();
+});
+$("diagClear").addEventListener("click", diagClearView);
+$("diagCopy").addEventListener("click", diagCopy);
+$("diagScrollEnd").addEventListener("click", () => {
+  diagAutoScroll = true;
+  $("diagScrollEnd").hidden = true;
+  $("diagConsole").scrollTop = $("diagConsole").scrollHeight;
+});
+$("diagConsole").addEventListener("scroll", () => {
+  const console = $("diagConsole");
+  const atBottom = console.scrollHeight - console.scrollTop - console.clientHeight < 8;
+  if (atBottom) diagAutoScroll = true;
+  else if (diagAutoScroll) diagAutoScroll = false;
+  $("diagScrollEnd").hidden = atBottom;
+});

@@ -20,6 +20,7 @@ from typing import Any, Iterator
 from .commands import run_command
 from .container_inventory import empty_catalog
 from .crypto_rules import CRYPTO_CATEGORIES, classify_app as classify_app_rule, classify_file as classify_file_rule
+from . import diagnostics as diag
 from .keywords import build_hits, load_profile
 from .reporting import write_files_csv, write_json
 from .settings import apply_catalog, catalog_snapshot, load_catalog
@@ -108,7 +109,19 @@ def probe_iphone(udid: str) -> dict[str, Any]:
 
 
 def discover_iphones() -> list[dict[str, Any]]:
-    return [probe_iphone(udid) for udid in list_iphone_udids()]
+    udids = list_iphone_udids()
+    diag.change(
+        "iphone.tools", "IPHONE",
+        f"iPhone-Werkzeuge {'vorhanden' if tools_available() else 'nicht vollständig installiert'}",
+        {"tools_available": tools_available()},
+        signature="yes" if tools_available() else "no",
+    )
+    diag.change(
+        "iphone.udids", "IPHONE",
+        f"iPhone-Erkennung: {len(udids)} UDID(s) sichtbar",
+        {"count": len(udids)}, signature=",".join(udids), debug=True,
+    )
+    return [probe_iphone(udid) for udid in udids]
 
 
 def ensure_paired(udid: str) -> dict[str, Any]:

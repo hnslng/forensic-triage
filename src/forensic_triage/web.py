@@ -25,6 +25,7 @@ from . import __version__
 from .casefiles import CaseStore
 from .commands import run_command
 from .crypto_rules import bundled_rules as bundled_crypto_rules, load_rules as load_crypto_rules, save_rules as save_crypto_rules, seed_rules as seed_crypto_rules
+from . import diagnostics as diag
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .iphone import discover_iphones
 from .android import discover_androids
@@ -57,6 +58,77 @@ LAST_POWER_STATUS_AT = 0.0
 LAST_LOGGED_POWER_STATE = ""
 POWER_ACTION_LOCK = threading.Lock()
 POWER_ACTION_REQUESTED = ""
+DEVICE_STATE_LOCK = threading.Lock()
+LAST_DEVICE_STATES: dict[str, dict[str, Any]] = {}
+
+
+def _device_logging_category(device: dict[str, Any]) -> str:
+    media_type = str(device.get("media_type", ""))
+    return {"android": "ANDROID", "iphone": "IPHONE"}.get(media_type, "USB")
+
+
+def _device_label(device: dict[str, Any]) -> str:
+    vendor = str(device.get("vendor") or "").strip()
+    model = str(device.get("model") or "").strip()
+    return " ".join(part for part in (vendor, model) if part) or str(device.get("path") or "Gerät")
+
+
+def _device_state(device: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "connection_state": str(device.get("connection_state", "")),
+        "mounted": bool(device.get("mounted")),
+        "read_only": bool(device.get("read_only")),
+    }
+
+
+def log_device_changes(devices: list[dict[str, Any]]) -> None:
+    """Log device presence and state transitions, never unchanged repeats."""
+    with DEVICE_STATE_LOCK:
+        previous = dict(LAST_DEVICE_STATES)
+    current: dict[str, dict[str, Any]] = {}
+    for device in devices:
+        path = str(device.get("path", ""))
+        if not path:
+            continue
+        category = _device_logging_category(device)
+        labels = {"label": _device_label(device), "category": category}
+        current[path] = {**_device_state(device), **labels}
+        details = {
+            "vendor": str(device.get("vendor") or ""),
+            "model": str(device.get("model") or ""),
+            "serial": str(device.get("serial") or "")[:40],
+            "media_type": str(device.get("media_type") or ""),
+        }
+        if device.get("media_type") == "android":
+            # Telefone: keine Seriennummer als Klartext im Normalmodus
+            details["serial"] = "(in DEBUG sichtbar)" if device.get("serial") else ""
+        before = previous.get(path)
+        if before is None:
+            diag.event(category, f"{labels['label']} verbunden", details)
+        elif before != current[path]:
+            now_state = current[path]
+            if before["connection_state"] != now_state["connection_state"]:
+                diag.event(
+                    category,
+                    f"{labels['label']}: Status {before['connection_state'] or 'unbekannt'}"
+                    f" → {now_state['connection_state'] or 'unbekannt'}",
+                    details,
+                )
+            if before["mounted"] != now_state["mounted"]:
+                detail = "Medium eingebunden" if now_state["mounted"] else "Medium nicht mehr eingebunden"
+                diag.event(category, f"{labels['label']}: {detail}", details)
+            if before["read_only"] != now_state["read_only"]:
+                diag.event(
+                    category,
+                    f"{labels['label']}: {'Nur-Lesen aktiv' if now_state['read_only'] else 'Schreibschutz aus'}",
+                    details, level="info" if now_state["read_only"] else "warning",
+                )
+    for path, before in previous.items():
+        if path not in current:
+            diag.event(before["category"], f"{before['label']} getrennt")
+    with DEVICE_STATE_LOCK:
+        LAST_DEVICE_STATES.clear()
+        LAST_DEVICE_STATES.update(current)
 
 
 def _env_float(name: str, default: float) -> float:
@@ -73,6 +145,32 @@ def _env_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _query_int(query: dict[str, list[str]], name: str, *, default: int = 0,
+               minimum: int | None = None, maximum: int | None = None) -> int:
+    raw = (query.get(name) or [""])[0]
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"Parameter {name} muss eine Zahl sein.") from exc
+    if minimum is not None and value < minimum:
+        raise ValueError(f"Parameter {name} muss >= {minimum} sein.")
+    if maximum is not None and value > maximum:
+        raise ValueError(f"Parameter {name} darf höchstens {maximum} sein.")
+    return value
+
+
+def _query_choice(query: dict[str, list[str]], name: str, allowed: Any) -> str | None:
+    raw = (query.get(name) or [""])[0]
+    if not raw:
+        return None
+    normalized = raw.upper()
+    if normalized not in allowed:
+        raise ValueError(f"Parameter {name} hat einen unmöglichen Wert.")
+    return normalized
 
 
 def parse_throttled_status(output: str) -> dict[str, Any]:
@@ -129,7 +227,8 @@ def read_power_status(force: bool = False) -> dict[str, Any]:
         state_key = f"{status['state']}:{status.get('raw', '')}"
         if state_key != LAST_LOGGED_POWER_STATE:
             log = logging.warning if status["state"] in {"danger", "warning"} else logging.info
-            log("power health changed: %s (%s)", status["label"], status.get("raw") or "unavailable")
+            log("power health changed: %s (%s)", status["label"], status.get("raw") or "unavailable",
+                extra={"diag_category": "SYSTEM"})
             LAST_LOGGED_POWER_STATE = state_key
         LAST_POWER_STATUS = status
         LAST_POWER_STATUS_AT = now
@@ -238,6 +337,7 @@ def cached_iphone_discovery() -> tuple[list[dict[str, Any]], str]:
             devices = discover_iphones()
         except (OSError, subprocess.SubprocessError, ValueError) as exc:
             LAST_IPHONE_DISCOVERY_ERROR = f"iPhone-Erkennung nicht verfügbar: {exc}"
+            diag.once("iphone.discovery", "IPHONE", LAST_IPHONE_DISCOVERY_ERROR[:300])
             return [dict(item) for item in LAST_IPHONE_DISCOVERY], LAST_IPHONE_DISCOVERY_ERROR
         LAST_IPHONE_DISCOVERY = [dict(item) for item in devices]
         LAST_IPHONE_DISCOVERY_ERROR = ""
@@ -256,6 +356,7 @@ def cached_android_discovery() -> tuple[list[dict[str, Any]], str]:
             devices = discover_androids()
         except (OSError, subprocess.SubprocessError, ValueError) as exc:
             LAST_ANDROID_DISCOVERY_ERROR = f"Android-Erkennung nicht verfügbar: {exc}"
+            diag.once("android.discovery", "ANDROID", LAST_ANDROID_DISCOVERY_ERROR[:300])
             return [dict(item) for item in LAST_ANDROID_DISCOVERY], LAST_ANDROID_DISCOVERY_ERROR
         LAST_ANDROID_DISCOVERY = [dict(item) for item in devices]
         LAST_ANDROID_DISCOVERY_ERROR = ""
@@ -284,6 +385,7 @@ def cached_media_discovery(*, reactivate: bool = False) -> tuple[list[dict[str, 
         except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
             LAST_DEVICE_DISCOVERY_ERROR = f"Datenträgererkennung blockiert oder nicht verfügbar: {exc}"
             DEVICE_DISCOVERY_UNHEALTHY_UNTIL = time.monotonic() + device_discovery_backoff_seconds()
+            diag.once("media.discovery", "USB", LAST_DEVICE_DISCOVERY_ERROR[:300])
             return [dict(item) for item in LAST_DEVICE_DISCOVERY], LAST_DEVICE_DISCOVERY_ERROR, reactivated
         LAST_DEVICE_DISCOVERY = [dict(item) for item in devices]
         LAST_DEVICE_DISCOVERY_ERROR = ""
@@ -397,6 +499,12 @@ def read_update_status() -> dict[str, str]:
                 default[mapped] = value
     except (OSError, ValueError):
         pass
+    signature = f"{default['state']}:{default.get('available_version', '')}"
+    diag.change(
+        "update.status", "UPDATE", f"Update-Status: {default['state']}",
+        {"state": default["state"], "available_version": default.get("available_version", "")},
+        signature=signature,
+    )
     return default
 
 
@@ -508,7 +616,9 @@ class TriageHandler(BaseHTTPRequestHandler):
     server: TriageHTTPServer
 
     def log_message(self, format: str, *args: object) -> None:
-        logging.info("web %s", format % args)
+        # Plain request lines are deliberately excluded from the diagnostics
+        # console (diag_silent): they would flood the bounded ring buffer.
+        logging.info("web %s", format % args, extra={"diag_silent": True})
 
     def _json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -586,6 +696,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 devices = [*devices, *iphones, *androids]
                 if not device_error:
                     clear_absent_quarantines(devices)
+                log_device_changes(devices)
                 latest = self.server.case_store.latest_media() or latest_result(self.server.results_root)
                 self._json(HTTPStatus.OK, {
                     "devices": devices,
@@ -631,6 +742,9 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         if route == "/api/updates":
             self._json(HTTPStatus.OK, {"update": read_update_status(), "jobs": update_job_states()})
+            return
+        if route == "/api/logs/recent":
+            self._get_logs_recent()
             return
         if route == "/api/profile":
             try:
@@ -747,6 +861,9 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if route == "/api/logs/mode":
+            self._post_logs_mode()
+            return
         if route == "/api/settings/filetypes":
             self._post_filetypes()
             return
@@ -785,6 +902,39 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._post_decision(int(decision_match.group(1)))
             return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def _get_logs_recent(self) -> None:
+        """Read-only structured diagnostics log from the in-memory ring."""
+        try:
+            query = parse_qs(urlsplit(self.path).query)
+            since = _query_int(query, "since", minimum=0)
+            limit = _query_int(query, "limit", default=200, minimum=1, maximum=diag.LOG_BUFFER_MAX)
+            level = _query_choice(query, "level", diag.LEVEL_ORDER)
+            category = _query_choice(query, "category", diag.CATEGORIES)
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        entries, latest = diag.recent(since=since, limit=limit, min_level=level, category=category)
+        self._json(HTTPStatus.OK, {
+            "entries": entries, "mode": diag.mode(), "count": len(entries), "latest": latest,
+        })
+
+    def _post_logs_mode(self) -> None:
+        try:
+            payload = self._read_payload()
+        except (ValueError, json.JSONDecodeError):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
+            return
+        request_mode = str(payload.get("mode", "")).casefold()
+        if request_mode not in diag.MODES:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "Diagnosemodus darf nur 'normal' oder 'debug' sein."})
+            return
+        diag.set_mode(request_mode)
+        diag.event(
+            "SYSTEM", f"Diagnosemodus umgeschaltet: {request_mode.upper()}",
+            level="info" if request_mode == "normal" else "warning",
+        )
+        self._json(HTTPStatus.OK, {"mode": diag.mode()})
 
     def _post_filetypes(self) -> None:
         try:
@@ -940,6 +1090,11 @@ class TriageHandler(BaseHTTPRequestHandler):
                 ["/usr/bin/systemctl", "start", "--no-block", f"forensic-triage-update@{action}.service"],
                 check=True, capture_output=True, text=True, timeout=5,
             )
+            diag.event(
+                "UPDATE",
+                "Update-Installation angefordert" if action == "install" else "Update-Prüfung angefordert",
+                level="info" if action == "check" else "warning",
+            )
             self._json(HTTPStatus.ACCEPTED, {"update": read_update_status(), "action": action})
         except (OSError, subprocess.SubprocessError) as exc:
             if guard_claimed:
@@ -1007,6 +1162,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 target.unlink(missing_ok=True)
                 raise
             worker_started = True
+            diag.event("UPDATE", "Offline-Update-Paket angenommen", level="warning")
             self._json(HTTPStatus.ACCEPTED, {"update": read_update_status(), "action": "offline"})
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
@@ -1192,7 +1348,12 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.CONFLICT, {"error": "Dieser Datenträger wird bereits gesichtet."})
             return
         sighting_number = ""
+        scan_started = time.monotonic()
         try:
+            diag.event("SCAN", f"Scan gestartet: {case_number} · {_device_label(device)}", {
+                "device": device_path, "scan_kind": str(device.get("media_type") or "block"),
+                "profiles": ",".join(profile_ids),
+            })
             sighting_number = self.server.case_store.allocate_sighting_number(
                 case_number, operator, device_path,
             )
@@ -1217,18 +1378,27 @@ class TriageHandler(BaseHTTPRequestHandler):
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,
             )
+            diag.event("SCAN", f"Scan abgeschlossen: {sighting_number} in {time.monotonic() - scan_started:.1f} s", {
+                "case": case_number, "device": device_path,
+            })
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.CREATED, record)
         except ScanTimeoutError as exc:
             quarantine_device(device_path)
-            logging.exception("scan request timed out")
+            logging.exception("scan request timed out", extra={"diag_category": "SCAN"})
+            diag.event("SCAN", f"Scan-Zeitlimit: {sighting_number or case_number}", {
+                "case": case_number, "device": device_path,
+            }, level="error")
             if sighting_number:
                 self.server.case_store.record_scan_failure(
                     case_number, sighting_number, operator, device_path, str(exc),
                 )
             self._json(HTTPStatus.GATEWAY_TIMEOUT, {"error": str(exc), "timed_out": True})
         except Exception as exc:  # Scanner errors must reach the operator cleanly.
-            logging.exception("scan request failed")
+            logging.exception("scan request failed", extra={"diag_category": "SCAN"})
+            diag.event("SCAN", f"Scan fehlgeschlagen: {sighting_number or case_number}", {
+                "case": case_number, "device": device_path, "error": str(exc)[:200],
+            }, level="error")
             if sighting_number:
                 self.server.case_store.record_scan_failure(
                     case_number, sighting_number, operator, device_path, str(exc),
@@ -1263,6 +1433,8 @@ def serve(
 ) -> None:
     if not web_root.is_dir():
         raise FileNotFoundError(f"web interface not found: {web_root}")
+    diag.install()
+    diag.event("SYSTEM", f"TRIAGE//BOX Weboberfläche bereit (v{__version__})", {"host": host, "port": port})
     server = TriageHTTPServer(
         (host, port), web_root, results_root, profile_path, casefiles_root,
         scan_timeout_seconds, command_timeout_seconds,

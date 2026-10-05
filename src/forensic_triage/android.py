@@ -16,6 +16,7 @@ from typing import Any
 from .commands import run_command
 from .container_inventory import empty_catalog
 from .crypto_rules import CRYPTO_CATEGORIES, classify_app
+from . import diagnostics as diag
 from .keywords import load_profile
 from .reporting import write_files_csv, write_json
 from .settings import catalog_snapshot
@@ -43,8 +44,14 @@ def _sysfs_text(path: Path) -> str:
 def _usb_candidates(root: Path = Path("/sys/bus/usb/devices")) -> list[dict[str, str]]:
     candidates: list[dict[str, str]] = []
     if not root.is_dir():
+        diag.change(
+            "android.sysfs.root", "ANDROID", "sysfs-Pfad nicht verfügbar",
+            {"root": str(root)}, signature="missing", debug=True,
+        )
         return candidates
-    for directory in sorted(root.iterdir(), key=lambda item: item.name):
+    diag.change("android.sysfs.root", "ANDROID", "sysfs-Pfad verfügbar", signature="present", debug=True)
+    entries = sorted(root.iterdir(), key=lambda item: item.name)
+    for directory in entries:
         vendor_id = _sysfs_text(directory / "idVendor").casefold()
         if vendor_id not in ANDROID_USB_VENDORS:
             continue
@@ -56,6 +63,13 @@ def _usb_candidates(root: Path = Path("/sys/bus/usb/devices")) -> list[dict[str,
             "model": _sysfs_text(directory / "product") or "Android-Gerät",
             "serial": serial,
         })
+    diag.change(
+        "android.sysfs.summary", "ANDROID",
+        f"sysfs geprüft: {len(entries)} Einträge, {len(candidates)} Android-Kandidaten",
+        {"checked": len(entries), "candidates": len(candidates)},
+        signature=f"{len(entries)}:{len(candidates)}:{'|'.join(sorted(c['sysfs_name'] for c in candidates))}",
+        debug=True,
+    )
     return candidates
 
 
@@ -117,10 +131,43 @@ def android_guidance(vendor: str) -> list[str]:
     ]
 
 
+def _log_discovery_state(
+    *, usb: list[dict[str, str]], adb_available: bool, adb: list[dict[str, str]],
+) -> None:
+    """Debug-only, change-tracked insight into sysfs and ADB (Diagnose Alpha 70)."""
+    diag.change(
+        "android.adb.available", "ANDROID",
+        f"ADB-Werkzeug {'vorhanden' if adb_available else 'nicht installiert'}",
+        {"adb_binary": adb_available},
+        signature="yes" if adb_available else "no",
+    )
+    for row in adb:
+        diag.change(
+            f"android.adb.{row['serial']}", "ANDROID",
+            f"ADB-Zustand: serial={row['serial']} state={row['adb_state']}",
+            {"adb_state": row["adb_state"]}, signature=row["adb_state"], debug=True,
+        )
+    for item in usb:
+        diag.change(
+            f"android.usb.{item['sysfs_name']}", "ANDROID",
+            "USB-Kandidat: "
+            f"vendor={item['vendor_id']} product={item['product_id']} "
+            f"manufacturer={item['vendor']} name={item['sysfs_name']}",
+            {
+                "idVendor": item["vendor_id"], "idProduct": item["product_id"],
+                "manufacturer": item["vendor"], "product": item["model"],
+                "serial_present": bool(item["serial"]),
+            },
+            signature=f"{item['vendor_id']}:{item['product_id']}:{bool(item['serial'])}",
+            debug=True,
+        )
+
+
 def discover_androids() -> list[dict[str, Any]]:
     usb = _usb_candidates()
     adb_available = bool(shutil.which("adb"))
     adb = _adb_rows()
+    _log_discovery_state(usb=usb, adb_available=adb_available, adb=adb)
     by_serial = {item["serial"]: item for item in usb if item["serial"]}
     devices: list[dict[str, Any]] = []
     used: set[str] = set()

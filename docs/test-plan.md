@@ -1,6 +1,6 @@
 # Testplan / Test plan
 
-Stand: 5. Oktober 2026 · Anwendung: `v0.2.0-alpha.69`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
+Stand: 5. Oktober 2026 · Anwendung: `v0.2.0-alpha.70`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
 
 Für den Alpha-68-Pi-Nachtest zuerst in Safari/macOS die Hauptseite laden, ohne Einstellungen zu öffnen: wenn kein Fall aktiv ist, liegt der gesamte TRIAGE//BOX-Bildschirm im Hintergrund, ist abgedunkelt und deutlicher (ca. 7,5 px) geblurrt und nicht bedienbar. Der zentrale Startbereich zeigt `TRIAGE//BOX` (die beiden Slashes separat in Acid-Grün), `BEREIT` und den Button „Fall anlegen / öffnen" — ohne zusätzlichen Erklärungssatz darunter. Oben rechts im Overlay befinden sich kompakte Utility-Controls für Einstellungen und Power, die dieselben lokalen Inline-SVGs wie die Systemleiste verwenden. Beide öffnen ihre Dialoge über dem Overlay; nach dem Schließen ist der Startzustand wieder sichtbar. Beim Reload mit serverseitig aktivem Fall darf das Overlay nicht kurz aufblitzen. Im aktiven Fall ohne Medium zeigt das Medien-Dashboard statt mehrzeiliger Hilfe nur `KEIN MEDIUM VERBUNDEN`.
 
@@ -15,6 +15,18 @@ Dann Updates wählen: Der kompakte Statusblock zeigt Version, Status und letzte 
 Responsive-Verhalten bei 1440 px, 1280 px, 1000 px und 620 px prüfen: Profil-Master-Detail, Dateitypen-Master-Detail und Erkennungsregeln-Toolbar sollen sinnvoll umgebrochen werden, Settings-Footer und wichtige Buttons müssen erreichbar bleiben. Zusätzlich auf Safari/macOS, Firefox und Brave/Chromium unter Windows prüfen, ob Settings, Stichwortprofile, Dateitypen, Erkennungsregeln, Updates, Medienkarten, Fallfenster, Tooltips, Statuszeilen, Tabellen und Ergebnis-/Scanansicht weiterhin technisch aussehen, aber kleine Labels/Hilfetexte nicht pixelig oder zu dünn wirken. Es dürfen keine externen Fonts geladen werden; `Courier New` darf nicht mehr als primärer Stack-Fallback auftauchen.
 
 Für Alpha 61 zusätzlich prüfen: Erkennungsregeln im neuen Master-Detail-Editor bearbeiten, suchen, filtern, duplizieren, löschen und per JSON exportieren/importieren. Regeländerungen speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `backup-hints.json`, `summary.json` und Fall-ZIP vergleichen. Bestehende Sichtungen müssen unverändert bleiben. Banking-/Finanz-Apps dürfen nicht als Krypto-Hinweis zählen. Geräte-Backup-Strukturen müssen in `backup-hints.json` und der Oberfläche sichtbar sein, ohne dass Backup-Inhalte analysiert werden. Telefonläufe müssen ein leeres `files.csv` erzeugen und dürfen keine AFC-/MTP-/Dateiinventarisierung starten. Bei iPhones/iPads Seriennummer und UDID getrennt prüfen. Bei Android müssen unvollständige Profile und nicht sichtbare geschützte Bereiche einen unbekannten Status statt eines Negativbefunds erhalten.
+
+## Diagnosekonsole (Alpha 70)
+
+In den Einstellungen den Tab **DIAGNOSE** prüfen (Details und Datenschutzregeln: [diagnostics.md](diagnostics.md)):
+
+- Nach dem Öffnen zeigt die Konsole bei leerem Ringbuffer „NOCH KEINE DIAGNOSEEREIGNISSE“ — keine Fehlermeldung; nach einem Service-Neustart bleibt das leere Verhalten bestehen (RAM-only).
+- USB-Stick anstecken/abziehen: verbunden/getrennt jeweils genau einmal; Details zeigen Hersteller und Modell, im DEBUG-Modus technische Kennungen. Keine Wiederholung pro Poll.
+- Android ohne USB-Debugging anstecken (Modus DEBUG): sysfs-Kandidaten mit `idVendor`, `idProduct`, Hersteller, Modell, Serien-Vorhanden-Flag, ADB-Binary-Status und resultierender `connection_state` erscheinen; identische Poll-Ergebnisse erzeugen keine neuen Zeilen.
+- „PAUSE“ hält die Anzeige an (Button → FORTSETZEN); danach kommen fehlende Einträge nach bzw. die Anzeige springt bei Lücke auf den neuesten Stand. „LEEREN“ leert nur die lokale Ansicht (Server-Ring läuft weiter; neue Ereignisse erscheinen wieder). „KOPIEREN“ legt die sichtbaren Zeilen im Klartext in der Zwischenablage ab; bei blockierter Zwischenablage erscheint ein verständlicher Fehlerstatus.
+- Auto-Scroll schiebt nur nach, wenn die Ansicht unten steht; beim Hochscrollen erscheint `↓ ZUM ENDE`. Die Konsole hält maximal 500 Zeilen im DOM; ältere Zeilen entfernen sich automatisch.
+- Polling pausiert, sobald der Tab/Dialog nicht sichtbar ist (Netzliste ohne Requests prüfen).
+- Die normale Fehlerdarstellung der Oberfläche bleibt unverändert; die Konsole ist Zusatzdiagnose, kein Ersatz für Meldungen.
 
 ## Automatisierte Tests
 

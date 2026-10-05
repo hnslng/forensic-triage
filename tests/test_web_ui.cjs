@@ -16,6 +16,7 @@ const pageData = entries => ({ entries, total: entries.length, shown: entries.le
 const record = id => ({ media: media.find(item => item.id === id), summary: { evidence: `SICHT-${id}`, categories_by_count: { Archive: 1, Dokumente: 1 }, largest_files: [] }, hits: { rechnung: 1 }, archive: {} });
 
 async function setup(t, override = () => null) {
+  diagReset();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
   const requests = [], errors = [];
   t.after(async () => { await page.close(); assert.deepEqual(errors, []); });
@@ -30,6 +31,12 @@ async function setup(t, override = () => null) {
     const asset = { '/': 'index.html', '/app.js': 'app.js', '/styles.css': 'styles.css' }[url.pathname];
     if (asset) return route.fulfill({ contentType: asset.endsWith('.js') ? 'text/javascript' : asset.endsWith('.css') ? 'text/css' : 'text/html', body: fs.readFileSync(path.join(root, 'web', asset), 'utf8') });
     if (url.pathname === '/api/status') return route.fulfill({ json: { devices: [], cases: [], active_case: null, update: {} } });
+    if (url.pathname === '/api/logs/recent') {
+      const since = Number(url.searchParams.get('since') || 0);
+      const limit = Number(url.searchParams.get('limit') || 200);
+      const entries = diagEntriesPage(since, limit);
+      return route.fulfill({ json: { entries, mode: diagFeed.mode, count: entries.length, latest: diagFeed.latest } });
+    }
     if (url.pathname === '/api/profiles') return route.fulfill({ json: { profiles: [] } });
     if (url.pathname === '/api/cases/TEST') return route.fulfill({ json: { case: { case_number: 'TEST' }, media } });
     const match = url.pathname.match(/^\/api\/media\/(\d+)(?:\/(tree|files|container))?$/);
@@ -74,6 +81,19 @@ function gate() {
 }
 
 const settingsCatalog = { version: 1, sha256: 'first', categories: { Bilder: ['jpg', 'png'], Dokumente: ['pdf'] } };
+
+// DIAGNOSE-Konsole (Alpha 70): controllable fake ring buffer behind /api/logs/recent.
+let diagFeed = { entries: [], mode: 'normal', latest: 0 };
+function diagPush(entry) {
+  const seq = ++diagFeed.latest;
+  diagFeed.entries.push({ seq, timestamp: entry.timestamp || '2026-10-05T19:42:01.015Z', level: entry.level || 'INFO', category: entry.category || 'USB', message: entry.message || 'Testereignis', ...(entry.details ? { details: entry.details } : {}) });
+  return seq;
+}
+function diagReset() { diagFeed = { entries: [], mode: 'normal', latest: 0 }; }
+function diagEntriesPage(since, limit) {
+  const newer = diagFeed.entries.filter(e => e.seq > since);
+  return diagFeed.entries.length && !since ? newer.slice(-limit) : newer.slice(0, limit);
+}
 const defaultCryptoRules = {
   version: 3,
   sha256: 'crypto-defaults',
@@ -584,6 +604,7 @@ test('master rows picture the same family across profiles, file types and detect
   const { page } = await setup(t, settingsFixture);
   await page.setViewportSize({ width: 1512, height: 982 });
   await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList .settings-profile-row').first().waitFor({ timeout: 5000 });
   const rowStyle = async selector => page.locator(selector).first().evaluate(node => {
     const s = getComputedStyle(node);
     return { pad: s.paddingTop, borderBottom: s.borderBottomWidth, fontSize: s.fontSize, minHeight: node.getBoundingClientRect().height };
@@ -1748,4 +1769,219 @@ test('offline update section is separate and file field aligns with install butt
   const button = await page.locator('#offlineUpdateInstall').evaluate(node => node.getBoundingClientRect());
   assert.ok(file.top >= row.top - 1 && file.bottom <= row.bottom + 1, 'file input must stay in offline row');
   assert.ok(button.top >= row.top - 1 && button.bottom <= row.bottom + 1, 'install button must stay in offline row');
+});
+
+// ── DIAGNOSE-Konsole (Alpha 70) ──
+const diagRows = page => page.evaluate(() => document.querySelectorAll('#diagRows .diag-row').length);
+async function diagWait(page, count) {
+  await page.waitForFunction(n => document.querySelectorAll('#diagRows .diag-row').length >= n, count, { timeout: 5000 });
+}
+async function openDiag(page) {
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsDiagnoseTab').click();
+  await page.waitForFunction(() => !document.getElementById('settingsDiagnosePane').hidden);
+}
+
+test('diagnose tab exists and console toolbar is complete', async t => {
+  const { page } = await setup(t);
+  await openDiag(page);
+  assert.equal(await page.locator('#settingsDiagnosePane').isVisible(), true);
+  for (const id of ['diagModeNormal', 'diagModeDebug', 'diagCategoryFilter', 'diagPause', 'diagClear', 'diagCopy']) {
+    assert.equal(await page.locator(`#${id}`).isVisible(), true, id);
+  }
+  assert.match(await page.locator('#diagPause').innerText(), /PAUSE/);
+});
+
+test('diagnose console loads entries from the ring buffer', async t => {
+  const { page } = await setup(t);
+  diagPush({ level: 'INFO', category: 'USB', message: 'Gerät erkannt' });
+  diagPush({ level: 'INFO', category: 'ANDROID', message: 'ADB nicht verfügbar' });
+  await openDiag(page);
+  await diagWait(page, 2);
+  assert.equal(await page.locator('#diagEmpty').isVisible(), false);
+  const text = await page.locator('#diagRows').innerText();
+  assert.match(text, /Gerät erkannt/);
+  assert.match(text, /ADB nicht verfügbar/);
+  assert.match(text, /USB/);
+});
+
+test('diagnose console shows calm empty state after service restart', async t => {
+  const { page } = await setup(t);
+  await openDiag(page);
+  await page.waitForTimeout(300);
+  assert.match(await page.locator('#diagEmpty').innerText(), /NOCH KEINE DIAGNOSEEREIGNISSE/);
+  assert.equal(await diagRows(page), 0);
+});
+
+test('polling runs only while the diagnose console is visible', async t => {
+  const { page, requests } = await setup(t);
+  diagPush({ message: 'vor dem Öffnen' });
+  await openDiag(page);
+  await diagWait(page, 1);
+  const whileOpen = requests.filter(r => r.path === '/api/logs/recent').length;
+  assert.ok(whileOpen >= 1, 'console must poll while visible');
+  await page.evaluate(() => document.getElementById('settingsModal').close());
+  const afterClose = requests.filter(r => r.path === '/api/logs/recent').length;
+  await page.waitForTimeout(1450);
+  assert.equal(requests.filter(r => r.path === '/api/logs/recent').length, afterClose, 'polling must stop when console hidden');
+});
+
+test('category filter narrows the visible rows', async t => {
+  const { page } = await setup(t);
+  diagPush({ category: 'USB', message: 'Stick erkannt' });
+  diagPush({ category: 'ANDROID', message: 'Kandidat erkannt' });
+  diagPush({ category: 'SCAN', message: 'Scan gestartet' });
+  await openDiag(page);
+  await diagWait(page, 3);
+  await page.selectOption('#diagCategoryFilter', 'ANDROID');
+  const rows = await page.locator('#diagRows').innerText();
+  assert.match(rows, /Kandidat erkannt/);
+  assert.doesNotMatch(rows, /Stick erkannt/);
+  assert.doesNotMatch(rows, /Scan gestartet/);
+});
+
+test('normal mode hides debug rows, debug mode shows them and posts mode to server', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (request.method() === 'POST' && url.pathname === '/api/logs/mode') {
+      const body = JSON.parse(request.postData() || '{}');
+      diagFeed.mode = body.mode || 'normal';
+      return { json: { mode: diagFeed.mode } };
+    }
+    return null;
+  });
+  diagPush({ level: 'INFO', category: 'USB', message: 'Gerät erkannt' });
+  diagPush({ level: 'DEBUG', category: 'USB', message: 'vendor=04e8 product=6860' });
+  await openDiag(page);
+  await diagWait(page, 1);
+  const normalText = await page.locator('#diagRows').innerText();
+  assert.match(normalText, /Gerät erkannt/);
+  assert.doesNotMatch(normalText, /vendor=04e8/);
+  await page.locator('#diagModeDebug').click();
+  await page.waitForFunction(() => document.getElementById('diagModeDebug').getAttribute('aria-pressed') === 'true');
+  await diagWait(page, 2);
+  assert.match(await page.locator('#diagRows').innerText(), /vendor=04e8/);
+  assert.ok(requests.some(r => r.path === '/api/logs/mode' && r.method === 'POST'), 'debug switch must inform server');
+});
+
+test('pause stops updates, resume loads the missed entries', async t => {
+  const { page } = await setup(t);
+  diagPush({ category: 'USB', message: 'vor Pause' });
+  await openDiag(page);
+  await diagWait(page, 1);
+  await page.locator('#diagPause').click();
+  assert.match(await page.locator('#diagPause').innerText(), /FORTSETZEN/);
+  diagPush({ category: 'USB', message: 'während Pause 1' });
+  diagPush({ category: 'USB', message: 'während Pause 2' });
+  await page.waitForTimeout(1450);
+  const pausedRows = await page.locator('#diagRows').innerText();
+  assert.doesNotMatch(pausedRows, /während Pause/);
+  await page.locator('#diagPause').click();
+  await diagWait(page, 3);
+  assert.match(await page.locator('#diagRows').innerText(), /während Pause 2/);
+});
+
+test('clear empties only the local view and keeps the live stream', async t => {
+  const { page } = await setup(t);
+  diagPush({ message: 'geloeschte Zeile' });
+  await openDiag(page);
+  await diagWait(page, 1);
+  await page.locator('#diagClear').click();
+  assert.equal(await diagRows(page), 0);
+  assert.match(await page.locator('#diagEmpty').innerText(), /NOCH KEINE DIAGNOSEEREIGNISSE/);
+  diagPush({ message: 'neu nach Leeren' });
+  await diagWait(page, 1);
+  assert.doesNotMatch(await page.locator('#diagRows').innerText(), /geloeschte Zeile/);
+  assert.match(await page.locator('#diagRows').innerText(), /neu nach Leeren/);
+});
+
+test('copy transfers the visible rows in report format', async t => {
+  const { page } = await setup(t);
+  diagPush({ level: 'INFO', category: 'USB', message: 'Gerät erkannt', details: { idVendor: '04e8' } });
+  await openDiag(page);
+  await diagWait(page, 1);
+  await page.evaluate(() => {
+    window.__copied = null;
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__copied = text; } } });
+  });
+  await page.locator('#diagCopy').click();
+  await page.waitForFunction(() => window.__copied !== null);
+  const copied = await page.evaluate(() => window.__copied);
+  assert.match(copied, /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} INFO USB Gerät erkannt idVendor=04e8/);
+  assert.match(await page.locator('#diagStatus').innerText(), /KOPIIERT/);
+});
+
+test('clipboard failure shows a readable status', async t => {
+  const { page } = await setup(t);
+  diagPush({ message: 'Zeile' });
+  await openDiag(page);
+  await diagWait(page, 1);
+  await page.evaluate(() => {
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('denied'); } } });
+  });
+  await page.locator('#diagCopy').click();
+  await page.waitForFunction(() => document.getElementById('diagStatus').innerText.includes('ZWISCHENABLAGE'));
+});
+
+test('warning and error rows are visually marked, info rows stay calm', async t => {
+  const { page } = await setup(t);
+  diagPush({ level: 'WARNING', category: 'UPDATE', message: 'Update fehlgeschlagen' });
+  diagPush({ level: 'ERROR', category: 'SCAN', message: 'Scan fehlgeschlagen' });
+  diagPush({ level: 'INFO', category: 'USB', message: 'ok' });
+  await openDiag(page);
+  await diagWait(page, 3);
+  assert.ok((await page.locator('#diagRows .lvl-warning').innerText()).includes('Update fehlgeschlagen'));
+  assert.ok((await page.locator('#diagRows .lvl-error').count()) === 1);
+  assert.ok((await page.locator('#diagRows .lvl-info').count()) === 1);
+});
+
+test('auto scroll follows new rows and stops when the user scrolls up', async t => {
+  const { page } = await setup(t);
+  await openDiag(page);
+  await page.waitForTimeout(200);
+  for (let i = 0; i < 40; i++) diagPush({ category: 'SCAN', message: `Zeile ${i}` });
+  await diagWait(page, 40);
+  await page.waitForTimeout(200);
+  const autoTop = await page.evaluate(() => document.getElementById('diagConsole').scrollTop);
+  assert.ok(autoTop > 0, 'auto scrolling must keep the view at the bottom');
+  await page.evaluate(() => { document.getElementById('diagConsole').scrollTop = 0; });
+  diagPush({ message: 'später' });
+  await diagWait(page, 41);
+  assert.equal(await page.evaluate(() => document.getElementById('diagConsole').scrollTop), 0, 'auto scroll must not fight the user');
+  assert.equal(await page.locator('#diagScrollEnd').isVisible(), true);
+  await page.locator('#diagScrollEnd').click();
+  await page.waitForFunction(() => document.getElementById('diagScrollEnd').hidden === true);
+});
+
+test('diagnose console never keeps more than 500 DOM rows', async t => {
+  const { page } = await setup(t);
+  await openDiag(page);
+  await page.waitForTimeout(200);
+  await page.evaluate(() => {
+    const flooding = [];
+    for (let i = 0; i < 600; i++) {
+      flooding.push({ seq: 1000 + i, timestamp: '2026-10-05T19:42:01.015Z', level: 'INFO', category: 'USB', message: `Flut ${i}` });
+    }
+    diagAppend(flooding);
+  });
+  assert.equal(await diagRows(page), 500);
+  const firstRow = await page.locator('#diagRows .diag-row').first().innerText();
+  assert.match(firstRow, /Flut 100/);
+  diagPush({ message: 'noch einer' });
+  await page.waitForFunction(() => document.getElementById('diagRows').innerText.includes('noch einer'));
+  assert.equal(await diagRows(page), 500, 'cap stays at 500 while new rows enter');
+  assert.match(await page.locator('#diagRows').innerText(), /noch einer/);
+  assert.doesNotMatch(await page.locator('#diagRows').innerText(), /Flut 100/);
+});
+
+test('diagnose tab stays usable at 800px width', async t => {
+  const { page } = await setup(t);
+  diagPush({ message: 'Zeile' });
+  await page.setViewportSize({ width: 800, height: 1000 });
+  await openDiag(page);
+  await diagWait(page, 1);
+  assert.equal(await page.locator('#settingsDiagnosePane').isVisible(), true);
+  const bodyOverflow = await page.evaluate(() => document.body.scrollWidth);
+  assert.ok(bodyOverflow <= 800, 'page must not scroll horizontally at 800px');
+  const toolbar = await page.locator('.diagnose-toolbar').boundingBox();
+  assert.ok(toolbar, 'toolbar must remain reachable');
 });
