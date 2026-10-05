@@ -28,6 +28,7 @@ def test_parse_fls_bodyfile():
     assert files[0]["size"] == 1234
     assert files[0]["original_extension"] == "PDF"
     assert files[0]["category"] == "Dokumente"
+    assert (files[0]["atime"], files[0]["mtime"], files[0]["ctime"], files[0]["crtime"]) == (1, 2, 3, 4)
     assert directories[0]["path"] == "docs"
 
 

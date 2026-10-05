@@ -8,6 +8,8 @@ Jeder Scan erhält innerhalb des Falles automatisch eine neutrale Sichtungsnumme
 
 Ein Fall kann optional einen lokalen Zeitraum (`date_from`/`date_to`) tragen. Der Zeitraum wird mit IANA-Zeitzone im Fall gespeichert; jeder Scan erhält zusätzlich einen unveränderlichen Snapshot. B (Birth/Created), M (Modified), C (Metadata Changed) und A (Accessed) bleiben getrennte Metadaten. C ist keine Erstellungszeit, A kann systemabhängig unzuverlässig sein, und die Auswertung ist kein Beweis einer Benutzerhandlung.
 
+Die aktuelle Zeitraumkonfiguration steht in `case.json`. Je Scan werden `period_date_from`, `period_date_to`, `period_timezone` und `period_file_count` in der Medienakte, `media-register.csv`, dem Text-/PDF-Bericht und den Scanrecords dokumentiert. `files.csv` speichert zusätzlich die getrennte Timestamp-Auswertung. Alte Datenbanken werden additiv migriert; historische Scan-Dateien bleiben unverändert. Die vollständige Definition und die Grenzen stehen in [timestamps.md](timestamps.md).
+
 ```text
 casefiles/
 ├── case-index.sqlite3

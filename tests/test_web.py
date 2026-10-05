@@ -70,7 +70,11 @@ def test_file_inventory_endpoint_forwards_filters(exact_path, archive_status) ->
     handler._json = lambda status, body: responses.append((status, body))
     handler.do_GET()
     assert calls[0][0][0] == 12
-    assert calls[0][1] == {"exact_path": exact_path, "archive_status": archive_status}
+    assert calls[0][1] == {
+        "exact_path": exact_path,
+        "archive_status": archive_status,
+        "period_filter": "",
+    }
     assert responses[0][0] == 200
 
 

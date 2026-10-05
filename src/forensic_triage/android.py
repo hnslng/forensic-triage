@@ -21,6 +21,7 @@ from .keywords import load_profile
 from .reporting import write_files_csv, write_json
 from .settings import catalog_snapshot
 from .statistics import summarize
+from .period import period_snapshot
 
 
 ANDROID_USB_VENDORS = {
@@ -464,6 +465,12 @@ def scan_android(request: dict[str, Any]) -> Path:
     started = time.monotonic()
     serial = str(request["adb_serial"])
     evidence = str(request["evidence"])
+    supplied_period = request.get("case_period") or {}
+    case_period = period_snapshot(
+        supplied_period.get("date_from"), supplied_period.get("date_to"),
+        {key: supplied_period.get(key) for key in ("timezone", "timezone_source", "timezone_reproducible")
+         if supplied_period.get(key) is not None} or None,
+    )
     result_root = Path(request["results_root"])
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
     safe_evidence = "".join(char if char.isalnum() or char in "-_" else "_" for char in evidence)
@@ -549,6 +556,8 @@ def scan_android(request: dict[str, Any]) -> Path:
             "container_index": {key: containers[key] for key in ("status", "duration_seconds", "containers_seen", "containers_indexed", "entries_indexed", "truncated")},
             "phone": {"platform": "android", "app_hint_count": len(app_hints), "apps_complete": apps_complete,
                       "assessment": assessment, "profile_count": len(profiles)},
+            "case_period": case_period, "period_evaluation": "not_applicable", "period_file_count": None,
+            "categories_in_period": {}, "latest_period_files": [],
             "crypto_rules": {"version": rules.get("version"), "sha256": rules.get("sha256")}, "crypto_file_hints": 0,
         })
         write_json(result_dir / "device.json", device)

@@ -15,7 +15,7 @@ from typing import Any
 from .container_inventory import archive_encryption_state, archive_encryption_states, empty_catalog, virtual_files
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
-from .period import period_timezone, validate_period
+from .period import period_timezone_info, validate_period
 
 
 DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
@@ -45,6 +45,21 @@ REASON_LABELS = {
     "technical": "Technische Grobsichtung nicht möglich",
     "other": "Sonstige Begründung",
 }
+
+
+def _csv_optional(value: Any) -> Any:
+    if value in (None, "", "null"):
+        return None
+    try:
+        number = float(value)
+        return int(number) if number.is_integer() else number
+    except (TypeError, ValueError):
+        return None
+
+
+def _csv_bool(value: Any) -> bool | None:
+    text = str(value or "").strip().casefold()
+    return True if text == "true" else False if text == "false" else None
 
 
 def utc_now() -> str:
@@ -95,7 +110,7 @@ class CaseStore:
                 connection.execute(
                     "ALTER TABLE cases ADD COLUMN next_sighting_sequence INTEGER NOT NULL DEFAULT 1"
                 )
-            for name in ("date_from", "date_to", "period_timezone"):
+            for name in ("date_from", "date_to", "period_timezone", "period_timezone_source", "period_timezone_reproducible"):
                 if name not in case_columns:
                     connection.execute(f"ALTER TABLE cases ADD COLUMN {name} TEXT")
             connection.execute(
@@ -130,9 +145,10 @@ class CaseStore:
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(media)")}
             if "specialist_name" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN specialist_name TEXT")
-            for name in ("period_date_from", "period_date_to", "period_timezone", "period_file_count"):
+            for name in ("period_date_from", "period_date_to", "period_timezone", "period_file_count", "period_timezone_source", "period_timezone_reproducible"):
                 if name not in columns:
-                    connection.execute(f"ALTER TABLE media ADD COLUMN {name} {'INTEGER' if name == 'period_file_count' else 'TEXT'}")
+                    kind = "INTEGER" if name in {"period_file_count", "period_timezone_reproducible"} else "TEXT"
+                    connection.execute(f"ALTER TABLE media ADD COLUMN {name} {kind}")
             if "sighting_number" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN sighting_number TEXT")
                 case_ids = [int(row["case_id"]) for row in connection.execute("SELECT DISTINCT case_id FROM media")]
@@ -196,7 +212,8 @@ class CaseStore:
         """Create or reopen a case and record the explicit operator session start."""
         case_number = safe_component(case_number)
         date_from, date_to = validate_period(date_from, date_to)
-        timezone = period_timezone() if date_from else None
+        timezone_info = period_timezone_info() if date_from else {"timezone": None, "timezone_source": None, "timezone_reproducible": None}
+        timezone = timezone_info["timezone"]
         now = utc_now()
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -206,11 +223,11 @@ class CaseStore:
                 (case_number, now, now),
             )
             row = connection.execute(
-                "SELECT id, date_from, date_to FROM cases WHERE case_number=?", (case_number,),
+                "SELECT id, date_from, date_to, period_timezone FROM cases WHERE case_number=?", (case_number,),
             ).fetchone()
             if (row["date_from"], row["date_to"]) != (date_from, date_to):
-                connection.execute("UPDATE cases SET date_from=?, date_to=?, period_timezone=? WHERE id=?", (date_from, date_to, timezone, int(row["id"])))
-                connection.execute("INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) VALUES (?, NULL, ?, 'case_period_set', ?, ?)", (int(row["id"]), now, operator.strip()[:120] or None, json.dumps({"old_date_from": row["date_from"], "old_date_to": row["date_to"], "new_date_from": date_from, "new_date_to": date_to, "timezone": timezone}, ensure_ascii=False)))
+                connection.execute("UPDATE cases SET date_from=?, date_to=?, period_timezone=?, period_timezone_source=?, period_timezone_reproducible=? WHERE id=?", (date_from, date_to, timezone, timezone_info["timezone_source"], timezone_info["timezone_reproducible"], int(row["id"])))
+                connection.execute("INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) VALUES (?, NULL, ?, 'case_period_set', ?, ?)", (int(row["id"]), now, operator.strip()[:120] or None, json.dumps({"old_date_from": row["date_from"], "old_date_to": row["date_to"], "new_date_from": date_from, "new_date_to": date_to, "old_timezone": row["period_timezone"], "timezone": timezone, **timezone_info}, ensure_ascii=False)))
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
                 "VALUES (?, NULL, ?, 'case_started', ?, ?)",
@@ -338,8 +355,8 @@ class CaseStore:
                     case_id, evidence_number, sighting_number, scan_id, result_path, scanned_at,
                     device_path, vendor, model, serial, size, file_count,
                     directory_count, keyword_matches, duration_seconds, period_date_from, period_date_to,
-                    period_timezone, period_file_count
-                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    period_timezone, period_file_count, period_timezone_source, period_timezone_reproducible
+                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     case_id, sighting_number, result_dir.name, relative_result, now,
@@ -351,6 +368,8 @@ class CaseStore:
                     (summary.get("case_period") or {}).get("date_from"),
                     (summary.get("case_period") or {}).get("date_to"),
                     (summary.get("case_period") or {}).get("timezone"), summary.get("period_file_count"),
+                    (summary.get("case_period") or {}).get("timezone_source"),
+                    (summary.get("case_period") or {}).get("timezone_reproducible"),
                 ),
             )
             media_id = int(cursor.lastrowid)
@@ -520,17 +539,22 @@ class CaseStore:
         offset: int = 0,
         exact_path: str | None = None,
         archive_status: str = "",
+        period_filter: str = "",
     ) -> dict[str, Any]:
         if archive_status not in {"", "encrypted", "unknown"}:
             raise ValueError("Ungültiger Archivstatus.")
+        if period_filter not in {"", "in", "out"}:
+            raise ValueError("Ungültiger Zeitraumfilter.")
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT result_path FROM media WHERE id=?",
+                "SELECT result_path, period_date_from FROM media WHERE id=?",
                 (media_id,),
             ).fetchone()
         if row is None:
             raise KeyError("Medienakte nicht gefunden.")
         inventory_path = self.root / str(row["result_path"]) / "files.csv"
+        if period_filter and not row["period_date_from"]:
+            raise ValueError("Für diesen Scan ist kein Fallzeitraum gespeichert.")
         needle = query.casefold().strip()
         selected_category = category.casefold().strip()
         selected_keyword = keyword.strip()
@@ -559,6 +583,10 @@ class CaseStore:
             encryption_state = archive_encryption_state(item, encryption_states)
             if archive_status and encryption_state != archive_status:
                 continue
+            if period_filter == "in" and str(item.get("in_period", "")).casefold() != "true":
+                continue
+            if period_filter == "out" and str(item.get("in_period", "")).casefold() != "false":
+                continue
             if exact_path is not None and path != exact_path:
                 continue
             if needle and needle not in path.casefold():
@@ -577,6 +605,13 @@ class CaseStore:
                     "extension": item.get("extension", ""),
                     "category": item.get("category", "Unbekannt"),
                     "mtime": item.get("mtime", ""),
+                    "atime": _csv_optional(item.get("atime")),
+                    "ctime": _csv_optional(item.get("ctime")),
+                    "crtime": _csv_optional(item.get("crtime")),
+                    "in_period": _csv_bool(item.get("in_period")),
+                    "period_matches": item.get("period_matches", "") or "",
+                    "latest_period_timestamp": _csv_optional(item.get("latest_period_timestamp")),
+                    "latest_period_timestamp_type": item.get("latest_period_timestamp_type", "") or "",
                     "source": item.get("source", "media_inventory"),
                     "container_format": item.get("container_format", ""),
                     "size_known": item.get("size_known", True),
@@ -860,6 +895,8 @@ class CaseStore:
             "vendor", "model", "serial", "size", "file_count", "directory_count",
             "keyword_matches", "duration_seconds", "decision", "reason_code", "reason_note",
             "decision_operator", "decided_at", "specialist_name",
+            "period_date_from", "period_date_to", "period_timezone", "period_file_count",
+            "period_timezone_source", "period_timezone_reproducible",
         }
         return {key: row[key] for key in keys if key in row.keys()}
 
@@ -884,13 +921,17 @@ class CaseStore:
                 (int(case["id"]),),
             ).fetchall()
         (case_dir / "case.json").write_text(
-            json.dumps({"case_number": case_number, "created_at": case["created_at"], "updated_at": case["updated_at"], "media_count": len(media)}, ensure_ascii=False, indent=2) + "\n",
+            json.dumps({"case_number": case_number, "created_at": case["created_at"], "updated_at": case["updated_at"], "media_count": len(media),
+                        "case_period": ({"date_from": case["date_from"], "date_to": case["date_to"], "timezone": case["period_timezone"],
+                                         "timezone_source": case["period_timezone_source"], "timezone_reproducible": case["period_timezone_reproducible"]}
+                                        if case["date_from"] and case["date_to"] else None)}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
         fields = [
             "id", "sighting_number", "evidence_number", "scan_id", "scanned_at", "vendor", "model", "serial", "size",
             "file_count", "directory_count", "keyword_matches", "duration_seconds", "decision",
             "reason_code", "reason_note", "decision_operator", "decided_at", "specialist_name",
+            "period_date_from", "period_date_to", "period_timezone", "period_file_count",
         ]
         with (case_dir / "media-register.csv").open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
@@ -907,9 +948,13 @@ class CaseStore:
             f"Erstellt: {case['created_at']}",
             f"Zuletzt aktualisiert: {case['updated_at']}",
             f"Erfasste Medien: {len(media)}",
+            f"Aktueller Fallzeitraum: {case['date_from'] + ' – ' + case['date_to'] if case['date_from'] and case['date_to'] else 'nicht festgelegt'}",
+            f"Fallzeitzone: {case['period_timezone'] or '—'}" + (" (Systemlokalzeit, keine eindeutige IANA-Zone)" if case["period_timezone_reproducible"] is not None and not bool(case["period_timezone_reproducible"]) else ""),
             "",
         ]
         for row in media:
+            is_phone = str(row["device_path"]).startswith(("android:", "iphone:"))
+            period_label = (f"{row['period_date_from']} – {row['period_date_to']}" if row["period_date_from"] and row["period_date_to"] else "nicht festgelegt")
             report_lines.extend(
                 [
                     f"SICHTUNGSMEDIUM: {row['sighting_number']}",
@@ -919,6 +964,9 @@ class CaseStore:
                     f"Größe (Byte): {row['size']}",
                     f"Scan: {row['scanned_at']} · {row['duration_seconds']} s",
                     f"Dateien / Ordner / Treffer: {row['file_count']} / {row['directory_count']} / {row['keyword_matches']}",
+                    f"Fallzeitraum beim Scan: {period_label}",
+                    f"Zeitzone: {row['period_timezone'] or '—'}",
+                    f"Dateien im Zeitraum: {'nicht anwendbar' if is_phone else (row['period_file_count'] if row['period_file_count'] is not None else 'nicht ausgewertet')}",
                     f"Entscheidung: {DECISION_LABELS.get(str(row['decision']), str(row['decision']))}",
                     f"Begründung: {REASON_LABELS.get(str(row['reason_code']), str(row['reason_code'] or '—'))}",
                     f"Notiz: {row['reason_note'] or '—'}",

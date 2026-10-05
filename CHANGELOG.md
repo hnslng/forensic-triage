@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.75] – 2026-10-06
+
+- Optionalen Fallzeitraum mit strikt validierten lokalen Datumsgrenzen, erkannter IANA-Zeitzone und transparentem OS-Lokalzeit-Fallback ergänzt.
+- B/M/C/A-Zeitstempel zentral ausgewertet; FAST verwendet Linux-`statx` ohne TSK-/`fls`-Durchlauf und ohne Prozess pro Datei; `crtime` bleibt bei fehlender Systemunterstützung leer.
+- Scan-Snapshots bleiben historisch unverändert; Fallakte, Medienregister, TXT/PDF und `files.csv` dokumentieren Zeitraum und Auswertung. Mobilgeräte bleiben App-only und `not_applicable`.
+- Additive DB-Migration, Änderungs-Audit, Zeitraumfilter, UI-Zusammenfassung und Dokumentation ergänzt.
+- Version auf `0.2.0-alpha.75` (`0.2.0a75`) angehoben.
+
 ## [0.2.0-alpha.74] – 2026-10-05
 
 - Optionaler Fallzeitraum mit additiver SQLite-Migration, Audit-Ereignissen und unveränderlichen Scan-Snapshots.

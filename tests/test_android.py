@@ -108,6 +108,8 @@ def test_tcl_guidance_contains_complete_ten_step_sequence():
     assert len(steps) == 10
     assert steps[0] == "Einstellungen öffnen"
     assert "System öffnen" in steps[1]
+    assert steps[3] == "Nach unten zur Build-Nummer scrollen"
+    assert "Build-Nummer öffnen" not in steps
     assert "Siebenmal" in steps[4]
     assert "USB-Debugging aktivieren" in steps[7]
     assert "USB-Debugging zulassen" in steps[9]
@@ -233,6 +235,7 @@ def test_android_quick_scan_checks_all_visible_profiles_and_no_files(tmp_path: P
         "adb_serial": "SERIAL1", "evidence": "SICHT-001", "results_root": str(tmp_path / "results"),
         "profile_path": str(tmp_path / "unused.yaml"), "profile_sources": [{"id": "test", "name": "TEST", "version": "1", "sha256": "abc"}],
         "filetype_catalog": {"version": 1, "categories": {"Bilder": ["jpg"]}}, "crypto_rules": rules,
+        "case_period": {"date_from": "2026-01-01", "date_to": "2026-06-30", "timezone": "UTC", "timezone_source": "test", "timezone_reproducible": True},
     })
     phone = json.loads((result / "phone.json").read_text())
     summary = json.loads((result / "summary.json").read_text())
@@ -242,4 +245,9 @@ def test_android_quick_scan_checks_all_visible_profiles_and_no_files(tmp_path: P
     assert phone["coverage"][-1]["status"] == "unknown"
     assert summary["file_count"] == 0
     assert summary["scan_mode"] == "phone_crypto_quick"
+    assert summary["case_period"]["date_from"] == "2026-01-01"
+    assert summary["period_evaluation"] == "not_applicable"
+    assert summary["period_file_count"] is None
+    assert summary["categories_in_period"] == {}
+    assert summary["latest_period_files"] == []
     assert (result / "files.csv").read_text().count("\n") == 1

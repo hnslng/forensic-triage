@@ -801,6 +801,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     int(query.get("offset", ["0"])[0]),
                     exact_path=query.get("exact_path", [None])[0],
                     archive_status=str(query.get("archive_status", [""])[0]),
+                    period_filter=str(query.get("period_filter", [""])[0]),
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:
@@ -1286,7 +1287,9 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         current_case = case_detail["case"]
         case_period = {"date_from": current_case.get("date_from"), "date_to": current_case.get("date_to"),
-                       "timezone": current_case.get("period_timezone")}
+                       "timezone": current_case.get("period_timezone"),
+                       "timezone_source": current_case.get("period_timezone_source"),
+                       "timezone_reproducible": current_case.get("period_timezone_reproducible")}
         if requested_profiles is None:
             profile_ids = [self.server.profile_path.stem]
         elif (
@@ -1389,7 +1392,11 @@ class TriageHandler(BaseHTTPRequestHandler):
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,
             )
-            diag.event("SCAN", f"Scan abgeschlossen: {sighting_number} in {time.monotonic() - scan_started:.1f} s", {
+            period_detail = ""
+            if record.get("summary", {}).get("period_evaluation") == "configured":
+                period_detail = (f" · Zeitraum: {current_case['date_from']} → {current_case['date_to']} · "
+                                 f"{record['summary'].get('period_file_count', 0)} / {record['summary'].get('file_count', 0)} Dateien")
+            diag.event("SCAN", f"Scan abgeschlossen: {sighting_number} in {time.monotonic() - scan_started:.1f} s{period_detail}", {
                 "case": case_number, "device": device_path,
             })
             record["cases"] = self.server.case_store.list_cases()

@@ -31,7 +31,7 @@ from .reporting import write_files_csv, write_json
 from .statistics import summarize
 from .validation import compare_expected
 from .settings import apply_catalog, catalog_snapshot, load_catalog
-from .period import evaluate_file_period, period_timezone, validate_period
+from .period import evaluate_file_period, period_snapshot, timestamp_coverage
 
 
 def _command(args: list[str]) -> str:
@@ -100,10 +100,11 @@ def scan(
     crypto_rules: dict[str, Any] | None = None,
     case_period: dict[str, Any] | None = None,
 ) -> Path:
-    if case_period:
-        date_from, date_to = validate_period(case_period.get("date_from"), case_period.get("date_to"))
-        case_period = {**case_period, "date_from": date_from, "date_to": date_to,
-                       "timezone": case_period.get("timezone") or period_timezone(), "inclusive": True}
+    case_period = period_snapshot(
+        (case_period or {}).get("date_from"), (case_period or {}).get("date_to"),
+        {key: (case_period or {}).get(key) for key in ("timezone", "timezone_source", "timezone_reproducible")
+         if (case_period or {}).get(key) is not None} or None,
+    )
     started = time.monotonic()
     catalog = (catalog_snapshot(filetype_catalog.get("categories"), filetype_catalog.get("version"))
                if filetype_catalog is not None else load_catalog(
@@ -176,7 +177,7 @@ def scan(
                     else:
                         raise ValueError(f"unsupported scan mode: {mode}")
                     all_files.extend(files)
-                    if mode == "tsk":
+                    if mode == "tsk" and case_period:
                         for file_record in files:
                             file_record.update(evaluate_file_period(file_record, case_period))
                     all_directories.extend(directories)
@@ -231,20 +232,8 @@ def scan(
         }
         summary = summarize(all_files, all_directories)
         period_files = [item for item in all_files if item.get("in_period") is True]
-        if case_period and case_period.get("date_from"):
-            coverage = {"files_total": len(all_files), "files_with_any_timestamp": 0,
-                        "B_available": 0, "M_available": 0, "C_available": 0, "A_available": 0,
-                        "B_invalid": 0, "M_invalid": 0, "C_invalid": 0, "A_invalid": 0}
-            for item in all_files:
-                any_timestamp = False
-                for field, key in (("crtime", "B"), ("mtime", "M"), ("ctime", "C"), ("atime", "A")):
-                    raw = item.get(field)
-                    if raw in (None, "", "null"):
-                        continue
-                    try:
-                        float(raw); coverage[f"{key}_available"] += 1; any_timestamp = True
-                    except (TypeError, ValueError): coverage[f"{key}_invalid"] += 1
-                coverage["files_with_any_timestamp"] += int(any_timestamp)
+        if case_period:
+            coverage = timestamp_coverage(all_files, case_period)
             latest = sorted((item for item in period_files if item.get("latest_period_timestamp") is not None),
                             key=lambda item: (-float(item["latest_period_timestamp"]), str(item.get("path", ""))))[:10]
             summary.update({"case_period": case_period, "period_evaluation": "configured",

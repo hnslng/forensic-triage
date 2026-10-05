@@ -186,6 +186,8 @@ h1 span { color: var(--acid); }
 .action-panel { padding-bottom: 0; }
 .action-panel[open] { padding-bottom: 9px; }
 .case-field { margin: 11px 0 8px; }
+.case-period-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.case-period-fields input { min-width: 0; width: 100%; }
 .case-session-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .case-session-footer { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); align-items: center; gap: 16px; padding: 12px 14px; background: var(--panel); }
 .case-session-footer .case-start-message { margin: 0; }
@@ -372,6 +374,21 @@ h1 span { color: var(--acid); }
 .progress-track div { width: 8%; height: 100%; background: repeating-linear-gradient(90deg, var(--acid) 0 8px, transparent 8px 11px); transition: width .25s ease; }
 .progress-panel code { display: block; color: var(--muted); margin: 10px 16px 0; font-size: 11px; line-height: 1.4; }
 .results { margin-top: 26px; }
+.period-summary { grid-column: 1 / -1; margin: 12px 0; padding: 14px; }
+.period-summary > .panel-title { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.period-summary > .panel-title strong { color: var(--ink); font-size: 12px; }
+.period-timezone { display: block; padding: 0 12px 6px; color: var(--muted); font-size: 10px; }
+.period-phone-context { padding: 10px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.period-file-count { padding: 12px; color: var(--acid); font-size: 13px; font-weight: 900; }
+.period-summary-grid { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); gap: 18px; }
+.period-summary-grid h3 { color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.period-category { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 12px; }
+.period-category b { color: var(--acid); }
+#latestPeriodFiles { margin: 0; padding-left: 24px; }
+#latestPeriodFiles li { display: grid; grid-template-columns: auto auto auto minmax(0,1fr); align-items: baseline; gap: 9px; padding: 5px 0; color: var(--muted); font-size: 11px; }
+#latestPeriodFiles li time, #latestPeriodFiles li b { color: var(--acid); white-space: nowrap; }
+#latestPeriodFiles li button { min-width: 0; padding: 0; overflow-wrap: anywhere; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+#latestPeriodFiles li button:hover { color: var(--acid); }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid var(--ink); padding-bottom: 10px; }
 .result-title-line { display: flex; align-items: center; gap: 16px; }
 .result-title-line > span { padding: 6px 8px; border: 1px solid var(--line); font-size: 11px; font-weight: 900; white-space: nowrap; }
@@ -936,6 +953,9 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
 
 @media (max-width: 900px) {
   .diag-row { grid-template-columns: 84px 62px 74px minmax(0, 1fr); gap: 6px; }
+  .period-summary-grid { grid-template-columns: 1fr; }
+  #latestPeriodFiles li { grid-template-columns: auto auto minmax(0, 1fr); }
+  #latestPeriodFiles li button { grid-column: 1 / -1; }
 }
 
 /* Detection rules workspace */
@@ -1041,6 +1061,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
 @media (max-width: 560px) {
   .detection-toolbar { grid-template-columns: minmax(0, 1fr); }
   .detection-count { text-align: left; }
+  .case-period-fields { grid-template-columns: 1fr; }
 }
 .detection-table-wrap {
   flex: 1 1 auto;

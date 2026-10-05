@@ -17,6 +17,7 @@ def write_files_csv(path: Path, files: list[dict[str, Any]]) -> None:
         "partition_slot", "path", "metadata_address", "tsk_type", "source", "size", "original_extension",
         "extension", "category",
         "uid", "gid", "atime", "mtime", "ctime", "crtime",
+        "in_period", "period_matches", "latest_period_timestamp", "latest_period_timestamp_type",
     ]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")

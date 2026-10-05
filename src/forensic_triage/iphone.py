@@ -25,6 +25,7 @@ from .keywords import build_hits, load_profile
 from .reporting import write_files_csv, write_json
 from .settings import apply_catalog, catalog_snapshot, load_catalog
 from .statistics import summarize
+from .period import period_snapshot
 
 
 REQUIRED_TOOLS = ("idevice_id", "ideviceinfo", "idevicepair", "ideviceinstaller")
@@ -306,6 +307,12 @@ def scan_iphone(request: dict[str, Any]) -> Path:
     started = time.monotonic()
     udid = str(request["udid"])
     evidence = str(request["evidence"])
+    supplied_period = request.get("case_period") or {}
+    case_period = period_snapshot(
+        supplied_period.get("date_from"), supplied_period.get("date_to"),
+        {key: supplied_period.get(key) for key in ("timezone", "timezone_source", "timezone_reproducible")
+         if supplied_period.get(key) is not None} or None,
+    )
     results_root = Path(request["results_root"])
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
     safe_evidence = "".join(char if char.isalnum() or char in "-_" else "_" for char in evidence)
@@ -387,6 +394,8 @@ def scan_iphone(request: dict[str, Any]) -> Path:
                       "complete": complete, "assessment": assessment},
             "iphone": {"app_hint_count": len(app_hints), "file_hint_count": 0,
                        "apps_complete": apps_complete, "files_complete": False, "complete": complete, "assessment": assessment},
+            "case_period": case_period, "period_evaluation": "not_applicable", "period_file_count": None,
+            "categories_in_period": {}, "latest_period_files": [],
             "crypto_rules": {"version": rules.get("version"), "sha256": rules.get("sha256")},
             "crypto_file_hints": 0,
         })

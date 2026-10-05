@@ -212,6 +212,14 @@ def build_case_pdf(
         meta,
         Spacer(1, 4 * mm),
         Paragraph(
+            "AKTUELLER FALLZEITRAUM: " + html.escape(
+                f"{case.get('date_from')} – {case.get('date_to')} · {case.get('period_timezone') or 'lokale Systemzeit'}"
+                if case.get("date_from") and case.get("date_to") else "nicht festgelegt"
+            ),
+            small,
+        ),
+        Spacer(1, 2 * mm),
+        Paragraph(
             "Kompakte Übersicht der vor Ort durchgeführten Metadaten-Grobsichtungen. "
             "Die Kategorien beruhen auf Dateiendungen und sind keine Inhalts- oder Dateisignaturanalyse.",
             small,
@@ -250,6 +258,11 @@ def build_case_pdf(
                 pass
         app_hint_count = len(phone_data.get("app_hints", [])) if isinstance(phone_data, dict) else 0
         content = (f"Telefon-Krypto-Schnellscan: {app_hint_count} relevante App-Hinweise" if is_phone else rough_content(summary))
+        period_text = (f"{row.get('period_date_from')} – {row.get('period_date_to')} · {row.get('period_timezone') or 'lokale Systemzeit'}"
+                       if row.get("period_date_from") and row.get("period_date_to") else "nicht festgelegt")
+        period_count_text = ("nicht anwendbar" if is_phone else
+                             f"{format_count(row.get('period_file_count'))} / {format_count(row.get('file_count'))} im Zeitraum"
+                             if row.get("period_file_count") is not None else "nicht ausgewertet")
         total_bytes = summary.get("total_file_bytes", 0)
         decision, decision_color = decision_summary(row)
         table_data.append([
@@ -265,7 +278,8 @@ def build_case_pdf(
                     (f"{format_count(len(phone_data.get('apps', [])) if isinstance(phone_data, dict) else 0)} Benutzer-Apps · "
                  f"Erfassung: {html.escape(str(phone_data.get('apps_status') or 'unbekannt'))}" if is_phone else
                  f"{format_count(row.get('file_count'))} Dateien, {format_count(row.get('directory_count'))} Ordner, "
-                 f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer"),
+                 f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer") +
+                    f"<br/>Fallzeitraum beim Scan: {html.escape(period_text)}<br/>Dateien im Zeitraum: {html.escape(period_count_text)}",
                 cell,
             ),
             Paragraph(f"<font color='{decision_color.hexval()}'><b>{decision}</b></font>", cell_bold),

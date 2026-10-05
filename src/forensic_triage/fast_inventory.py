@@ -5,14 +5,72 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import ctypes
+import errno
 from pathlib import Path
 from typing import Any
 
 from .classifier import classify, original_extension_for
 from .commands import run_command
 from .container_inventory import ContainerLimits, index_containers
-from .device import SafetyError
+from .device import SafetyError, enforce_read_only
 from .period import evaluate_file_period
+
+
+class _StatxTimestamp(ctypes.Structure):
+    _fields_ = [("tv_sec", ctypes.c_int64), ("tv_nsec", ctypes.c_uint32), ("reserved", ctypes.c_int32)]
+
+
+class _Statx(ctypes.Structure):
+    _fields_ = [
+        ("mask", ctypes.c_uint32), ("blksize", ctypes.c_uint32), ("attributes", ctypes.c_uint64),
+        ("nlink", ctypes.c_uint32), ("uid", ctypes.c_uint32), ("gid", ctypes.c_uint32),
+        ("mode", ctypes.c_uint16), ("spare0", ctypes.c_uint16), ("ino", ctypes.c_uint64),
+        ("size", ctypes.c_uint64), ("blocks", ctypes.c_uint64), ("attributes_mask", ctypes.c_uint64),
+        ("atime", _StatxTimestamp), ("btime", _StatxTimestamp), ("ctime", _StatxTimestamp),
+        ("mtime", _StatxTimestamp), ("rdev_major", ctypes.c_uint32), ("rdev_minor", ctypes.c_uint32),
+        ("dev_major", ctypes.c_uint32), ("dev_minor", ctypes.c_uint32), ("mnt_id", ctypes.c_uint64),
+        ("dio_mem_align", ctypes.c_uint32), ("dio_offset_align", ctypes.c_uint32),
+        ("spare3", ctypes.c_uint64 * 12),
+    ]
+
+
+STATX_BASIC_STATS = 0x07FF
+STATX_BTIME = 0x0800
+STATX_SIZE = 0x0200
+STATX_UID = 0x0008
+STATX_GID = 0x0010
+STATX_ATIME = 0x0020
+STATX_MTIME = 0x0040
+STATX_CTIME = 0x0080
+STATX_INVENTORY_FIELDS = STATX_SIZE | STATX_UID | STATX_GID | STATX_ATIME | STATX_MTIME | STATX_CTIME
+AT_SYMLINK_NOFOLLOW = 0x0100
+
+
+def _stat_metadata(path: Path) -> dict[str, Any]:
+    """Read common metadata in one Linux statx call where libc supports it."""
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        function = getattr(libc, "statx")
+        function.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_uint, ctypes.POINTER(_Statx)]
+        function.restype = ctypes.c_int
+        value = _Statx()
+        result = function(-100, os.fsencode(path), AT_SYMLINK_NOFOLLOW,
+                          STATX_BASIC_STATS | STATX_BTIME, ctypes.byref(value))
+        if result == 0 and (value.mask & STATX_INVENTORY_FIELDS) == STATX_INVENTORY_FIELDS:
+            btime = int(value.btime.tv_sec) if value.mask & STATX_BTIME else None
+            return {"size": int(value.size), "uid": int(value.uid), "gid": int(value.gid),
+                    "atime": int(value.atime.tv_sec), "mtime": int(value.mtime.tv_sec),
+                    "ctime": int(value.ctime.tv_sec), "crtime": btime, "stat_method": "statx"}
+        error = ctypes.get_errno()
+        if error not in (0, errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP):
+            raise OSError(error, os.strerror(error), str(path))
+    except (AttributeError, OSError, TypeError, ValueError):
+        pass
+    stat = path.stat(follow_symlinks=False)
+    return {"size": stat.st_size, "uid": stat.st_uid, "gid": stat.st_gid,
+            "atime": int(stat.st_atime), "mtime": int(stat.st_mtime), "ctime": int(stat.st_ctime),
+            "crtime": None, "stat_method": "os.stat"}
 
 
 def _run(*args: str) -> str:
@@ -64,7 +122,7 @@ def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] 
         for name in sorted(filenames):
             path = current_path / name
             relative = path.relative_to(root).as_posix()
-            stat = path.stat(follow_symlinks=False)
+            stat = _stat_metadata(path)
             extension, category = classify(relative)
             record = {
                     "partition_slot": partition_slot,
@@ -72,18 +130,19 @@ def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] 
                     "metadata_address": "",
                     "tsk_type": "r/r",
                     "source": "readonly_mount",
-                    "size": stat.st_size,
+                    "size": stat["size"],
                     "original_extension": original_extension_for(relative),
                     "extension": extension,
                     "category": category,
-                    "uid": stat.st_uid,
-                    "gid": stat.st_gid,
-                    "atime": int(stat.st_atime),
-                    "mtime": int(stat.st_mtime),
-                    "ctime": int(stat.st_ctime),
-                    "crtime": None,
+                    "uid": stat["uid"],
+                    "gid": stat["gid"],
+                    "atime": stat["atime"],
+                    "mtime": stat["mtime"],
+                    "ctime": stat["ctime"],
+                    "crtime": stat["crtime"],
                 }
-            record.update(evaluate_file_period(record, case_period))
+            if case_period:
+                record.update(evaluate_file_period(record, case_period))
             files.append(record)
     return files, directories
 
@@ -95,6 +154,8 @@ def readonly_mount_inventory(
     """Mount an already read-only partition defensively, inventory, and unmount."""
     if os.geteuid() != 0:
         raise SafetyError("root privileges are required for read-only mount inventory")
+    # Verify the exact block node that will be mounted, including child partitions.
+    enforce_read_only(partition_device)
     mountpoint = Path(tempfile.mkdtemp(prefix="forensic-triage-", dir="/mnt"))
     mounted = False
     try:

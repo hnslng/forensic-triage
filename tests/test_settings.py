@@ -1,15 +1,18 @@
 import copy
+import csv
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from http.client import HTTPConnection
+from pathlib import Path
 
 import pytest
 
 from forensic_triage import scanner
 from forensic_triage import web as web_module
 from forensic_triage.classifier import classify
+from forensic_triage.container_inventory import empty_catalog
 from forensic_triage.settings import (
     SettingsConflict, catalog_snapshot, default_catalog, load_catalog,
     prepare_profiles, save_catalog,
@@ -198,3 +201,46 @@ def test_scan_catalog_snapshot_applies_to_files_containers_and_preserves_history
     original = {path.name: path.read_bytes() for path in result.iterdir() if path.is_file()}
     save_catalog(tmp_path / "settings/filetypes.json", {"Neu": ["heic"]}, default_catalog()["sha256"])
     assert {path.name: path.read_bytes() for path in result.iterdir() if path.is_file()} == original
+
+
+def test_fast_scan_evaluates_existing_inventory_without_fls_pass(tmp_path, monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from forensic_triage.period import evaluate_file_period
+
+    calls = []
+    stamp = int(datetime(2026, 1, 15, 12, tzinfo=ZoneInfo("UTC")).timestamp())
+    raw = {"partition_slot": "001", "path": "evidence.txt", "size": 12,
+           "original_extension": "txt", "extension": "txt", "category": "Dokumente",
+           "uid": 0, "gid": 0, "atime": stamp, "mtime": stamp, "ctime": stamp, "crtime": None}
+    case_period = {"date_from": "2026-01-01", "date_to": "2026-01-31", "timezone": "UTC",
+                   "timezone_source": "test", "timezone_reproducible": True}
+    def command(args):
+        calls.append(args)
+        return "File System Type: exFAT\n"
+    monkeypatch.setattr(scanner, "inspect_device", lambda _path: {"type": "disk"})
+    monkeypatch.setattr(scanner, "enforce_read_only", lambda _path: None)
+    monkeypatch.setattr(scanner, "_command", command)
+    monkeypatch.setattr(scanner, "parse_mmls", lambda _text: [{"allocated": True, "slot": "001", "start_sector": 2048}])
+    monkeypatch.setattr(scanner, "filesystem_type", lambda _text: "exFAT")
+    monkeypatch.setattr(scanner, "partition_path_for_start", lambda *_args: Path("/dev/fake1"))
+    def inventory(_device, _slot, _limits, passed_period):
+        assert passed_period["timezone"] == "UTC"
+        return [{**raw, **evaluate_file_period(raw, passed_period)}], [], {"options": "ro,nosuid,nodev,noexec"}, empty_catalog()
+    monkeypatch.setattr(scanner, "readonly_mount_inventory", inventory)
+    monkeypatch.setattr(scanner, "load_profile", lambda _path: pytest.fail("frozen profile should be used"))
+    catalog = catalog_snapshot({"Dokumente": ["txt"]}, 1)
+    result = scanner.scan(Path("/dev/fake"), tmp_path / "profile.yaml", "SICHT-001", tmp_path / "results",
+                          mode="fast", keywords=[], profile_sources=[{"id": "test", "name": "test", "version": "1", "sha256": "x"}],
+                          filetype_catalog=catalog, case_period=case_period)
+    summary = json.loads((result / "summary.json").read_text(encoding="utf-8"))
+    assert summary["period_file_count"] == 1
+    assert summary["timestamp_coverage"]["B_available"] == 0
+    assert summary["timestamp_coverage"]["M_available"] == 1
+    assert summary["latest_period_files"][0]["path"] == "evidence.txt"
+    assert all(call[0] != "fls" for call in calls)
+    assert all(call[0] not in {"istat", "stat"} for call in calls)
+    with (result / "files.csv").open(encoding="utf-8", newline="") as handle:
+        saved = next(csv.DictReader(handle))
+    assert saved["in_period"] == "True"
+    assert saved["period_matches"] == "M+C+A"

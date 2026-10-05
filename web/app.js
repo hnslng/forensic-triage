@@ -37,6 +37,9 @@ const inventoryRequests = new WeakMap();
 let caseHistorySignature = "";
 let knownCases = [];
 let activeCaseNumber = null;
+let activeCasePeriod = null;
+let periodFieldsCase = null;
+let periodLoadError = false;
 let deleteTargetCaseNumber = null;
 let activeOperator = "";
 let profileKeywords = [];
@@ -1284,6 +1287,7 @@ function renderResults(summary, hits = {}) {
   $("directoryCount").textContent = Number(summary.directory_count || 0).toLocaleString("de-AT");
   $("keywordMatches").textContent = Number(summary.keyword_matches || 0).toLocaleString("de-AT");
   $("totalBytes").textContent = formatBytes(summary.total_file_bytes);
+  renderPeriodSummary(summary);
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
@@ -1307,6 +1311,40 @@ function renderResults(summary, hits = {}) {
     return `<tr><td class="largest-size">${formatBytes(file.size)}</td><td><button class="largest-file-link" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}" aria-label="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(folder)}</small><span aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg></span></button></td></tr>`;
   }).join("") || '<tr><td colspan="2">KEINE DATEIEN ERFASST</td></tr>';
   $("results").hidden = false;
+}
+
+function renderPeriodSummary(summary = {}) {
+  const period = summary.case_period;
+  const panel = $("periodSummary");
+  const configured = Boolean(period?.date_from && period?.date_to);
+  panel.hidden = !configured;
+  if (!configured) return;
+  const formatDate = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("de-AT");
+  $("periodRange").textContent = `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`;
+  $("periodTimezone").textContent = period.timezone_reproducible === false
+    ? `ZEITZONE: ${period.timezone || "lokale Systemzeit"} · keine eindeutige IANA-Zone ermittelt`
+    : `ZEITZONE: ${period.timezone || "lokale Systemzeit"}`;
+  const phone = summary.period_evaluation === "not_applicable";
+  $("periodPhoneContext").hidden = !phone;
+  $("periodFileCount").textContent = phone
+    ? "ZEITRAUM ALS FALLKONTEXT GESPEICHERT · KEINE DATEIAUSWERTUNG"
+    : `${Number(summary.period_file_count || 0).toLocaleString("de-AT")} / ${Number(summary.file_count || 0).toLocaleString("de-AT")} DATEIEN IM ZEITRAUM`;
+  $("periodCategories").innerHTML = phone ? "" : Object.entries(summary.categories_in_period || {})
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"))
+    .map(([name, count]) => `<div class="period-category"><span>${escapeHtml(name)}</span><b>${Number(count).toLocaleString("de-AT")}</b></div>`).join("") || "<small>Keine Dateien im Zeitraum</small>";
+  const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 10);
+  const zone = period.timezone && period.timezone !== "local" ? period.timezone : undefined;
+  $("latestPeriodFiles").innerHTML = rows.map((file) => {
+    let time = "Zeitstempel nicht darstellbar";
+    const epoch = Number(file.latest_period_timestamp);
+    if (Number.isFinite(epoch)) {
+      try {
+        time = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "medium", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000));
+      } catch { time = new Date(epoch * 1000).toLocaleString("de-AT"); }
+    }
+    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(file.path || "")}">${escapeHtml(file.path || "")}</button></li>`;
+  }).join("");
+  $("periodSummary").querySelector(".period-summary-grid").hidden = phone;
 }
 
 function renderArchive(archive) {
@@ -1566,8 +1604,15 @@ async function loadCase(caseNumber) {
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
     currentCaseMedia = sortedSightings(data.media || []);
-    $("dateFrom").value = data.case.date_from || "";
-    $("dateTo").value = data.case.date_to || "";
+    if ($("caseNumber").value.trim().toUpperCase() === data.case.case_number) {
+      $("dateFrom").value = data.case.date_from || "";
+      $("dateTo").value = data.case.date_to || "";
+      periodFieldsCase = data.case.case_number;
+    }
+    if (data.case.case_number === activeCaseNumber) {
+      activeCasePeriod = data.case.date_from ? { date_from: data.case.date_from, date_to: data.case.date_to, timezone: data.case.period_timezone } : null;
+    }
+    updateCaseSessionUi();
     renderMediaCards(currentCaseMedia);
     renderDevices(devices);
     $("casePanel").hidden = false;
@@ -1580,6 +1625,31 @@ async function loadCase(caseNumber) {
     if (revision !== caseLoadRevision) return;
     $("decisionMessage").textContent = error.message;
   }
+}
+
+async function loadCasePeriodForDraft(caseNumber) {
+  periodLoadError = false;
+  try {
+    const response = await fetch(`/api/cases/${encodeURIComponent(caseNumber)}`);
+    if (response.status === 404) {
+      // Preserve dates the operator entered for a new case; case-number changes
+      // already clear any values inherited from a previously selected case.
+      periodFieldsCase = caseNumber;
+      updateCaseSessionUi();
+      return;
+    }
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Fallzeitraum konnte nicht geladen werden");
+    if ($("caseNumber").value.trim().toUpperCase() === caseNumber) {
+      $("dateFrom").value = data.case.date_from || "";
+      $("dateTo").value = data.case.date_to || "";
+      periodFieldsCase = caseNumber;
+    }
+  } catch (error) {
+    periodLoadError = true;
+    $("caseStartMessage").textContent = `FALLDATEN NICHT GELADEN: ${error.message}`;
+  }
+  updateCaseSessionUi();
 }
 
 function sortedSightings(media) {
@@ -1741,11 +1811,17 @@ function updateCaseSessionUi(message = "") {
   if (!draftCase) openRequirements.push("FALLNUMMER FEHLT");
   if (!draftOperator) openRequirements.push("BEARBEITERKÜRZEL FEHLT");
   if (!profileReady) openRequirements.push("SUCHPROFIL FEHLT");
+  if (periodLoadError) openRequirements.push("FALLZEITRAUM NICHT GELADEN");
   if (runningPaths.size) openRequirements.push("SCAN LÄUFT");
   const ready = openRequirements.length === 0;
-  const sameSession = activeCaseNumber === draftCase && activeOperator === draftOperator;
-  $("caseStart").disabled = !ready || sameSession;
-  const caseStartLabel = activeCaseNumber && !sameSession ? " ANDEREN FALL STARTEN" : " FALL STARTEN";
+  const dateFrom = $("dateFrom").value || "";
+  const dateTo = $("dateTo").value || "";
+  const periodError = dateFrom && !dateTo ? "ZEITRAUM BIS FEHLT" : !dateFrom && dateTo ? "ZEITRAUM VON FEHLT" : dateFrom && dateTo && dateFrom > dateTo ? "ZEITRAUM VON LIEGT NACH BIS" : "";
+  const samePeriod = (activeCasePeriod?.date_from || "") === dateFrom && (activeCasePeriod?.date_to || "") === dateTo;
+  const sameIdentity = activeCaseNumber === draftCase && activeOperator === draftOperator;
+  const sameSession = sameIdentity && samePeriod;
+  $("caseStart").disabled = !ready || sameSession || Boolean(periodError);
+  const caseStartLabel = sameIdentity && !samePeriod ? " FALLZEITRAUM SPEICHERN" : activeCaseNumber && !sameSession ? " ANDEREN FALL STARTEN" : " FALL STARTEN";
   const caseStartText = $("caseStart").lastChild;
   if (caseStartText && caseStartText.nodeType === Node.TEXT_NODE) caseStartText.textContent = caseStartLabel;
   else $("caseStart").append(caseStartLabel);
@@ -1753,7 +1829,9 @@ function updateCaseSessionUi(message = "") {
   $("activeCaseDisplay").classList.toggle("locked", !activeCaseNumber);
   $("activeCaseNumber").textContent = activeCaseNumber || "KEIN FALL";
   $("activeCaseOperator").textContent = activeCaseNumber ? `| ${activeOperator}` : "";
-  if (message) {
+  if (periodError && !message) {
+    $("caseStartMessage").textContent = periodError;
+  } else if (message) {
     $("caseStartMessage").textContent = message;
   } else if (openRequirements.length) {
     $("caseStartMessage").textContent = `OFFEN: ${openRequirements.join(" · ")}`;
@@ -1936,12 +2014,16 @@ async function syncCaseSessionFromServer(session) {
     invalidateMediaView();
     activeCaseNumber = null;
     activeOperator = "";
+    activeCasePeriod = null;
+    periodFieldsCase = null;
     currentCaseMedia = [];
     currentMediaId = null;
     currentDecision = null;
     inventoryTreeMediaId = null;
     $("caseNumber").value = "";
     $("operator").value = "";
+    $("dateFrom").value = "";
+    $("dateTo").value = "";
     $("casePanel").hidden = true;
     $("results").hidden = true;
     $("dashboardView").hidden = false;
@@ -1957,6 +2039,7 @@ async function syncCaseSessionFromServer(session) {
   invalidateMediaView();
   activeCaseNumber = serverCaseNumber;
   activeOperator = serverOperator;
+  activeCasePeriod = null;
   $("caseNumber").value = activeCaseNumber;
   $("operator").value = activeOperator;
   currentMediaId = null;
@@ -2378,6 +2461,8 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
 
 async function startCaseSession() {
   const caseNumber = $("caseNumber").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
+  if (caseNumber && periodFieldsCase !== caseNumber) await loadCasePeriodForDraft(caseNumber);
+  if (periodLoadError) return;
   const operator = $("operator").value.trim().toUpperCase();
   const dateFrom = $("dateFrom").value || null;
   const dateTo = $("dateTo").value || null;
@@ -2436,12 +2521,16 @@ async function stopCaseSession({ keepUpdateOpen = false } = {}) {
   if (activeCaseNumber && !serverActiveCase) serverActiveCase = { case_number: activeCaseNumber, operator: activeOperator };
   activeCaseNumber = null;
   activeOperator = "";
+  activeCasePeriod = null;
+  periodFieldsCase = null;
   currentCaseMedia = [];
   currentMediaId = null;
   currentDecision = null;
   inventoryTreeMediaId = null;
   $("caseNumber").value = "";
   $("operator").value = "";
+  $("dateFrom").value = "";
+  $("dateTo").value = "";
   $("casePanel").hidden = true;
   $("results").hidden = true;
   $("dashboardView").hidden = false;
@@ -3053,7 +3142,7 @@ $("profileList").addEventListener("click", (event) => {
   event.stopPropagation();
   openProfileEditor(edit.dataset.editProfile);
 });
-$("caseList").addEventListener("click", (event) => {
+$("caseList").addEventListener("click", async (event) => {
   const remove = event.target.closest("button[data-delete-case]");
   if (remove) {
     const caseNumber = remove.dataset.deleteCase;
@@ -3070,7 +3159,12 @@ $("caseList").addEventListener("click", (event) => {
   }
   const item = event.target.closest("button[data-case-number]");
   if (!item) return;
-  $("caseNumber").value = item.dataset.caseNumber;
+  const selectedCase = item.dataset.caseNumber;
+  $("caseNumber").value = selectedCase;
+  $("dateFrom").value = "";
+  $("dateTo").value = "";
+  periodFieldsCase = null;
+  await loadCasePeriodForDraft(selectedCase);
   caseHistorySignature = "";
   renderCaseHistory(knownCases);
   updateCaseSessionUi();
@@ -3234,9 +3328,16 @@ for (const button of document.querySelectorAll("[data-decision]")) {
     updateDecisionAvailability();
   });
 }
-for (const input of [$("caseNumber"), $("operator")]) {
+for (const input of [$("caseNumber"), $("operator"), $("dateFrom"), $("dateTo")]) {
   input.addEventListener("input", () => {
     if (input === $("caseNumber")) {
+      const typedCase = input.value.trim().toUpperCase();
+      if (typedCase !== periodFieldsCase) {
+        $("dateFrom").value = "";
+        $("dateTo").value = "";
+        periodFieldsCase = null;
+        periodLoadError = false;
+      }
       caseHistorySignature = "";
       renderCaseHistory(knownCases);
     }

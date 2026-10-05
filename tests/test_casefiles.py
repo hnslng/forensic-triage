@@ -55,7 +55,7 @@ def test_case_archive_records_scan_and_decision(tmp_path) -> None:
         "offset": 0,
         "next_offset": 1,
         "has_more": False,
-        "files": [{"path": "a", "size": 1, "extension": "", "category": "Unbekannt", "mtime": "", "source": "media_inventory", "container_format": "", "size_known": True}],
+        "files": [{"path": "a", "size": 1, "extension": "", "category": "Unbekannt", "mtime": "", "atime": None, "ctime": None, "crtime": None, "in_period": None, "period_matches": "", "latest_period_timestamp": None, "latest_period_timestamp_type": "", "source": "media_inventory", "container_format": "", "size_known": True}],
     }
 
 
@@ -332,6 +332,95 @@ def test_safe_component_refuses_path_escape() -> None:
         safe_component("../")
 
 
+def test_case_period_audit_exports_and_historical_scan_snapshot(tmp_path):
+    store = CaseStore(tmp_path / "casefiles")
+    first = store.start_case("FALL-ZEIT", "HL", "2025-01-01", "2025-12-31")
+    assert first["case"]["date_from"] == "2025-01-01"
+    audit_path = store.case_path("FALL-ZEIT") / "audit.log"
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    assert sum(event["event_type"] == "case_period_set" for event in events) == 1
+    store.start_case("FALL-ZEIT", "HL", "2025-01-01", "2025-12-31")
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    assert sum(event["event_type"] == "case_period_set" for event in events) == 1
+
+    result_one = make_result(store, "FALL-ZEIT", "SICHT-001")
+    summary_one = {"case_period": {"date_from": "2025-01-01", "date_to": "2025-12-31", "timezone": "UTC", "inclusive": True},
+                   "period_file_count": 4, "file_count": 12}
+    (result_one / "summary.json").write_text(json.dumps(summary_one), encoding="utf-8")
+    (result_one / "files.csv").write_text("path,atime,mtime,ctime,crtime,in_period,period_matches,latest_period_timestamp,latest_period_timestamp_type\na,1,2,3,4,True,M+C+A,3,C+A\n", encoding="utf-8")
+    media_one = store.record_scan("FALL-ZEIT", "SICHT-001", "HL", {"path": "/dev/sdb"}, result_one)["media"]
+    saved_csv = (result_one / "files.csv").read_bytes()
+    saved_summary = (result_one / "summary.json").read_bytes()
+
+    store.start_case("FALL-ZEIT", "HL", "2026-01-01", "2026-06-30")
+    result_two = make_result(store, "FALL-ZEIT", "SICHT-002")
+    (result_two / "summary.json").write_text(json.dumps({"case_period": {"date_from": "2026-01-01", "date_to": "2026-06-30", "timezone": "UTC", "inclusive": True}, "period_file_count": 2, "file_count": 12}), encoding="utf-8")
+    media_two = store.record_scan("FALL-ZEIT", "SICHT-002", "HL", {"path": "/dev/sdb"}, result_two)["media"]
+    assert media_one["period_date_from"] == "2025-01-01"
+    assert media_one["period_file_count"] == 4
+    assert media_two["period_date_from"] == "2026-01-01"
+    assert (result_one / "files.csv").read_bytes() == saved_csv
+    assert (result_one / "summary.json").read_bytes() == saved_summary
+    detail = store.case_detail("FALL-ZEIT")
+    assert detail["case"]["date_from"] == "2026-01-01"
+    assert detail["media"][1]["period_date_from"] == "2025-01-01"
+    case_json = json.loads((store.case_path("FALL-ZEIT") / "case.json").read_text(encoding="utf-8"))
+    assert case_json["case_period"]["date_from"] == "2026-01-01"
+    with (store.case_path("FALL-ZEIT") / "media-register.csv").open(encoding="utf-8", newline="") as handle:
+        records = list(csv.DictReader(handle))
+    assert records[0]["period_date_from"] == "2025-01-01"
+    report = (store.case_path("FALL-ZEIT") / "case-report.txt").read_text(encoding="utf-8")
+    assert "Aktueller Fallzeitraum: 2026-01-01 – 2026-06-30" in report
+    assert "Fallzeitraum beim Scan: 2025-01-01 – 2025-12-31" in report
+    assert "Dateien im Zeitraum: 4" in report
+
+    store.start_case("FALL-ZEIT", "HL", None, None)
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    changes = [event for event in events if event["event_type"] == "case_period_set"]
+    assert len(changes) == 3
+    assert changes[-1]["details"]["old_date_from"] == "2026-01-01"
+    assert changes[-1]["details"]["new_date_from"] is None
+    assert json.loads((store.case_path("FALL-ZEIT") / "case.json").read_text())["case_period"] is None
+
+
+def test_phone_scan_period_snapshot_is_not_applicable(tmp_path):
+    store = CaseStore(tmp_path / "casefiles")
+    store.start_case("FALL-TELEFON", "HL", "2025-01-01", "2025-01-31")
+    result = make_result(store, "FALL-TELEFON", "SICHT-001")
+    summary = {"case_period": {"date_from": "2025-01-01", "date_to": "2025-01-31", "timezone": "UTC", "inclusive": True},
+               "period_evaluation": "not_applicable", "period_file_count": None, "file_count": 0}
+    (result / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+    media = store.record_scan("FALL-TELEFON", "SICHT-001", "HL", {"path": "android:serial"}, result)["media"]
+    assert media["period_date_from"] == "2025-01-01"
+    assert media["period_file_count"] is None
+    report = (store.case_path("FALL-TELEFON") / "case-report.txt").read_text(encoding="utf-8")
+    assert "Dateien im Zeitraum: nicht anwendbar" in report
+
+
+def test_file_inventory_exposes_period_timestamps_and_filters_stored_snapshot(tmp_path):
+    store = CaseStore(tmp_path / "casefiles")
+    store.start_case("FALL-FILTER", "HL", "2026-01-01", "2026-01-31")
+    result = make_result(store, "FALL-FILTER", "SICHT-001")
+    (result / "summary.json").write_text(json.dumps({
+        "case_period": {"date_from": "2026-01-01", "date_to": "2026-01-31", "timezone": "UTC", "inclusive": True},
+        "period_file_count": 1, "file_count": 2,
+    }), encoding="utf-8")
+    (result / "files.csv").write_text(
+        "path,size,category,atime,mtime,ctime,crtime,in_period,period_matches,latest_period_timestamp,latest_period_timestamp_type\n"
+        "inside.txt,4,Dokumente,1,2,3,4,True,M+C+A,3,C\n"
+        "outside.txt,5,Dokumente,11,12,13,,False,,,\n",
+        encoding="utf-8",
+    )
+    media_id = store.record_scan("FALL-FILTER", "SICHT-001", "HL", {"path": "/dev/sdb"}, result)["media"]["id"]
+    all_files = store.file_inventory(media_id)
+    assert all_files["files"][0]["atime"] == 1
+    assert all_files["files"][0]["in_period"] is True
+    assert all_files["files"][0]["period_matches"] == "M+C+A"
+    assert all_files["files"][0]["latest_period_timestamp_type"] == "C"
+    assert [item["path"] for item in store.file_inventory(media_id, period_filter="in")["files"]] == ["inside.txt"]
+    assert [item["path"] for item in store.file_inventory(media_id, period_filter="out")["files"]] == ["outside.txt"]
+
+
 def test_existing_archive_gets_neutral_sighting_numbers(tmp_path) -> None:
     root = tmp_path / "casefiles"
     root.mkdir()
@@ -354,8 +443,9 @@ def test_existing_archive_gets_neutral_sighting_numbers(tmp_path) -> None:
 
     store = CaseStore(root)
     with store._connect() as connection:
-        row = connection.execute("SELECT sighting_number, evidence_number FROM media WHERE id=1").fetchone()
-    assert dict(row) == {"sighting_number": "SICHT-001", "evidence_number": ""}
+        row = connection.execute("SELECT sighting_number, evidence_number, period_date_from, period_date_to, period_timezone, period_file_count FROM media WHERE id=1").fetchone()
+    assert dict(row) == {"sighting_number": "SICHT-001", "evidence_number": "", "period_date_from": None,
+                         "period_date_to": None, "period_timezone": None, "period_file_count": None}
     report = (root / "FALL-ALT" / "case-report.txt").read_text(encoding="utf-8")
     assert "SICHTUNGSMEDIUM: SICHT-001" in report
     assert "BEWEISMITTEL / ASSERVAT: nicht vergeben" in report

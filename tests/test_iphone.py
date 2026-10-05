@@ -114,12 +114,19 @@ def test_simulated_quick_scan_writes_app_only_case_bundle(tmp_path: Path, monkey
         "profile_sources": [{"id": "test", "name": "TEST", "version": "1", "sha256": "abc"}],
         "filetype_catalog": {"version": 1, "categories": {"Web-Dateien": ["json"]}},
         "crypto_rules": current_rules,
+        "case_period": {"date_from": "2026-01-01", "date_to": "2026-06-30", "timezone": "UTC", "timezone_source": "test", "timezone_reproducible": True},
     })
     summary = json.loads((result / "summary.json").read_text())
     detail = json.loads((result / "iphone.json").read_text())
     device = json.loads((result / "device.json").read_text())
     assert summary["file_count"] == 0
     assert summary["scan_mode"] == "phone_crypto_quick"
+    assert summary["case_period"]["date_from"] == "2026-01-01"
+    assert summary["period_evaluation"] == "not_applicable"
+    assert summary["period_file_count"] is None
+    assert summary["categories_in_period"] == {}
+    assert summary["latest_period_files"] == []
+    assert (result / "files.csv").read_text().count("\n") == 1
     assert summary["timings"]["application_inventory_seconds"] >= 0
     assert summary["iphone"]["app_hint_count"] == 1
     assert summary["iphone"]["apps_complete"] is True
