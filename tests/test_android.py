@@ -2,6 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from forensic_triage import android
 from forensic_triage.crypto_rules import snapshot
 
@@ -51,6 +53,39 @@ def test_google_pixel_vendor_is_visible_before_adb(tmp_path: Path):
     assert candidate["confidence"] == "high"
 
 
+def test_real_tcl_a1_alpha_21_is_visible_before_adb(tmp_path: Path):
+    usb_device(
+        tmp_path, "1-1.2", vendor="1bbb", product_id="0168", manufacturer="TCL",
+        product="A1 Alpha 21", device_class="00", interface=("06", "01", "01", "MTP"),
+    )
+    candidates = android._usb_candidates(tmp_path)
+    assert len(candidates) == 1
+    assert candidates[0]["vendor"] == "TCL"
+    assert candidates[0]["model"] == "A1 Alpha 21"
+    assert candidates[0]["confidence"] == "medium"
+    assert candidates[0]["evidence"] == "known_phone_brand_with_mtp_ptp"
+
+
+@pytest.mark.parametrize("manufacturer", ["Alcatel", "Nokia", "HMD", "realme", "ZTE"])
+def test_additional_phone_brands_with_mtp_are_candidates(tmp_path: Path, manufacturer: str):
+    usb_device(
+        tmp_path, "6-1", vendor="3344", manufacturer=manufacturer, product="Provider handset",
+        interface=("06", "01", "01", "MTP"),
+    )
+    candidates = android._usb_candidates(tmp_path)
+    assert len(candidates) == 1
+    assert candidates[0]["confidence"] == "medium"
+    assert candidates[0]["evidence"] == "known_phone_brand_with_mtp_ptp"
+
+
+def test_tcl_without_phone_usb_evidence_is_not_accepted(tmp_path: Path):
+    usb_device(
+        tmp_path, "7-1", vendor="3344", manufacturer="TCL", product="USB Hub",
+        interface=("09", "00", "00", "Hub"),
+    )
+    assert android._usb_candidates(tmp_path) == []
+
+
 def test_normal_usb_drive_is_not_android(tmp_path: Path):
     usb_device(tmp_path, "3-1", vendor="0951", manufacturer="Kingston", product="DataTraveler",
                interface=("08", "06", "50", "Mass Storage"))
@@ -92,6 +127,20 @@ def test_discovery_distinguishes_debugging_and_authorization(monkeypatch):
     device = android.discover_androids()[0]
     assert device["connection_state"] == "authorized"
     assert device["scan_supported"] is True
+
+
+def test_real_tcl_discovery_without_adb_is_debugging_required(monkeypatch):
+    monkeypatch.setattr(android.shutil, "which", lambda _name: "/usr/bin/adb")
+    monkeypatch.setattr(android, "_usb_candidates", lambda: [{
+        "sysfs_name": "1-1.2", "vendor_id": "1bbb", "product_id": "0168",
+        "vendor": "TCL", "model": "A1 Alpha 21", "serial": "",
+        "confidence": "medium", "evidence": "known_phone_brand_with_mtp_ptp",
+    }])
+    monkeypatch.setattr(android, "_adb_rows", lambda: [])
+    device = android.discover_androids()[0]
+    assert device["connection_state"] == "debugging_required"
+    assert device["scan_supported"] is False
+    assert device["guidance"]
 
 
 def test_usb_topology_keeps_identity_without_usb_serial(monkeypatch):

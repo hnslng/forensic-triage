@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.71 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.72 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -197,9 +197,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a71` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.71`
-- automatisierte Tests: 224 Python-Prüfungen und 98 isolierte Browserprüfungen einschließlich Pre-ADB-Android-Erkennung, False-Positive-Schutz für Massenspeicher/Kameras, USB→ADB-Identitätskorrelation, Diagnose-Cooldown/Loggerfilter/Reload-Modus sowie der bestehenden Scanner-, Telefon-, Regel- und UI-Prüfungen
+- Paketversion: `0.2.0a72` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.72`
+- automatisierte Tests: 232 Python-Prüfungen und 98 isolierte Browserprüfungen einschließlich Pre-ADB-Android-Erkennung, False-Positive-Schutz für Massenspeicher/Kameras, USB→ADB-Identitätskorrelation, Diagnose-Cooldown/Loggerfilter/Reload-Modus sowie der bestehenden Scanner-, Telefon-, Regel- und UI-Prüfungen
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: reale Android-/Samsung-Abnahme, erneuter iPhone-Zeitvergleich der neuen App-only-Version, vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
@@ -213,4 +213,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.71 recognizes sufficiently evidenced Android phones before USB debugging: known Android vendors remain strong evidence, while manufacturer/product and USB class/interface signals are combined conservatively; MTP/PTP alone and camera-like devices are rejected. The UI immediately shows `debugging_required` and guidance, then `authorization_required`, and finally scan-ready `authorized`. USB serial or topology keeps identity stable where ADB supplies a reliable mapping. The RAM-only diagnostics console now has a correct cooldown, filtered application-only logging, no unnecessary duplicate stream handler or scan error, and reload-safe NORMAL/DEBUG synchronization. NORMAL hides phone identifiers; DEBUG may show technical IDs required for diagnosis. No real phone/Pi hardware acceptance was performed for Alpha 71. Scanner, matcher, read-only, archive, case and update behavior remain unchanged. TRIAGE//BOX searches removable-media names and paths, not file payloads; phone quick scans read device and user-app metadata only, never phone files, photos, wallet contents, keys or seeds. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).
+Version 0.2.0-alpha.72 recognizes sufficiently evidenced Android phones before USB debugging: known Android vendors remain strong evidence, while manufacturer/product and USB class/interface signals are combined conservatively; MTP/PTP alone and camera-like devices are rejected. The UI immediately shows `debugging_required` and guidance, then `authorization_required`, and finally scan-ready `authorized`. USB serial or topology keeps identity stable where ADB supplies a reliable mapping. Alpha 71 included a real Pi finding of a rejected TCL A1 Alpha 21 (`1bbb:0168`, MTP); Alpha 72 adds the missing manufacturer evidence and regression coverage. No new real hardware acceptance was performed for Alpha 72. Scanner, matcher, read-only, archive, case and update behavior remain unchanged. TRIAGE//BOX searches removable-media names and paths, not file payloads; phone quick scans read device and user-app metadata only, never phone files, photos, wallet contents, keys or seeds. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).

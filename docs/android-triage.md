@@ -1,6 +1,6 @@
 # Android-/Mobilgerät-Triage
 
-Stand: 5. Oktober 2026 · Anwendung `v0.2.0-alpha.71`
+Stand: 5. Oktober 2026 · Anwendung `v0.2.0-alpha.72`
 
 ## Zweck
 
@@ -12,7 +12,7 @@ Der normale Mobilgerät-Lauf ist ein **Krypto-Schnellscan**. Er erfasst Gerätei
 
 1. Apple-Geräte werden über `idevice_id` erkannt und dem iPhone-Collector zugeordnet.
 2. Android-Geräte werden ohne Inhaltszugriff aus Linux-sysfs erkannt. Bekannte Android-Vendor-IDs sind starke Evidenz. Zusätzlich werden Geräteklasse, alle USB-Interfaceklassen/-protokolle sowie Hersteller- und Produkttexte bewertet.
-3. MTP/PTP allein genügt ausdrücklich nicht: Kameras und sonstige Imaging-Geräte ohne Telefon-/Android-Indiz werden verworfen. Eine unbekannte Vendor-ID wird nur mit kombinierter, nachvollziehbarer Telefonidentität plus passendem MTP/PTP-/Composite-Merkmal als Kandidat behandelt.
+3. MTP/PTP allein genügt ausdrücklich nicht: Kameras und sonstige Imaging-Geräte ohne Telefon-/Android-Indiz werden verworfen. Hersteller-/Produktmerkmale decken neben den bisherigen Marken nun auch TCL/Alcatel, Nokia/HMD, realme, ZTE, ASUS/ROG, Fairphone, Lenovo, Meizu, Tecno, Infinix, itel, Blackview, Ulefone, Doogee, Cubot, Oukitel und UMIDIGI ab. Eine unbekannte Vendor-ID wird nur mit kombinierter, nachvollziehbarer Telefonidentität plus passendem MTP/PTP-/Composite-Merkmal als Kandidat behandelt.
 4. Physisch erkannt, aber noch ohne ADB: `debugging_required`, nicht scanbar, Anleitung sichtbar. ADB `unauthorized`: `authorization_required`, Bestätigung am Telefon erforderlich. ADB `device`: `authorized`, scanbar.
 5. Die USB- und ADB-Ansichten werden über identische Seriennummer oder die von ADB gemeldete USB-Topologie korreliert. Ohne eindeutiges Signal wird nicht nur anhand eines Herstellernamens zusammengeführt.
 
@@ -77,7 +77,7 @@ Ein Android-Lauf erzeugt die gemeinsame Fallstruktur mit `device.json`, `phone.j
 
 ## Praktischer Samsung-Test
 
-1. Alpha 71 installieren und Pi/Dienst frisch starten; `adb` muss als Systemabhängigkeit vorhanden sein.
+1. Alpha 72 installieren und Pi/Dienst frisch starten; `adb` muss als Systemabhängigkeit vorhanden sein.
 2. Testfall starten, Auto-Scan aktiv lassen.
 3. DIAGNOSE → DEBUG → ANDROID öffnen. Samsung **ohne USB-Debugging** entsperrt per Datenkabel anschließen und normale Datenfreigabe bestätigen. Telefonkachel, `debugging_required`, Anleitung, USB-Interfaces und Kandidatenbegründung prüfen.
 4. USB-Debugging aktivieren. Zuerst **nicht** bestätigen: `authorization_required`; keine Sichtung darf beginnen.
@@ -89,4 +89,4 @@ Ein Android-Lauf erzeugt die gemeinsame Fallstruktur mit `device.json`, `phone.j
 
 ## Noch nicht praktisch bestätigt
 
-Die Pre-ADB-Erkennung und Zustandskette sind automatisiert mit synthetischen sysfs-/ADB-Daten geprüft, aber Alpha 71 wurde in dieser Entwicklungsumgebung nicht an einem realen Samsung/Pixel/Xiaomi-Gerät und nicht auf einem Raspberry Pi abgenommen. Herstellerpfade, reale USB-Deskriptoren, udev-/Zugriffsregeln, Paketlisten je Profil und Auto-Start müssen praktisch verifiziert werden. Android-Oberflächen und Paketnamen können sich ändern; Regeln und Anleitung benötigen laufende Pflege.
+Der reale Alpha-71-Pi-Test zeigte ein physisch erkanntes, aber abgelehntes TCL/A1-Alpha-21-Telefon (`1bbb:0168`, `06/01/01:MTP`). Ursache war fehlende TCL-Telefon-Evidenz, nicht USB/sysfs/MTP. Alpha 72 behebt genau diesen Fall; der exakte Datensatz und Provider-/White-Label-Varianten sind automatisiert regressionsgeprüft. Weitere reale USB-Deskriptoren, udev-/Zugriffsregeln, Paketlisten je Profil und Auto-Start müssen weiterhin praktisch verifiziert werden.

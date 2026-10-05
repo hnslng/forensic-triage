@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.72] – 2026-10-05
+
+- **TCL/A1 Alpha 21:** Der reale Pi-Fund `idVendor=1bbb`, `idProduct=0168`, `manufacturer=TCL`, `product=A1 Alpha 21`, `06/01/01:MTP` wird jetzt vor ADB als Android-Kandidat erkannt. Ergebnis: `confidence=medium`, `known_phone_brand_with_mtp_ptp`, `debugging_required`, `scan_supported=false` und vorhandene Guidance.
+- **Hersteller-Evidenz erweitert:** TCL, Alcatel, Nokia, HMD, realme, ZTE, ASUS, ROG, Fairphone, Lenovo, Meizu, Tecno, Infinix, itel, Blackview, Ulefone, Doogee, Cubot, Oukitel und UMIDIGI werden als Telefon-/Produktmerkmale berücksichtigt. Es wurden keine neuen Vendor-IDs erfunden.
+- **False-Positive-Schutz bleibt aktiv:** Herstellername allein reicht nicht; es braucht weiterhin passende MTP/PTP- oder Composite-/Telefon-USB-Evidenz. MTP/PTP allein, Canon-Kameras, Hubs und normale Massenspeicher bleiben ausgeschlossen.
+- **Regressionen:** Der exakte TCL-Hardwaredatensatz sowie Alcatel/Nokia/HMD/realme/ZTE, negative TCL-/Hub-, Kamera-, Massenspeicher- und unbekannte-MTP-Fälle sind automatisiert abgedeckt.
+- Version auf `0.2.0-alpha.72` (`0.2.0a72`) angehoben.
+
 ## [0.2.0-alpha.71] – 2026-10-05
 
 - **Android vor ADB sichtbar:** Linux-sysfs-Erkennung wertet neben der gepflegten Hersteller-Vendor-Liste nun Geräteklasse, alle USB-Interfaces (Klasse/Subklasse/Protokoll und Interfacebezeichnung) sowie Hersteller-/Produkttexte aus. Bekannte Android-Vendoren und ADB-Interfaces sind starke Evidenz; MTP/PTP wird nur zusammen mit plausibler Telefon-/Android-Identität akzeptiert. Kamerabezeichnungen und MTP/PTP ohne Telefonindiz werden ausdrücklich verworfen. Samsung, Google/Pixel, Xiaomi, Motorola, OnePlus, OPPO, Sony, Huawei, Nothing, LG, HTC und vivo bleiben abgedeckt.
@@ -9,7 +17,7 @@ Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semant
 - **Stabile Identität:** USB- und ADB-Sicht werden zuerst über USB-Seriennummer, alternativ über die von ADB gemeldete USB-Topologie korreliert. Dadurch behält ein Telefon ohne USB-Seriennummer bei `debugging_required → authorization_required → authorized` den Pfad `android:usb-…`, statt als getrenntes/neues Gerät zu flackern. Ohne eindeutiges Signal wird keine Zuordnung nur anhand des Herstellers behauptet.
 - **Diagnose gehärtet:** `once()` verschiebt den Cooldown nicht mehr durch unterdrückte Wiederholungen. Der Root-Logger wird nicht mehr auf INFO erweitert; der Diagnosehandler akzeptiert nur den kontrollierten Namespace, explizite Diagnosekategorien oder bekannte Module aus dem Anwendungspaket. Ein WARNING-StreamHandler wird nur ergänzt, wenn noch kein normaler Handler existiert. Scan-Exceptions bleiben im Journal, erzeugen in der Diagnose aber nur das eine gezielte Fehlerereignis.
 - **NORMAL/DEBUG konsistent:** Nach Browser-Reload übernimmt die Konsole den serverseitigen Modus einschließlich Buttons und Filter. NORMAL enthält keine Telefonseriennummern im Klartext; DEBUG darf notwendige technische Kennungen (einschließlich ADB-ID) zeigen. Android-DEBUG nennt Kandidaten-/Ablehnungsgrund, Confidence, USB-Klassen/Interfaces, Serien-Vorhanden-Flag, ADB-Status, resultierenden Verbindungsstatus und Identitätsquelle — jeweils nur bei Änderung.
-- **Tests:** 224 Python-Prüfungen und 98 isolierte Browserprüfungen. Neu abgedeckt: Samsung/Pixel vor ADB, Massenspeicher- und Kamera-Ausschluss, konservative MTP-Evidenz, alle drei ADB-Zustände, seriennummernlose USB→ADB-Korrelation, Cooldown unter Dauerfehler, Fremdlogger-Filter, einzelnes Scanfehlerereignis, Pre-ADB-Kachel/Guidance ohne aktiven Fall und bestehender DEBUG-Serverzustand nach Reload. Kein echter Pi-/Telefon-Hardwaretest wurde in dieser Entwicklungsumgebung durchgeführt.
+- **Tests:** 232 Python-Prüfungen und 98 isolierte Browserprüfungen. Neu abgedeckt: Samsung/Pixel vor ADB, Massenspeicher- und Kamera-Ausschluss, konservative MTP-Evidenz, alle drei ADB-Zustände, seriennummernlose USB→ADB-Korrelation, Cooldown unter Dauerfehler, Fremdlogger-Filter, einzelnes Scanfehlerereignis, Pre-ADB-Kachel/Guidance ohne aktiven Fall und bestehender DEBUG-Serverzustand nach Reload. Kein echter Pi-/Telefon-Hardwaretest wurde in dieser Entwicklungsumgebung durchgeführt.
 - Version auf `0.2.0-alpha.71` (`0.2.0a71`) angehoben.
 
 ## [0.2.0-alpha.70] – 2026-10-05

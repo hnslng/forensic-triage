@@ -32,10 +32,16 @@ ANDROID_USB_VENDORS = {
 ANDROID_MANUFACTURER_MARKERS = (
     "samsung", "google", "pixel", "xiaomi", "redmi", "motorola", "oneplus",
     "oppo", "sony", "huawei", "honor", "nothing", "lg", "htc", "vivo",
+    "tcl", "alcatel", "nokia", "hmd", "realme", "zte", "asus", "rog",
+    "fairphone", "lenovo", "meizu", "tecno", "infinix", "itel", "blackview",
+    "ulefone", "doogee", "cubot", "oukitel", "umidigi",
 )
 ANDROID_PRODUCT_MARKERS = (
     "android", "galaxy", "pixel", "phone", "smartphone", "oneplus", "oppo",
     "xiaomi", "redmi", "moto", "xperia", "huawei", "honor", "nothing", "vivo",
+    "tcl", "alcatel", "nokia", "hmd", "realme", "zte", "asus", "rog",
+    "fairphone", "lenovo", "meizu", "tecno", "infinix", "itel", "blackview",
+    "ulefone", "doogee", "cubot", "oukitel", "umidigi",
 )
 CAMERA_MARKERS = (
     "camera", "digital camera", "dslr", "mirrorless", "nikon", "canon",
@@ -104,12 +110,18 @@ def _android_usb_evidence(
         item["class"] == "06" and item["subclass"] in {"01", "1"}
         for item in interfaces
     ) or any(marker in labels for marker in ("mtp", "ptp"))
+    composite_phone_interface = any(item["class"] in {"02", "03", "06", "ff"} for item in interfaces)
+    phone_usb_evidence = imaging_interface or (
+        device_class in {"00", "0", "ef"} and composite_phone_interface
+    )
 
     if known_vendor:
         return True, "high", "known_android_vendor"
     if adb_interface:
         return True, "high", "adb_usb_interface"
-    if (known_brand or phone_product) and not camera and (imaging_interface or device_class in {"00", "0", "ef"}):
+    if known_brand and not camera and phone_usb_evidence:
+        return True, "medium", "known_phone_brand_with_mtp_ptp"
+    if phone_product and not camera and phone_usb_evidence:
         return True, "medium", "phone_identity_with_mtp_ptp_or_composite_usb"
     if imaging_interface and camera:
         return False, "rejected", "camera_ptp_without_android_evidence"
