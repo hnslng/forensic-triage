@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.73] – 2026-10-05
+
+- **Android-Guidance ausgelagert:** Gerätekarten bleiben bei nicht scanbereiten Android-Geräten kompakt und zeigen nur Status, den Hinweis „USB-Debugging noch nicht aktiviert“ sowie **ANLEITUNG ÖFFNEN**. Die langen Schritte erscheinen ausschließlich in einem kleinen Modal.
+- **Guidance-Modal:** Nummerierte Herstellerschritte, kurzer Hinweis zu abweichenden Menübezeichnungen sowie **KOPIEREN** und **SCHLIESSEN**. Die Karte enthält keine inline eingebettete Schritteliste mehr.
+- **Hersteller-Guides:** Samsung, Google/Pixel, Xiaomi/Redmi, Motorola, OnePlus, TCL/Alcatel, OPPO, Huawei/Honor, Nokia/HMD, realme, ZTE und Nothing wählen automatisch eigene Guides; unbekannte Hersteller erhalten den allgemeinen Android-Fallback. Der TCL/A1-Alpha-21-Guide enthält exakt zehn Schritte.
+- **Tests:** 247 Python- und 98 Browserprüfungen. Neu: Inline-Guidance entfernt, Modal öffnen/schließen, Kopieraktion, Herstellerwahl, TCL-Schrittfolge, Fallback und kompakte Kachel.
+- Version auf `0.2.0-alpha.73` (`0.2.0a73`) angehoben.
+
 ## [0.2.0-alpha.72] – 2026-10-05
 
 - **TCL/A1 Alpha 21:** Der reale Pi-Fund `idVendor=1bbb`, `idProduct=0168`, `manufacturer=TCL`, `product=A1 Alpha 21`, `06/01/01:MTP` wird jetzt vor ADB als Android-Kandidat erkannt. Ergebnis: `confidence=medium`, `known_phone_brand_with_mtp_ptp`, `debugging_required`, `scan_supported=false` und vorhandene Guidance.

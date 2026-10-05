@@ -282,6 +282,16 @@
       <p>Fall direkt öffnen oder aus dem Archiv entfernen. Der aktive Fall ist gegen Löschen geschützt.</p>
       <div id="caseList" class="case-list"><p>NOCH KEINE FÄLLE VORHANDEN</p></div>
     </dialog>
+    <dialog id="androidGuidanceModal" class="android-guidance-modal" aria-labelledby="androidGuidanceTitle">
+      <div class="modal-head"><div><span>ANDROID</span> <b id="androidGuidanceTitle">ANLEITUNG</b></div><button id="closeAndroidGuidance" type="button">SCHLIESSEN ×</button></div>
+      <div class="android-guidance-body">
+        <p class="android-guidance-device" id="androidGuidanceDevice">ANDROID-TELEFON</p>
+        <ol id="androidGuidanceSteps"></ol>
+        <p class="android-guidance-note">Menübezeichnungen können je nach Android-/Herstellerversion leicht abweichen.</p>
+        <div class="android-guidance-actions"><button id="copyAndroidGuidance" type="button">KOPIEREN</button><button id="closeAndroidGuidanceBottom" type="button">SCHLIESSEN</button></div>
+        <p id="androidGuidanceMessage" class="android-guidance-message" aria-live="polite"></p>
+      </div>
+    </dialog>
     <dialog id="evidenceModal" class="evidence-modal">
       <div class="modal-head"><div><span>◆</span> DOKUMENTATION &amp; NACHWEIS</div><button id="closeEvidenceModal" type="button">SCHLIESSEN ×</button></div>
       <p class="archive-explainer">Hier müssen Sie nichts eingeben. TRIAGE//BOX dokumentiert automatisch, was gesichtet wurde und schützt die Unterlagen mit Prüfsummen gegen unbemerkte Änderungen.</p>

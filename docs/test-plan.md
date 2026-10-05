@@ -1,6 +1,6 @@
 # Testplan / Test plan
 
-Stand: 5. Oktober 2026 · Anwendung: `v0.2.0-alpha.72`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
+Stand: 5. Oktober 2026 · Anwendung: `v0.2.0-alpha.73`. Dies ist ein Prüfplan, kein Beleg, dass alle folgenden Prüfungen bereits bestanden wurden. Vorhandene Nachweise und praktische Pi-Beobachtungen stehen in [project-status.md](project-status.md). Die Telefon-Praxistests stehen in [iphone-triage.md](iphone-triage.md#erster-test-mit-einem-echten-iphone) und [android-triage.md](android-triage.md#praktischer-samsung-test).
 
 Für den Alpha-68-Pi-Nachtest zuerst in Safari/macOS die Hauptseite laden, ohne Einstellungen zu öffnen: wenn kein Fall aktiv ist, liegt der gesamte TRIAGE//BOX-Bildschirm im Hintergrund, ist abgedunkelt und deutlicher (ca. 7,5 px) geblurrt und nicht bedienbar. Der zentrale Startbereich zeigt `TRIAGE//BOX` (die beiden Slashes separat in Acid-Grün), `BEREIT` und den Button „Fall anlegen / öffnen" — ohne zusätzlichen Erklärungssatz darunter. Oben rechts im Overlay befinden sich kompakte Utility-Controls für Einstellungen und Power, die dieselben lokalen Inline-SVGs wie die Systemleiste verwenden. Beide öffnen ihre Dialoge über dem Overlay; nach dem Schließen ist der Startzustand wieder sichtbar. Beim Reload mit serverseitig aktivem Fall darf das Overlay nicht kurz aufblitzen. Im aktiven Fall ohne Medium zeigt das Medien-Dashboard statt mehrzeiliger Hilfe nur `KEIN MEDIUM VERBUNDEN`.
 
@@ -16,7 +16,9 @@ Responsive-Verhalten bei 1440 px, 1280 px, 1000 px und 620 px prüfen: Profil-Ma
 
 Für Alpha 61 zusätzlich prüfen: Erkennungsregeln im neuen Master-Detail-Editor bearbeiten, suchen, filtern, duplizieren, löschen und per JSON exportieren/importieren. Regeländerungen speichern, anschließend neuen Scan und Regelstand/Treffergrund in `crypto-rules.json`, `crypto-hints.json`, `backup-hints.json`, `summary.json` und Fall-ZIP vergleichen. Bestehende Sichtungen müssen unverändert bleiben. Banking-/Finanz-Apps dürfen nicht als Krypto-Hinweis zählen. Geräte-Backup-Strukturen müssen in `backup-hints.json` und der Oberfläche sichtbar sein, ohne dass Backup-Inhalte analysiert werden. Telefonläufe müssen ein leeres `files.csv` erzeugen und dürfen keine AFC-/MTP-/Dateiinventarisierung starten. Bei iPhones/iPads Seriennummer und UDID getrennt prüfen. Bei Android müssen unvollständige Profile und nicht sichtbare geschützte Bereiche einen unbekannten Status statt eines Negativbefunds erhalten.
 
-## Diagnosekonsole und Pre-ADB-Android (Alpha 72)
+## Diagnosekonsole und Pre-ADB-Android (Alpha 73)
+
+- Bei `debugging_required` bleibt die Gerätekachel kompakt: keine Schritteliste inline, nur Status, Hinweis und **ANLEITUNG ÖFFNEN**. Das Modal öffnet/schließt, zeigt nummerierte Hersteller-Schritte, den Abweichungshinweis und kopiert den Guide über **KOPIEREN**.
 
 In den Einstellungen den Tab **DIAGNOSE** prüfen (Details und Datenschutzregeln: [diagnostics.md](diagnostics.md)):
 

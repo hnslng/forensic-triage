@@ -1062,6 +1062,7 @@ test('iphone card and app-only result distinguish hints from incomplete collecti
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
     activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    updateStartOverlay();
     renderDevices([{
       path: 'iphone:000-test', serial: '000-test', udid: '000-test', vendor: 'Apple',
       model: 'iPhone15,4', device_name: 'Testtelefon', ios_version: '18.6',
@@ -1113,6 +1114,7 @@ test('android card guides authorization and result shows profile coverage', asyn
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
     activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    updateStartOverlay();
     renderDevices([{
       path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test',
       media_type: 'android', connection_state: 'authorization_required', scan_supported: false,
@@ -1122,6 +1124,14 @@ test('android card guides authorization and result shows profile coverage', asyn
   });
   assert.match(await page.locator('#deviceList').innerText(), /ANDROID-TELEFON VERBUNDEN/);
   assert.match(await page.locator('#deviceList').innerText(), /USB-DEBUGGING AM TELEFON BESTÄTIGEN/);
+  assert.match(await page.locator('#deviceList').innerText(), /ANLEITUNG ÖFFNEN/);
+  assert.doesNotMatch(await page.locator('#deviceList').innerText(), /Einstellungen öffnen/);
+  await page.locator('[data-open-android-guidance]').click();
+  assert.equal(await page.locator('#androidGuidanceModal').isVisible(), true);
+  assert.match(await page.locator('#androidGuidanceSteps').innerText(), /USB-Debugging aktivieren/);
+  assert.match(await page.locator('#androidGuidanceModal').innerText(), /Menübezeichnungen können/);
+  await page.locator('#closeAndroidGuidanceBottom').click();
+  assert.equal(await page.locator('#androidGuidanceModal').isVisible(), false);
   assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
   const androidRecord = {
     media: { id: 100, case_number: 'TEST', sighting_number: 'SICHT-100', device_path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test', decision: 'open' },
@@ -1825,7 +1835,9 @@ test('pre-adb android stays visible without active case and shows debugging guid
   const text = await page.locator('#deviceList').innerText();
   assert.match(text, /ANDROID-TELEFON VERBUNDEN/);
   assert.match(text, /USB-DEBUGGING IST NOCH NICHT AKTIVIERT/);
-  assert.match(text, /Softwareinformationen/);
+  assert.doesNotMatch(text, /Softwareinformationen/);
+  await page.evaluate(() => openAndroidGuidance('android:usb-9-1'));
+  assert.match(await page.locator('#androidGuidanceSteps').innerText(), /Softwareinformationen/);
   assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
 });
 
@@ -1849,7 +1861,7 @@ test('pre-adb android guidance stays readable at target widths', async t => {
     });
     assert.ok(layout.left >= 0 && layout.right <= width + 1, `card fits at ${width}px`);
     assert.ok(layout.scroll <= layout.client + 1, `no horizontal overflow at ${width}px`);
-    assert.equal(await page.locator('.android-guidance').isVisible(), true);
+    assert.equal(await page.locator('.android-guidance-compact').isVisible(), true);
   }
 });
 

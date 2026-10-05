@@ -1829,10 +1829,16 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
             ? "USB-DEBUGGING IST NOCH NICHT AKTIVIERT"
             : "TELEFON VORBEREITEN")
       : stateLabels[state];
-    const guidance = android && !device.scan_supported ? `<div class="android-guidance"><strong>ANDROID-TELEFON VERBUNDEN</strong><p>Für die Krypto-App-Prüfung einmalig am Telefon:</p><ol>${(device.guidance || []).map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol><small>TRIAGE//BOX wartet automatisch. Nach der Bestätigung startet der Scan bei aktivem Fall.</small></div>` : "";
+    const guidanceText = device.connection_state === "debugging_required"
+      ? "USB-Debugging noch nicht aktiviert"
+      : "USB-Debugging am Telefon bestätigen";
+    const guidance = android && !device.scan_supported
+      ? `<div class="android-guidance-compact"><span>${guidanceText}</span><button type="button" data-open-android-guidance="${escapeHtml(device.path)}">ANLEITUNG ÖFFNEN</button></div>`
+      : "";
+    const phoneTitle = android && !device.scan_supported ? "ANDROID-TELEFON VERBUNDEN" : android ? "ANDROID VERBUNDEN" : "IPHONE ERKANNT";
     const ejectDisabled = deviceDiscoveryError || ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
-      <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${phone ? `${android ? "ANDROID" : "IPHONE"} ERKANNT` : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
+      <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${phone ? phoneTitle : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
       <div class="device-copy"><strong>${escapeHtml(model)}</strong><span>${escapeHtml(device.path)}${phone ? "" : ` · ${formatBytes(device.size)}`} · ${type}</span><code title="${escapeHtml(serial)}">${phone ? "GERÄTE-ID" : "SERIAL"} ${escapeHtml(serial.length > 22 ? `${serial.slice(0, 22)}…` : serial)}</code></div>
       <div class="device-state"><b>${escapeHtml(visibleState)}</b><small title="${escapeHtml(stateReason)}">${escapeHtml(stateReason)}</small></div>
       ${guidance}
@@ -1857,6 +1863,29 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   updateDashboardState();
   updateScanAvailability();
   scheduleAutoScan(400);
+}
+
+function openAndroidGuidance(devicePath) {
+  const device = devices.find(item => item.path === devicePath && item.media_type === "android");
+  if (!device) return;
+  $("androidGuidanceDevice").textContent = [device.vendor, device.model].filter(Boolean).join(" ") || "ANDROID-TELEFON";
+  $("androidGuidanceSteps").innerHTML = (device.guidance || []).map(step => `<li>${escapeHtml(step)}</li>`).join("");
+  $("androidGuidanceMessage").textContent = "";
+  const modal = $("androidGuidanceModal");
+  modal.dataset.devicePath = devicePath;
+  modal.showModal();
+}
+
+async function copyAndroidGuidance() {
+  const modal = $("androidGuidanceModal");
+  const device = devices.find(item => item.path === modal.dataset.devicePath);
+  const lines = [$("androidGuidanceDevice").textContent, "", ...(device?.guidance || [])];
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    $("androidGuidanceMessage").textContent = "ANLEITUNG KOPIERT";
+  } catch (_) {
+    $("androidGuidanceMessage").textContent = "ZWISCHENABLAGE NICHT VERFÜGBAR";
+  }
 }
 
 function updateScanAvailability() {
@@ -2669,10 +2698,19 @@ $("autoScanToggle").addEventListener("change", () => {
 });
 $("deviceRefresh").addEventListener("click", refreshMediaDevices);
 $("deviceList").addEventListener("click", (event) => {
+  const guidance = event.target.closest("button[data-open-android-guidance]");
+  if (guidance) { openAndroidGuidance(guidance.dataset.openAndroidGuidance); return; }
   const eject = event.target.closest("button[data-eject-device]");
   if (eject) { ejectDevice(eject.dataset.ejectDevice); return; }
   const button = event.target.closest("button[data-scan-device]");
   if (button) runScan(button.dataset.scanDevice);
+});
+$("closeAndroidGuidance").addEventListener("click", () => $("androidGuidanceModal").close());
+$("closeAndroidGuidanceBottom").addEventListener("click", () => $("androidGuidanceModal").close());
+$("copyAndroidGuidance").addEventListener("click", copyAndroidGuidance);
+$("androidGuidanceModal").addEventListener("cancel", event => { event.preventDefault(); $("androidGuidanceModal").close(); });
+$("androidGuidanceModal").addEventListener("click", event => {
+  if (event.target === $("androidGuidanceModal")) $("androidGuidanceModal").close();
 });
 $("mediaCards").addEventListener("click", (event) => {
   const eject = event.target.closest("button[data-eject-device]");

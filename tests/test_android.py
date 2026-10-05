@@ -86,6 +86,33 @@ def test_tcl_without_phone_usb_evidence_is_not_accepted(tmp_path: Path):
     assert android._usb_candidates(tmp_path) == []
 
 
+@pytest.mark.parametrize(
+    ("vendor", "expected"),
+    [
+        ("Samsung", "Softwareinformationen"), ("Google Pixel", "Build-Nummer"),
+        ("Xiaomi Redmi", "MIUI"), ("Motorola", "Build-Nummer"), ("OnePlus", "Build-Nummer"),
+        ("TCL", "System öffnen"), ("Alcatel", "System öffnen"), ("OPPO", "Zusätzliche Einstellungen"),
+        ("Huawei Honor", "System & Aktualisierungen"), ("Nokia HMD", "System → Entwickleroptionen"),
+        ("realme", "Systemeinstellungen"), ("ZTE", "System → Entwickleroptionen"),
+        ("Nothing", "System → Entwickleroptionen"), ("Unbekannt", "Siebenmal auf Build-Nummer"),
+    ],
+)
+def test_android_guidance_selects_specific_or_generic_guide(vendor: str, expected: str):
+    steps = android.android_guidance(vendor)
+    assert steps
+    assert any(expected in step for step in steps)
+
+
+def test_tcl_guidance_contains_complete_ten_step_sequence():
+    steps = android.android_guidance("TCL A1 Alpha 21")
+    assert len(steps) == 10
+    assert steps[0] == "Einstellungen öffnen"
+    assert "System öffnen" in steps[1]
+    assert "Siebenmal" in steps[4]
+    assert "USB-Debugging aktivieren" in steps[7]
+    assert "USB-Debugging zulassen" in steps[9]
+
+
 def test_normal_usb_drive_is_not_android(tmp_path: Path):
     usb_device(tmp_path, "3-1", vendor="0951", manufacturer="Kingston", product="DataTraveler",
                interface=("08", "06", "50", "Mass Storage"))

@@ -1,6 +1,6 @@
 # Android-/Mobilgerät-Triage
 
-Stand: 5. Oktober 2026 · Anwendung `v0.2.0-alpha.72`
+Stand: 5. Oktober 2026 · Anwendung `v0.2.0-alpha.73`
 
 ## Zweck
 

@@ -216,7 +216,7 @@ def android_guidance(vendor: str) -> list[str]:
             "System → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
             "Die Abfrage ‚USB-Debugging zulassen?‘ bestätigen",
         ]
-    if "xiaomi" in normalized:
+    if "xiaomi" in normalized or "redmi" in normalized:
         return [
             "Einstellungen → Über das Telefon öffnen", "Mehrfach auf OS-/MIUI-Version tippen",
             "Weitere Einstellungen → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
@@ -233,6 +233,49 @@ def android_guidance(vendor: str) -> list[str]:
             "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
             "System → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
             "Die Verbindungsabfrage am Telefon bestätigen",
+        ]
+    if "tcl" in normalized or "alcatel" in normalized:
+        return [
+            "Einstellungen öffnen", "System öffnen", "Telefoninformationen / Über das Telefon öffnen",
+            "Build-Nummer öffnen", "Siebenmal auf Build-Nummer tippen",
+            "Zu System zurückgehen", "Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "oppo" in normalized:
+        return [
+            "Einstellungen → Über das Gerät öffnen", "Version öffnen", "Siebenmal auf Build-Nummer tippen",
+            "Zusätzliche Einstellungen → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "huawei" in normalized or "honor" in normalized:
+        return [
+            "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
+            "System & Aktualisierungen → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "nokia" in normalized or "hmd" in normalized:
+        return [
+            "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
+            "System → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "realme" in normalized:
+        return [
+            "Einstellungen → Über das Gerät öffnen", "Version öffnen", "Siebenmal auf Build-Nummer tippen",
+            "Systemeinstellungen → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "zte" in normalized:
+        return [
+            "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
+            "System → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
+        ]
+    if "nothing" in normalized:
+        return [
+            "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
+            "System → Entwickleroptionen öffnen", "USB-Debugging aktivieren",
+            "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
         ]
     return [
         "Einstellungen → Über das Telefon öffnen", "Siebenmal auf Build-Nummer tippen",
