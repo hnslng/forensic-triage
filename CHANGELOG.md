@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.74] – 2026-10-05
+
+- Optionaler Fallzeitraum mit additiver SQLite-Migration, Audit-Ereignissen und unveränderlichen Scan-Snapshots.
+- B/M/C/A-Zeitstempel werden getrennt ausgewertet; FAST bleibt beim bestehenden read-only Dateiwalk ohne TSK-Fallback oder Prozess pro Datei.
+- `files.csv` und `summary.json` enthalten Zeitraumstatus, Coverage, Kategorien und die zehn neuesten passenden Dateien.
+- Telefone bleiben App-only; Zeitraumdaten werden nur als historischer Scan-Kontext gespeichert.
+- Alpha-73-Korrekturen: `support_missing` erhält einen passenden Hinweis; TCL scrollt zur Build-Nummer.
+- Version auf `0.2.0-alpha.74` (`0.2.0a74`) angehoben.
+
 ## [0.2.0-alpha.73] – 2026-10-05
 
 - **Android-Guidance ausgelagert:** Gerätekarten bleiben bei nicht scanbereiten Android-Geräten kompakt und zeigen nur Status, den Hinweis „USB-Debugging noch nicht aktiviert“ sowie **ANLEITUNG ÖFFNEN**. Die langen Schritte erscheinen ausschließlich in einem kleinen Modal.

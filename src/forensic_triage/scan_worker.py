@@ -34,6 +34,7 @@ def execute(request: dict[str, Any]) -> Path:
         profile_sources=list(request.get("profile_sources") or []),
         filetype_catalog=request.get("filetype_catalog"),
         crypto_rules=request.get("crypto_rules"),
+        case_period=request.get("case_period"),
     )
 
 

@@ -250,6 +250,11 @@
           <label class="case-field" for="caseNumber">FALLNUMMER
             <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
           </label>
+          <div class="case-period-fields">
+            <label class="case-field" for="dateFrom">ZEITRAUM VON<input id="dateFrom" class="case-input" type="date" /></label>
+            <label class="case-field" for="dateTo">ZEITRAUM BIS<input id="dateTo" class="case-input" type="date" /></label>
+          </div>
+          <small class="case-profile-hint">OPTIONAL · DATEISYSTEM-ZEITSTEMPEL</small>
           <button id="openCaseArchive" class="case-archive-open" type="button">▤ FALLARCHIV ÖFFNEN <small id="caseListCount">0 FALLAKTEN</small></button>
           <div class="case-actions">
             <a id="caseReportDownload" class="case-download disabled" href="#" download aria-disabled="true">PDF-BERICHT</a>

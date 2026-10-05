@@ -237,7 +237,7 @@ def android_guidance(vendor: str) -> list[str]:
     if "tcl" in normalized or "alcatel" in normalized:
         return [
             "Einstellungen öffnen", "System öffnen", "Telefoninformationen / Über das Telefon öffnen",
-            "Build-Nummer öffnen", "Siebenmal auf Build-Nummer tippen",
+            "Nach unten zur Build-Nummer scrollen", "Siebenmal auf Build-Nummer tippen",
             "Zu System zurückgehen", "Entwickleroptionen öffnen", "USB-Debugging aktivieren",
             "USB-Verbindung / Abfrage bestätigen", "‚USB-Debugging zulassen?‘ → Zulassen",
         ]

@@ -1566,6 +1566,8 @@ async function loadCase(caseNumber) {
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
     currentCaseMedia = sortedSightings(data.media || []);
+    $("dateFrom").value = data.case.date_from || "";
+    $("dateTo").value = data.case.date_to || "";
     renderMediaCards(currentCaseMedia);
     renderDevices(devices);
     $("casePanel").hidden = false;
@@ -1831,7 +1833,9 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
       : stateLabels[state];
     const guidanceText = device.connection_state === "debugging_required"
       ? "USB-Debugging noch nicht aktiviert"
-      : "USB-Debugging am Telefon bestätigen";
+      : device.connection_state === "support_missing"
+        ? "ANDROID-UNTERSTÜTZUNG AUF DER BOX FEHLT"
+        : "USB-Debugging am Telefon bestätigen";
     const guidance = android && !device.scan_supported
       ? `<div class="android-guidance-compact"><span>${guidanceText}</span><button type="button" data-open-android-guidance="${escapeHtml(device.path)}">ANLEITUNG ÖFFNEN</button></div>`
       : "";
@@ -2375,6 +2379,12 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
 async function startCaseSession() {
   const caseNumber = $("caseNumber").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80);
   const operator = $("operator").value.trim().toUpperCase();
+  const dateFrom = $("dateFrom").value || null;
+  const dateTo = $("dateTo").value || null;
+  if ((dateFrom && !dateTo) || (!dateFrom && dateTo) || (dateFrom && dateTo && dateFrom > dateTo)) {
+    $("caseStartMessage").textContent = "UNGÜLTIGER FALLZEITRAUM";
+    return;
+  }
   if (!caseNumber) { $("caseNumber").focus(); return; }
   if (!operator) { $("operator").focus(); return; }
   if (runningPaths.size) {
@@ -2388,7 +2398,7 @@ async function startCaseSession() {
     const response = await fetch("/api/cases/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: caseNumber, operator }),
+      body: JSON.stringify({ case_number: caseNumber, operator, date_from: dateFrom, date_to: dateTo }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gestartet werden");

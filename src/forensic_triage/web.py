@@ -997,6 +997,8 @@ class TriageHandler(BaseHTTPRequestHandler):
             payload = self._read_payload()
             case_number = str(payload.get("case_number", "")).strip()
             operator = str(payload.get("operator", "")).strip()
+            date_from = payload.get("date_from")
+            date_to = payload.get("date_to")
         except (ValueError, json.JSONDecodeError):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültige Anfrage."})
             return
@@ -1010,7 +1012,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Bearbeiterkürzel ist erforderlich."})
             return
         try:
-            result = self.server.case_store.start_case(case_number, operator)
+            result = self.server.case_store.start_case(case_number, operator, date_from, date_to)
             set_active_case_session(result["case"]["case_number"], operator)
             self._json(HTTPStatus.OK, result)
         except ValueError as exc:
@@ -1278,6 +1280,13 @@ class TriageHandler(BaseHTTPRequestHandler):
         if not OPERATOR_PATTERN.fullmatch(operator):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiges Bearbeiterkürzel."})
             return
+        case_detail = self.server.case_store.case_detail(case_number)
+        if case_detail is None:
+            self._json(HTTPStatus.CONFLICT, {"error": "Fall muss zuerst gestartet werden."})
+            return
+        current_case = case_detail["case"]
+        case_period = {"date_from": current_case.get("date_from"), "date_to": current_case.get("date_to"),
+                       "timezone": current_case.get("period_timezone")}
         if requested_profiles is None:
             profile_ids = [self.server.profile_path.stem]
         elif (
@@ -1374,6 +1383,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     "id": profile["id"], "name": profile["name"],
                     "version": profile["version"], "sha256": profile["sha256"],
                 } for profile in loaded_profiles],
+                "case_period": case_period,
             }, timeout_seconds=self.server.scan_timeout_seconds,
                 command_timeout_seconds=self.server.command_timeout_seconds)
             record = self.server.case_store.record_scan(

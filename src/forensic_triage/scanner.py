@@ -31,6 +31,7 @@ from .reporting import write_files_csv, write_json
 from .statistics import summarize
 from .validation import compare_expected
 from .settings import apply_catalog, catalog_snapshot, load_catalog
+from .period import evaluate_file_period, period_timezone, validate_period
 
 
 def _command(args: list[str]) -> str:
@@ -40,6 +41,7 @@ def _command(args: list[str]) -> str:
 
 def _inventory_optical_medium(
     device: Path, mode: str, raw_dir: Path,
+    case_period: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Inventory a CD/DVD filesystem that lives directly on the drive node."""
     partition: dict[str, Any] = {
@@ -68,7 +70,10 @@ def _inventory_optical_medium(
             partition["inventory_method"] = "tsk_fls"
             containers = empty_catalog("unavailable_in_tsk_mode")
         elif mode == "fast":
-            files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT")
+            if case_period:
+                files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT", case_period=case_period)
+            else:
+                files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT")
             write_json(raw_dir / "fast_mount_OPT.json", mount_info)
             partition["partition_device"] = str(device)
             partition["inventory_method"] = "kernel_readonly_mount"
@@ -93,7 +98,12 @@ def scan(
     profile_sources: list[dict[str, str]] | None = None,
     filetype_catalog: dict[str, Any] | None = None,
     crypto_rules: dict[str, Any] | None = None,
+    case_period: dict[str, Any] | None = None,
 ) -> Path:
+    if case_period:
+        date_from, date_to = validate_period(case_period.get("date_from"), case_period.get("date_to"))
+        case_period = {**case_period, "date_from": date_from, "date_to": date_to,
+                       "timezone": case_period.get("timezone") or period_timezone(), "inclusive": True}
     started = time.monotonic()
     catalog = (catalog_snapshot(filetype_catalog.get("categories"), filetype_catalog.get("version"))
                if filetype_catalog is not None else load_catalog(
@@ -121,7 +131,7 @@ def scan(
         write_json(result_dir / "device.json", device_info)
 
         if device_info.get("type") == "rom":
-            all_files, all_directories, partitions, container_catalog = _inventory_optical_medium(device, mode, raw_dir)
+            all_files, all_directories, partitions, container_catalog = _inventory_optical_medium(device, mode, raw_dir, case_period)
         else:
             mmls_output = _command(["mmls", str(device)])
             (raw_dir / "mmls.txt").write_text(mmls_output, encoding="utf-8")
@@ -158,7 +168,7 @@ def scan(
                             max_total_entries=max(0, configured_container_limits.max_total_entries - indexed_entries),
                         )
                         files, directories, mount_info, containers = readonly_mount_inventory(
-                            partition_device, slot, remaining_limits,
+                            partition_device, slot, remaining_limits, case_period,
                         )
                         write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
                         partition["partition_device"] = str(partition_device)
@@ -166,6 +176,9 @@ def scan(
                     else:
                         raise ValueError(f"unsupported scan mode: {mode}")
                     all_files.extend(files)
+                    if mode == "tsk":
+                        for file_record in files:
+                            file_record.update(evaluate_file_period(file_record, case_period))
                     all_directories.extend(directories)
                     container_catalogs.append(containers)
                     indexed_containers += int(containers.get("containers_indexed", 0))
@@ -217,6 +230,30 @@ def scan(
             "selected_keywords": selected_keywords,
         }
         summary = summarize(all_files, all_directories)
+        period_files = [item for item in all_files if item.get("in_period") is True]
+        if case_period and case_period.get("date_from"):
+            coverage = {"files_total": len(all_files), "files_with_any_timestamp": 0,
+                        "B_available": 0, "M_available": 0, "C_available": 0, "A_available": 0,
+                        "B_invalid": 0, "M_invalid": 0, "C_invalid": 0, "A_invalid": 0}
+            for item in all_files:
+                any_timestamp = False
+                for field, key in (("crtime", "B"), ("mtime", "M"), ("ctime", "C"), ("atime", "A")):
+                    raw = item.get(field)
+                    if raw in (None, "", "null"):
+                        continue
+                    try:
+                        float(raw); coverage[f"{key}_available"] += 1; any_timestamp = True
+                    except (TypeError, ValueError): coverage[f"{key}_invalid"] += 1
+                coverage["files_with_any_timestamp"] += int(any_timestamp)
+            latest = sorted((item for item in period_files if item.get("latest_period_timestamp") is not None),
+                            key=lambda item: (-float(item["latest_period_timestamp"]), str(item.get("path", ""))))[:10]
+            summary.update({"case_period": case_period, "period_evaluation": "configured",
+                            "period_file_count": len(period_files), "categories_in_period": summarize(period_files, []).get("categories_by_count", {}),
+                            "timestamp_coverage": coverage,
+                            "latest_period_files": [{key: item.get(key) for key in ("path", "category", "latest_period_timestamp", "latest_period_timestamp_type", "period_matches")} for item in latest]})
+        else:
+            summary.update({"case_period": None, "period_evaluation": "not_configured", "period_file_count": None,
+                            "categories_in_period": {}, "timestamp_coverage": {}, "latest_period_files": []})
         summary["archive_encryption"] = archive_encryption_summary(all_files, container_catalog)
         summary.update(
             {

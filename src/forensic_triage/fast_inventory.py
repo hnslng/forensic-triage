@@ -12,6 +12,7 @@ from .classifier import classify, original_extension_for
 from .commands import run_command
 from .container_inventory import ContainerLimits, index_containers
 from .device import SafetyError
+from .period import evaluate_file_period
 
 
 def _run(*args: str) -> str:
@@ -41,7 +42,7 @@ def partition_path_for_start(device: Path, start_sector: int) -> Path:
     return find_partition_path(data, start_sector)
 
 
-def inventory_tree(root: Path, partition_slot: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Collect active file metadata without opening file contents."""
     files: list[dict[str, Any]] = []
     directories: list[dict[str, Any]] = []
@@ -65,8 +66,7 @@ def inventory_tree(root: Path, partition_slot: str) -> tuple[list[dict[str, Any]
             relative = path.relative_to(root).as_posix()
             stat = path.stat(follow_symlinks=False)
             extension, category = classify(relative)
-            files.append(
-                {
+            record = {
                     "partition_slot": partition_slot,
                     "path": relative,
                     "metadata_address": "",
@@ -83,12 +83,14 @@ def inventory_tree(root: Path, partition_slot: str) -> tuple[list[dict[str, Any]
                     "ctime": int(stat.st_ctime),
                     "crtime": None,
                 }
-            )
+            record.update(evaluate_file_period(record, case_period))
+            files.append(record)
     return files, directories
 
 
 def readonly_mount_inventory(
     partition_device: Path, partition_slot: str, container_limits: ContainerLimits | None = None,
+    case_period: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     """Mount an already read-only partition defensively, inventory, and unmount."""
     if os.geteuid() != 0:
@@ -110,7 +112,7 @@ def readonly_mount_inventory(
         options = set(str(mount_info.get("options", "")).split(","))
         if "ro" not in options:
             raise SafetyError(f"mount is not read-only: {mount_info.get('options')}")
-        files, directories = inventory_tree(mountpoint, partition_slot)
+        files, directories = inventory_tree(mountpoint, partition_slot, case_period)
         containers = index_containers(mountpoint, files, partition_slot, container_limits)
         return files, directories, mount_info, containers
     finally:

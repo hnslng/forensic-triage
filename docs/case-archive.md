@@ -6,6 +6,8 @@ Die Fallunterlagen des Dashboards liegen unter dem konfigurierten `FORENSIC_TRIA
 
 Jeder Scan erhält innerhalb des Falles automatisch eine neutrale Sichtungsnummer. Eine offizielle Beweismittel-/Asservatennummer wird erst ergänzt, wenn die Entscheidung „Sichern“ gespeichert wird.
 
+Ein Fall kann optional einen lokalen Zeitraum (`date_from`/`date_to`) tragen. Der Zeitraum wird mit IANA-Zeitzone im Fall gespeichert; jeder Scan erhält zusätzlich einen unveränderlichen Snapshot. B (Birth/Created), M (Modified), C (Metadata Changed) und A (Accessed) bleiben getrennte Metadaten. C ist keine Erstellungszeit, A kann systemabhängig unzuverlässig sein, und die Auswertung ist kein Beweis einer Benutzerhandlung.
+
 ```text
 casefiles/
 ├── case-index.sqlite3

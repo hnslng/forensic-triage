@@ -15,6 +15,7 @@ from typing import Any
 from .container_inventory import archive_encryption_state, archive_encryption_states, empty_catalog, virtual_files
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
+from .period import period_timezone, validate_period
 
 
 DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
@@ -94,6 +95,9 @@ class CaseStore:
                 connection.execute(
                     "ALTER TABLE cases ADD COLUMN next_sighting_sequence INTEGER NOT NULL DEFAULT 1"
                 )
+            for name in ("date_from", "date_to", "period_timezone"):
+                if name not in case_columns:
+                    connection.execute(f"ALTER TABLE cases ADD COLUMN {name} TEXT")
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS media (
@@ -126,6 +130,9 @@ class CaseStore:
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(media)")}
             if "specialist_name" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN specialist_name TEXT")
+            for name in ("period_date_from", "period_date_to", "period_timezone", "period_file_count"):
+                if name not in columns:
+                    connection.execute(f"ALTER TABLE media ADD COLUMN {name} {'INTEGER' if name == 'period_file_count' else 'TEXT'}")
             if "sighting_number" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN sighting_number TEXT")
                 case_ids = [int(row["case_id"]) for row in connection.execute("SELECT DISTINCT case_id FROM media")]
@@ -185,9 +192,11 @@ class CaseStore:
             ).fetchone()
         return f"SICHT-{int(row['next_sighting_sequence']) if row else 1:03d}"
 
-    def start_case(self, case_number: str, operator: str) -> dict[str, Any]:
+    def start_case(self, case_number: str, operator: str, date_from: str | None = None, date_to: str | None = None) -> dict[str, Any]:
         """Create or reopen a case and record the explicit operator session start."""
         case_number = safe_component(case_number)
+        date_from, date_to = validate_period(date_from, date_to)
+        timezone = period_timezone() if date_from else None
         now = utc_now()
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -197,8 +206,11 @@ class CaseStore:
                 (case_number, now, now),
             )
             row = connection.execute(
-                "SELECT id FROM cases WHERE case_number=?", (case_number,),
+                "SELECT id, date_from, date_to FROM cases WHERE case_number=?", (case_number,),
             ).fetchone()
+            if (row["date_from"], row["date_to"]) != (date_from, date_to):
+                connection.execute("UPDATE cases SET date_from=?, date_to=?, period_timezone=? WHERE id=?", (date_from, date_to, timezone, int(row["id"])))
+                connection.execute("INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) VALUES (?, NULL, ?, 'case_period_set', ?, ?)", (int(row["id"]), now, operator.strip()[:120] or None, json.dumps({"old_date_from": row["date_from"], "old_date_to": row["date_to"], "new_date_from": date_from, "new_date_to": date_to, "timezone": timezone}, ensure_ascii=False)))
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
                 "VALUES (?, NULL, ?, 'case_started', ?, ?)",
@@ -325,8 +337,9 @@ class CaseStore:
                 INSERT INTO media(
                     case_id, evidence_number, sighting_number, scan_id, result_path, scanned_at,
                     device_path, vendor, model, serial, size, file_count,
-                    directory_count, keyword_matches, duration_seconds
-                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    directory_count, keyword_matches, duration_seconds, period_date_from, period_date_to,
+                    period_timezone, period_file_count
+                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     case_id, sighting_number, result_dir.name, relative_result, now,
@@ -335,6 +348,9 @@ class CaseStore:
                     int(device.get("size", 0) or 0), int(summary.get("file_count", 0)),
                     int(summary.get("directory_count", 0)), int(summary.get("keyword_matches", 0)),
                     float(summary.get("duration_seconds", 0)),
+                    (summary.get("case_period") or {}).get("date_from"),
+                    (summary.get("case_period") or {}).get("date_to"),
+                    (summary.get("case_period") or {}).get("timezone"), summary.get("period_file_count"),
                 ),
             )
             media_id = int(cursor.lastrowid)
