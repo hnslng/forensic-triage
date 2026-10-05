@@ -2,6 +2,22 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.69] – 2026-10-05
+
+- COMPACT-UI-Pass für die gesamte Einstellungs-Oberfläche: weniger UI-Chrome, weniger Leerraum, mehr Fläche für die eigentlichen Daten. Die vier Tabs verwenden konsequent dieselbe Designsprache (`.master-detail`-Hülle, gemeinsame Master-/Detail-Köpfe, gemeinsame Footer, ein Buttonsystem).
+- Inline-Namensbearbeitung: Der Profilname bzw. Kategoriename ist im Normalzustand Text im Detailkopf (`BEARBEITEN`/`DUPLIZIEREN` bzw. `BEARBEITEN`/`LÖSCHEN`); das große dauerhafte Namensfeld entfällt. `BEARBEITEN` öffnet eine kompakte Eingabezeile mit `OK`/`ABBRECHEN` (Enter/Escape), neue Profile und Kategorien starten direkt im Editiermodus. Ungespeicherte Änderungen werden weiterhin nie still verworfen.
+- Kompakte Stichwortprofil-Verwaltung: Hinzufügen-Zeile ohne Label (`[ Stichwort oder Dateiname hinzufügen … ] [+]`, Enter funktioniert), gemeinsame Toolbar aus Suche, `ALLE`, `KEINE` und Zähler `n / m AKTIV` in einer Zeile, Keywordliste als flexibler Hauptbereich (nur sie scrollt; Detailkopf, Hinzufügen, Toolbar, Tabellenkopf und Footer bleiben fest).
+- Gemeinsame Master-Listen: Profilliste (PROFIL · STICHWÖRTER · VERSION), Kategorienliste (KATEGORIE · ENDUNGEN) und Regelliste (NAME · KATEGORIE · IOS · ANDROID · STATUS) bilden mit gleichen Kopf-/Zeilenhöhen, Linien, Schriftwerten, Hover- und aktiven Zuständen eine Familie. Aktive Zeile: dezenter Acid-Hintergrund plus 3px-Acid-Kante links, keine Kartenoptik.
+- Einheitliche Linien: 1px solid var(--line) für Struktur und Listenzeilen; gestrichelte Linien aus normalen Listen entfernt.
+- Einheitliche Controls: Inputs/Selects/Buttons ca. 32px, kleine Sekundär-/Icon-Buttons ca. 28–30px; die Lesbarkeitsvorgaben aus Alpha 66 (keine Schrift unter 11px) bleiben vollständig erhalten.
+- Kompakte Haupt-Tabs (Acid-Unterstrich statt gefüllter Flächen) und schmale Regel-Subtabs; Regel-Toolbar ohne gestapelte Labelzeilen (Suche/Filter/Sortierung mit Platzhaltern und aria-labels, Zähler rechts, eine Zeile am Desktop).
+- Updates extrem reduziert: keine Introzeile, ein kompakter Statusblock (VERSION · STATUS · LETZTE PRÜFUNG · JETZT PRÜFEN), Offline-Update darunter mit Auswahl und INSTALLIEREN; Zustände unverändert zustandsorientiert (`✓ AKTUELL`, `UPDATE VERFÜGBAR · <Version>`, Prüfung/Installation, `UPDATE FEHLGESCHLAGEN`), keine historische Erfolgsmeldung.
+- Introzeilen der Panes entfernt; der Erkennungsregeln-Bereich behält als einzigen Text einen kurzen Satz zum Regelumfang. Katalog-Fußnote auf den Kern reduziert.
+- Regel-Inspector: kompakter Kopf mit Regelname als Text plus `DUPLIZIEREN`/`LÖSCHEN`, Felder wie zuvor gruppiert (Feld-Paare, Plattform-Blöcke), Sticky-Header-Fix aus Alpha 67/68 unangetastet und regressionstestet.
+- Alte, nicht mehr referenzierte CSS-Blöcke (Vorgänger-Katalog, Keyword-Modal) entfernt; keine fachliche Logikänderung — Scanner, Matching, Katalog-/Profil-APIs und Update-Backend unverändert.
+- Browsertests: 7 neue Alpha-69-Regressionsprüfungen (Inline-Namensbearbeitung, kompakte Toolbars, einheitliche Master-/Button-/Linien-Systeme, keine Introtexte, kompakter Update-Status); bestehende Prüfungen wurden nur dort angepasst, wo das Markup bewusst umgebaut wurde. 81/81 Tests grün.
+- Version auf `0.2.0-alpha.69` (`0.2.0a69`) angehoben.
+
 ## [0.2.0-alpha.68] – 2026-10-04
 
 - Stichwortprofile als konsistente Master-Detail-Tabelle: Die Profilliste nutzt exakt die Spaltenlogik der Dateitypen-Masterliste (PROFIL · STICHWÖRTER · VERSION rechtsbündig, gleiche Master-Breite, Zeilenhöhe, aktive Markierung und Trennlinien). Der rechte Editor erhielt die gemeinsame Editor-Hülle mit festem Footer.

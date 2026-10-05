@@ -347,47 +347,48 @@
         <button id="settingsUpdatesTab" type="button" aria-pressed="false" aria-controls="settingsUpdatesPane">UPDATES</button>
       </nav>
       <section id="settingsProfilesPane" class="settings-pane profile-pane" aria-labelledby="settingsProfilesTab">
-        <p class="pane-intro">Suchbegriffe für Sichtungen verwalten.</p>
-        <div class="profile-workspace">
-          <div class="profile-master">
-            <div class="profile-master-head">
+        <div class="profile-workspace master-detail">
+          <div class="profile-master master">
+            <div class="master-head">
               <strong>PROFILE</strong>
-              <button id="createProfile" class="profile-create-compact" type="button" title="Neues Profil"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUES PROFIL</button>
+              <button id="createProfile" class="s-btn small" type="button" title="Neues Profil"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUES PROFIL</button>
             </div>
-            <div class="profile-list-header">
+            <div class="master-list-header profile-list-header">
               <span>PROFIL</span>
               <span>STICHWÖRTER</span>
               <span>VERSION</span>
             </div>
-            <div id="settingsProfilesList" class="settings-profiles"></div>
+            <div id="settingsProfilesList" class="master-list settings-profiles"></div>
           </div>
-          <div class="profile-detail" id="profileDetail">
-            <div class="profile-detail-empty" id="profileDetailEmpty">
+          <div class="profile-detail detail" id="profileDetail">
+            <div class="detail-empty" id="profileDetailEmpty">
               <strong>PROFIL AUSWÄHLEN</strong>
-              <p>Wählen Sie links ein Profil aus, um die enthaltenen Stichwörter zu bearbeiten.</p>
+              <p>Wählen Sie links ein Profil aus.</p>
             </div>
-            <div class="profile-detail-form" id="profileDetailForm" hidden>
-              <div class="profile-detail-head">
-                <strong id="profileDetailTitle">PROFIL BEARBEITEN</strong>
-                <div class="profile-detail-actions">
-                  <button id="profileDetailDuplicate" type="button">DUPLIZIEREN</button>
+            <div class="profile-detail-form detail-form" id="profileDetailForm" hidden>
+              <div class="detail-head">
+                <div class="detail-name">
+                  <strong id="profileDetailTitleName">—</strong>
+                  <div id="profileNameEdit" class="detail-name-edit" hidden>
+                    <input id="profileDetailName" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Profilname" />
+                    <button id="profileNameOk" class="s-btn small" type="button" aria-label="Profilnamen übernehmen">OK</button>
+                    <button id="profileNameCancel" class="s-btn small" type="button" aria-label="Profilnamen ändern abbrechen">ABBRECHEN</button>
+                  </div>
+                </div>
+                <div class="detail-head-actions">
+                  <button id="profileDetailEdit" class="s-btn small" type="button">BEARBEITEN</button>
+                  <button id="profileDetailDuplicate" class="s-btn small" type="button">DUPLIZIEREN</button>
                 </div>
               </div>
-              <label class="profile-name-field" for="profileDetailName">PROFILNAME
-                <input id="profileDetailName" maxlength="40" autocomplete="off" spellcheck="false" />
-              </label>
               <div class="keyword-add-row">
-                <input id="profileDetailNewInput" maxlength="120" placeholder="NEUES STICHWORT ODER DATEINAME …" autocomplete="off" spellcheck="false" aria-label="Neues Stichwort oder Dateiname" />
-                <button id="profileDetailAddKeyword" type="button">+ HINZUFÜGEN</button>
+                <input id="profileDetailNewInput" maxlength="120" placeholder="Stichwort oder Dateiname hinzufügen …" autocomplete="off" spellcheck="false" aria-label="Neues Stichwort oder Dateiname" />
+                <button id="profileDetailAddKeyword" class="s-btn small" type="button" title="Stichwort hinzufügen" aria-label="Stichwort hinzufügen"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span></button>
               </div>
-              <label class="keyword-search-field" for="profileDetailSearch">
-                <span>BEGRIFF SUCHEN</span>
+              <div class="keyword-toolbar">
                 <input id="profileDetailSearch" type="search" placeholder="Begriff suchen …" autocomplete="off" spellcheck="false" aria-label="Stichwortliste filtern" />
-              </label>
-              <div class="keyword-bulk-actions">
-                <button id="profileDetailSelectAll" type="button">ALLE</button>
-                <button id="profileDetailClearAll" type="button">KEINE</button>
-                <span id="profileDetailCount" class="profile-detail-count">0 / 0 AKTIV</span>
+                <button id="profileDetailSelectAll" class="s-btn small" type="button">ALLE</button>
+                <button id="profileDetailClearAll" class="s-btn small" type="button">KEINE</button>
+                <span id="profileDetailCount" class="keyword-count">0 / 0 AKTIV</span>
               </div>
               <div class="keyword-table-head" aria-hidden="true">
                 <span>AKTIV</span><span>STICHWORT / DATEINAME</span><span>ENTFERNEN</span>
@@ -396,9 +397,9 @@
                 <div id="profileDetailOptions" class="keyword-options"></div>
               </div>
               <p id="profileDetailMessage" class="keyword-message"></p>
-              <div class="profile-detail-footer">
-                <button id="profileDetailApply" class="apply-keywords" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
-                <button id="profileDetailSave" class="save-keywords" type="button">PROFIL SPEICHERN</button>
+              <div class="detail-footer">
+                <button id="profileDetailApply" class="s-btn" type="button">AUSWAHL FÜR NÄCHSTE SCANS</button>
+                <button id="profileDetailSave" class="s-btn primary" type="button">PROFIL SPEICHERN</button>
               </div>
             </div>
           </div>
@@ -419,8 +420,8 @@
           <div class="detection-body">
             <div class="detection-list-panel">
               <div class="detection-toolbar">
-                <label for="detectionSearch">REGEL SUCHEN<input id="detectionSearch" type="search" placeholder="NAME, ALIAS, BUNDLE-ID, PACKAGE-ID …" /></label>
-                <label for="detectionFilter">FILTER<select id="detectionFilter" aria-label="Erkennungsregeln filtern">
+                <input id="detectionSearch" type="search" placeholder="Regel suchen …" autocomplete="off" spellcheck="false" aria-label="Regeln nach Name, Alias, Bundle-ID oder Package-ID suchen" />
+                <select id="detectionFilter" aria-label="Erkennungsregeln filtern">
                     <option value="">ALLE REGELN</option>
                     <option value="active">AKTIV</option>
                     <option value="inactive">INAKTIV</option>
@@ -429,12 +430,12 @@
                     <option value="unverified">ID NOCH NICHT VERIFIZIERT</option>
                     <option value="missing_ios">IOS-ID FEHLT</option>
                     <option value="missing_android">ANDROID-ID FEHLT</option>
-                  </select></label>
-                <label for="detectionSort">SORTIEREN NACH<select id="detectionSort" aria-label="Erkennungsregeln sortieren nach">
+                  </select>
+                <select id="detectionSort" aria-label="Erkennungsregeln sortieren nach">
                     <option value="name">NAME</option>
                     <option value="category">KATEGORIE</option>
                     <option value="status">STATUS</option>
-                  </select></label>
+                  </select>
                 <span id="detectionCount" class="detection-count">0 REGELN</span>
               </div>
               <div class="detection-table-wrap" id="detectionTableWrap">
@@ -499,54 +500,57 @@
         </dl>
       </dialog>
       <section id="settingsFiletypesPane" class="settings-pane filetypes-pane" aria-labelledby="settingsFiletypesTab" hidden>
-        <p class="pane-intro">Dateiendungen werden Kategorien zugeordnet.</p>
-        <div class="filetypes-workspace">
-          <div class="filetypes-master">
-            <div class="filetypes-master-head">
-              <label class="ft-search-label" for="catalogSearch">DATEITYPEN
-                <input id="catalogSearch" type="search" placeholder="Kategorie oder Endung suchen …" />
-              </label>
-              <button id="catalogAddCategory" class="ft-master-create" type="button" title="Neue Kategorie"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUE KATEGORIE</button>
+        <div class="filetypes-workspace master-detail">
+          <div class="filetypes-master master">
+            <div class="master-head with-search">
+              <input id="catalogSearch" type="search" placeholder="Kategorie oder Endung suchen …" aria-label="Kategorie oder Endung suchen" autocomplete="off" spellcheck="false" />
+              <button id="catalogAddCategory" class="s-btn small" type="button" title="Neue Kategorie"><span class="icon-text" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 5v14M5 12h14"/></svg></span> NEUE KATEGORIE</button>
             </div>
-            <div id="catalogVersion" class="filetypes-version" aria-label="Katalogversion"></div>
-            <div class="catalog-list-header" aria-hidden="true"><span>KATEGORIE</span><span>ENDUNGEN</span></div>
-            <div id="catalogRows" class="catalog-rows" role="listbox" aria-label="Dateityp-Kategorien"></div>
+            <div id="catalogVersion" class="catalog-version" aria-label="Katalogversion"></div>
+            <div class="master-list-header catalog-list-header" aria-hidden="true"><span>KATEGORIE</span><span>ENDUNGEN</span></div>
+            <div id="catalogRows" class="master-list catalog-rows" role="listbox" aria-label="Dateityp-Kategorien"></div>
           </div>
-          <div class="filetypes-detail">
-            <div class="filetypes-detail-empty" id="filetypesDetailEmpty">
+          <div class="filetypes-detail detail">
+            <div class="detail-empty" id="filetypesDetailEmpty">
               <strong>KATEGORIE AUSWÄHLEN</strong>
-              <p>Wählen Sie links eine Kategorie aus, um die Endungen zu bearbeiten.</p>
+              <p>Wählen Sie links eine Kategorie aus.</p>
             </div>
-            <div class="filetypes-detail-form" id="filetypesDetailForm" hidden>
-              <div class="filetypes-detail-head">
-                <strong id="filetypesDetailTitle">KATEGORIE BEARBEITEN</strong>
+            <div class="filetypes-detail-form detail-form" id="filetypesDetailForm" hidden>
+              <div class="detail-head">
+                <div class="detail-name">
+                  <strong id="filetypesDetailTitleName">—</strong>
+                  <div id="filetypeNameEdit" class="detail-name-edit" hidden>
+                    <input id="filetypesDetailName" maxlength="50" autocomplete="off" spellcheck="false" aria-label="Kategoriename" />
+                    <button id="filetypeNameOk" class="s-btn small" type="button" aria-label="Kategorienamen übernehmen">OK</button>
+                    <button id="filetypeNameCancel" class="s-btn small" type="button" aria-label="Kategorienamen ändern abbrechen">ABBRECHEN</button>
+                  </div>
+                </div>
+                <div class="detail-head-actions">
+                  <button id="filetypesDetailEdit" class="s-btn small" type="button">BEARBEITEN</button>
+                  <button id="filetypesDetailDelete" class="s-btn small danger" type="button">LÖSCHEN</button>
+                </div>
               </div>
-              <label class="ft-field" for="filetypesDetailName">KATEGORIENAME
-                <input id="filetypesDetailName" maxlength="50" autocomplete="off" spellcheck="false" />
+              <label class="ft-extensions-field" for="filetypesDetailExtensions">ENDUNGEN
+                <textarea id="filetypesDetailExtensions" rows="7" spellcheck="false" placeholder="arw, avif, bmp, cr2, cr3, dng, gif, heic, …"></textarea>
               </label>
-              <label class="ft-field" for="filetypesDetailExtensions">ENDUNGEN
-                <textarea id="filetypesDetailExtensions" rows="6" spellcheck="false" placeholder="arw, avif, bmp, cr2, cr3, dng, gif, heic, …"></textarea>
-              </label>
-              <p class="ft-hint">Endungen kommasepariert.</p>
-              <button id="filetypesDetailDelete" class="ft-delete" type="button">KATEGORIE LÖSCHEN</button>
-              <div class="filetypes-detail-footer">
-                <button id="filetypesDetailReset" type="button">ZURÜCKSETZEN</button>
-                <button id="filetypesDetailApply" type="button">ÄNDERUNGEN ÜBERNEHMEN</button>
+              <p class="ft-hint">Komma, Leerzeichen oder Zeilenumbruch trennen Einträge.</p>
+              <div class="detail-footer">
+                <button id="filetypesDetailReset" class="s-btn" type="button">ZURÜCKSETZEN</button>
+                <button id="filetypesDetailApply" class="s-btn primary" type="button">ÄNDERUNGEN ÜBERNEHMEN</button>
               </div>
             </div>
           </div>
           <footer class="filetypes-footer">
-            <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“. „Mehrdeutig“ und „Schutz-/Schlüsseldateien" beschreiben die Endung, keine bestätigten Inhalte oder Verschlüsselung.</p>
+            <p class="catalog-note">Unbekannte Endungen landen automatisch unter „Unbekannt“.</p>
             <div class="catalog-actions">
-              <button id="catalogReset" type="button">STANDARD LADEN</button>
-              <button id="catalogSave" type="button" disabled>ÄNDERUNGEN SPEICHERN</button>
+              <button id="catalogReset" class="s-btn" type="button">STANDARD LADEN</button>
+              <button id="catalogSave" class="s-btn primary" type="button" disabled>ÄNDERUNGEN SPEICHERN</button>
             </div>
           </footer>
         </div>
         <p id="catalogMessage" role="status" aria-live="polite"></p>
       </section>
       <section id="settingsUpdatesPane" class="settings-pane settings-updates-pane" aria-labelledby="settingsUpdatesTab" hidden>
-        <p class="pane-intro">Installierte Version prüfen oder Update installieren.</p>
         <div id="updateModal" class="update-modal update-embedded">
           <div class="update-modal-body">
             <div class="update-status-block">
@@ -556,18 +560,18 @@
                 <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
               </div>
               <div class="update-primary-actions">
-                <button id="updateCheck" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
-                <button id="updateStopCase" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
-                <button id="updateInstall" type="button" hidden>UPDATE INSTALLIEREN</button>
+                <button id="updateCheck" class="s-btn small" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
+                <button id="updateStopCase" class="s-btn small" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
+                <button id="updateInstall" class="s-btn primary" type="button" hidden>UPDATE INSTALLIEREN</button>
               </div>
             </div>
             <p id="updateActionMessage" class="update-action-message"></p>
             <div id="updateProgress" class="update-progress" hidden><div><i></i></div><span id="updateProgressLabel">UPDATE WIRD VORBEREITET …</span></div>
             <section class="offline-update">
-              <div><strong>OFFLINE-UPDATE</strong><small>Signiertes .tbu-Paket vom Laptop übertragen. Der Pi benötigt kein Internet.</small></div>
+              <strong>OFFLINE-UPDATE</strong>
               <div class="offline-update-row">
                 <input id="offlineUpdateFile" type="file" accept=".tbu,application/octet-stream" aria-label="Updatepaket auswählen" />
-                <button id="offlineUpdateInstall" type="button" disabled>PAKET INSTALLIEREN</button>
+                <button id="offlineUpdateInstall" class="s-btn small" type="button" disabled>PAKET INSTALLIEREN</button>
               </div>
               <p id="offlineUpdateMessage" role="status" aria-live="polite"></p>
             </section>

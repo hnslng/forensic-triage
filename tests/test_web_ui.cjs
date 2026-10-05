@@ -181,7 +181,7 @@ test('keyword list scrolls internally while editor header, search and footer sta
   const box = await page.locator('#profileDetailSave').boundingBox();
   const editor = await page.locator('#profileDetail').boundingBox();
   assert.ok(box && editor && box.y > editor.y && box.height > 20, 'profile footer stays visible below the list');
-  for (const selector of ['#profileDetailName', '#profileDetailNewInput', '#profileDetailSearch', '.keyword-table-head']) {
+  for (const selector of ['#profileDetailTitleName', '#profileDetailNewInput', '#profileDetailSearch', '.keyword-table-head']) {
     const visible = await page.locator(selector).evaluate(node => node.getBoundingClientRect().bottom > 0);
     assert.equal(visible, true, `${selector} stays visible`);
   }
@@ -412,8 +412,9 @@ test('detection rule controls and platform ID states are explicit and accessible
   await page.setViewportSize({ width: 1512, height: 982 });
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsCryptoTab').click();
-  assert.equal(await page.locator('label[for="detectionFilter"]').innerText().then(text => text.includes('FILTER')), true);
-  assert.equal(await page.locator('label[for="detectionSort"]').innerText().then(text => text.includes('SORTIEREN NACH')), true);
+  assert.equal(await page.locator('select[aria-label="Erkennungsregeln filtern"]').count(), 1);
+  assert.equal(await page.locator('select[aria-label="Erkennungsregeln sortieren nach"]').count(), 1);
+  assert.equal(await page.locator('input#detectionSearch[aria-label]').count(), 1, 'search stays accessible without stacked labels');
 
   const symbols = async id => page.locator(`#detectionRows tr[data-id="${id}"] .platform-id-status`).allInnerTexts();
   assert.deepEqual(await symbols('wallet'), ['✓', '?']);
@@ -519,6 +520,162 @@ test('detection rules apply drafts and save all persist changes', async t => {
   await page.waitForFunction(() => document.getElementById('detectionMessage').textContent.includes('GESPEICHERT'));
   assert.equal(await page.locator('#detectionSaveAll').isDisabled(), true);
   assert.deepEqual(requests.filter(item => item.method !== 'GET' && item.path === '/api/settings/crypto').length, 1);
+});
+
+// ===== Alpha 69: compact settings design system =====
+
+test('profile detail uses a compact text header with inline name editing', async t => {
+  const { page } = await setup(t, a68Fixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList [data-select-profile="default"]').click();
+  const head = await page.locator('#profileDetailTitleName');
+  await head.waitFor({ state: 'visible' });
+  assert.match(await head.innerText(), /Allgemein \/ Wirtschaft/i, 'detail head shows the object name as text');
+  // Kein dauerhaftes großes Namensfeld.
+  assert.equal(await page.locator('#profileDetailName').isVisible(), false);
+  assert.equal(await page.locator('#profileDetailEdit').isVisible(), true);
+
+  // Editiermodus: BEARBEITEN zeigt kompakte Zeile, OK bestätigt, ABBRECHEN verwirft.
+  await page.locator('#profileDetailEdit').click();
+  assert.equal(await page.locator('#profileDetailName').isVisible(), true);
+  assert.equal(await page.locator('#profileDetailEdit').isVisible(), false);
+  await page.locator('#profileDetailName').fill('Allgemein Umbenennung');
+  await page.locator('#profileNameOk').click();
+  assert.equal(await page.locator('#profileDetailName').isVisible(), false);
+  assert.match(await page.locator('#profileDetailTitleName').innerText(), /Allgemein Umbenennung/);
+  await page.locator('#profileDetailEdit').click();
+  await page.locator('#profileDetailName').fill('Umbenennung WIRD VERWORFEN');
+  await page.locator('#profileNameCancel').click();
+  assert.match(await page.locator('#profileDetailTitleName').innerText(), /Allgemein Umbenennung/);
+
+  // Neues Profil startet direkt im Namens-Editiermodus. Die Umbenennung ist
+  // ungespeichert, das Verwerfen muss bestätigt werden (kein stiller Verlust).
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#createProfile').click();
+  assert.equal(await page.locator('#profileDetailName').isVisible(), true);
+  assert.equal(await page.locator('#profileDetailEdit').isVisible(), false);
+  assert.equal(await page.evaluate(() => $("profileDetailName").value), '');
+  await page.locator('#profileNameCancel').click();
+  assert.equal(await page.locator('#profileDetailTitleName').innerText(), 'NEUES PROFIL');
+});
+
+test('keyword add row and toolbar are compact and keep search, selection and counter in one row', async t => {
+  const { page } = await setup(t, a68Fixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsProfilesList [data-select-profile="default"]').click();
+  const addInput = page.locator('#profileDetailNewInput');
+  assert.match(await addInput.getAttribute('placeholder'), /[Hh]inzufügen/);
+  assert.equal(await page.locator('#profileDetailAddKeyword').innerText(), '');
+  const addHeight = await page.locator('#profileDetailAddKeyword').evaluate(node => node.getBoundingClientRect().height);
+  assert.ok(addHeight <= 34, `add button must stay compact: ${addHeight}`);
+  // Enter-Hinzufügen funktioniert weiterhin.
+  await addInput.fill('testoptional');
+  await addInput.press('Enter');
+  assert.equal(await page.locator('#profileDetailOptions .keyword-option').count(), 6);
+
+  const toolbar = await page.locator('.keyword-toolbar').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth, height: node.getBoundingClientRect().height }));
+  assert.ok(toolbar.scroll <= toolbar.client + 1, 'keyword toolbar must not wrap on desktop');
+  assert.ok(toolbar.height <= 40, 'keyword toolbar must stay one compact row');
+  const tops = await page.locator('.keyword-toolbar input, .keyword-toolbar button').evaluateAll(nodes => nodes.map(n => Math.round(n.getBoundingClientRect().top)));
+  assert.equal(new Set(tops).size, 1, 'search, ALLE and KEINE share one row');
+});
+
+test('master rows picture the same family across profiles, file types and detection rules', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await openSettingsFromAnywhere(page);
+  const rowStyle = async selector => page.locator(selector).first().evaluate(node => {
+    const s = getComputedStyle(node);
+    return { pad: s.paddingTop, borderBottom: s.borderBottomWidth, fontSize: s.fontSize, minHeight: node.getBoundingClientRect().height };
+  });
+  const profileRow = await rowStyle('#settingsProfilesList .settings-profile-row');
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('#catalogRows [data-category]').first().waitFor();
+  const catalogRow = await rowStyle('#catalogRows .catalog-row');
+  assert.equal(profileRow.pad, catalogRow.pad, 'same row padding');
+  assert.equal(profileRow.borderBottom, catalogRow.borderBottom, 'same horizontal line');
+  assert.equal(profileRow.fontSize, catalogRow.fontSize, 'same type scale');
+  // Aktive Zeile: dezenter Acid-Ton plus linke Acid-Kante.
+  await page.locator('#settingsProfilesTab').click();
+  await page.locator('#settingsProfilesList [data-select-profile="default"]').click();
+  const active = await page.locator('#settingsProfilesList .settings-profile-row.selected').evaluate(node => {
+    const s = getComputedStyle(node);
+    return { bg: s.backgroundColor, shadow: s.boxShadow };
+  });
+  assert.match(active.bg, /201,\s*242,\s*82/);
+  assert.match(active.shadow, /3px.*inset/);
+  // Kopf und Zeile teilen dieselben Linien und Schriftwerte.
+  const headerStyle = await page.locator('.profile-list-header').evaluate(node => { const s = getComputedStyle(node); return { border: s.borderBottomWidth, font: s.fontSize, height: node.getBoundingClientRect().height }; });
+  assert.equal(headerStyle.border, profileRow.borderBottom, 'same line weight as rows');
+  assert.equal(headerStyle.font, profileRow.fontSize, 'same type scale as rows');
+  assert.ok(headerStyle.height <= 34, `master header stays compact: ${headerStyle.height}`);
+});
+
+test('settings buttons share one primary/secondary/danger system', async t => {
+  const css = fs.readFileSync(path.join(root, 'web', 'styles.css'), 'utf8');
+  assert.match(css, /\.s-btn \{[^}]*min-height:\s*32px/);
+  assert.match(css, /\.s-btn\.primary \{[^}]*var\(--acid\)/s);
+  assert.match(css, /\.s-btn\.danger \{[^}]*var\(--danger\)/s);
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  const style = async (selector, prop) => page.locator(selector).evaluate((node, p) => getComputedStyle(node)[p], prop);
+  await page.locator('#settingsProfilesList [data-select-profile="default"]').click();
+  const saveBg = await style('#profileDetailSave', 'backgroundColor');
+  const applyBorder = await style('#profileDetailApply', 'borderStyle');
+  const applyColor = await style('#profileDetailApply', 'color');
+  assert.deepEqual([/201, 242, 82|201,242,82/.test(saveBg), applyBorder === 'solid', /232, 234, 223/.test(applyColor)], [true, true, true]);
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('#catalogRows [data-category="Bilder"]').click();
+  const deleteColor = await style('#filetypesDetailDelete', 'color');
+  assert.equal(deleteColor, 'rgb(255, 104, 95)', 'delete is danger-styled');
+  const allButtons = await page.locator('.settings-modal [class*="s-btn"]').count();
+  assert.ok(allButtons >= 8, 'unified button classes are used across settings');
+});
+
+test('settings no longer carry permanent intro paragraphs', async () => {
+  const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
+  const count = (html.match(/class="pane-intro"/g) || []).length;
+  assert.equal(count, 0, 'no permanent intro paragraphs in settings panes');
+  assert.equal((html.match(/settingsProfilesPane|settingsFiletypesPane|settingsUpdatesPane/g) || []).length >= 3, true);
+});
+
+test('filetype detail shows the category as text with inline editing and local/global footer split', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsFiletypesTab').click();
+  await page.locator('#catalogRows [data-category="Bilder"]').click();
+  assert.match(await page.locator('#filetypesDetailTitleName').innerText(), /^Bilder$/);
+  assert.equal(await page.locator('#filetypesDetailName').isVisible(), false);
+  await page.locator('#filetypesDetailEdit').click();
+  assert.equal(await page.locator('#filetypesDetailName').isVisible(), true);
+  await page.locator('#filetypeNameCancel').click();
+  assert.match(await page.locator('#filetypesDetailTitleName').innerText(), /^Bilder$/);
+  // Lokale Detailaktionen vs. globale Katalogaktionen getrennt.
+  const detailFooter = await page.locator('#filetypesDetailForm .detail-footer').evaluate(node => node.getBoundingClientRect().bottom);
+  const globalFooter = await page.locator('.filetypes-footer').evaluate(node => node.getBoundingClientRect().top);
+  assert.ok(detailFooter < globalFooter, 'detail actions sit above the global catalog footer');
+  assert.equal(await page.locator('#filetypesDetailReset').isVisible(), true);
+  assert.equal(await page.locator('#catalogSave').isVisible(), true);
+});
+
+test('updates pane stays a single quiet status row plus offline section', async t => {
+  const { page } = await setup(t, settingsFixture);
+  await openSettingsFromAnywhere(page);
+  await page.locator('#settingsUpdatesTab').click();
+  await page.evaluate(() => renderUpdateState({ state: 'current', current_version: '0.2.0a69', updated_at: new Date().toISOString() }));
+  const grid = await page.locator('.update-version-grid').evaluate(node => ({ cols: getComputedStyle(node).gridTemplateColumns.split(' ').length, height: node.getBoundingClientRect().height }));
+  assert.equal(grid.cols, 3, 'VERSION / STATUS / LETZTE PRÜFUNG in einer Zeile');
+  assert.ok(grid.height <= 70, 'status row stays compact');
+  const check = await page.locator('#updateCheck').evaluate(node => node.getBoundingClientRect());
+  const block = await page.locator('.update-status-block').evaluate(node => node.getBoundingClientRect());
+  assert.ok(check.right <= block.right + 1 && check.bottom <= block.bottom + 1, 'JETZT PRÜFEN stays inside the status row');
+  assert.equal(await page.locator('.offline-update').isVisible(), true);
+  assert.equal(await page.locator('#offlineUpdateFile').isVisible(), true);
+  const body = await page.locator('.update-modal-body').evaluate(node => ({
+    height: node.scrollHeight, client: node.clientHeight,
+  }));
+  assert.ok(body.height < 600, 'update pane stays free of sprawling empty space');
 });
 
 for (const fails of [false, true]) test(`end case from update dialog: ${fails ? 'failure retains lock' : 'success enables deliberate install'}`, async t => {
@@ -1431,9 +1588,9 @@ test('detection toolbar keeps search filter sort and count on one row on desktop
   await page.locator('#settingsCryptoTab').click();
   const toolbar = await page.locator('.detection-toolbar').evaluate(node => ({ scroll: node.scrollWidth, client: node.clientWidth, height: node.getBoundingClientRect().height }));
   assert.ok(toolbar.scroll <= toolbar.client + 1, 'toolbar must not wrap or overflow on desktop');
-  assert.ok(toolbar.height <= 80, 'toolbar must stay compact');
-  const labelTops = await page.locator('.detection-toolbar label').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().top));
-  assert.equal(new Set(labelTops).size, 1, 'all toolbar labels must share the same top baseline');
+  assert.ok(toolbar.height <= 70, 'toolbar must stay compact without stacked labels');
+  const tops = await page.locator('.detection-toolbar input, .detection-toolbar select').evaluateAll(nodes => nodes.map(n => Math.round(n.getBoundingClientRect().top)));
+  assert.equal(new Set(tops).size, 1, 'all toolbar controls must share one baseline row');
   const count = await page.locator('#detectionCount').evaluate(node => node.getBoundingClientRect());
   const toolbarBox = await page.locator('.detection-toolbar').evaluate(node => node.getBoundingClientRect());
   assert.ok(count.right <= toolbarBox.right + 1, 'count must stay inside toolbar');
@@ -1482,6 +1639,7 @@ test('filetypes editor can rename, add extensions and delete a category', async 
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsFiletypesTab').click();
   await page.locator('[data-category="Bilder"]').click();
+  await page.locator('#filetypesDetailEdit').click();
   await page.locator('#filetypesDetailName').fill('Bilder Neu');
   await page.locator('#filetypesDetailExtensions').fill('jpg, png, gif');
   await page.locator('#filetypesDetailApply').click();

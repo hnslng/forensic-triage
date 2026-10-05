@@ -666,15 +666,43 @@ function renderFiletypeDetail() {
   catalogDetailDraftExtensions = extensions.join(", ");
   $("filetypesDetailName").value = catalogDetailDraftName;
   $("filetypesDetailExtensions").value = catalogDetailDraftExtensions;
-  $("filetypesDetailTitle").textContent = catalogSelectedCategory === "" ? "NEUE KATEGORIE" : "KATEGORIE BEARBEITEN";
+  renderFiletypeDetailHead();
+  // Frisch angelegte Kategorien starten direkt im Namens-Editiermodus.
+  const startRename = catalogStartRename;
+  catalogStartRename = false;
+  setFiletypeNameEditing(startRename);
   $("filetypesDetailDelete").disabled = !catalogSelectedCategory;
   empty.hidden = true;
   form.hidden = false;
 }
 
+let catalogStartRename = false;
+
+function renderFiletypeDetailHead() {
+  const name = $("filetypesDetailName").value.trim();
+  $("filetypesDetailTitleName").textContent = name || "NEUE KATEGORIE";
+}
+
+let filetypeNameBeforeEdit = "";
+function setFiletypeNameEditing(editing) {
+  $("filetypeNameEdit").hidden = !editing;
+  $("filetypesDetailTitleName").hidden = editing;
+  $("filetypesDetailEdit").hidden = editing;
+  if (editing) {
+    filetypeNameBeforeEdit = $("filetypesDetailName").value;
+    $("filetypesDetailName").focus();
+  }
+}
+
 function markCatalogDetailDirty() {
   catalogDetailDirty = true;
   $("catalogMessage").textContent = "UNGESPEICHERTE ÄNDERUNGEN IM EDITOR";
+}
+
+function resetFiletypeDetail() {
+  catalogDetailDirty = false;
+  renderFiletypeDetail();
+  $("catalogMessage").textContent = "";
 }
 
 function applyFiletypeDetail() {
@@ -703,12 +731,6 @@ function applyFiletypeDetail() {
   $("catalogMessage").textContent = "KATEGORIE IM ENTWURF ÜBERNOMMEN";
 }
 
-function resetFiletypeDetail() {
-  catalogDetailDirty = false;
-  renderFiletypeDetail();
-  $("catalogMessage").textContent = "";
-}
-
 function deleteFiletypeCategory() {
   if (!catalogState || !catalogSelectedCategory) return;
   if (!window.confirm(`Kategorie „${catalogSelectedCategory}" aus dem Entwurf entfernen?`)) return;
@@ -734,10 +756,10 @@ function addFiletypeCategory() {
   catalogState = { ...catalogState, categories: { ...catalogState.categories, [name]: [] } };
   catalogSelectedCategory = name;
   catalogDetailDirty = false;
+  catalogStartRename = true;
   markCatalogDirty();
   renderCatalog(catalogState.categories);
   renderFiletypeDetail();
-  $("filetypesDetailName").focus();
 }
 
 function markCatalogDirty() {
@@ -1233,6 +1255,7 @@ async function loadProfiles(preferredIds = activeProfileIds) {
         keywordDraft = [...detail.keywords];
         draftSelectedKeywords = new Set(selectedByProfile.get(profileDetailId) || keywordDraft);
         $("profileDetailName").value = detail.name;
+        renderProfileDetailHead();
         renderKeywordOptions();
         updateProfileDetailCount();
       }
@@ -2502,7 +2525,6 @@ function openProfileEditor(profileId = null, duplicate = false) {
   keywordDraft = [...(detail?.keywords || [])];
   draftSelectedKeywords = new Set(duplicate ? keywordDraft : selectedByProfile.get(profileId) || keywordDraft);
   $("profileDetailName").value = duplicate ? `${(detail?.name || "Profil").slice(0, 34)} Kopie` : detail?.name || "";
-  $("profileDetailTitle").textContent = createNew ? "NEUES PROFIL" : "PROFIL BEARBEITEN";
   $("profileDetailNewInput").value = "";
   $("profileDetailSearch").value = "";
   $("profileDetailMessage").textContent = "";
@@ -2510,12 +2532,14 @@ function openProfileEditor(profileId = null, duplicate = false) {
   profileDetailDirty = false;
   $("profileDetailEmpty").hidden = true;
   $("profileDetailForm").hidden = false;
+  renderProfileDetailHead();
   renderKeywordOptions();
   updateProfileDetailCount();
   renderProfileList();
   if (!$("settingsModal").open) $("settingsModal").showModal();
   selectSettingsPane("profiles");
-  if (createNew) $("profileDetailName").focus();
+  // Neue und duplizierte Profile starten direkt im Namens-Editiermodus.
+  setProfileNameEditing(createNew);
 }
 
 function addKeywordFromInput() {
@@ -2538,6 +2562,22 @@ function addKeywordFromInput() {
 
 function selectedDraftFromControls() {
   return new Set(keywordDraft.filter((keyword) => draftSelectedKeywords.has(keyword)));
+}
+
+function renderProfileDetailHead() {
+  const name = $("profileDetailName").value.trim();
+  $("profileDetailTitleName").textContent = name || "NEUES PROFIL";
+}
+
+let profileNameBeforeEdit = "";
+function setProfileNameEditing(editing) {
+  $("profileNameEdit").hidden = !editing;
+  $("profileDetailTitleName").hidden = editing;
+  $("profileDetailEdit").hidden = editing;
+  if (editing) {
+    profileNameBeforeEdit = $("profileDetailName").value;
+    $("profileDetailName").focus();
+  }
 }
 
 function markProfileDetailDirty() {
@@ -2567,7 +2607,7 @@ async function saveProfileEditor() {
     updateKeywordSummary();
     profileDetailDirty = false;
     $("profileDetailMessage").textContent = "GESPEICHERT";
-    $("profileDetailTitle").textContent = "PROFIL BEARBEITEN";
+    renderProfileDetailHead();
     renderProfileList();
     setSystemState(`PROFIL ${data.profile.name.toUpperCase()} GESPEICHERT`, "ready");
   } catch (error) {
@@ -2601,6 +2641,9 @@ function resetProfileDetail() {
   keywordDraft = [];
   draftSelectedKeywords = new Set();
   $("profileDetailSearch").value = "";
+  $("profileDetailName").value = "";
+  $("profileDetailTitleName").textContent = "—";
+  setProfileNameEditing(false);
   updateProfileDetailCount();
   renderProfileList();
 }
@@ -2830,8 +2873,19 @@ $("catalogRows").addEventListener("click", (event) => {
   selectFiletypeCategory(row.dataset.category);
 });
 $("catalogAddCategory").addEventListener("click", addFiletypeCategory);
-$("filetypesDetailName").addEventListener("input", markCatalogDetailDirty);
+$("filetypesDetailName").addEventListener("input", () => { markCatalogDetailDirty(); renderFiletypeDetailHead(); });
 $("filetypesDetailExtensions").addEventListener("input", markCatalogDetailDirty);
+$("filetypesDetailEdit").addEventListener("click", () => setFiletypeNameEditing(true));
+$("filetypeNameOk").addEventListener("click", () => setFiletypeNameEditing(false));
+$("filetypeNameCancel").addEventListener("click", () => {
+  $("filetypesDetailName").value = filetypeNameBeforeEdit;
+  renderFiletypeDetailHead();
+  setFiletypeNameEditing(false);
+});
+$("filetypesDetailName").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { event.preventDefault(); $("filetypeNameCancel").click(); }
+  if (event.key === "Enter") { event.preventDefault(); $("filetypeNameOk").click(); }
+});
 $("filetypesDetailApply").addEventListener("click", applyFiletypeDetail);
 $("filetypesDetailReset").addEventListener("click", resetFiletypeDetail);
 $("filetypesDetailDelete").addEventListener("click", deleteFiletypeCategory);
@@ -2907,7 +2961,18 @@ $("profileDetailOptions").addEventListener("click", (event) => {
   renderKeywordOptions();
   updateProfileDetailCount();
 });
-$("profileDetailName").addEventListener("input", markProfileDetailDirty);
+$("profileDetailName").addEventListener("input", () => { markProfileDetailDirty(); renderProfileDetailHead(); });
+$("profileDetailEdit").addEventListener("click", () => setProfileNameEditing(true));
+$("profileNameOk").addEventListener("click", () => setProfileNameEditing(false));
+$("profileNameCancel").addEventListener("click", () => {
+  $("profileDetailName").value = profileNameBeforeEdit;
+  renderProfileDetailHead();
+  setProfileNameEditing(false);
+});
+$("profileDetailName").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { event.preventDefault(); $("profileNameCancel").click(); }
+  if (event.key === "Enter") { event.preventDefault(); $("profileNameOk").click(); }
+});
 $("profileDetailSave").addEventListener("click", saveProfileEditor);
 $("profileList").addEventListener("change", (event) => {
   const checkbox = event.target.closest('input[type="checkbox"]');
