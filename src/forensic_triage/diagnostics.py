@@ -117,9 +117,10 @@ def latest_sequence() -> int:
 class DiagHandler(logging.Handler):
     """Feed regular Python log records into the diagnostics ring buffer.
 
-    Only conscious application logging is captured: INFO and above from every
-    logger, plus DEBUG records from the controlled ``forensic-triage``
-    namespace (recorded only while debug mode is active). The handler never
+    Only conscious application logging is captured: records from the controlled
+    ``forensic-triage`` namespace, known application modules, or records with an
+    explicit ``diag_category``. DEBUG additionally requires the controlled
+    namespace and active debug mode. The handler never
     raises and never logs about itself, so it cannot recurse or deadlock.
 
     ``ring=None`` marks the production handler that appends to the module
@@ -134,11 +135,14 @@ class DiagHandler(logging.Handler):
         try:
             if getattr(record, "diag_silent", False):
                 return
-            if record.levelno >= logging.INFO:
-                pass
-            elif record.name == LOGGER_NAME and mode() == "debug":
-                pass
-            else:
+            controlled = record.name == LOGGER_NAME or record.name.startswith(LOGGER_NAME + ".")
+            explicit = str(getattr(record, "diag_category", "") or "") in CATEGORIES
+            module = getattr(record, "module", "") or str(record.name or "").rsplit(".", 1)[-1]
+            source_path = str(getattr(record, "pathname", "") or "").replace("\\", "/")
+            known_module = module in _CATEGORY_BY_MODULE and "/forensic_triage/" in source_path
+            if record.levelno < logging.INFO and not (controlled and mode() == "debug"):
+                return
+            if not (controlled or explicit or known_module):
                 return
             message = str(record.getMessage())[:MESSAGE_LIMIT]
             details = _clean_details(getattr(record, "diag_details", None))
@@ -300,9 +304,9 @@ def once(
     now = time.monotonic()
     with _ONCE_LOCK:
         previous = _ONCE.get(key)
+        if previous is not None and now - previous < cooldown:
+            return False
         _ONCE[key] = now
-    if previous is not None and now - previous < cooldown:
-        return False
     _internal(LEVEL_ORDER.get(level.upper(), 30), category, message, details)
     return True
 
@@ -353,12 +357,11 @@ def recent(
 
 
 def install(*, stream: bool = True) -> None:
-    """Attach the diagnostics handler to the root logger, once per process.
+    """Attach the filtered diagnostics handler without widening root logging.
 
-    Also raises the root logger level to INFO so deliberately emitted
-    application ``logging.info`` records reach the console view, and routes
-    warnings and errors to stderr exactly as before, so journald keeps seeing
-    them. Third-party DEBUG logging stays suppressed at the root logger.
+    Propagated records from the dedicated application namespace still reach
+    root handlers even when the root logger remains at WARNING. A fallback
+    stderr handler is installed only when the process has no normal handler.
     """
     global _INSTALLED
     with _INSTALL_LOCK:
@@ -369,9 +372,9 @@ def install(*, stream: bool = True) -> None:
             _INSTALLED = True
             return
         _LOGGER.setLevel(logging.DEBUG)
-        root.setLevel(logging.INFO)
         root.addHandler(DiagHandler())
-        if stream:
+        normal_handlers = [handler for handler in root.handlers if not isinstance(handler, DiagHandler)]
+        if stream and not normal_handlers:
             stderr_handler = logging.StreamHandler()
             stderr_handler.setLevel(logging.WARNING)
             stderr_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))

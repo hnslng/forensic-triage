@@ -1120,8 +1120,8 @@ test('android card guides authorization and result shows profile coverage', asyn
       guidance: ['Einstellungen öffnen', 'USB-Debugging aktivieren', 'Verbindungsabfrage bestätigen'],
     }]);
   });
-  assert.match(await page.locator('#deviceList').innerText(), /ANDROID-TELEFON ERKANNT/);
-  assert.match(await page.locator('#deviceList').innerText(), /VERBINDUNG AM TELEFON BESTÄTIGEN/);
+  assert.match(await page.locator('#deviceList').innerText(), /ANDROID-TELEFON VERBUNDEN/);
+  assert.match(await page.locator('#deviceList').innerText(), /USB-DEBUGGING AM TELEFON BESTÄTIGEN/);
   assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
   const androidRecord = {
     media: { id: 100, case_number: 'TEST', sighting_number: 'SICHT-100', device_path: 'android:SERIAL1', serial: 'SERIAL1', vendor: 'Samsung', model: 'Galaxy Test', decision: 'open' },
@@ -1813,6 +1813,46 @@ test('diagnose console shows calm empty state after service restart', async t =>
   assert.equal(await diagRows(page), 0);
 });
 
+test('pre-adb android stays visible without active case and shows debugging guidance', async t => {
+  const { page } = await setup(t);
+  await page.evaluate(() => renderDevices([{
+    path: 'android:usb-9-1', serial: '', vendor: 'Samsung', model: 'Galaxy Test',
+    media_type: 'android', connection_state: 'debugging_required', scan_supported: false,
+    unavailable_reason: 'Für die Krypto-App-Prüfung die Schritte am Telefon durchführen.',
+    guidance: ['Einstellungen öffnen', 'Telefoninfo öffnen', 'Softwareinformationen öffnen', 'USB-Debugging aktivieren'],
+  }]));
+  assert.equal(await page.locator('#deviceList .device-card').count(), 1);
+  const text = await page.locator('#deviceList').innerText();
+  assert.match(text, /ANDROID-TELEFON VERBUNDEN/);
+  assert.match(text, /USB-DEBUGGING IST NOCH NICHT AKTIVIERT/);
+  assert.match(text, /Softwareinformationen/);
+  assert.equal(await page.locator('[data-scan-device]').isDisabled(), true);
+});
+
+test('pre-adb android guidance stays readable at target widths', async t => {
+  const { page } = await setup(t);
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    renderDevices([{
+      path: 'android:usb-9-1', serial: '', vendor: 'Samsung', model: 'Galaxy Test',
+      media_type: 'android', connection_state: 'debugging_required', scan_supported: false,
+      unavailable_reason: 'Für die Krypto-App-Prüfung die Schritte am Telefon durchführen.',
+      guidance: ['Einstellungen', 'Telefoninfo', 'Softwareinformationen', 'Siebenmal Buildnummer',
+        'Gerätecode bestätigen', 'Entwickleroptionen', 'USB-Debugging aktivieren', 'USB-Debugging zulassen'],
+    }]);
+  });
+  for (const width of [1512, 1280, 1000, 800]) {
+    await page.setViewportSize({ width, height: 982 });
+    const layout = await page.locator('#deviceList .device-card').evaluate(node => {
+      const box = node.getBoundingClientRect();
+      return { left: box.left, right: box.right, scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth };
+    });
+    assert.ok(layout.left >= 0 && layout.right <= width + 1, `card fits at ${width}px`);
+    assert.ok(layout.scroll <= layout.client + 1, `no horizontal overflow at ${width}px`);
+    assert.equal(await page.locator('.android-guidance').isVisible(), true);
+  }
+});
+
 test('polling runs only while the diagnose console is visible', async t => {
   const { page, requests } = await setup(t);
   diagPush({ message: 'vor dem Öffnen' });
@@ -1861,6 +1901,26 @@ test('normal mode hides debug rows, debug mode shows them and posts mode to serv
   await diagWait(page, 2);
   assert.match(await page.locator('#diagRows').innerText(), /vendor=04e8/);
   assert.ok(requests.some(r => r.path === '/api/logs/mode' && r.method === 'POST'), 'debug switch must inform server');
+});
+
+test('diagnose reload adopts existing server debug mode and normal button posts', async t => {
+  const { page, requests } = await setup(t, async (url, request) => {
+    if (request.method() === 'POST' && url.pathname === '/api/logs/mode') {
+      const body = JSON.parse(request.postData() || '{}');
+      diagFeed.mode = body.mode || 'normal';
+      return { json: { mode: diagFeed.mode } };
+    }
+    return null;
+  });
+  diagFeed.mode = 'debug';
+  await page.reload({ waitUntil: 'networkidle' });
+  await openDiag(page);
+  await page.waitForFunction(() => document.getElementById('diagModeDebug').getAttribute('aria-pressed') === 'true');
+  assert.equal(await page.locator('#diagModeNormal').getAttribute('aria-pressed'), 'false');
+  await page.locator('#diagModeNormal').click();
+  await page.waitForFunction(() => document.getElementById('diagModeNormal').getAttribute('aria-pressed') === 'true');
+  assert.equal(diagFeed.mode, 'normal');
+  assert.ok(requests.some(r => r.path === '/api/logs/mode' && r.method === 'POST'));
 });
 
 test('pause stops updates, resume loads the missed entries', async t => {

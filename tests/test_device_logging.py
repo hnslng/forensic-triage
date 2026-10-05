@@ -48,13 +48,18 @@ def test_unchanged_snapshot_logs_nothing() -> None:
 
 def test_adb_state_transition_is_logged_exactly() -> None:
     log_device_changes([android_device(serial="R58V", connection_state="debugging_required")])
-    log_device_changes([android_device(serial="R58V", connection_state="unauthorized")])
+    log_device_changes([android_device(serial="R58V", connection_state="authorization_required")])
     log_device_changes([android_device(serial="R58V", connection_state="authorized")])
     transitions = [entry["message"] for entry in events() if entry["category"] == "ANDROID"]
     transitions = [message for message in transitions if "Status" in message or "geändert" in message]
     assert len(transitions) == 2
-    assert any("debugging_required → unauthorized" in message for message in transitions)
-    assert any("unauthorized → authorized" in message for message in transitions)
+    assert any("debugging_required → authorization_required" in message for message in transitions)
+    assert any("authorization_required → authorized" in message for message in transitions)
+
+
+def test_phone_serials_are_hidden_in_normal_device_events() -> None:
+    log_device_changes([android_device(serial="SECRET-SERIAL")])
+    assert "SECRET-SERIAL" not in str(events())
 
 
 def test_disconnected_device_logs_once() -> None:

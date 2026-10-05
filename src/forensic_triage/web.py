@@ -99,8 +99,9 @@ def log_device_changes(devices: list[dict[str, Any]]) -> None:
             "serial": str(device.get("serial") or "")[:40],
             "media_type": str(device.get("media_type") or ""),
         }
-        if device.get("media_type") == "android":
-            # Telefone: keine Seriennummer als Klartext im Normalmodus
+        if device.get("media_type") in {"android", "iphone"}:
+            # Telefonkennungen bleiben in NORMAL verborgen. Gezielte DEBUG-
+            # Diagnose darf technische Kennungen separat ausgeben.
             details["serial"] = "(in DEBUG sichtbar)" if device.get("serial") else ""
         before = previous.get(path)
         if before is None:
@@ -1385,7 +1386,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.CREATED, record)
         except ScanTimeoutError as exc:
             quarantine_device(device_path)
-            logging.exception("scan request timed out", extra={"diag_category": "SCAN"})
+            logging.exception("scan request timed out", extra={"diag_silent": True})
             diag.event("SCAN", f"Scan-Zeitlimit: {sighting_number or case_number}", {
                 "case": case_number, "device": device_path,
             }, level="error")
@@ -1395,7 +1396,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                 )
             self._json(HTTPStatus.GATEWAY_TIMEOUT, {"error": str(exc), "timed_out": True})
         except Exception as exc:  # Scanner errors must reach the operator cleanly.
-            logging.exception("scan request failed", extra={"diag_category": "SCAN"})
+            logging.exception("scan request failed", extra={"diag_silent": True})
             diag.event("SCAN", f"Scan fehlgeschlagen: {sighting_number or case_number}", {
                 "case": case_number, "device": device_path, "error": str(exc)[:200],
             }, level="error")

@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.70 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.71 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -35,7 +35,7 @@ Das Werkzeug ersetzt weder eine forensische Sicherung noch eine Laboranalyse. Es
 - direktes Öffnen und doppelt bestätigtes Entfernen einzelner Fälle mit Dateierhalt im Papierkorb; Rückimport noch offen
 - sicherer Software-Auswurf und erneute Geräteerkennung
 - softwareseitiges Öffnen externer USB-CD/DVD-Laufwerke auch ohne physischen Auswurfknopf
-- automatische Telefonerkennung: iPhone über reguläre Apple-USB-Dienste, Android zunächst über USB-Geräteinformationen und nach Freigabe über den gemeinsamen Android-Collector
+- automatische Telefonerkennung: iPhone über reguläre Apple-USB-Dienste; Android konservativ bereits vor USB-Debugging über Hersteller-, Produkt-, Geräteklassen- und USB-Interface-Evidenz und nach Freigabe über ADB
 - schneller iPhone-/Android-App-Scan mit Geräteinformationen, zugänglichen Benutzerprofilen, Benutzer-App-Liste und Krypto-Klassifikation – ohne Foto-, Medien- oder Dateisichtung
 - verständliche Samsung-, Pixel-, Xiaomi-, Motorola-, OnePlus- und allgemeine Android-Anleitung, solange die Verbindung am Telefon noch nicht vorbereitet oder bestätigt ist
 - gemeinsame, lokal bearbeitbare Erkennungsregeln mit getrennten iOS-Bundle-IDs und Android-Package-IDs; Wallets, Hardware-Wallet-Begleiter, Börsen, Portfolio-/Steuer-, Zahlungsdienste, Banking/Finanzen und Geräte-Backups bleiben nachvollziehbar getrennt
@@ -63,7 +63,7 @@ Das bedeutet insbesondere:
 - Ein App-Treffer belegt weder Wallet-Inhalte noch Vermögenswerte. „Kein Treffer“ bedeutet nur: keine passende App in der tatsächlich erfassten App-Liste. Ein technisch nicht zugängliches Profil wird ausdrücklich als ungeprüft ausgewiesen.
 - Banking-/Finanz-App-Treffer sind neutral und keine Krypto-Indikatoren.
 - Backup-Erkennungen belegen nur charakteristische Strukturen (Pfad, Dateiname, Endung), nie den Inhalt oder die erfolgreiche Wiederherstellung eines Backups.
-- Android erfordert aktiviertes USB-Debugging und eine Bestätigung am entsperrten Telefon. Arbeitsprofile werden abgefragt, soweit das System sie meldet. Secure Folder/Knox und andere geschützte Bereiche können unzugänglich bleiben und werden dann nicht als negativ bewertet.
+- Android wird nach ausreichend sicherer USB-Evidenz schon vor aktiviertem USB-Debugging samt Anleitung angezeigt. Der App-Schnellscan erfordert weiterhin USB-Debugging und die Bestätigung am entsperrten Telefon. MTP/PTP allein gilt nicht als Android-Beleg. Arbeitsprofile werden abgefragt, soweit das System sie meldet; unzugängliche Bereiche werden nicht negativ bewertet.
 
 Für echte Beweismittel ist ein validierter Hardware-Schreibblocker erforderlich. Der implementierte Software-Schreibschutz ist eine zusätzliche Schutzschicht, kein Ersatz dafür.
 
@@ -197,9 +197,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a70` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.70`
-- automatisierte Tests: 215 Python-Prüfungen und 95 isolierte Browserprüfungen einschließlich simulierter iPhone-/Android-App-Scans, Android-Profilen, Regelmigration, Backup-Signaturen, skalierbarer Regellisten, Stichwortprofi-Tabelle mit Inline-Namensbearbeitung, kompakter Toolbar, einheitlicher Master-Detail-/Button-Systeme, UI-Lesbarkeitsregressionen und der neuen Diagnosekonsole (Ringbuffer, Cursor-API, NORMAL/DEBUG, Pause/Leeren/Kopieren, Auto-Scroll, DOM-Limit)
+- Paketversion: `0.2.0a71` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.71`
+- automatisierte Tests: 224 Python-Prüfungen und 98 isolierte Browserprüfungen einschließlich Pre-ADB-Android-Erkennung, False-Positive-Schutz für Massenspeicher/Kameras, USB→ADB-Identitätskorrelation, Diagnose-Cooldown/Loggerfilter/Reload-Modus sowie der bestehenden Scanner-, Telefon-, Regel- und UI-Prüfungen
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert
 - offen: reale Android-/Samsung-Abnahme, erneuter iPhone-Zeitvergleich der neuen App-only-Version, vollständiger Probeeinsatz, systematische Parallel-/Störungstests, Datenwiederherstellung, Schutzkonzept und formale Freigabe
@@ -213,4 +213,4 @@ TRIAGE//BOX is a local field-triage aid for removable media. It starts locked af
 
 The default fast mode temporarily mounts partitions with `ro,nosuid,nodev,noexec` only after the whole block device has been set to and verified as read-only. A slower mount-free TSK directory walk remains available for testing. Software read-only controls do not replace a validated forensic hardware write blocker.
 
-Version 0.2.0-alpha.70 adds a built-in diagnostics console without changing scanner or forensic logic: the settings now include a DIAGNOSE tab backed by a bounded in-memory ring buffer (500 entries by default, RAM-only, no persistence) fed by a custom logging handler from the existing Python log records. Device, state and scan events are logged on change only (no poll spam); DEBUG material (sysfs candidates with idVendor/idProduct, ADB binary state, adb device states, resulting connection_state) is enabled server-side via POST /api/logs/mode. ALPHA-69 UI, bundled default profiles and the matchers remain unchanged; all forensic paths are untouched. TRIAGE//BOX searches removable-media names and paths, not file payloads. Its phone path is separate: paired Apple mobile devices and explicitly authorized Android devices are checked for device and user-app metadata only. The quick scan does not enumerate phone files, photos or media and never reads wallet contents, keys or seeds. Android profiles are queried when visible; inaccessible protected areas remain explicitly unknown. Banking/finance app matches are neutral indicators, never crypto alerts. Device-backup structures (e.g. iTunes/Finder, Samsung Smart Switch, Android ADB, Xiaomi, Huawei) are recognized on media from path and filename patterns only; backup contents are never opened. All app matches are triage indicators, not proof of assets. The removable-media scanner still supports bounded archive directory metadata, isolated time-limited workers, read-only controls, decisions and a compact PDF report. It does not recover deleted data, carve, image, or make seizure decisions. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).
+Version 0.2.0-alpha.71 recognizes sufficiently evidenced Android phones before USB debugging: known Android vendors remain strong evidence, while manufacturer/product and USB class/interface signals are combined conservatively; MTP/PTP alone and camera-like devices are rejected. The UI immediately shows `debugging_required` and guidance, then `authorization_required`, and finally scan-ready `authorized`. USB serial or topology keeps identity stable where ADB supplies a reliable mapping. The RAM-only diagnostics console now has a correct cooldown, filtered application-only logging, no unnecessary duplicate stream handler or scan error, and reload-safe NORMAL/DEBUG synchronization. NORMAL hides phone identifiers; DEBUG may show technical IDs required for diagnosis. No real phone/Pi hardware acceptance was performed for Alpha 71. Scanner, matcher, read-only, archive, case and update behavior remain unchanged. TRIAGE//BOX searches removable-media names and paths, not file payloads; phone quick scans read device and user-app metadata only, never phone files, photos, wallet contents, keys or seeds. Installation details are in [docs/installation.md](docs/installation.md); phone scope is in [docs/iphone-triage.md](docs/iphone-triage.md) and [docs/android-triage.md](docs/android-triage.md).

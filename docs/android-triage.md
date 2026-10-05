@@ -1,6 +1,6 @@
 # Android-/Mobilgerät-Triage
 
-Stand: 3. Oktober 2026 · Anwendung `v0.2.0-alpha.64`
+Stand: 5. Oktober 2026 · Anwendung `v0.2.0-alpha.71`
 
 ## Zweck
 
@@ -11,11 +11,12 @@ Der normale Mobilgerät-Lauf ist ein **Krypto-Schnellscan**. Er erfasst Gerätei
 ## Automatische Erkennung
 
 1. Apple-Geräte werden über `idevice_id` erkannt und dem iPhone-Collector zugeordnet.
-2. Android-Geräte werden zunächst ohne Inhaltszugriff anhand ihrer Linux-USB-Geräteinformationen erkannt. Bekannte Hersteller-IDs dienen nur der Zuordnung als Android-Kandidat.
-3. Sobald das Android-Mobilgerät die Verbindung freigibt, meldet `adb devices -l` den Zustand `device`. Dann werden Hersteller, Modell, Android-Version und Build ergänzt und der Scan kann automatisch starten.
-4. `unauthorized` bedeutet: Die Verbindungsabfrage wartet am Telefon. `offline` beziehungsweise fehlende Freigabe wird nicht als scanbares Gerät behandelt.
+2. Android-Geräte werden ohne Inhaltszugriff aus Linux-sysfs erkannt. Bekannte Android-Vendor-IDs sind starke Evidenz. Zusätzlich werden Geräteklasse, alle USB-Interfaceklassen/-protokolle sowie Hersteller- und Produkttexte bewertet.
+3. MTP/PTP allein genügt ausdrücklich nicht: Kameras und sonstige Imaging-Geräte ohne Telefon-/Android-Indiz werden verworfen. Eine unbekannte Vendor-ID wird nur mit kombinierter, nachvollziehbarer Telefonidentität plus passendem MTP/PTP-/Composite-Merkmal als Kandidat behandelt.
+4. Physisch erkannt, aber noch ohne ADB: `debugging_required`, nicht scanbar, Anleitung sichtbar. ADB `unauthorized`: `authorization_required`, Bestätigung am Telefon erforderlich. ADB `device`: `authorized`, scanbar.
+5. Die USB- und ADB-Ansichten werden über identische Seriennummer oder die von ADB gemeldete USB-Topologie korreliert. Ohne eindeutiges Signal wird nicht nur anhand eines Herstellernamens zusammengeführt.
 
-Die Box pollt den Zustand weiter. Bei aktivem Fall und Auto-Scan wechselt ein bestätigtes Gerät selbstständig vom Hilfebildschirm in den Scan.
+Die Box pollt den Zustand weiter. Die Telefonkachel und Anleitung sind bereits ohne aktiven Fall sichtbar; ein Scan bleibt bis zum bewussten Fallstart und `authorized` gesperrt. Bei aktivem Fall und Auto-Scan wechselt ein bestätigtes Gerät selbstständig vom Hilfebildschirm in den Scan.
 
 ## Vorbereitung am Telefon
 
@@ -76,16 +77,16 @@ Ein Android-Lauf erzeugt die gemeinsame Fallstruktur mit `device.json`, `phone.j
 
 ## Praktischer Samsung-Test
 
-1. Alpha 60 über den Online-Pfad installieren; `adb` ist eine neue Systemabhängigkeit und steckt deshalb nicht in einem reinen alten Offline-Paket.
+1. Alpha 71 installieren und Pi/Dienst frisch starten; `adb` muss als Systemabhängigkeit vorhanden sein.
 2. Testfall starten, Auto-Scan aktiv lassen.
-3. Samsung entsperrt per Datenkabel anschließen. Prüfen, ob zunächst Hersteller/Modell und die Samsung-Anleitung erscheinen.
-4. USB-Debugging aktivieren. Zuerst **nicht** bestätigen: Oberfläche muss weiter „Verbindung am Telefon bestätigen“ zeigen und darf keine Sichtung anlegen.
-5. Bestätigen: Scan muss automatisch starten.
+3. DIAGNOSE → DEBUG → ANDROID öffnen. Samsung **ohne USB-Debugging** entsperrt per Datenkabel anschließen und normale Datenfreigabe bestätigen. Telefonkachel, `debugging_required`, Anleitung, USB-Interfaces und Kandidatenbegründung prüfen.
+4. USB-Debugging aktivieren. Zuerst **nicht** bestätigen: `authorization_required`; keine Sichtung darf beginnen.
+5. Bestätigen: `authorized`; bei aktivem Fall darf der Scan starten.
 6. Geräteangaben, alle sichtbaren Profile, App-Zahl, Krypto-Treffer, Regelgrund und Erfassungsstatus prüfen.
 7. Mit Arbeitsprofil wiederholen. Secure Folder einmal gesperrt und einmal geöffnet testen; niemals darf aus Nichtzugänglichkeit ein Negativbefund werden.
 8. Kabel während App-Erfassung abziehen: Webdienst und andere Scans müssen bedienbar bleiben; der Lauf muss nachvollziehbar fehlschlagen.
-9. `summary.json.timings`, `scan.log`, PDF-Bericht und Audit kontrollieren.
+9. Telefon abziehen: genau ein sauberer Disconnect, keine zweite/flackernde Telefonkachel. `summary.json.timings`, `scan.log`, PDF-Bericht und Audit kontrollieren.
 
 ## Noch nicht praktisch bestätigt
 
-Die Android-Funktion ist automatisiert simuliert, aber in Alpha 60 noch nicht an einem realen Samsung/Pixel/Xiaomi-Gerät abgenommen. Herstellerpfade, Paketlisten je Profil, USB-Zugriffsregeln und Auto-Start müssen auf dem Pi praktisch verifiziert werden. Android-Oberflächen und Paketnamen können sich ändern; Regeln und Anleitung benötigen laufende Pflege.
+Die Pre-ADB-Erkennung und Zustandskette sind automatisiert mit synthetischen sysfs-/ADB-Daten geprüft, aber Alpha 71 wurde in dieser Entwicklungsumgebung nicht an einem realen Samsung/Pixel/Xiaomi-Gerät und nicht auf einem Raspberry Pi abgenommen. Herstellerpfade, reale USB-Deskriptoren, udev-/Zugriffsregeln, Paketlisten je Profil und Auto-Start müssen praktisch verifiziert werden. Android-Oberflächen und Paketnamen können sich ändern; Regeln und Anleitung benötigen laufende Pflege.

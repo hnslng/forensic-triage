@@ -1804,7 +1804,7 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   ));
   const dashboardDevices = activeCaseNumber
     ? visibleDevices
-    : visibleDevices.filter((device) => device.media_type === "optical");
+    : visibleDevices.filter((device) => ["optical", "android", "iphone"].includes(device.media_type));
   $("deviceList").innerHTML = dashboardDevices.map((device) => {
     const state = deviceStates.get(device.path) || "ready";
     const iphone = device.media_type === "iphone";
@@ -1823,9 +1823,13 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
     const visibleState = iphone && state === "ready" && device.connection_state !== "paired"
       ? "IPHONE ENTSPERREN / VERTRAUEN"
       : android && !device.scan_supported
-        ? (device.connection_state === "authorization_required" ? "VERBINDUNG AM TELEFON BESTÄTIGEN" : "TELEFON VORBEREITEN")
+        ? (device.connection_state === "authorization_required"
+          ? "USB-DEBUGGING AM TELEFON BESTÄTIGEN"
+          : device.connection_state === "debugging_required"
+            ? "USB-DEBUGGING IST NOCH NICHT AKTIVIERT"
+            : "TELEFON VORBEREITEN")
       : stateLabels[state];
-    const guidance = android && !device.scan_supported ? `<div class="android-guidance"><strong>ANDROID-TELEFON ERKANNT</strong><p>Für die Krypto-App-Prüfung einmalig am Telefon:</p><ol>${(device.guidance || []).map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol><small>TRIAGE//BOX wartet automatisch. Nach der Bestätigung startet der Scan bei aktivem Fall.</small></div>` : "";
+    const guidance = android && !device.scan_supported ? `<div class="android-guidance"><strong>ANDROID-TELEFON VERBUNDEN</strong><p>Für die Krypto-App-Prüfung einmalig am Telefon:</p><ol>${(device.guidance || []).map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol><small>TRIAGE//BOX wartet automatisch. Nach der Bestätigung startet der Scan bei aktivem Fall.</small></div>` : "";
     const ejectDisabled = deviceDiscoveryError || ["scanning", "timeout"].includes(state) || device.mounted;
     return `<article class="device-card" data-state="${state}">
       <span class="device-card-top"><i class="device-led" title="${escapeHtml(visibleState)}"></i><b>${phone ? `${android ? "ANDROID" : "IPHONE"} ERKANNT` : optical ? "CD/DVD-LAUFWERK" : "NEUES MEDIUM"}</b><em>${deviceDiscoveryError ? "STATUS UNBEKANNT" : "● ONLINE"}</em></span>
@@ -3321,7 +3325,13 @@ async function diagPoll() {
     if (!response.ok) throw new Error("Diagnose-Protokoll nicht verfügbar");
     const data = await response.json();
     if (revision !== diagPollRevision || !diagConsoleVisible() || diagPaused) return;
-    if (data.mode === "debug" || data.mode === "normal") diagServerMode = data.mode;
+    if (data.mode === "debug" || data.mode === "normal") {
+      const modeChanged = diagDisplayMode !== data.mode;
+      diagServerMode = data.mode;
+      diagDisplayMode = data.mode;
+      applyDiagModeButtons();
+      if (modeChanged) diagRenderAll();
+    }
     const entries = Array.isArray(data.entries) ? data.entries : [];
     const newest = Number(entries.at(-1)?.seq) || diagCursor;
     if (newest > diagCursor) diagCursor = newest;
@@ -3336,7 +3346,7 @@ async function diagPoll() {
 }
 
 async function diagSetMode(mode) {
-  if (mode === diagDisplayMode) return;
+  if (mode === diagServerMode && mode === diagDisplayMode) return;
   try {
     const response = await fetch("/api/logs/mode", {
       method: "POST",
@@ -3344,7 +3354,9 @@ async function diagSetMode(mode) {
       body: JSON.stringify({ mode }),
     });
     if (!response.ok) throw new Error((await response.json()).error || "Modus nicht übernommen");
-    diagDisplayMode = mode;
+    const data = await response.json();
+    diagServerMode = data.mode === "debug" ? "debug" : "normal";
+    diagDisplayMode = diagServerMode;
     applyDiagModeButtons();
     if (mode === "debug") { /* server records DEBUG from now on */ }
     diagRenderAll();

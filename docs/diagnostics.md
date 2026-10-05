@@ -1,4 +1,4 @@
-# Diagnosekonsole (Alpha 70)
+# Diagnosekonsole (Alpha 71)
 
 Die Diagnosekonsole ist ein lokales Werkzeug für den Testbetrieb. Sie zeigt in der Weboberfläche, was TRIAGE//BOX intern erkennt und tut — USB-Geräte, Android-/iPhone-Kandidaten, ADB- und Trust-Zustände, Scans, Updates und Fehler — damit spätere Hardwaretests (Pi, USB-Sticks, Android, iPhone) nachvollziehbar bleiben.
 
@@ -7,7 +7,7 @@ Sie ist **Diagnose-Infrastruktur, keine neue Logging-Plattform** und ändert kei
 ## Aufbau
 
 - **Ringbuffer im RAM**: thread-sicher, standardmäßig die letzten **500 Einträge** (älteste werden verworfen). Über die Umgebungsvariable `FORENSIC_TRIAGE_DIAG_BUFFER_MAX` konfigurierbar, Obergrenze 2000. Kein Schreiben auf Datenträger, keine Persistenz: Nach einem Service-Neustart ist die Konsole leer (Zustand „NOCH KEINE DIAGNOSEEREIGNISSE").
-- **Handler statt Zweitsystem**: ein eigener `logging.Handler` übernimmt die bestehenden Python-LogRecords. Vorhandene `logging.info/warning/error`-Aufrufe funktionieren unverändert. HTTP-Zugriffszeilen (`web GET …`) und ungefiltertes journalctl fließen bewusst **nicht** in die Konsole; bestehende Speicherorte (`scan.log`, journal) bleiben unangetastet.
+- **Handler statt Zweitsystem**: ein eigener `logging.Handler` übernimmt nur bewusst freigegebene Records aus dem `forensic-triage`-Namespace, Records mit expliziter Diagnosekategorie oder bekannten Modulen unter `forensic_triage/`. Der Root-Logger bleibt auf seinem vorhandenen Level; INFO-Daten fremder Bibliotheken werden nicht aufgenommen. Ein zusätzlicher WARNING-StreamHandler entsteht nur, wenn der Prozess noch keinen normalen Handler besitzt. Bestehende Speicherorte (`scan.log`, journal) bleiben unangetastet.
 - **Struktur je Eintrag**: fortlaufende `seq` (monoton steigend, Cursor für Polling), ISO- Zeitstempel mit Millisekunden, `LEVEL`, `CATEGORY`, Meldung und optional kleine Details (maximal 12 Felder, je 200 Zeichen).
 
 ## Kategorien
@@ -17,11 +17,11 @@ Sie ist **Diagnose-Infrastruktur, keine neue Logging-Plattform** und ändert kei
 ## NORMAL- und DEBUG-Modus
 
 - **NORMAL** (Vorgabe): wichtige Zustandsänderungen — Geräte verbunden/getrennt, Einbinden/Schreibschutz, Verbindungs-/Trust-Zustände, Scanstart/-ende mit Dauer, Update-Statuswechsel, Fehler (WARNING/ERROR).
-- **DEBUG**: zusätzlich technische Details aus dem kontrollierten `forensic-triage`-Logger-Namespace — sysfs-Kandidaten mit `idVendor`, `idProduct`, Hersteller, Modell und Serien-**Vorhanden-Flag**, ADB-Binary vorhanden ja/nein, ADB-Zustand pro Gerät (`adb devices`), resultierender `connection_state`. Der Root-Logger wird nicht global auf DEBUG gesetzt; Debug-Aufzeichnung wird serverseitig per Umschalter aktiviert (`POST /api/logs/mode`).
+- **DEBUG**: zusätzlich technische Details aus dem kontrollierten `forensic-triage`-Logger-Namespace — sysfs-Pfad, `idVendor`, `idProduct`, Hersteller, Modell, Geräteklasse, Interfaceklasse/-subklasse/-protokoll, Kandidaten- oder Ablehnungsgrund, Confidence, Serien-**Vorhanden-Flag**, ADB-Binary, ADB-Zustand, resultierender `connection_state` und Identitätsquelle. Technisch erforderliche Gerätekennungen wie die ADB-ID dürfen hier erscheinen. Der Root-Logger wird nicht global erweitert; Debug-Aufzeichnung wird serverseitig per Umschalter aktiviert.
 
 ## Logflut-Vermeidung
 
-Zustandsänderungen (Gerät verbunden/getrennt, ADB-/Trust-Statusübergänge, Einhängen, Schreibschutz, Strom- und Update-Zustände) werden nur bei tatsächlicher Änderung geloggt. Identische Poll-Ergebnisse erzeugen keine Einträge. Wiederkehrende Fehler (z. B. blockierte Erkennung) erscheinen erneut frühestens nach 60 Sekunden (Dedup/Cooldown).
+Zustandsänderungen werden nur bei tatsächlicher Änderung geloggt. Identische Poll-Ergebnisse erzeugen keine Einträge. Wiederkehrende Fehler erscheinen einmal und dann frühestens 60 Sekunden nach dem zuletzt **ausgegebenen** Ereignis; unterdrückte Poll-Treffer verlängern das Fenster nicht. Scan-Exceptions bleiben vollständig im Journal, während die Konsole genau ein kompaktes Fehlerereignis erhält.
 
 ## Bedienung (Tab DIAGNOSE in den Einstellungen)
 
@@ -44,14 +44,15 @@ Diagnoseendpunkte geben ausschließlich bereits erfasste, strukturierte Einträg
 ## Datenschutz
 
 - Keine Passwörter, Tokens, Sitzungsdaten oder privaten Schlüssel; keine Dateiinhalte.
-- Seriennummern von Telefonen erscheinen nicht als Klartext, sondern nur als Serienstatus (Vorhanden ja/nein); technische Kennungen (`idVendor`/`idProduct`) nur im DEBUG-Modus.
+- NORMAL zeigt keine Telefonseriennummern oder UDIDs im Klartext. DEBUG darf technische Kennungen anzeigen, wenn sie zur lokalen Fehleranalyse erforderlich sind. Passwörter, Tokens, Sitzungsdaten, Dateiinhalte und andere Secrets bleiben in beiden Modi ausgeschlossen.
 - RAM-only: die Konsole wird nicht auf Datenträger geschrieben, wodurch keine neue Aufbewahrungs-/Löschthematik entsteht.
 
 ## Manueller Hardware-Test (Pi)
 
 1. DIAGNOSE öffnen, Modus DEBUG aktivieren.
 2. USB-Stick anstecken → USB-Ereignisse beachten (verbunden, Details), danach abziehen → „getrennt".
-3. Android ohne USB-Debugging anstecken → ablesen: Wird ein USB-Gerät erkannt? `idVendor`/`idProduct`/Hersteller/Produkt erscheinen? Seriennform vorhanden? Kandidat erkannt? ADB vorhanden? Welcher `connection_state` entsteht?
-4. USB-Debugging aktivieren, Autorisierung am Telefon bestätigen → Zustandsübergänge verdeutlichen (`debugging_required → unauthorized → authorized`).
+3. Samsung ohne USB-Debugging anstecken und normale Datenfreigabe bestätigen: Telefonkachel, `debugging_required`, Anleitung sowie erkannte USB-Merkmale/Kandidatenbegründung prüfen.
+4. USB-Debugging aktivieren, Autorisierung zunächst offen lassen: `authorization_required` prüfen.
+5. Dialog bestätigen: `authorized` und Scanbereitschaft prüfen; anschließend abziehen und genau einen Disconnect prüfen.
 
-Wichtig: In Alpha 70 wird die frühe Android-Erkennung **nicht** repariert — der Test zeigt nur, was aktuell passiert, und liefert die Grundlage für Alpha 71.
+Diese Alpha-71-Funktion ist automatisiert/mock-basiert geprüft, aber noch nicht mit einem echten Telefon am Raspberry Pi abgenommen.

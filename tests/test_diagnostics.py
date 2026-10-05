@@ -17,7 +17,7 @@ def fresh_diagnostics(monkeypatch):
     diag.reset_state()
 
 
-def make_record(name="root", level=logging.INFO, msg="System läuft", args=(), pathname="/opt/web.py"):
+def make_record(name="root", level=logging.INFO, msg="System läuft", args=(), pathname="/opt/forensic_triage/web.py"):
     return logging.LogRecord(name, level, pathname, 1, msg, args, None)
 
 
@@ -126,10 +126,10 @@ def test_handler_derives_category_from_explicit_and_module() -> None:
     record = make_record(name=diag.LOGGER_NAME, msg="Strukturwert")
     record.diag_category = "ANDROID"
     handler.emit(record)
-    handler.emit(make_record(pathname="/opt/android.py"))
+    handler.emit(make_record(pathname="/opt/forensic_triage/android.py"))
     handler.emit(make_record(level=logging.ERROR, pathname="/opt/senseless.py"))
     entries, _ = ring.since()
-    assert [entry["category"] for entry in entries] == ["ANDROID", "ANDROID", "ERROR"]
+    assert [entry["category"] for entry in entries] == ["ANDROID", "ANDROID"]
 
 
 def test_handler_swallows_broken_sinks_and_payloads() -> None:
@@ -172,11 +172,32 @@ def test_once_rate_limits_repeated_errors() -> None:
 
 
 def test_once_cooldown_allows_repeat_after_window(monkeypatch) -> None:
-    original_monotonic = diag.time.monotonic
-    diag.once("a", "ERROR", "Kaputt")
-    assert diag.once("a", "ERROR", "Kaputt") is False
-    monkeypatch.setattr(diag.time, "monotonic", lambda: original_monotonic() + 61.0)
+    moments = iter((0.0, 1.0, 59.0, 61.0))
+    monkeypatch.setattr(diag.time, "monotonic", lambda: next(moments))
     assert diag.once("a", "ERROR", "Kaputt") is True
+    assert diag.once("a", "ERROR", "Kaputt") is False
+    assert diag.once("a", "ERROR", "Kaputt") is False
+    assert diag.once("a", "ERROR", "Kaputt") is True
+
+
+def test_handler_rejects_uncontrolled_library_info() -> None:
+    ring = diag.LogRing()
+    handler = diag.DiagHandler(ring)
+    handler.emit(make_record(name="urllib3.connectionpool", msg="request completed", pathname="/site-packages/urllib3/web.py"))
+    handler.emit(make_record(name="forensic-triage.web", msg="application event"))
+    assert [entry["message"] for entry in ring.since()[0]] == ["application event"]
+
+
+def test_scan_exception_can_stay_in_journal_without_duplicate_diagnostic() -> None:
+    ring = diag.LogRing()
+    handler = diag.DiagHandler(ring)
+    record = make_record(level=logging.ERROR, msg="scan request failed", pathname="/opt/web.py")
+    record.diag_silent = True
+    handler.emit(record)
+    visible = make_record(name=diag.LOGGER_NAME, level=logging.ERROR, msg="Scan fehlgeschlagen")
+    visible.diag_category = "SCAN"
+    handler.emit(visible)
+    assert [entry["message"] for entry in ring.since()[0]] == ["Scan fehlgeschlagen"]
 
 
 def test_change_logs_only_on_state_change() -> None:
@@ -201,6 +222,19 @@ def test_install_is_idempotent() -> None:
     root_handler_count = len(logging.getLogger().handlers)
     diag.install(stream=False)
     assert len(logging.getLogger().handlers) == root_handler_count
+
+
+def test_install_preserves_root_level_and_does_not_duplicate_existing_handler(monkeypatch) -> None:
+    root = logging.getLogger()
+    existing = logging.NullHandler()
+    monkeypatch.setattr(root, "handlers", [existing])
+    root.setLevel(logging.ERROR)
+    diag.reset_state()
+    diag.install(stream=True)
+    assert root.level == logging.ERROR
+    assert root.handlers.count(existing) == 1
+    assert len([handler for handler in root.handlers if isinstance(handler, diag.DiagHandler)]) == 1
+    assert not any(isinstance(handler, logging.StreamHandler) for handler in root.handlers if handler is not existing)
 
 
 def test_recent_endpoint_delivers_entries_mode_and_latest(stub_diags=None) -> None:

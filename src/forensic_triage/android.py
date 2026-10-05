@@ -29,6 +29,19 @@ ANDROID_USB_VENDORS = {
     "2b6a": "Nothing", "1004": "LG", "0bb4": "HTC", "2d95": "vivo",
 }
 
+ANDROID_MANUFACTURER_MARKERS = (
+    "samsung", "google", "pixel", "xiaomi", "redmi", "motorola", "oneplus",
+    "oppo", "sony", "huawei", "honor", "nothing", "lg", "htc", "vivo",
+)
+ANDROID_PRODUCT_MARKERS = (
+    "android", "galaxy", "pixel", "phone", "smartphone", "oneplus", "oppo",
+    "xiaomi", "redmi", "moto", "xperia", "huawei", "honor", "nothing", "vivo",
+)
+CAMERA_MARKERS = (
+    "camera", "digital camera", "dslr", "mirrorless", "nikon", "canon",
+    "fujifilm", "olympus", "panasonic lumix", "leica",
+)
+
 
 def _run(args: list[str], *, timeout: float = 8, check: bool = False) -> subprocess.CompletedProcess[str]:
     return run_command(args, check=check, capture_output=True, timeout=timeout)
@@ -41,8 +54,72 @@ def _sysfs_text(path: Path) -> str:
         return ""
 
 
-def _usb_candidates(root: Path = Path("/sys/bus/usb/devices")) -> list[dict[str, str]]:
-    candidates: list[dict[str, str]] = []
+def _usb_interfaces(root: Path, sysfs_name: str) -> list[dict[str, str]]:
+    """Read USB interface descriptors belonging to one physical device."""
+    interfaces: list[dict[str, str]] = []
+    for interface in sorted(root.glob(f"{sysfs_name}:*"), key=lambda item: item.name):
+        class_id = _sysfs_text(interface / "bInterfaceClass").casefold()
+        if not class_id:
+            continue
+        interfaces.append({
+            "name": interface.name,
+            "class": class_id,
+            "subclass": _sysfs_text(interface / "bInterfaceSubClass").casefold(),
+            "protocol": _sysfs_text(interface / "bInterfaceProtocol").casefold(),
+            "label": _sysfs_text(interface / "interface"),
+        })
+    return interfaces
+
+
+def _interface_summary(interfaces: list[dict[str, str]]) -> str:
+    return ",".join(
+        f"{item['class']}/{item['subclass']}/{item['protocol']}"
+        + (f":{item['label']}" if item.get("label") else "")
+        for item in interfaces
+    )
+
+
+def _android_usb_evidence(
+    *, vendor_id: str, manufacturer: str, product: str,
+    device_class: str, interfaces: list[dict[str, str]],
+) -> tuple[bool, str, str]:
+    """Conservatively classify a pre-ADB USB device and explain the evidence."""
+    description = f"{manufacturer} {product}".casefold()
+    labels = " ".join(item.get("label", "") for item in interfaces).casefold()
+    known_vendor = vendor_id in ANDROID_USB_VENDORS
+    known_brand = any(
+        re.search(rf"\b{re.escape(marker)}\b", description)
+        for marker in ANDROID_MANUFACTURER_MARKERS
+    )
+    phone_product = any(
+        re.search(rf"\b{re.escape(marker)}\b", description)
+        for marker in ANDROID_PRODUCT_MARKERS
+    )
+    camera = any(marker in description for marker in CAMERA_MARKERS)
+    adb_interface = any(
+        item["class"] == "ff" and item["subclass"] == "42" and item["protocol"] in {"01", "1"}
+        for item in interfaces
+    ) or "adb" in labels
+    imaging_interface = any(
+        item["class"] == "06" and item["subclass"] in {"01", "1"}
+        for item in interfaces
+    ) or any(marker in labels for marker in ("mtp", "ptp"))
+
+    if known_vendor:
+        return True, "high", "known_android_vendor"
+    if adb_interface:
+        return True, "high", "adb_usb_interface"
+    if (known_brand or phone_product) and not camera and (imaging_interface or device_class in {"00", "0", "ef"}):
+        return True, "medium", "phone_identity_with_mtp_ptp_or_composite_usb"
+    if imaging_interface and camera:
+        return False, "rejected", "camera_ptp_without_android_evidence"
+    if imaging_interface:
+        return False, "rejected", "mtp_ptp_without_phone_evidence"
+    return False, "rejected", "no_android_phone_evidence"
+
+
+def _usb_candidates(root: Path = Path("/sys/bus/usb/devices")) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
     if not root.is_dir():
         diag.change(
             "android.sysfs.root", "ANDROID", "sysfs-Pfad nicht verfügbar",
@@ -53,15 +130,36 @@ def _usb_candidates(root: Path = Path("/sys/bus/usb/devices")) -> list[dict[str,
     entries = sorted(root.iterdir(), key=lambda item: item.name)
     for directory in entries:
         vendor_id = _sysfs_text(directory / "idVendor").casefold()
-        if vendor_id not in ANDROID_USB_VENDORS:
+        if not vendor_id:  # Interface directories have no idVendor of their own.
             continue
         product_id = _sysfs_text(directory / "idProduct").casefold()
+        manufacturer = _sysfs_text(directory / "manufacturer")
+        product = _sysfs_text(directory / "product")
+        device_class = _sysfs_text(directory / "bDeviceClass").casefold()
+        interfaces = _usb_interfaces(root, directory.name)
+        accepted, confidence, reason = _android_usb_evidence(
+            vendor_id=vendor_id, manufacturer=manufacturer, product=product,
+            device_class=device_class, interfaces=interfaces,
+        )
+        if not accepted:
+            diag.change(
+                f"android.usb.rejected.{directory.name}", "ANDROID",
+                f"USB-Gerät nicht als Android klassifiziert: name={directory.name} reason={reason}",
+                {
+                    "idVendor": vendor_id, "idProduct": product_id,
+                    "manufacturer": manufacturer, "product": product,
+                    "device_class": device_class, "interfaces": _interface_summary(interfaces),
+                },
+                signature=f"{vendor_id}:{product_id}:{reason}:{_interface_summary(interfaces)}", debug=True,
+            )
+            continue
         serial = _sysfs_text(directory / "serial")
         candidates.append({
             "sysfs_name": directory.name, "vendor_id": vendor_id, "product_id": product_id,
-            "vendor": _sysfs_text(directory / "manufacturer") or ANDROID_USB_VENDORS[vendor_id],
-            "model": _sysfs_text(directory / "product") or "Android-Gerät",
-            "serial": serial,
+            "vendor": manufacturer or ANDROID_USB_VENDORS.get(vendor_id, "Android"),
+            "model": product or "Android-Gerät", "serial": serial,
+            "device_class": device_class, "interfaces": interfaces,
+            "confidence": confidence, "evidence": reason,
         })
     diag.change(
         "android.sysfs.summary", "ANDROID",
@@ -132,7 +230,8 @@ def android_guidance(vendor: str) -> list[str]:
 
 
 def _log_discovery_state(
-    *, usb: list[dict[str, str]], adb_available: bool, adb: list[dict[str, str]],
+    *, usb: list[dict[str, Any]], adb_available: bool, adb: list[dict[str, str]],
+    devices: list[dict[str, Any]],
 ) -> None:
     """Debug-only, change-tracked insight into sysfs and ADB (Diagnose Alpha 70)."""
     diag.change(
@@ -157,23 +256,56 @@ def _log_discovery_state(
                 "idVendor": item["vendor_id"], "idProduct": item["product_id"],
                 "manufacturer": item["vendor"], "product": item["model"],
                 "serial_present": bool(item["serial"]),
+                "device_class": item.get("device_class", ""),
+                "interfaces": _interface_summary(item.get("interfaces", [])),
+                "confidence": item.get("confidence", ""),
+                "reason": item.get("evidence", ""),
             },
-            signature=f"{item['vendor_id']}:{item['product_id']}:{bool(item['serial'])}",
+            signature=(
+                f"{item['vendor_id']}:{item['product_id']}:{bool(item['serial'])}:"
+                f"{item.get('confidence', '')}:{item.get('evidence', '')}:"
+                f"{_interface_summary(item.get('interfaces', []))}"
+            ),
             debug=True,
         )
+    for device in devices:
+        diag.change(
+            f"android.result.{device['path']}", "ANDROID",
+            f"Android-Verbindungsstatus: {device['connection_state']}",
+            {
+                "connection_state": device["connection_state"],
+                "scan_supported": bool(device["scan_supported"]),
+                "identity_source": device.get("identity_source", ""),
+            }, signature=f"{device['connection_state']}:{bool(device['scan_supported'])}", debug=True,
+        )
+
+
+def _match_usb_candidate(
+    row: dict[str, str], usb: list[dict[str, Any]], used_sysfs: set[str],
+) -> tuple[dict[str, Any], str]:
+    serial = row.get("serial", "")
+    for item in usb:
+        if item["sysfs_name"] not in used_sysfs and item.get("serial") and item["serial"] == serial:
+            return item, "usb_serial"
+    topology = str(row.get("usb") or "").removeprefix("usb:")
+    if topology:
+        for item in usb:
+            if item["sysfs_name"] not in used_sysfs and item["sysfs_name"] == topology:
+                return item, "usb_topology"
+    return {}, "adb_serial"
 
 
 def discover_androids() -> list[dict[str, Any]]:
     usb = _usb_candidates()
     adb_available = bool(shutil.which("adb"))
     adb = _adb_rows()
-    _log_discovery_state(usb=usb, adb_available=adb_available, adb=adb)
-    by_serial = {item["serial"]: item for item in usb if item["serial"]}
     devices: list[dict[str, Any]] = []
-    used: set[str] = set()
+    used_sysfs: set[str] = set()
     for row in adb:
         serial = row["serial"]
-        physical = by_serial.get(serial, {})
+        physical, identity_source = _match_usb_candidate(row, usb, used_sysfs)
+        if physical:
+            used_sysfs.add(physical["sysfs_name"])
         state = row["adb_state"]
         vendor = str(physical.get("vendor") or row.get("product") or "Android")
         model = str(physical.get("model") or row.get("model", "")).replace("_", " ") or "Android-Gerät"
@@ -182,16 +314,16 @@ def discover_androids() -> list[dict[str, Any]]:
             "Verbindungsabfrage am Telefon bestätigen." if state == "unauthorized" else
             "Telefon entsperren, Kabel prüfen und Verbindungsfreigabe bestätigen."
         )
+        identity = str(physical.get("serial") or (f"usb-{physical['sysfs_name']}" if physical else serial))
         devices.append({
-            "path": f"android:{serial}", "serial": serial, "adb_serial": serial,
+            "path": f"android:{identity}", "serial": str(physical.get("serial") or serial), "adb_serial": serial,
             "vendor": vendor, "model": model, "size": 0, "media_type": "android",
             "connection_state": connection_state, "scan_supported": state == "device",
             "mounted": False, "read_only": False, "unavailable_reason": reason,
-            "guidance": android_guidance(vendor),
+            "guidance": android_guidance(vendor), "identity_source": identity_source,
         })
-        used.add(serial)
     for item in usb:
-        if item["serial"] and item["serial"] in used:
+        if item["sysfs_name"] in used_sysfs:
             continue
         identity = item["serial"] or f"usb-{item['sysfs_name']}"
         connection_state = "debugging_required" if adb_available else "support_missing"
@@ -206,13 +338,16 @@ def discover_androids() -> list[dict[str, Any]]:
             "media_type": "android", "connection_state": connection_state,
             "scan_supported": False, "mounted": False, "read_only": False,
             "unavailable_reason": unavailable_reason,
+            "identity_source": "usb_serial" if item["serial"] else "usb_topology",
             "guidance": android_guidance(item["vendor"]) if adb_available else [
                 "Pi einmal mit Internet verbinden",
                 "sudo apt-get update && sudo apt-get install -y adb ausführen",
                 "TRIAGE//BOX anschließend neu starten",
             ],
         })
-    return sorted(devices, key=lambda item: (str(item["vendor"]).casefold(), str(item["model"]).casefold(), str(item["path"])))
+    devices = sorted(devices, key=lambda item: (str(item["vendor"]).casefold(), str(item["model"]).casefold(), str(item["path"])))
+    _log_discovery_state(usb=usb, adb_available=adb_available, adb=adb, devices=devices)
+    return devices
 
 
 def _adb(serial: str, *args: str, timeout: float = 12) -> subprocess.CompletedProcess[str]:
