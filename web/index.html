@@ -143,12 +143,12 @@
 
         <div class="analysis-grid">
           <article id="categoriesPanel" class="panel categories-panel">
-            <div class="panel-title"><span>05</span> DATEIEN &amp; ZEITRAUM</div>
+            <div class="panel-title"><span>05</span> DATEITYPEN</div>
+            <small id="categoryLegend" class="category-legend" hidden>ANZAHL (IM ZEITRAUM)</small>
             <section id="periodSummary" class="period-summary" hidden>
               <div class="period-heading"><strong id="periodRange">—</strong><span id="periodTimezone" class="period-timezone"></span></div>
               <div id="periodPhoneContext" class="period-phone-context" hidden>ZEITRAUM ALS FALLKONTEXT · KEINE DATEIAUSWERTUNG</div>
               <strong id="periodFileCount" class="period-file-count"></strong>
-              <button id="openTimestampModal" class="period-detail-button" type="button" hidden>ZEITSTEMPEL ANZEIGEN</button>
             </section>
             <div id="categories" class="bar-list"></div>
             <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
@@ -157,14 +157,22 @@
               <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
             </section>
           </article>
-          <article id="hintsPanel" class="panel hints-panel">
-            <div class="panel-title"><span>06</span> HINWEISE</div>
-            <h3 class="hint-section-title">STICHWORTTREFFER</h3>
+          <article id="keywordsPanel" class="panel keywords-panel">
+            <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
             <div id="keywords" class="keyword-list"></div>
+          </article>
+          <article id="hintsPanel" class="panel hints-panel">
+            <div class="panel-title"><span>07</span> HINWEISE</div>
+            <h3 class="hint-section-title hint-section-title-first">KRYPTO-HINWEISE · TOP 5</h3>
             <section id="cryptoFindings" class="crypto-findings" hidden>
-              <div class="hint-section-title"><span>KRYPTO-HINWEISE</span><small id="cryptoRulesVersion"></small></div>
+              <small id="cryptoRulesVersion" class="crypto-rules-version"></small>
               <div id="cryptoSummary"></div>
               <button id="cryptoDetails" class="crypto-details-button" type="button">DETAILS ANZEIGEN</button>
+            </section>
+            <section id="timestampSummary" class="timestamp-summary" hidden>
+              <h3 class="hint-section-title">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL · TOP 5</h3>
+              <ol id="latestPeriodPreview" class="timestamp-preview" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
+              <button id="openTimestampModal" class="period-detail-button" type="button">ALLE ANZEIGEN</button>
             </section>
             <details id="backupFindings" class="backup-findings" hidden>
               <summary>GERÄTE-BACKUPS · <span id="backupFindingCount">0</span></summary>

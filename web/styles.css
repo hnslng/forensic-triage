@@ -382,6 +382,7 @@ h1 span { color: var(--acid); }
 .period-file-count { display: block; padding: 8px 0; color: var(--acid); font-size: 11px; font-weight: 900; }
 .period-detail-button { min-height: 34px; padding: 7px 10px; border: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 900; }
 .period-detail-button:hover { border-color: var(--acid); background: rgba(201, 242, 82, .05); }
+.category-legend { display: block; margin: -5px 12px 4px; color: var(--muted); font-size: 10px; letter-spacing: .04em; }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid var(--ink); padding-bottom: 10px; }
 .result-title-line { display: flex; align-items: center; gap: 16px; }
 .result-title-line > span { padding: 6px 8px; border: 1px solid var(--line); font-size: 11px; font-weight: 900; white-space: nowrap; }
@@ -483,7 +484,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .android-guidance-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
 .android-guidance-actions button:last-child { border-color: var(--line); color: var(--ink); }
 .android-guidance-message { min-height: 14px; margin: 0; color: var(--amber); font-size: 11px; font-weight: 800; }
-.analysis-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
+.analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: start; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }
 .keyword-list { padding: 14px 15px; }
@@ -495,17 +496,26 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.category-period-count { display: block; color: var(--muted); font-size: 10px; }
+.category-period-count { display: inline; color: var(--muted); font-size: 10px; }
 .largest-file-summary { margin-top: 2px; color: var(--acid) !important; font-size: 10px !important; letter-spacing: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hint-section-title { display: flex; justify-content: space-between; gap: 8px; margin: 12px 12px 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; letter-spacing: .04em; }
-.hints-panel > .hint-section-title { border-top: 0; margin-top: 0; }
-.crypto-findings { margin: 8px 12px; }
+.hints-panel > .hint-section-title-first { border-top: 0; margin-top: 0; }
+.crypto-findings { margin: 0 12px 8px; }
+.crypto-rules-version { display: block; margin: 0 0 4px; color: var(--muted); font-size: 10px; text-align: right; }
 #cryptoSummary { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
 #cryptoSummary > span { padding: 4px 6px; border: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 #cryptoSummary b { margin-left: 4px; color: var(--acid); }
 .crypto-details-button { width: 100%; padding: 9px 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; text-align: left; }
 .crypto-details-button:hover { color: var(--ink); }
 .crypto-hint-list { max-height: 360px; overflow: auto; }
+.timestamp-summary { margin: 0 12px 8px; border-top: 1px solid var(--line); }
+.timestamp-summary .hint-section-title { margin-left: 0; margin-right: 0; }
+.timestamp-preview { display: grid; gap: 0; margin: 0; padding: 2px 0 5px 22px; }
+.timestamp-preview li { display: grid; grid-template-columns: minmax(82px, auto) 38px minmax(0, 1fr); gap: 6px; align-items: baseline; min-width: 0; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.timestamp-preview time, .timestamp-preview b { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.timestamp-preview b { color: var(--amber); }
+.timestamp-preview button { min-width: 0; overflow: hidden; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.timestamp-preview button:hover { color: var(--acid); }
 .backup-findings { margin: 0 12px 8px; }
 .backup-hint { padding: 8px 0; border-top: 1px solid var(--line); }
 .archive-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 12px 12px; padding-top: 6px; border-top: 1px solid var(--line); }
@@ -598,10 +608,15 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .timestamp-list li { display: grid; grid-template-columns: minmax(138px, auto) 72px minmax(90px, auto) minmax(0, 1fr); gap: 8px; align-items: center; min-width: 0; padding: 11px 0; border-bottom: 1px dashed var(--line); }
 .timestamp-list time, .timestamp-list li > b, .timestamp-list li > span { color: var(--muted); font-size: 11px; }
 .timestamp-list li > b { color: var(--amber); }
-.timestamp-list button { min-width: 0; overflow: hidden; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.timestamp-list button { min-width: 0; overflow-wrap: anywhere; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; }
 .timestamp-list button:hover { color: var(--acid); text-decoration: underline; }
+.timestamp-path { grid-column: 1 / -1; overflow-wrap: anywhere; color: var(--muted); font-size: 10px; line-height: 1.35; }
 .crypto-detail-modal #cryptoHintList { max-height: min(62vh, 620px); padding: 0 14px 12px; overflow-y: auto; }
 .crypto-detail-modal .crypto-hint-list { max-height: none; }
+.crypto-detail-modal .crypto-file-link strong, .crypto-detail-modal .crypto-file-link small, .crypto-detail-modal .crypto-file-link span { display: block; overflow-wrap: anywhere; white-space: normal; }
+.crypto-detail-modal .crypto-file-link strong { color: var(--ink); font-size: 12px; }
+.crypto-detail-modal .crypto-file-link small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.crypto-detail-modal .crypto-file-link span { margin-top: 4px; }
 .case-panel { margin-top: 10px; }
 .inventory-panel { grid-column: span 2; height: 100%; margin-top: 0; }
 .case-panel .panel-title b { color: var(--ink); }

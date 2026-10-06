@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.80] – 2026-10-06
+
+- Ergebnisdashboard wieder auf drei natürliche Spalten geordnet: `05 DATEITYPEN`, `06 STICHWORTTREFFER` und `07 HINWEISE`.
+- Zeitraumwerte erscheinen nur noch kompakt in Klammern hinter der Gesamtzahl; Krypto- und Zeitstempelhinweise zeigen rechts jeweils maximal fünf Übersichtszeilen.
+- Vollständige Krypto- und Zeitstempeldetails bleiben in den bestehenden Modals mit Dateiname, Pfad und exakter Explorer-Navigation.
+- Keine Änderungen an Scanner, Erkennung oder Forensiklogik.
+- Version auf `0.2.0-alpha.80` (`0.2.0a80`) angehoben.
+
 ## [0.2.0-alpha.79] – 2026-10-06
 
 - Ergebnisdashboard beruhigt: Dateitypen stehen vor der kompakten Zeitraumzusammenfassung; Zeitraumwerte werden pro Kategorie als „davon … im Zeitraum“ gezeigt.

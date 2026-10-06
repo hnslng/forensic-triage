@@ -1292,14 +1292,15 @@ function renderResults(summary, hits = {}) {
   largestSummary.hidden = !largest;
   largestSummary.textContent = largest ? `GRÖSSTE DATEI: ${formatBytes(largest.size)} · ${String(largest.path || "").split("/").pop()}` : "";
   renderPeriodSummary(summary);
+  const hasPeriodCategories = Boolean(summary.case_period && summary.period_evaluation !== "not_applicable");
+  $("categoryLegend").hidden = !hasPeriodCategories;
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
     const periodCount = Number(summary.categories_in_period?.[name] || 0);
-    const periodNote = summary.case_period && summary.period_evaluation !== "not_applicable"
-      ? `<small class="category-period-count">DAVON ${periodCount.toLocaleString("de-AT")} IM ZEITRAUM</small>` : "";
-    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}${periodNote}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
+    const periodNote = hasPeriodCategories ? ` <small class="category-period-count">(${periodCount.toLocaleString("de-AT")})</small>` : "";
+    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span><span class="bar-name">${periodNote}${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
   $("archiveEncryptedCount").textContent = Number(archiveEncryption.encrypted || 0).toLocaleString("de-AT");
@@ -1321,6 +1322,8 @@ function renderPeriodSummary(summary = {}) {
   if (!configured) {
     $("openTimestampModal").hidden = true;
     $("latestPeriodFiles").innerHTML = "";
+    $("latestPeriodPreview").innerHTML = "";
+    $("timestampSummary").hidden = true;
     return;
   }
   const formatDate = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("de-AT");
@@ -1334,6 +1337,8 @@ function renderPeriodSummary(summary = {}) {
     ? "ZEITRAUM ALS FALLKONTEXT GESPEICHERT · KEINE DATEIAUSWERTUNG"
     : `${Number(summary.period_file_count || 0).toLocaleString("de-AT")} / ${Number(summary.file_count || 0).toLocaleString("de-AT")} DATEIEN IM ZEITRAUM`;
   const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 10);
+  const previewRows = rows.slice(0, 5);
+  $("timestampSummary").hidden = phone || rows.length === 0;
   $("openTimestampModal").hidden = phone || rows.length === 0;
   $("timestampModalContext").textContent = [
     `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`,
@@ -1350,7 +1355,18 @@ function renderPeriodSummary(summary = {}) {
     }
     const path = String(file.path || "");
     const filename = path.split("/").pop() || path;
-    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
+    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button><small class="timestamp-path">PFAD: ${escapeHtml(path)}</small></li>`;
+  }).join("");
+  $("latestPeriodPreview").innerHTML = previewRows.map((file) => {
+    const epoch = Number(file.latest_period_timestamp);
+    let time = "—";
+    if (Number.isFinite(epoch)) {
+      try { time = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "short", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000)); }
+      catch { time = new Date(epoch * 1000).toLocaleString("de-AT"); }
+    }
+    const path = String(file.path || "");
+    const filename = path.split("/").pop() || path;
+    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
   }).join("");
 }
 
@@ -1460,11 +1476,10 @@ function renderIphoneSummary(phone) {
 }
 
 function renderCryptoFindings(crypto, isPhone) {
-  $("cryptoFindings").hidden = !crypto || isPhone;
-  if (!crypto) return;
-  const apps = crypto.app_hints || [];
-  const files = crypto.file_hints || [];
-  $("cryptoRulesVersion").textContent = crypto.rules?.version ? `REGELSTAND V${crypto.rules.version}` : "ÄLTERE SICHTUNG";
+  $("cryptoFindings").hidden = isPhone;
+  const apps = crypto?.app_hints || [];
+  const files = crypto?.file_hints || [];
+  $("cryptoRulesVersion").textContent = crypto?.rules?.version ? `REGELSTAND V${crypto.rules.version}` : "";
   $("cryptoScope").textContent = isPhone
     ? "Hinweise aus Apps und zugänglichen Dateinamen · keine Inhaltsanalyse."
     : "Hinweise nur aus Dateinamen und Pfaden des Grobindex. Keine Inhaltsanalyse und kein Nachweis für Krypto-Vermögenswerte.";
@@ -1481,11 +1496,17 @@ function renderCryptoFindings(crypto, isPhone) {
   }
   const categorySummary = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])
     .map(([category, count]) => `<span>${escapeHtml(appCategoryLabels[category] || category.toUpperCase())} <b>${count.toLocaleString("de-AT")}</b></span>`).join("");
-  $("cryptoSummary").innerHTML = categorySummary || '<span>KEINE DATEIHINWEISE</span>';
+  $("cryptoSummary").innerHTML = categorySummary
+    ? [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([category, count]) => `<span>${escapeHtml(appCategoryLabels[category] || category.toUpperCase())} <b>${count.toLocaleString("de-AT")}</b></span>`).join("")
+    : '<span>KEINE KRYPTO-HINWEISE</span>';
+  $("cryptoDetails").hidden = !(apps.length || files.length);
   const appRows = apps.map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
   const fileRows = [...groupedFiles.values()].flat().map(({ path, match, ...item }) => {
     const reason = match.reason || match.id || "REGELTREFFER";
-    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(path || "")}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(path || "DATEI")}</strong><span>${escapeHtml(appCategoryLabels[match.category] || match.category || "HINWEIS")} · ${escapeHtml(reason)}${item.extension ? ` · ${escapeHtml(item.extension)}` : ""}</span></button></li>`;
+    const fullPath = String(path || "");
+    const filename = fullPath.split("/").pop() || fullPath || "DATEI";
+    const term = match.term || match.keyword || match.matched_term;
+    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(fullPath)}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(filename)}</strong><small>${escapeHtml(fullPath)}</small><span>${escapeHtml(appCategoryLabels[match.category] || match.category || "HINWEIS")} · ${escapeHtml(reason)}${term ? ` · BEGRIFF: ${escapeHtml(term)}` : ""}${item.extension ? ` · ${escapeHtml(item.extension)}` : ""}</span></button></li>`;
   });
   $("cryptoHintList").innerHTML = appRows.length || fileRows.length
     ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>`
@@ -1570,7 +1591,7 @@ function renderRecord(record) {
     $("cryptoFindings").after($("backupFindings"));
   } else {
     $("categoriesPanel").append($("periodSummary"));
-    $("hintsPanel").append($("cryptoFindings"), $("backupFindings"));
+    $("hintsPanel").append($("backupFindings"));
   }
   renderIphoneSummary(phone);
   renderCryptoFindings(record.crypto || null, isPhone);
@@ -3224,16 +3245,23 @@ $("inventoryMore").addEventListener("click", () => {
 });
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
 $("inventorySort").addEventListener("change", (event) => loadInventory({ sortBy: event.target.value }));
-$("latestPeriodFiles").addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-inventory-file]");
-  if (!button || !currentMediaId) return;
-  const exactPath = button.dataset.inventoryFile;
+function openInventoryExactPath(exactPath) {
+  if (!exactPath || !currentMediaId) return;
   $("inventoryPanel").open = true;
   $("inventorySearch").value = exactPath;
   loadInventory({ exactPath, search: "" });
   $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("latestPeriodFiles").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-inventory-file]");
+  if (button) openInventoryExactPath(button.dataset.inventoryFile);
+});
+$("latestPeriodPreview").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-inventory-file]");
+  if (button) openInventoryExactPath(button.dataset.inventoryFile);
 });
 $("openTimestampModal").addEventListener("click", () => {
+  if ($("cryptoModal").open) $("cryptoModal").close();
   if (!$("timestampModal").open) $("timestampModal").showModal();
 });
 $("closeTimestampModal").addEventListener("click", () => $("timestampModal").close());
@@ -3241,6 +3269,7 @@ $("timestampModal").addEventListener("click", (event) => {
   if (event.target === $("timestampModal")) $("timestampModal").close();
 });
 $("cryptoDetails").addEventListener("click", () => {
+  if ($("timestampModal").open) $("timestampModal").close();
   if (!$("cryptoModal").open) $("cryptoModal").showModal();
 });
 $("closeCryptoModal").addEventListener("click", () => $("cryptoModal").close());
@@ -3249,11 +3278,7 @@ $("cryptoModal").addEventListener("click", (event) => {
 });
 $("cryptoHintList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-file]");
-  if (!button || !currentMediaId) return;
-  $("inventoryPanel").open = true;
-  $("inventorySearch").value = button.dataset.inventoryFile;
-  loadInventory({ exactPath: button.dataset.inventoryFile, search: "" });
-  $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (button) openInventoryExactPath(button.dataset.inventoryFile);
 });
 $("inventoryFiles").addEventListener("click", (event) => {
   const button = event.target.closest("button.inventory-container-toggle");

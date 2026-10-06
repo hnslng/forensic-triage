@@ -1510,8 +1510,8 @@ test('compact period summary shows counts and at most ten timestamps and fits ta
     categories_in_period: { Dokumente: 3, Bilder: 1 }, latest_period_files: latest,
   }), latest);
   assert.equal(await page.locator('#latestPeriodFiles li').count(), 10);
-  assert.match(await page.locator('#latestPeriodFiles').innerText(), /M\+C/);
-  assert.doesNotMatch(await page.locator('#latestPeriodFiles').innerText(), /docs\//);
+  assert.match(await page.locator('#latestPeriodPreview').innerText(), /M\+C/);
+  assert.doesNotMatch(await page.locator('#latestPeriodPreview').innerText(), /docs\//);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' }, period_evaluation: 'not_applicable' }));
   assert.equal(await page.locator('#periodPhoneContext').isVisible(), true);
   assert.equal(await page.locator('#latestPeriodFiles li').count(), 0);
@@ -1539,26 +1539,33 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
       period_evaluation: 'configured', period_file_count: 2, file_count: 8,
       categories_by_count: { Dokumente: 5, Bilder: 3 }, categories_in_period: { Dokumente: 1, Bilder: 1 },
       largest_files: [{ path: 'Archiv/sehr-grosse-datei.bin', size: 1048576 }],
-      latest_period_files: [{ path: 'Langer/Pfad/dokument.pdf', category: 'Dokumente', latest_period_timestamp: 1790000000, latest_period_timestamp_type: 'M' }],
+      latest_period_files: Array.from({ length: 10 }, (_, index) => ({ path: index === 0 ? 'Langer/Pfad/dokument.pdf' : `Archiv/Unterordner/datei-${index}.txt`, category: 'Dokumente', latest_period_timestamp: 1790000000 - index, latest_period_timestamp_type: index % 2 ? 'M+C' : 'M' })),
     }, crypto: { rules: { version: 2 }, file_hints: [
       { path: 'Wallet/one.db', matches: [{ category: 'wallet', id: 'wallet-db', reason: 'Dateiname: one.db' }] },
       { path: 'Exchange/two.csv', matches: [{ category: 'exchange', id: 'exchange-export', reason: 'Endung: csv' }] },
       { path: 'Wallet/three.json', matches: [{ category: 'wallet', id: 'wallet-json', reason: 'Endung: json' }] },
+      { path: 'Hardware/four.bin', matches: [{ category: 'hardware', id: 'hardware-wallet', reason: 'Regel: hardware' }] },
+      { path: 'Payment/five.txt', matches: [{ category: 'payment', id: 'payment-service', reason: 'Regel: payment' }] },
+      { path: 'Market/six.csv', matches: [{ category: 'market', id: 'market-service', reason: 'Regel: market' }] },
+      { path: 'Bank/seven.db', matches: [{ category: 'banking', id: 'bank-service', reason: 'Regel: banking' }] },
     ] } });
   }, media[2]);
   assert.equal(await page.locator('#files').count(), 0, 'largest files must not have a separate card');
   assert.match(await page.locator('#largestFileSummary').innerText(), /1 MB.*sehr-grosse-datei\.bin/i);
-  assert.match(await page.locator('#categoriesPanel .panel-title').innerText(), /05.*DATEIEN.*ZEITRAUM/);
-  assert.match(await page.locator('#hintsPanel .panel-title').innerText(), /06.*HINWEISE/);
+  assert.match(await page.locator('#categoriesPanel .panel-title').innerText(), /05.*DATEITYPEN/);
+  assert.match(await page.locator('#keywordsPanel .panel-title').innerText(), /06.*STICHWORTTREFFER/);
+  assert.match(await page.locator('#hintsPanel .panel-title').innerText(), /07.*HINWEISE/);
   assert.equal(await page.locator('#timestampModal').isVisible(), false);
   assert.equal(await page.locator('#cryptoModal').isVisible(), false);
   assert.match(await page.locator('#cryptoSummary').innerText(), /SELF-CUSTODY WALLETS.*2/);
+  assert.equal(await page.locator('#cryptoSummary > span').count(), 5);
   assert.doesNotMatch(await page.locator('#hintsPanel').innerText(), /Wallet\/one\.db/);
   await page.evaluate(() => { activeCaseNumber = 'TEST'; updateStartOverlay(); });
   await page.locator('#cryptoDetails').click();
   assert.equal(await page.locator('#cryptoModal').isVisible(), true);
   assert.match(await page.locator('#cryptoHintList').innerText(), /Wallet\/one\.db/);
-  assert.deepEqual(await page.locator('#categories .category-period-count').allTextContents(), ['DAVON 1 IM ZEITRAUM', 'DAVON 1 IM ZEITRAUM']);
+  assert.match(await page.locator('#cryptoHintList').innerText(), /Bank\/seven\.db/);
+  assert.deepEqual(await page.locator('#categories .category-period-count').allTextContents(), ['(1)', '(1)']);
   assert.equal(await page.locator('#categoriesPanel').evaluate(node => {
     const ids = [...node.children].map(child => child.id);
     return ids.indexOf('categories') < ids.indexOf('archiveStatus') && ids.indexOf('archiveStatus') < ids.indexOf('periodSummary');
@@ -1567,13 +1574,15 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
   const timestampModal = page.locator('#timestampModal');
   await page.locator('#openTimestampModal').click();
   assert.equal(await timestampModal.isVisible(), true);
-  assert.equal(await timestampModal.locator('#latestPeriodFiles li').count(), 1);
+  assert.equal(await page.locator('#latestPeriodPreview li').count(), 5);
+  assert.equal(await timestampModal.locator('#latestPeriodFiles li').count(), 10);
   assert.match(await timestampModal.innerText(), /M/);
   assert.match(await timestampModal.innerText(), /dokument\.pdf/);
+  assert.match(await timestampModal.innerText(), /PFAD: Langer\/Pfad\/dokument\.pdf/);
   const panelHeights = await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height)));
   assert.equal(await page.locator('.decision-panel').evaluate(node => getComputedStyle(node).gridColumn), '1 / -1');
   const request = page.waitForRequest(request => request.url().includes('/api/media/1/files') && request.url().includes('exact_path='));
-  await page.locator('#latestPeriodFiles button').click();
+  await page.locator('#latestPeriodFiles button').first().click();
   const navigation = new URL((await request).url());
   assert.equal(navigation.searchParams.get('exact_path'), 'Langer/Pfad/dokument.pdf');
   assert.deepEqual(await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height))), panelHeights);
@@ -1581,12 +1590,11 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
   await page.locator('#inventorySort').selectOption('size');
   await page.waitForFunction(() => [...performance.getEntriesByType('resource')].some(item => item.name.includes('sort_by=size')));
   assert.ok(requests.some(item => item.path === '/api/media/1/files' && item.query.includes('sort_by=size')));
-  await page.locator('#cryptoDetails').evaluate(node => { node.open = false; });
   for (const width of [1512, 1280, 1000, 800]) {
     await page.setViewportSize({ width, height: 1080 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `no horizontal overflow at ${width}px`);
-    const rows = await page.locator('.analysis-grid > *').evaluateAll(nodes => new Set(nodes.map(node => Math.round(node.getBoundingClientRect().top))).size);
-    assert.equal(rows, width <= 900 ? 2 : 1, `dashboard panel layout at ${width}px`);
+    const panelRows = await page.locator('.analysis-grid > *').evaluateAll(nodes => new Set(nodes.map(node => Math.round(node.getBoundingClientRect().top))).size);
+    assert.equal(panelRows, width <= 900 ? 3 : 1, `dashboard panel layout at ${width}px`);
     if (width === 1512 && process.env.TRIAGE_DASHBOARD_SCREENSHOT) await page.screenshot({ path: process.env.TRIAGE_DASHBOARD_SCREENSHOT, fullPage: true });
   }
 });
