@@ -4,7 +4,10 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from forensic_triage.period import evaluate_file_period, period_timezone_info, timestamp_coverage, validate_period
+from forensic_triage.period import (
+    evaluate_file_period, optional_bool, period_snapshot, period_timezone_info,
+    sqlite_optional_bool, timestamp_coverage, validate_period,
+)
 from forensic_triage.reporting import write_files_csv
 
 
@@ -122,3 +125,19 @@ def test_files_csv_keeps_period_fields(tmp_path):
     assert saved["period_matches"] == "M+C+A"
     assert saved["latest_period_timestamp"] == "1760000001"
     assert saved["latest_period_timestamp_type"] == "C"
+
+
+@pytest.mark.parametrize(("raw", "expected"), [
+    (None, None), (0, False), (1, True), ("0", False), ("1", True),
+    (False, False), (True, True), ("false", False), ("true", True),
+])
+def test_optional_bool_normalizes_sqlite_and_json_values(raw, expected):
+    assert optional_bool(raw) is expected
+    assert sqlite_optional_bool(raw) == (None if expected is None else int(expected))
+
+
+def test_period_snapshot_does_not_truthify_false_string():
+    period = period_snapshot("2026-01-01", "2026-01-31", {
+        "timezone": "local", "timezone_source": "fallback", "timezone_reproducible": "0",
+    })
+    assert period["timezone_reproducible"] is False

@@ -336,6 +336,9 @@ def test_case_period_audit_exports_and_historical_scan_snapshot(tmp_path):
     store = CaseStore(tmp_path / "casefiles")
     first = store.start_case("FALL-ZEIT", "HL", "2025-01-01", "2025-12-31")
     assert first["case"]["date_from"] == "2025-01-01"
+    with store._connect() as connection:
+        case_schema = {row["name"]: row["type"] for row in connection.execute("PRAGMA table_info(cases)")}
+    assert case_schema["period_timezone_reproducible"] == "INTEGER"
     audit_path = store.case_path("FALL-ZEIT") / "audit.log"
     events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
     assert sum(event["event_type"] == "case_period_set" for event in events) == 1
@@ -381,6 +384,115 @@ def test_case_period_audit_exports_and_historical_scan_snapshot(tmp_path):
     assert changes[-1]["details"]["old_date_from"] == "2026-01-01"
     assert changes[-1]["details"]["new_date_from"] is None
     assert json.loads((store.case_path("FALL-ZEIT") / "case.json").read_text())["case_period"] is None
+
+
+def test_timezone_boolean_persists_and_exports_as_boolean_values(tmp_path, monkeypatch):
+    import forensic_triage.casefiles as casefiles
+    from forensic_triage.period import period_timezone_info
+
+    store = CaseStore(tmp_path / "casefiles")
+    monkeypatch.setattr(casefiles, "period_timezone_info", lambda: {
+        "timezone": "local", "timezone_source": "system-local-fallback", "timezone_reproducible": False,
+    })
+    case = store.start_case("FALL-TZ", "HL", "2026-01-01", "2026-01-31")
+    assert case["case"]["period_timezone_reproducible"] is False
+    audit = [json.loads(line) for line in (store.case_path("FALL-TZ") / "audit.log").read_text().splitlines()]
+    period_event = next(event for event in audit if event["event_type"] == "case_period_set")
+    assert period_event["details"]["timezone_reproducible"] is False
+    case_json = json.loads((store.case_path("FALL-TZ") / "case.json").read_text())
+    assert case_json["case_period"]["timezone"] == "local"
+    assert case_json["case_period"]["timezone_reproducible"] is False
+    with store._connect() as connection:
+        saved = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM cases WHERE case_number='FALL-TZ'").fetchone()
+    assert tuple(saved) == (0, "integer")
+
+    result = make_result(store, "FALL-TZ", "SICHT-001")
+    period = {"date_from": "2026-01-01", "date_to": "2026-01-31", "timezone": "local",
+              "timezone_source": "system-local-fallback", "timezone_reproducible": False}
+    (result / "summary.json").write_text(json.dumps({"case_period": period, "period_file_count": 1, "file_count": 1}), encoding="utf-8")
+    media = store.record_scan("FALL-TZ", "SICHT-001", "HL", {"path": "/dev/sdb"}, result)["media"]
+    assert media["period_timezone_reproducible"] is False
+    with store._connect() as connection:
+        saved = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM media").fetchone()
+    assert tuple(saved) == (0, "integer")
+    assert json.loads((result / "summary.json").read_text())["case_period"]["timezone_reproducible"] is False
+    record = json.loads(next((store.case_path("FALL-TZ") / "media").rglob("*.json")).read_text())
+    assert record["period_timezone_reproducible"] is False
+
+
+def test_timezone_true_and_null_use_sqlite_integer_and_json_boolean_types(tmp_path, monkeypatch):
+    import forensic_triage.casefiles as casefiles
+
+    store = CaseStore(tmp_path / "casefiles")
+    monkeypatch.setattr(casefiles, "period_timezone_info", lambda: {
+        "timezone": "Europe/Vienna", "timezone_source": "TZ", "timezone_reproducible": True,
+    })
+    configured = store.start_case("FALL-TZ-TRUE", "HL", "2026-01-01", "2026-01-31")
+    assert configured["case"]["period_timezone_reproducible"] is True
+    true_json = json.loads((store.case_path("FALL-TZ-TRUE") / "case.json").read_text())
+    assert true_json["case_period"]["timezone_reproducible"] is True
+    with store._connect() as connection:
+        true_db = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM cases WHERE case_number='FALL-TZ-TRUE'").fetchone()
+    assert tuple(true_db) == (1, "integer")
+    true_result = make_result(store, "FALL-TZ-TRUE", "SICHT-001")
+    (true_result / "summary.json").write_text(json.dumps({"case_period": {
+        "date_from": "2026-01-01", "date_to": "2026-01-31", "timezone": "Europe/Vienna",
+        "timezone_reproducible": True,
+    }}), encoding="utf-8")
+    true_media = store.record_scan("FALL-TZ-TRUE", "SICHT-001", "HL", {"path": "/dev/sdb"}, true_result)["media"]
+    assert true_media["period_timezone_reproducible"] is True
+    with store._connect() as connection:
+        true_media_db = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM media WHERE case_id=(SELECT id FROM cases WHERE case_number='FALL-TZ-TRUE')").fetchone()
+    assert tuple(true_media_db) == (1, "integer")
+
+    unconfigured = store.start_case("FALL-TZ-NULL", "HL")
+    assert unconfigured["case"]["period_timezone_reproducible"] is None
+    assert json.loads((store.case_path("FALL-TZ-NULL") / "case.json").read_text())["case_period"] is None
+    with store._connect() as connection:
+        null_db = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM cases WHERE case_number='FALL-TZ-NULL'").fetchone()
+    assert tuple(null_db) == (None, "null")
+    null_result = make_result(store, "FALL-TZ-NULL", "SICHT-001")
+    (null_result / "summary.json").write_text(json.dumps({"case_period": None}), encoding="utf-8")
+    null_media = store.record_scan("FALL-TZ-NULL", "SICHT-001", "HL", {"path": "/dev/sdb"}, null_result)["media"]
+    assert null_media["period_timezone_reproducible"] is None
+    with store._connect() as connection:
+        null_media_db = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM media WHERE case_id=(SELECT id FROM cases WHERE case_number='FALL-TZ-NULL')").fetchone()
+    assert tuple(null_media_db) == (None, "null")
+
+
+@pytest.mark.parametrize(("legacy_value", "expected"), [("0", False), ("1", True)])
+def test_alpha75_text_case_boolean_is_normalized_on_read(tmp_path, legacy_value, expected):
+    root = tmp_path / "casefiles"
+    root.mkdir()
+    case_dir = root / "FALL-LEGACY"
+    records_dir = case_dir / "media" / "SICHT-001" / "records"
+    records_dir.mkdir(parents=True)
+    (case_dir / "case.json").write_text(json.dumps({"case_number": "FALL-LEGACY", "case_period": {
+        "date_from": "2026-01-01", "date_to": "2026-01-31", "timezone": "local",
+        "timezone_reproducible": legacy_value,
+    }}), encoding="utf-8")
+    (records_dir / "scan.json").write_text(json.dumps({"period_timezone_reproducible": legacy_value}), encoding="utf-8")
+    audit_before = b'{"historical":"unchanged"}\n'
+    (case_dir / "audit.log").write_bytes(audit_before)
+    database = root / "case-index.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE cases (id INTEGER PRIMARY KEY, case_number TEXT UNIQUE, created_at TEXT, updated_at TEXT, date_from TEXT, date_to TEXT, period_timezone TEXT, period_timezone_source TEXT, period_timezone_reproducible TEXT)")
+        connection.execute("INSERT INTO cases VALUES (1, 'FALL-LEGACY', 't', 't', '2026-01-01', '2026-01-31', 'local', 'fallback', ?)", (legacy_value,))
+    store = CaseStore(root)
+    detail = store.case_detail("FALL-LEGACY")
+    assert detail["case"]["period_timezone_reproducible"] is expected
+    with store._connect() as connection:
+        schema_type = {row["name"]: row["type"] for row in connection.execute("PRAGMA table_info(cases)")}["period_timezone_reproducible"]
+        raw_value = connection.execute("SELECT period_timezone_reproducible FROM cases WHERE case_number='FALL-LEGACY'").fetchone()[0]
+    assert schema_type == "TEXT"
+    assert raw_value == legacy_value
+    assert json.loads((case_dir / "case.json").read_text())["case_period"]["timezone_reproducible"] is expected
+    assert json.loads((records_dir / "scan.json").read_text())["period_timezone_reproducible"] is expected
+    assert (case_dir / "audit.log").read_bytes() == audit_before
+    assert (case_dir / "manifest.sha256").exists()
+    store.start_case("FALL-LEGACY", "HL", "2026-01-01", "2026-01-31")
+    assert json.loads((store.case_path("FALL-LEGACY") / "case.json").read_text())["case_period"]["timezone_reproducible"] is expected
+    assert store._media_dict({"period_timezone_reproducible": legacy_value})["period_timezone_reproducible"] is expected
 
 
 def test_phone_scan_period_snapshot_is_not_applicable(tmp_path):

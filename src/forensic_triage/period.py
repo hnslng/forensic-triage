@@ -11,6 +11,29 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 TIMESTAMP_TYPES = (("crtime", "B"), ("mtime", "M"), ("ctime", "C"), ("atime", "A"))
 
 
+def optional_bool(value: Any) -> bool | None:
+    """Normalize SQLite/JSON boolean representations without truthiness traps."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return value == 1
+    if isinstance(value, str):
+        normalized = value.strip().casefold()
+        if normalized in {"1", "true"}:
+            return True
+        if normalized in {"0", "false"}:
+            return False
+    return None
+
+
+def sqlite_optional_bool(value: Any) -> int | None:
+    """Bind an optional boolean to SQLite as INTEGER 1/0 or SQL NULL."""
+    normalized = optional_bool(value)
+    return None if normalized is None else int(normalized)
+
+
 def validate_period(date_from: str | None, date_to: str | None) -> tuple[str | None, str | None]:
     start, end = (str(date_from or "").strip() or None), (str(date_to or "").strip() or None)
     if start is None and end is None:
@@ -129,6 +152,5 @@ def period_snapshot(date_from: str | None, date_to: str | None, timezone_info: d
     if start is None:
         return None
     info = timezone_info or period_timezone_info()
-    normalized_info = {**info, "timezone_reproducible": (bool(info.get("timezone_reproducible"))
-                                                        if info.get("timezone_reproducible") is not None else None)}
+    normalized_info = {**info, "timezone_reproducible": optional_bool(info.get("timezone_reproducible"))}
     return {"date_from": start, "date_to": end, **normalized_info, "inclusive": True}

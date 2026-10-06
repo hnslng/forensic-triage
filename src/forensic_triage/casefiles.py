@@ -15,7 +15,7 @@ from typing import Any
 from .container_inventory import archive_encryption_state, archive_encryption_states, empty_catalog, virtual_files
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
-from .period import period_timezone_info, validate_period
+from .period import optional_bool, period_timezone_info, sqlite_optional_bool, validate_period
 
 
 DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
@@ -110,9 +110,11 @@ class CaseStore:
                 connection.execute(
                     "ALTER TABLE cases ADD COLUMN next_sighting_sequence INTEGER NOT NULL DEFAULT 1"
                 )
-            for name in ("date_from", "date_to", "period_timezone", "period_timezone_source", "period_timezone_reproducible"):
+            for name in ("date_from", "date_to", "period_timezone", "period_timezone_source"):
                 if name not in case_columns:
                     connection.execute(f"ALTER TABLE cases ADD COLUMN {name} TEXT")
+            if "period_timezone_reproducible" not in case_columns:
+                connection.execute("ALTER TABLE cases ADD COLUMN period_timezone_reproducible INTEGER")
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS media (
@@ -197,6 +199,39 @@ class CaseStore:
             connection.execute("PRAGMA optimize")
         for case_number in migrated_cases:
             self.refresh_exports(case_number)
+        self._normalize_period_json_exports()
+
+    def _normalize_period_json_exports(self) -> None:
+        """Repair exported JSON booleans from Alpha-75 DB representations, never audit history."""
+        with self._connect() as connection:
+            case_numbers = [str(row["case_number"]) for row in connection.execute("SELECT case_number FROM cases")]
+        for case_number in case_numbers:
+            case_dir = self.case_path(case_number)
+            if case_dir.is_symlink():
+                continue
+            changed = False
+            targets = [case_dir / "case.json", *sorted((case_dir / "media").glob("*/records/*.json"))]
+            for target in targets:
+                if target.is_symlink():
+                    continue
+                try:
+                    document = json.loads(target.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                if not isinstance(document, dict):
+                    continue
+                field = "timezone_reproducible" if target.name == "case.json" else "period_timezone_reproducible"
+                period = document.get("case_period") if target.name == "case.json" else document
+                if not isinstance(period, dict) or field not in period:
+                    continue
+                normalized = optional_bool(period[field])
+                if period[field] is normalized:
+                    continue
+                period[field] = normalized
+                target.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                changed = True
+            if changed and case_dir.exists():
+                self._write_manifest(case_dir)
 
     def next_sighting_number(self, case_number: str) -> str:
         """Preview the next number; allocation must use allocate_sighting_number()."""
@@ -226,7 +261,7 @@ class CaseStore:
                 "SELECT id, date_from, date_to, period_timezone FROM cases WHERE case_number=?", (case_number,),
             ).fetchone()
             if (row["date_from"], row["date_to"]) != (date_from, date_to):
-                connection.execute("UPDATE cases SET date_from=?, date_to=?, period_timezone=?, period_timezone_source=?, period_timezone_reproducible=? WHERE id=?", (date_from, date_to, timezone, timezone_info["timezone_source"], timezone_info["timezone_reproducible"], int(row["id"])))
+                connection.execute("UPDATE cases SET date_from=?, date_to=?, period_timezone=?, period_timezone_source=?, period_timezone_reproducible=? WHERE id=?", (date_from, date_to, timezone, timezone_info["timezone_source"], sqlite_optional_bool(timezone_info["timezone_reproducible"]), int(row["id"])))
                 connection.execute("INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) VALUES (?, NULL, ?, 'case_period_set', ?, ?)", (int(row["id"]), now, operator.strip()[:120] or None, json.dumps({"old_date_from": row["date_from"], "old_date_to": row["date_to"], "new_date_from": date_from, "new_date_to": date_to, "old_timezone": row["period_timezone"], "timezone": timezone, **timezone_info}, ensure_ascii=False)))
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
@@ -369,7 +404,7 @@ class CaseStore:
                     (summary.get("case_period") or {}).get("date_to"),
                     (summary.get("case_period") or {}).get("timezone"), summary.get("period_file_count"),
                     (summary.get("case_period") or {}).get("timezone_source"),
-                    (summary.get("case_period") or {}).get("timezone_reproducible"),
+                    sqlite_optional_bool((summary.get("case_period") or {}).get("timezone_reproducible")),
                 ),
             )
             media_id = int(cursor.lastrowid)
@@ -887,7 +922,9 @@ class CaseStore:
                 "WHERE media.case_id=? ORDER BY media.id DESC",
                 (int(case["id"]),),
             ).fetchall()
-        return {"case": dict(case), "media": [self._media_dict(row) for row in rows], "archive": self._archive_info(str(case["case_number"]))}
+        case_dict = dict(case)
+        case_dict["period_timezone_reproducible"] = optional_bool(case_dict.get("period_timezone_reproducible"))
+        return {"case": case_dict, "media": [self._media_dict(row) for row in rows], "archive": self._archive_info(str(case["case_number"]))}
 
     def _media_dict(self, row: sqlite3.Row) -> dict[str, Any]:
         keys = {
@@ -898,7 +935,10 @@ class CaseStore:
             "period_date_from", "period_date_to", "period_timezone", "period_file_count",
             "period_timezone_source", "period_timezone_reproducible",
         }
-        return {key: row[key] for key in keys if key in row.keys()}
+        result = {key: row[key] for key in keys if key in row.keys()}
+        if "period_timezone_reproducible" in result:
+            result["period_timezone_reproducible"] = optional_bool(result["period_timezone_reproducible"])
+        return result
 
     def refresh_exports(self, case_number: str) -> None:
         with self._export_lock:
@@ -923,7 +963,7 @@ class CaseStore:
         (case_dir / "case.json").write_text(
             json.dumps({"case_number": case_number, "created_at": case["created_at"], "updated_at": case["updated_at"], "media_count": len(media),
                         "case_period": ({"date_from": case["date_from"], "date_to": case["date_to"], "timezone": case["period_timezone"],
-                                         "timezone_source": case["period_timezone_source"], "timezone_reproducible": case["period_timezone_reproducible"]}
+                                         "timezone_source": case["period_timezone_source"], "timezone_reproducible": optional_bool(case["period_timezone_reproducible"])}
                                         if case["date_from"] and case["date_to"] else None)}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
@@ -949,7 +989,7 @@ class CaseStore:
             f"Zuletzt aktualisiert: {case['updated_at']}",
             f"Erfasste Medien: {len(media)}",
             f"Aktueller Fallzeitraum: {case['date_from'] + ' – ' + case['date_to'] if case['date_from'] and case['date_to'] else 'nicht festgelegt'}",
-            f"Fallzeitzone: {case['period_timezone'] or '—'}" + (" (Systemlokalzeit, keine eindeutige IANA-Zone)" if case["period_timezone_reproducible"] is not None and not bool(case["period_timezone_reproducible"]) else ""),
+            f"Fallzeitzone: {case['period_timezone'] or '—'}" + (" (Systemlokalzeit, keine eindeutige IANA-Zone)" if optional_bool(case["period_timezone_reproducible"]) is False else ""),
             "",
         ]
         for row in media:
@@ -992,8 +1032,8 @@ class CaseStore:
             )
         build_case_pdf(
             case_dir / "case-report.pdf",
-            dict(case),
-            [dict(row) for row in media],
+            {**dict(case), "period_timezone_reproducible": optional_bool(case["period_timezone_reproducible"])},
+            [{**dict(row), "period_timezone_reproducible": optional_bool(row["period_timezone_reproducible"])} for row in media],
             [dict(event) for event in audit],
             self.root,
         )

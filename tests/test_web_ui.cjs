@@ -1515,6 +1515,13 @@ test('period summary shows counts and top ten, stays quiet without a period, and
   }), latest);
   assert.equal(await page.locator('#periodSummary').isVisible(), true);
   assert.match(await page.locator('#periodFileCount').innerText(), /4 \/ 12/);
+  await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'local', timezone_reproducible: false }, period_file_count: 1, file_count: 1 }));
+  assert.match(await page.locator('#periodTimezone').innerText(), /keine eindeutige IANA-Zone ermittelt/);
+  await page.evaluate(latest => renderResults({
+    case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'Europe/Vienna' },
+    period_evaluation: 'configured', period_file_count: 4, file_count: 12,
+    categories_in_period: { Dokumente: 3, Bilder: 1 }, latest_period_files: latest,
+  }), latest);
   assert.equal(await page.locator('#latestPeriodFiles li').count(), 10);
   assert.match(await page.locator('#latestPeriodFiles').innerText(), /M\+C/);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' }, period_evaluation: 'not_applicable' }));

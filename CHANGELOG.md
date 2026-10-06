@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.76] – 2026-10-06
+
+- Gezielter Persistenzfix für `period_timezone_reproducible`: neue Fallspalten sind `INTEGER`; Writes binden `1`, `0` oder `NULL`.
+- Alpha-75-TEXT-Altwerte werden zentral als echte Python-Booleans normalisiert (`"0"` → `False`, `"1"` → `True`); API, Scan-/Medienrecords und `case.json` geben Boolean/`null` statt String/Zahl aus.
+- Keine Schema-Neuerstellung für bestehende Alpha-75-Datenbanken; bestehende Audit-Dateien werden nicht rückwirkend verändert.
+- Alpha-75-Zeitraumsauswertung, FAST/statx und App-only-Telefonscans unverändert regressionsgeprüft.
+- Version auf `0.2.0-alpha.76` (`0.2.0a76`) angehoben.
+
 ## [0.2.0-alpha.75] – 2026-10-06
 
 - Optionalen Fallzeitraum mit strikt validierten lokalen Datumsgrenzen, erkannter IANA-Zeitzone und transparentem OS-Lokalzeit-Fallback ergänzt.
