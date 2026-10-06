@@ -380,9 +380,8 @@ h1 span { color: var(--acid); }
 .period-timezone { color: var(--muted); font-size: 10px; }
 .period-phone-context { padding: 10px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .period-file-count { display: block; padding: 8px 0; color: var(--acid); font-size: 11px; font-weight: 900; }
-.period-detail-button { min-height: 34px; padding: 7px 10px; border: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 900; }
-.period-detail-button:hover { border-color: var(--acid); background: rgba(201, 242, 82, .05); }
-.category-legend { display: block; margin: -5px 12px 4px; color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.category-legend { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; padding: 8px 12px 2px; color: var(--muted); font-size: 10px; letter-spacing: .035em; }
+.category-legend strong { overflow: hidden; color: var(--muted); font-size: inherit; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid var(--ink); padding-bottom: 10px; }
 .result-title-line { display: flex; align-items: center; gap: 16px; }
 .result-title-line > span { padding: 6px 8px; border: 1px solid var(--line); font-size: 11px; font-weight: 900; white-space: nowrap; }
@@ -488,39 +487,40 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }
 .keyword-list { padding: 14px 15px; }
-.bar-row { display: grid; grid-template-columns: 30px minmax(96px, 118px) minmax(90px, 1fr); align-items: center; gap: 10px; max-width: none; margin: 9px 0; font-size: 12px; }
+.bar-row { display: grid; grid-template-columns: 42px minmax(130px, 1.25fr) minmax(34px, .75fr); align-items: center; gap: 7px; max-width: none; margin: 9px 0; font-size: 12px; }
+.bar-row.has-period { grid-template-columns: 42px 48px minmax(130px, 1.25fr) minmax(34px, .75fr); }
 .bar-row.result-filter { width: 100%; padding: 3px 4px; border: 0; border-radius: 0; appearance: none; background: transparent; color: inherit; text-align: left; cursor: pointer; font-family: inherit; }
 .bar-row.result-filter:hover { color: var(--acid); background: rgba(201, 242, 82, .035); }
 .bar-row.result-filter.active { color: var(--acid); background: rgba(201, 242, 82, .055); box-shadow: inset 3px 0 0 var(--acid); }
 .bar-track { width: 100%; height: 11px; outline: 1px solid #333c2f; background: #252b21; }
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.bar-period { color: var(--muted); text-align: right; font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.category-period-count { display: inline; color: var(--muted); font-size: 10px; }
 .largest-file-summary { margin-top: 2px; color: var(--acid) !important; font-size: 10px !important; letter-spacing: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hint-section-title { display: flex; justify-content: space-between; gap: 8px; margin: 12px 12px 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.hint-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 12px 12px 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; letter-spacing: .035em; }
 .hints-panel > .hint-section-title-first { border-top: 0; margin-top: 0; }
 .crypto-findings { margin: 0 12px 8px; }
-.crypto-rules-version { display: block; margin: 0 0 4px; color: var(--muted); font-size: 10px; text-align: right; }
+.crypto-rules-version { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 #cryptoSummary { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
-#cryptoSummary > span { padding: 4px 6px; border: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+#cryptoSummary > span { padding: 5px 7px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 #cryptoSummary b { margin-left: 4px; color: var(--acid); }
-.crypto-details-button { width: 100%; padding: 9px 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; text-align: left; }
-.crypto-details-button:hover { color: var(--ink); }
+.hint-detail-button { width: 100%; min-height: 34px; padding: 8px 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 11px; font-weight: 800; text-align: left; }
+.hint-detail-button:hover { color: var(--ink); background: rgba(201, 242, 82, .035); }
 .crypto-hint-list { max-height: 360px; overflow: auto; }
 .timestamp-summary { margin: 0 12px 8px; border-top: 1px solid var(--line); }
 .timestamp-summary .hint-section-title { margin-left: 0; margin-right: 0; }
 .timestamp-preview { display: grid; gap: 0; margin: 0; padding: 2px 0 5px 22px; }
-.timestamp-preview li { display: grid; grid-template-columns: minmax(82px, auto) 38px minmax(0, 1fr); gap: 6px; align-items: baseline; min-width: 0; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.timestamp-preview li { display: grid; grid-template-columns: minmax(112px, max-content) minmax(56px, max-content) minmax(0, 1fr); gap: 8px; align-items: baseline; min-width: 0; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .timestamp-preview time, .timestamp-preview b { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .timestamp-preview b { color: var(--amber); }
-.timestamp-preview button { min-width: 0; overflow: hidden; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.timestamp-preview button { min-width: 0; overflow: hidden; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-size: 11px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .timestamp-preview button:hover { color: var(--acid); }
 .backup-findings { margin: 0 12px 8px; }
 .backup-hint { padding: 8px 0; border-top: 1px solid var(--line); }
-.archive-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 12px 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.archive-status { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 12px 8px; padding-top: 9px; border-top: 1px solid var(--line); }
 .archive-status-label { flex-basis: 100%; color: var(--muted); font-size: 11px; letter-spacing: .03em; }
-.archive-status-filter { min-height: 34px; padding: 5px 2px; border: 0; border-bottom: 1px dotted var(--muted); background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.archive-status-filter { min-height: 30px; padding: 4px 2px; border: 0; border-bottom: 1px dotted var(--muted); background: transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
 .archive-status-filter b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .archive-status-filter:hover { color: var(--ink); border-bottom-color: var(--ink); }
 .archive-status-filter.active { color: var(--acid); border-bottom: 2px solid var(--acid); }
@@ -822,8 +822,14 @@ footer button { color: var(--ink); background: transparent; border: 1px solid va
 footer button:hover { border-color: var(--acid); color: var(--acid); }
 [hidden] { display: none !important; }
 
+@media (max-width: 1100px) {
+  .analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hints-panel { grid-column: 1 / -1; }
+}
+
 @media (max-width: 900px) {
   .analysis-grid, .detail-workspace { grid-template-columns: 1fr; }
+  .hints-panel { grid-column: auto; }
   .inventory-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inventory-tools input { grid-column: 1 / -1; }
 }

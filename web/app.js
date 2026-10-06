@@ -1290,7 +1290,9 @@ function renderResults(summary, hits = {}) {
   const largest = (summary.largest_files || [])[0];
   const largestSummary = $("largestFileSummary");
   largestSummary.hidden = !largest;
-  largestSummary.textContent = largest ? `GRÖSSTE DATEI: ${formatBytes(largest.size)} · ${String(largest.path || "").split("/").pop()}` : "";
+  const largestName = largest ? String(largest.path || "").split("/").pop() : "";
+  largestSummary.textContent = largest ? `GRÖSSTE DATEI: ${formatBytes(largest.size)} · ${largestName}` : "";
+  largestSummary.title = largestName;
   renderPeriodSummary(summary);
   const hasPeriodCategories = Boolean(summary.case_period && summary.period_evaluation !== "not_applicable");
   $("categoryLegend").hidden = !hasPeriodCategories;
@@ -1299,8 +1301,8 @@ function renderResults(summary, hits = {}) {
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
     const periodCount = Number(summary.categories_in_period?.[name] || 0);
-    const periodNote = hasPeriodCategories ? ` <small class="category-period-count">(${periodCount.toLocaleString("de-AT")})</small>` : "";
-    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span><span class="bar-name">${periodNote}${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
+    const periodCell = hasPeriodCategories ? `<span class="bar-period">(${periodCount.toLocaleString("de-AT")})</span>` : "";
+    return `<button class="bar-row result-filter${hasPeriodCategories ? " has-period" : ""}" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span>${periodCell}<span class="bar-name" title="${escapeHtml(name)}">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
   $("archiveEncryptedCount").textContent = Number(archiveEncryption.encrypted || 0).toLocaleString("de-AT");
@@ -1318,16 +1320,20 @@ function renderPeriodSummary(summary = {}) {
   const period = summary.case_period;
   const panel = $("periodSummary");
   const configured = Boolean(period?.date_from && period?.date_to);
-  panel.hidden = !configured;
+  panel.dataset.configured = String(configured);
+  panel.hidden = true;
   if (!configured) {
+    $("categoryPeriodRange").textContent = "";
     $("openTimestampModal").hidden = true;
     $("latestPeriodFiles").innerHTML = "";
     $("latestPeriodPreview").innerHTML = "";
     $("timestampSummary").hidden = true;
     return;
   }
-  const formatDate = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("de-AT");
-  $("periodRange").textContent = `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`;
+  const formatDate = (value) => new Intl.DateTimeFormat("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+  const periodRange = `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`;
+  $("categoryPeriodRange").textContent = periodRange;
+  $("periodRange").textContent = periodRange;
   $("periodTimezone").textContent = period.timezone_reproducible === false
     ? `ZEITZONE: ${period.timezone || "lokale Systemzeit"} · keine eindeutige IANA-Zone ermittelt`
     : `ZEITZONE: ${period.timezone || "lokale Systemzeit"}`;
@@ -1340,10 +1346,11 @@ function renderPeriodSummary(summary = {}) {
   const previewRows = rows.slice(0, 5);
   $("timestampSummary").hidden = phone || rows.length === 0;
   $("openTimestampModal").hidden = phone || rows.length === 0;
-  $("timestampModalContext").textContent = [
-    `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`,
-    period.timezone && period.timezone !== "local" ? period.timezone : null,
-  ].filter(Boolean).join(" · ");
+  const timezoneContext = period.timezone_reproducible === false
+    ? `${period.timezone || "lokale Systemzeit"} · keine eindeutige IANA-Zone ermittelt`
+    : (period.timezone && period.timezone !== "local" ? period.timezone : "lokale Systemzeit");
+  const countContext = phone ? null : `${Number(summary.period_file_count || 0).toLocaleString("de-AT")} / ${Number(summary.file_count || 0).toLocaleString("de-AT")} DATEIEN IM ZEITRAUM`;
+  $("timestampModalContext").textContent = [periodRange, timezoneContext, countContext].filter(Boolean).join(" · ");
   const zone = period.timezone && period.timezone !== "local" ? period.timezone : undefined;
   $("latestPeriodFiles").innerHTML = rows.map((file) => {
     let time = "Zeitstempel nicht darstellbar";
@@ -1587,10 +1594,12 @@ function renderRecord(record) {
   $("inventoryPanel").dataset.mediaId = String(record.media?.id ?? "");
   if (isPhone) {
     $("iphoneSummary").append($("periodSummary"));
+    $("periodSummary").hidden = $("periodSummary").dataset.configured !== "true";
     $("iphoneSummary").after($("cryptoFindings"));
     $("cryptoFindings").after($("backupFindings"));
   } else {
     $("categoriesPanel").append($("periodSummary"));
+    $("periodSummary").hidden = true;
     $("hintsPanel").append($("backupFindings"));
   }
   renderIphoneSummary(phone);

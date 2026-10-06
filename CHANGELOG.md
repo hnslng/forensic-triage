@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.81] – 2026-10-06
+
+- Dateitypzeilen in getrennte Spalten für Gesamtzahl, Zeitraumzahl, Kategoriename und Balken aufgeteilt; lange Kategorien erhalten mehr lesbaren Raum und vollständige Tooltips.
+- Zeitraum kompakt in die Legendenzeile verschoben; der redundante Zeitraumblock wurde aus dem Datenträger-Dashboard entfernt und bleibt mit Zeitzone im Timestamp-Modal erhalten.
+- Archivstatus samt Explorer-Filtern nach „07 Hinweise“ verschoben; Krypto- und Timestamp-Typografie sowie Detailaktionen vereinheitlicht.
+- Keine Änderungen an Scanner, Erkennung oder Forensiklogik.
+- Version auf `0.2.0-alpha.81` (`0.2.0a81`) angehoben.
+
 ## [0.2.0-alpha.80] – 2026-10-06
 
 - Ergebnisdashboard wieder auf drei natürliche Spalten geordnet: `05 DATEITYPEN`, `06 STICHWORTTREFFER` und `07 HINWEISE`.

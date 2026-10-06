@@ -144,18 +144,13 @@
         <div class="analysis-grid">
           <article id="categoriesPanel" class="panel categories-panel">
             <div class="panel-title"><span>05</span> DATEITYPEN</div>
-            <small id="categoryLegend" class="category-legend" hidden>ANZAHL (IM ZEITRAUM)</small>
+            <div id="categoryLegend" class="category-legend" hidden><span>ANZAHL (IM ZEITRAUM)</span><strong id="categoryPeriodRange"></strong></div>
             <section id="periodSummary" class="period-summary" hidden>
               <div class="period-heading"><strong id="periodRange">—</strong><span id="periodTimezone" class="period-timezone"></span></div>
               <div id="periodPhoneContext" class="period-phone-context" hidden>ZEITRAUM ALS FALLKONTEXT · KEINE DATEIAUSWERTUNG</div>
               <strong id="periodFileCount" class="period-file-count"></strong>
             </section>
             <div id="categories" class="bar-list"></div>
-            <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
-              <span class="archive-status-label">ARCHIVE</span>
-              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="encrypted" aria-pressed="false" title="Verschlüsselte Archive im Dateiverzeichnis anzeigen"><b id="archiveEncryptedCount">0</b> verschlüsselt</button>
-              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
-            </section>
           </article>
           <article id="keywordsPanel" class="panel keywords-panel">
             <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
@@ -163,16 +158,20 @@
           </article>
           <article id="hintsPanel" class="panel hints-panel">
             <div class="panel-title"><span>07</span> HINWEISE</div>
-            <h3 class="hint-section-title hint-section-title-first">KRYPTO-HINWEISE · TOP 5</h3>
+            <h3 class="hint-section-title hint-section-title-first"><span>KRYPTO-HINWEISE · TOP 5</span><small id="cryptoRulesVersion" class="crypto-rules-version"></small></h3>
             <section id="cryptoFindings" class="crypto-findings" hidden>
-              <small id="cryptoRulesVersion" class="crypto-rules-version"></small>
               <div id="cryptoSummary"></div>
-              <button id="cryptoDetails" class="crypto-details-button" type="button">DETAILS ANZEIGEN</button>
+              <button id="cryptoDetails" class="hint-detail-button" type="button">DETAILS ANZEIGEN</button>
             </section>
             <section id="timestampSummary" class="timestamp-summary" hidden>
-              <h3 class="hint-section-title">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL · TOP 5</h3>
+              <h3 class="hint-section-title">JÜNGSTE ZEITSTEMPEL · TOP 5</h3>
               <ol id="latestPeriodPreview" class="timestamp-preview" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
-              <button id="openTimestampModal" class="period-detail-button" type="button">ALLE ANZEIGEN</button>
+              <button id="openTimestampModal" class="hint-detail-button" type="button">ALLE ANZEIGEN</button>
+            </section>
+            <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
+              <span class="archive-status-label">ARCHIVE</span>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="encrypted" aria-pressed="false" title="Verschlüsselte Archive im Dateiverzeichnis anzeigen"><b id="archiveEncryptedCount">0</b> verschlüsselt</button>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
             </section>
             <details id="backupFindings" class="backup-findings" hidden>
               <summary>GERÄTE-BACKUPS · <span id="backupFindingCount">0</span></summary>
