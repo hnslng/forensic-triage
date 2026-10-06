@@ -144,13 +144,19 @@
         <div class="analysis-grid">
           <article id="categoriesPanel" class="panel categories-panel">
             <div class="panel-title"><span>05</span> DATEITYPEN</div>
-            <div id="categoryLegend" class="category-legend" hidden><span>ANZAHL (IM ZEITRAUM)</span><strong id="categoryPeriodRange"></strong></div>
+            <div id="categoryLegend" class="category-legend" hidden><span class="category-head-total">GESAMT</span><span class="category-head-period">ZEITRAUM</span><span class="category-head-name">DATEITYP</span><strong id="categoryPeriodRange"></strong></div>
             <section id="periodSummary" class="period-summary" hidden>
               <div class="period-heading"><strong id="periodRange">—</strong><span id="periodTimezone" class="period-timezone"></span></div>
               <div id="periodPhoneContext" class="period-phone-context" hidden>ZEITRAUM ALS FALLKONTEXT · KEINE DATEIAUSWERTUNG</div>
               <strong id="periodFileCount" class="period-file-count"></strong>
             </section>
             <div id="categories" class="bar-list"></div>
+            <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
+              <span class="archive-status-label">ARCHIV-STATUS</span>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="encrypted" aria-pressed="false" title="Verschlüsselte Archive im Dateiverzeichnis anzeigen"><b id="archiveEncryptedCount">0</b> VERSCHLÜSSELT</button>
+              <span aria-hidden="true">·</span>
+              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> UNGEPRÜFT</button>
+            </section>
           </article>
           <article id="keywordsPanel" class="panel keywords-panel">
             <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
@@ -158,20 +164,13 @@
           </article>
           <article id="hintsPanel" class="panel hints-panel">
             <div class="panel-title"><span>07</span> HINWEISE</div>
-            <h3 class="hint-section-title hint-section-title-first"><span>KRYPTO-HINWEISE · TOP 5</span><small id="cryptoRulesVersion" class="crypto-rules-version"></small></h3>
+            <h3 class="hint-section-title hint-section-title-first"><span>KRYPTO-HINWEISE · TOP 5 <small id="cryptoRulesVersion" class="crypto-rules-version"></small></span><button id="cryptoDetails" class="hint-detail-button" type="button">DETAILS ↗</button></h3>
             <section id="cryptoFindings" class="crypto-findings" hidden>
               <div id="cryptoSummary"></div>
-              <button id="cryptoDetails" class="hint-detail-button" type="button">DETAILS ANZEIGEN</button>
             </section>
             <section id="timestampSummary" class="timestamp-summary" hidden>
-              <h3 class="hint-section-title">JÜNGSTE ZEITSTEMPEL · TOP 5</h3>
+              <h3 class="hint-section-title"><span>JÜNGSTE ZEITSTEMPEL · TOP 5</span><button id="openTimestampModal" class="hint-detail-button" type="button">ALLE ANZEIGEN ↗</button></h3>
               <ol id="latestPeriodPreview" class="timestamp-preview" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
-              <button id="openTimestampModal" class="hint-detail-button" type="button">ALLE ANZEIGEN</button>
-            </section>
-            <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
-              <span class="archive-status-label">ARCHIVE</span>
-              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="encrypted" aria-pressed="false" title="Verschlüsselte Archive im Dateiverzeichnis anzeigen"><b id="archiveEncryptedCount">0</b> verschlüsselt</button>
-              <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
             </section>
             <details id="backupFindings" class="backup-findings" hidden>
               <summary>GERÄTE-BACKUPS · <span id="backupFindingCount">0</span></summary>
@@ -350,14 +349,14 @@
       </div>
     </dialog>
     <dialog id="timestampModal" class="evidence-modal result-detail-modal" aria-labelledby="timestampModalTitle">
-      <div class="modal-head"><div><span>05</span> <b id="timestampModalTitle">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL</b></div><button id="closeTimestampModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head result-detail-head"><div><span>07</span> <b id="timestampModalTitle">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL</b></div><button id="closeTimestampModal" type="button">SCHLIESSEN ×</button></div>
       <p id="timestampModalContext" class="result-detail-context"></p>
-      <ol id="latestPeriodFiles" class="timestamp-list" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
+      <div class="result-detail-table-wrap"><table class="result-detail-table timestamp-table" aria-label="Jüngste Dateisystem-Zeitstempel"><thead><tr><th>DATUM</th><th>UHRZEIT</th><th>KATEGORIE</th><th>DATEI</th><th>TS</th></tr></thead><tbody id="latestPeriodFiles"></tbody></table></div>
     </dialog>
     <dialog id="cryptoModal" class="evidence-modal result-detail-modal crypto-detail-modal" aria-labelledby="cryptoModalTitle">
-      <div class="modal-head"><div><span>06</span> <b id="cryptoModalTitle">KRYPTO-HINWEISE · DETAILS</b></div><button id="closeCryptoModal" type="button">SCHLIESSEN ×</button></div>
+      <div class="modal-head result-detail-head"><div><span>07</span> <b id="cryptoModalTitle">KRYPTO-HINWEISE · DETAILS</b></div><button id="closeCryptoModal" type="button">SCHLIESSEN ×</button></div>
       <p id="cryptoScope" class="result-detail-context"></p>
-      <div id="cryptoHintList"></div>
+      <div class="result-detail-table-wrap"><table class="result-detail-table crypto-table" aria-label="Krypto-Dateihinweise"><thead><tr><th>DATEI</th><th>KATEGORIE</th><th>BEGRIFF</th><th>ENDUNG</th></tr></thead><tbody id="cryptoHintList"></tbody></table></div>
     </dialog>
     <dialog id="deleteModal" class="delete-modal">
       <form id="deleteForm" method="dialog">
@@ -597,7 +596,7 @@
                 <div><span>LETZTE PRÜFUNG</span><strong id="updateCheckedAt">—</strong></div>
               </div>
               <div class="update-primary-actions">
-                <button id="updateCheck" class="s-btn small" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> JETZT PRÜFEN</button>
+                <button id="updateCheck" class="s-btn small" type="button"><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg></span> <span id="updateCheckLabel">JETZT PRÜFEN</span></button>
                 <button id="updateStopCase" class="s-btn small" type="button" hidden><span class="icon-text" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12"/></svg></span> FALL BEENDEN</button>
                 <button id="updateInstall" class="s-btn primary" type="button" hidden>UPDATE INSTALLIEREN</button>
               </div>

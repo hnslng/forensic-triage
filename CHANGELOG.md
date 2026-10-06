@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.82] – 2026-10-06
+
+- Ergebnisdashboard: Analyse-Karten auf gleiche Höhe gebracht, Dateityp-Spalten klar getrennt und Archivstatus als kompakte Fußzeile in „07 Hinweise“ integriert.
+- Krypto- und Timestamp-Übersichten sowie Detaildialoge typografisch vereinheitlicht; Zeitstempelvorschau zeigt Datum, Kategorie und Dateiname, die Detailansicht weiterhin vollständige Zeit- und Pfadangaben.
+- Explorer und Entscheidungsbereich auf Desktop im Verhältnis 2:1 angeordnet; Ergebnisaktionen und Update-Status konsistent dimensioniert.
+- Keine Änderungen an Scanner, Erkennung oder Forensiklogik.
+- Version auf `0.2.0-alpha.82` (`0.2.0a82`) angehoben.
+
 ## [0.2.0-alpha.81] – 2026-10-06
 
 - Dateitypzeilen in getrennte Spalten für Gesamtzahl, Zeitraumzahl, Kategoriename und Balken aufgeteilt; lange Kategorien erhalten mehr lesbaren Raum und vollständige Tooltips.

@@ -316,8 +316,13 @@ function renderUpdateState(value = {}) {
   // The status line is fully state-driven: after a finished install it simply
   // returns to "AKTUELL". No permanent historic success banner is kept.
   $("settingsUpdatesTab").classList.toggle("update-available", state === "available");
-  $("updateInstall").hidden = state !== "available";
-  $("updateInstall").textContent = available ? `UPDATE INSTALLIEREN · ${formatReleaseVersion(available)}` : "UPDATE INSTALLIEREN";
+  const installAction = state === "available" || state === "installing" || updateActionInProgress === "install";
+  $("updateCheck").hidden = installAction;
+  $("updateInstall").hidden = !installAction;
+  $("updateCheckLabel").textContent = state === "checking" || updateActionInProgress === "check" ? "PRÜFE …" : "JETZT PRÜFEN";
+  $("updateInstall").textContent = state === "installing" || updateActionInProgress === "install"
+    ? "INSTALLIERE …"
+    : available ? `UPDATE INSTALLIEREN · ${formatReleaseVersion(available)}` : "UPDATE INSTALLIEREN";
   const activeCase = activeCaseNumber || serverActiveCase?.case_number;
   const actionRunning = isUpdateBusy();
   $("updateModal").classList.toggle("update-busy", actionRunning);
@@ -1295,13 +1300,15 @@ function renderResults(summary, hits = {}) {
   largestSummary.title = largestName;
   renderPeriodSummary(summary);
   const hasPeriodCategories = Boolean(summary.case_period && summary.period_evaluation !== "not_applicable");
-  $("categoryLegend").hidden = !hasPeriodCategories;
+  $("categoryLegend").classList.toggle("has-period", hasPeriodCategories);
+  $("categoryLegend").hidden = false;
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
     const periodCount = Number(summary.categories_in_period?.[name] || 0);
-    const periodCell = hasPeriodCategories ? `<span class="bar-period">(${periodCount.toLocaleString("de-AT")})</span>` : "";
+    const differs = periodCount !== Number(count);
+    const periodCell = hasPeriodCategories ? `<span class="bar-period-value${differs ? " differs" : ""}">${periodCount.toLocaleString("de-AT")}</span>` : "";
     return `<button class="bar-row result-filter${hasPeriodCategories ? " has-period" : ""}" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span>${periodCell}<span class="bar-name" title="${escapeHtml(name)}">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
@@ -1353,27 +1360,34 @@ function renderPeriodSummary(summary = {}) {
   $("timestampModalContext").textContent = [periodRange, timezoneContext, countContext].filter(Boolean).join(" · ");
   const zone = period.timezone && period.timezone !== "local" ? period.timezone : undefined;
   $("latestPeriodFiles").innerHTML = rows.map((file) => {
-    let time = "Zeitstempel nicht darstellbar";
+    let date = "—", clock = "—";
     const epoch = Number(file.latest_period_timestamp);
     if (Number.isFinite(epoch)) {
       try {
-        time = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "medium", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000));
-      } catch { time = new Date(epoch * 1000).toLocaleString("de-AT"); }
+        const parts = new Intl.DateTimeFormat("de-AT", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", ...(zone ? { timeZone: zone } : {}) }).formatToParts(new Date(epoch * 1000));
+        const part = type => parts.find(item => item.type === type)?.value || "";
+        date = `${part("day")}.${part("month")}.${part("year")}`;
+        clock = `${part("hour")}:${part("minute")}:${part("second")}`;
+      } catch {
+        const value = new Date(epoch * 1000);
+        date = value.toLocaleDateString("de-AT");
+        clock = value.toLocaleTimeString("de-AT");
+      }
     }
     const path = String(file.path || "");
     const filename = path.split("/").pop() || path;
-    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button><small class="timestamp-path">PFAD: ${escapeHtml(path)}</small></li>`;
+    return `<tr><td><time>${escapeHtml(date)}</time></td><td><time>${escapeHtml(clock)}</time></td><td>${escapeHtml(file.category || "Unbekannt")}</td><td><button class="result-detail-file" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(filename)}</strong><small class="result-detail-path">${escapeHtml(path)}</small></button></td><td class="timestamp-type">${escapeHtml(file.latest_period_timestamp_type || "")}</td></tr>`;
   }).join("");
   $("latestPeriodPreview").innerHTML = previewRows.map((file) => {
     const epoch = Number(file.latest_period_timestamp);
-    let time = "—";
+    let date = "—";
     if (Number.isFinite(epoch)) {
-      try { time = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "short", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000)); }
-      catch { time = new Date(epoch * 1000).toLocaleString("de-AT"); }
+      try { date = new Intl.DateTimeFormat("de-AT", { day: "2-digit", month: "2-digit", year: "2-digit", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000)); }
+      catch { date = new Date(epoch * 1000).toLocaleDateString("de-AT"); }
     }
     const path = String(file.path || "");
     const filename = path.split("/").pop() || path;
-    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
+    return `<li><time>${escapeHtml(date)}</time><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
   }).join("");
 }
 
@@ -1507,17 +1521,19 @@ function renderCryptoFindings(crypto, isPhone) {
     ? [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([category, count]) => `<span>${escapeHtml(appCategoryLabels[category] || category.toUpperCase())} <b>${count.toLocaleString("de-AT")}</b></span>`).join("")
     : '<span>KEINE KRYPTO-HINWEISE</span>';
   $("cryptoDetails").hidden = !(apps.length || files.length);
-  const appRows = apps.map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
+  const appRows = apps.map(item => `<tr><td><span class="result-detail-file result-detail-file-static"><strong>${escapeHtml(item.name || "APP")}</strong><small class="result-detail-path">${escapeHtml(item.package_id || item.bundle_id || "APP-METADATEN")}</small></span></td><td>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")}</td><td>${escapeHtml(item.reason || item.id || "REGELTREFFER")}</td><td>APP</td></tr>`);
   const fileRows = [...groupedFiles.values()].flat().map(({ path, match, ...item }) => {
     const reason = match.reason || match.id || "REGELTREFFER";
     const fullPath = String(path || "");
     const filename = fullPath.split("/").pop() || fullPath || "DATEI";
     const term = match.term || match.keyword || match.matched_term;
-    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(fullPath)}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(filename)}</strong><small>${escapeHtml(fullPath)}</small><span>${escapeHtml(appCategoryLabels[match.category] || match.category || "HINWEIS")} · ${escapeHtml(reason)}${term ? ` · BEGRIFF: ${escapeHtml(term)}` : ""}${item.extension ? ` · ${escapeHtml(item.extension)}` : ""}</span></button></li>`;
+    const category = appCategoryLabels[match.category] || match.category || "HINWEIS";
+    const extension = item.extension || (filename.includes(".") ? `.${filename.split(".").pop()}` : "—");
+    return `<tr><td><button class="result-detail-file" type="button" data-inventory-file="${escapeHtml(fullPath)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(fullPath)}"><strong>${escapeHtml(filename)}</strong><small class="result-detail-path">${escapeHtml(fullPath)}</small></button></td><td>${escapeHtml(category)}</td><td>${escapeHtml(term || reason)}</td><td>${escapeHtml(extension)}</td></tr>`;
   });
   $("cryptoHintList").innerHTML = appRows.length || fileRows.length
-    ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>`
-    : '<p class="iphone-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</p>';
+    ? `${appRows.join("")}${fileRows.join("")}`
+    : '<tr><td colspan="4" class="result-detail-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</td></tr>';
 }
 
 function renderBackupFindings(backup) {

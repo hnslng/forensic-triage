@@ -221,6 +221,7 @@ test('update tab shows a quiet, state-driven status without a permanent success 
   });
   await openSettingsFromAnywhere(page);
   await page.locator('#settingsUpdatesTab').click();
+  await page.setViewportSize({ width: 1512, height: 1080 });
   assert.match(await page.locator('#settingsUpdatesTab').innerText(), /UPDATES/);
   await page.evaluate(() => renderUpdateState({ state: 'current', current_version: '0.2.0a68', updated_at: new Date().toISOString() }));
   assert.match(await page.locator('#updateStatus').innerText(), /AKTUELL/);
@@ -228,20 +229,31 @@ test('update tab shows a quiet, state-driven status without a permanent success 
   assert.notEqual(await page.locator('#updateCheckedAt').innerText(), '—');
   assert.equal(await page.locator('#updateSuccessNotice').count(), 0, 'no permanent success banner in the markup');
   assert.equal(await page.locator('#updateCheck').isVisible(), true);
+  assert.match(await page.locator('#updateCheck').innerText(), /JETZT PRÜFEN/);
+  assert.equal(await page.locator('#updateInstall').isVisible(), false);
   const statusBox = await page.locator('.update-status-block').evaluate(node => node.getBoundingClientRect());
   const check = await page.locator('#updateCheck').evaluate(node => node.getBoundingClientRect());
   assert.ok(check.top >= statusBox.top && check.bottom <= statusBox.bottom + 2, 'JETZT PRÜFEN sits inside the combined status block');
+  assert.ok(Math.abs(check.height - statusBox.height) <= 2, `main update action matches status block height (${check.height}px / ${statusBox.height}px)`);
   assert.equal(await page.locator('.offline-update').isVisible(), true, 'offline update stays present');
+  if (process.env.TRIAGE_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.TRIAGE_SCREENSHOT_DIR, 'update-current-1512.png'), fullPage: true });
 
   // Update available: status shows the target version and offers install.
   await page.evaluate(() => renderUpdateState({ state: 'available', current_version: '0.2.0a67', available_version: '0.2.0a68' }));
   assert.match(await page.locator('#updateStatus').innerText(), /UPDATE VERFÜGBAR · v0\.2\.0-alpha\.68/);
   assert.equal(await page.locator('#updateInstall').isVisible(), true);
+  assert.equal(await page.locator('#updateCheck').isVisible(), false, 'available update replaces the check action');
+  const installBox = await page.locator('#updateInstall').evaluate(node => node.getBoundingClientRect());
+  const availableStatusBox = await page.locator('.update-status-block').evaluate(node => node.getBoundingClientRect());
+  assert.ok(Math.abs(installBox.height - availableStatusBox.height) <= 2, 'install action matches status block height');
+  if (process.env.TRIAGE_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.TRIAGE_SCREENSHOT_DIR, 'update-available-1512.png'), fullPage: true });
 
   // Installing: temporary state only.
   await page.evaluate(() => renderUpdateState({ state: 'installing' }));
   assert.match(await page.locator('#updateStatus').innerText(), /UPDATE WIRD INSTALLIER/);
-  assert.equal(await page.locator('#updateInstall').isVisible(), false);
+  assert.equal(await page.locator('#updateInstall').isVisible(), true);
+  assert.match(await page.locator('#updateInstall').innerText(), /INSTALLIERE/);
+  assert.equal(await page.locator('#updateCheck').isVisible(), false);
   await page.evaluate(() => renderUpdateState({ state: 'installed' }));
   assert.match(await page.locator('#updateStatus').innerText(), /✓ AKTUELL/);
 
@@ -1259,11 +1271,11 @@ test('archive counts have their own readable section, without altering bar align
   });
   await open(page, 1);
   assert.equal(await page.locator('#archiveStatus').isVisible(), true);
-  assert.equal(await page.locator('#archiveStatus').evaluate(node => node.parentElement.id), 'hintsPanel');
-  assert.equal(await page.locator('#categoriesPanel #archiveStatus').count(), 0);
+  assert.equal(await page.locator('#archiveStatus').evaluate(node => node.parentElement.id), 'categoriesPanel');
+  assert.equal(await page.locator('#hintsPanel #archiveStatus').count(), 0);
   assert.equal(await page.locator('#archiveEncryptedCount').innerText(), '4');
   assert.equal(await page.locator('#archiveUnknownCount').innerText(), '2');
-  assert.doesNotMatch(await page.locator('#categories').innerText(), /VERSCHLÜSSELT|UNGEPRÜFT/);
+  assert.match(await page.locator('#categoriesPanel').innerText(), /ARCHIV-STATUS.*4 VERSCHLÜSSELT.*2 UNGEPRÜFT/s);
   const tracks = await page.locator('#categories .bar-track').evaluateAll(nodes => nodes.map(node => ({ x: node.getBoundingClientRect().x, width: node.getBoundingClientRect().width })));
   assert.deepEqual(tracks[0], tracks[1]);
   await page.evaluate(() => renderResults({ archive_encryption: { total: 3, encrypted: 0, unknown: 0 } }));
@@ -1503,8 +1515,10 @@ test('compact period summary shows counts and at most ten timestamps and fits ta
     renderResults({ case_period: null, period_evaluation: 'not_configured', categories_by_count: { Bilder: 1602, Dokumente: 702 } });
   });
   assert.equal(await page.locator('#periodSummary').isHidden(), true);
-  assert.equal(await page.locator('#categoryLegend').isHidden(), true);
-  assert.equal(await page.locator('#categories .bar-period').count(), 0);
+  assert.equal(await page.locator('#categoryLegend').isVisible(), true);
+  assert.equal(await page.locator('#categoryLegend .category-head-period').isVisible(), false);
+  assert.equal(await page.locator('#categoryLegend strong').isVisible(), false);
+  assert.equal(await page.locator('#categories .bar-period-value').count(), 0);
   const latest = Array.from({ length: 12 }, (_, i) => ({ path: `docs/file-${i}.txt`, category: 'Dokumente', latest_period_timestamp: 1790000000 - i, latest_period_timestamp_type: 'M+C' }));
   await page.evaluate(latest => renderResults({
     case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'Europe/Vienna' },
@@ -1513,7 +1527,7 @@ test('compact period summary shows counts and at most ten timestamps and fits ta
   }), latest);
   assert.equal(await page.locator('#periodSummary').isHidden(), true);
   assert.equal(await page.locator('#categoryLegend').isVisible(), true);
-  assert.match(await page.locator('#categoryLegend').innerText(), /ANZAHL \(IM ZEITRAUM\).*01\.01\.2026.*31\.01\.2026/s);
+  assert.match(await page.locator('#categoryLegend').innerText(), /GESAMT.*ZEITRAUM.*DATEITYP.*01\.01\.2026.*31\.01\.2026/s);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'local', timezone_reproducible: false }, period_file_count: 1, file_count: 1 }));
   assert.match(await page.locator('#timestampModalContext').innerText(), /keine eindeutige IANA-Zone ermittelt/);
   await page.evaluate(latest => renderResults({
@@ -1521,12 +1535,12 @@ test('compact period summary shows counts and at most ten timestamps and fits ta
     period_evaluation: 'configured', period_file_count: 4, file_count: 12,
     categories_in_period: { Dokumente: 3, Bilder: 1 }, latest_period_files: latest,
   }), latest);
-  assert.equal(await page.locator('#latestPeriodFiles li').count(), 10);
-  assert.match(await page.locator('#latestPeriodPreview').innerText(), /M\+C/);
+  assert.equal(await page.locator('#latestPeriodFiles tr').count(), 10);
+  assert.doesNotMatch(await page.locator('#latestPeriodPreview').innerText(), /M\+C/);
   assert.doesNotMatch(await page.locator('#latestPeriodPreview').innerText(), /docs\//);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' }, period_evaluation: 'not_applicable' }));
   assert.equal(await page.locator('#periodSummary').isHidden(), true);
-  assert.equal(await page.locator('#latestPeriodFiles li').count(), 0);
+  assert.equal(await page.locator('#latestPeriodFiles tr').count(), 0);
   await page.evaluate(() => { activeCaseNumber = null; updateStartOverlay(); openAuftrag(); });
   for (const width of [1512, 1280, 1000, 800]) {
     await page.setViewportSize({ width, height: 1080 });
@@ -1545,6 +1559,7 @@ test('compact period summary shows counts and at most ten timestamps and fits ta
 
 test('result layout keeps files compact, aggregates crypto hints, and opens exact timestamp paths in explorer', async t => {
   const { page, requests } = await setup(t, settingsFixture);
+  await page.setViewportSize({ width: 1512, height: 1080 });
   const screenshotDir = process.env.TRIAGE_SCREENSHOT_DIR;
   if (screenshotDir) fs.mkdirSync(screenshotDir, { recursive: true });
   await page.evaluate(mediaFixture => {
@@ -1555,9 +1570,9 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
       categories_in_period: { Bilder: 1500, Dokumente: 650, Tabellen: 400, 'Text/Logs': 330, 'E-Mail': 240, 'Web-Dateien': 230, Unbekannt: 95, Datenbanken: 88, Archive: 8, Video: 5, Audio: 2, 'Datenträger-/Backup-Images': 2, Sicherungskopien: 1 },
       archive_encryption: { total: 10, encrypted: 4, unknown: 2 },
       largest_files: [{ path: 'Archiv/sehr-grosse-datei.bin', size: 1048576 }],
-      latest_period_files: Array.from({ length: 10 }, (_, index) => ({ path: index === 0 ? 'Langer/Pfad/dokument.pdf' : `Archiv/Unterordner/datei-${index}.txt`, category: 'Dokumente', latest_period_timestamp: 1790000000 - index, latest_period_timestamp_type: index % 2 ? 'M+C' : 'M' })),
+      latest_period_files: Array.from({ length: 10 }, (_, index) => ({ path: index === 0 ? 'Langer/Pfad/Toy Story 5 (2026) – 2160p WEB-DL H265 DV HDR10 – German DL.nfo' : `Archiv/Unterordner/datei-${index}.txt`, category: 'Dokumente', latest_period_timestamp: 1790000000 - index, latest_period_timestamp_type: index === 0 ? 'B+M+C+A' : index % 2 ? 'A' : 'C+A' })),
     }, crypto: { rules: { version: 2 }, file_hints: [
-      { path: 'Wallet/one.db', matches: [{ category: 'wallet', id: 'wallet-db', reason: 'Dateiname: one.db' }] },
+      { path: 'Wallet/Bitcoin_wallet_Hinweis.txt', matches: [{ category: 'wallet', id: 'wallet-db', term: 'wallet', reason: 'Dateiname: wallet' }] },
       { path: 'Exchange/two.csv', matches: [{ category: 'exchange', id: 'exchange-export', reason: 'Endung: csv' }] },
       { path: 'Wallet/three.json', matches: [{ category: 'wallet', id: 'wallet-json', reason: 'Endung: json' }] },
       { path: 'Hardware/four.bin', matches: [{ category: 'hardware', id: 'hardware-wallet', reason: 'Regel: hardware' }] },
@@ -1573,39 +1588,66 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
   assert.match(await page.locator('#hintsPanel .panel-title').innerText(), /07.*HINWEISE/);
   assert.equal(await page.locator('#timestampModal').isVisible(), false);
   assert.equal(await page.locator('#cryptoModal').isVisible(), false);
-  assert.match(await page.locator('#cryptoSummary').innerText(), /SELF-CUSTODY WALLETS.*2/);
+  assert.equal(await page.locator('#cryptoDetails').isVisible(), true);
+  assert.equal(await page.locator('.hint-section-title-first').locator('button').innerText(), 'DETAILS ↗');
+  assert.equal(await page.locator('#openTimestampModal').innerText(), 'ALLE ANZEIGEN ↗');
+  assert.match(await page.locator('#cryptoSummary').innerText(), /SELF-CUSTODY WALLETS\s+2/);
   assert.equal(await page.locator('#cryptoSummary > span').count(), 5);
   assert.doesNotMatch(await page.locator('#hintsPanel').innerText(), /Wallet\/one\.db/);
   await page.evaluate(() => { activeCaseNumber = 'TEST'; updateStartOverlay(); });
   await page.locator('#cryptoDetails').click();
   assert.equal(await page.locator('#cryptoModal').isVisible(), true);
-  assert.match(await page.locator('#cryptoHintList').innerText(), /Wallet\/one\.db/);
+  assert.match(await page.locator('#cryptoHintList').innerText(), /Wallet\/Bitcoin_wallet_Hinweis\.txt/);
   assert.match(await page.locator('#cryptoHintList').innerText(), /Bank\/seven\.db/);
+  assert.equal((await page.locator('#cryptoModal thead').innerText()).trim(), 'DATEI\tKATEGORIE\tBEGRIFF\tENDUNG');
   if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, 'crypto-modal.png'), fullPage: true });
+  const cryptoRequest = page.waitForRequest(request => request.url().includes('/api/media/1/files') && request.url().includes('exact_path='));
+  await page.locator('#cryptoHintList button[data-inventory-file]').first().click();
+  assert.equal(new URL((await cryptoRequest).url()).searchParams.get('exact_path'), 'Wallet/Bitcoin_wallet_Hinweis.txt');
   assert.deepEqual((await page.locator('#categories .bar-value').allTextContents()).slice(0, 3).map(text => text.replace(/\s/g, ' ')), ['1 602', '702', '451']);
-  assert.deepEqual((await page.locator('#categories .bar-period').allTextContents()).slice(0, 3).map(text => text.replace(/\s/g, ' ')), ['(1 500)', '(650)', '(400)']);
+  assert.deepEqual((await page.locator('#categories .bar-period-value').allTextContents()).slice(0, 3).map(text => text.replace(/\s/g, ' ')), ['1 500', '650', '400']);
+  assert.equal(await page.locator('#categories .bar-name .bar-period-value').count(), 0);
+  assert.equal(await page.locator('#categories .bar-period-value.differs').count(), 10);
   assert.deepEqual((await page.locator('#categories .bar-name').allTextContents()).slice(-2), ['DATENTRÄGER-/BACKUP-IMAGES', 'SICHERUNGSKOPIEN']);
   assert.equal(await page.locator('#categories').innerText().then(text => text.includes('DAVON')), false);
   assert.equal(await page.locator('[data-inventory-category="Datenträger-/Backup-Images"] .bar-name').getAttribute('title'), 'Datenträger-/Backup-Images');
   assert.equal(await page.locator('#periodSummary').isHidden(), true);
-  assert.equal(await page.locator('#archiveStatus').evaluate(node => node.parentElement.id), 'hintsPanel');
+  assert.equal(await page.locator('#archiveStatus').evaluate(node => node.parentElement.id), 'categoriesPanel');
   const timestampModal = page.locator('#timestampModal');
   await page.evaluate(() => document.getElementById('openTimestampModal').click());
   assert.equal(await page.locator('#cryptoModal').isVisible(), false);
   assert.equal(await timestampModal.isVisible(), true);
   assert.equal(await page.locator('#latestPeriodPreview li').count(), 5);
-  assert.equal(await timestampModal.locator('#latestPeriodFiles li').count(), 10);
+  assert.equal(await timestampModal.locator('#latestPeriodFiles tr').count(), 10);
   assert.match(await timestampModal.innerText(), /M/);
-  assert.match(await timestampModal.innerText(), /dokument\.pdf/);
-  assert.match(await timestampModal.innerText(), /PFAD: Langer\/Pfad\/dokument\.pdf/);
+  assert.match(await timestampModal.innerText(), /Toy Story 5 \(2026\) – 2160p WEB-DL H265 DV HDR10 – German DL\.nfo/);
+  assert.match(await timestampModal.innerText(), /Langer\/Pfad\/Toy Story 5 \(2026\) – 2160p WEB-DL H265 DV HDR10 – German DL\.nfo/);
+  assert.match(await timestampModal.innerText(), /B\+M\+C\+A/);
+  assert.equal(await timestampModal.locator('.result-detail-file strong').first().evaluate(node => getComputedStyle(node).overflowWrap), 'anywhere');
+  assert.equal((await timestampModal.locator('thead').innerText()).trim(), 'DATUM\tUHRZEIT\tKATEGORIE\tDATEI\tTS');
+  assert.equal(await page.locator('#latestPeriodPreview').innerText().then(text => /\d{1,2}:\d{2}|\bM\+C\b|Langer\/Pfad/.test(text)), false);
+  assert.equal(await timestampModal.locator('.result-detail-file strong').first().evaluate(node => getComputedStyle(node).textOverflow), 'clip');
+  assert.equal(await timestampModal.locator('thead th').first().evaluate(node => getComputedStyle(node).position), 'sticky');
+  const sharedModalMetrics = await Promise.all(['#timestampModal', '#cryptoModal'].map(selector => page.locator(selector).evaluate(node => {
+    const style = getComputedStyle(node), head = getComputedStyle(node.querySelector('.result-detail-head'));
+    return { width: style.width, maxHeight: style.maxHeight, headerHeight: head.minHeight, headerPadding: head.padding, font: style.fontFamily, border: style.borderTopWidth };
+  })));
+  assert.deepEqual(sharedModalMetrics[0], sharedModalMetrics[1]);
   if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, 'timestamp-modal.png'), fullPage: true });
   const panelHeights = await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height)));
-  assert.equal(await page.locator('.decision-panel').evaluate(node => getComputedStyle(node).gridColumn), '1 / -1');
+  const workspace = await page.locator('#documentationGrid').evaluate(node => ({ columns: getComputedStyle(node).gridTemplateColumns.split(' ').map(Number), explorer: node.querySelector('#inventoryPanel').getBoundingClientRect(), decision: node.querySelector('.decision-panel').getBoundingClientRect() }));
+  assert.ok(workspace.workspace === undefined || workspace.columns.length === 2);
+  assert.ok(workspace.explorer.left < workspace.decision.left && Math.abs(workspace.explorer.top - workspace.decision.top) <= 1);
+  assert.ok(workspace.explorer.width / workspace.decision.width > 1.8 && workspace.explorer.width / workspace.decision.width < 2.3);
+  const actionTiles = await page.locator('.result-actions > *').evaluateAll(nodes => nodes.map(node => ({ height: node.getBoundingClientRect().height, width: node.getBoundingClientRect().width })));
+  assert.ok(Math.abs(actionTiles[0].height - actionTiles[1].height) <= 1);
+  assert.ok(Math.abs(actionTiles[0].width - actionTiles[1].width) <= 1);
   const request = page.waitForRequest(request => request.url().includes('/api/media/1/files') && request.url().includes('exact_path='));
   await page.locator('#latestPeriodFiles button').first().click();
   const navigation = new URL((await request).url());
-  assert.equal(navigation.searchParams.get('exact_path'), 'Langer/Pfad/dokument.pdf');
+  assert.equal(navigation.searchParams.get('exact_path'), 'Langer/Pfad/Toy Story 5 (2026) – 2160p WEB-DL H265 DV HDR10 – German DL.nfo');
   assert.deepEqual(await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height))), panelHeights);
+  assert.ok(Math.max(...panelHeights) - Math.min(...panelHeights) <= 1, 'all three dashboard panels share one height');
   assert.equal(await page.locator('#inventoryPanel').evaluate(node => node.open), true);
   await page.locator('#timestampModal').evaluate(node => node.open && node.close());
   await page.locator('#inventorySort').selectOption('size');
@@ -1615,18 +1657,28 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
     await page.setViewportSize({ width, height: 1080 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `no horizontal overflow at ${width}px`);
     const separatedCategoryCells = await page.locator('#categories .bar-row.has-period').evaluateAll(rows => rows.every(row => {
-      const cells = ['.bar-value', '.bar-period', '.bar-name', '.bar-track'].map(selector => row.querySelector(selector).getBoundingClientRect());
+      const cells = ['.bar-value', '.bar-period-value', '.bar-name', '.bar-track'].map(selector => row.querySelector(selector).getBoundingClientRect());
       return cells.every(cell => cell.width > 0) && cells.slice(1).every((cell, index) => cell.left - cells[index].right >= 4) && cells[2].width >= 120;
     }));
     assert.equal(separatedCategoryCells, true, `category value, period, name and bar remain separated at ${width}px`);
     const separatedTimestampCells = await page.locator('#latestPeriodPreview li').evaluateAll(rows => rows.every(row => {
-      const type = row.querySelector('b').getBoundingClientRect();
+      const type = row.querySelector('span').getBoundingClientRect();
       const filename = row.querySelector('button').getBoundingClientRect();
       return type.width > 0 && filename.width > 0 && filename.left - type.right >= 6;
     }));
     assert.equal(separatedTimestampCells, true, `timestamp type and filename remain separated at ${width}px`);
     const panelRows = await page.locator('.analysis-grid > *').evaluateAll(nodes => new Set(nodes.map(node => Math.round(node.getBoundingClientRect().top))).size);
     assert.equal(panelRows, width <= 900 ? 3 : width <= 1100 ? 2 : 1, `dashboard panel layout at ${width}px`);
+    if (width > 1100) {
+      const heights = await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      assert.ok(Math.max(...heights) - Math.min(...heights) <= 1, `analysis cards share height at ${width}px`);
+    }
+    if (width === 1000 || width === 800) {
+      await page.locator('#timestampModal').evaluate(node => node.close());
+      await page.locator('#openTimestampModal').click();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `timestamp modal fits width ${width}`);
+      await page.locator('#timestampModal').evaluate(node => node.close());
+    }
     if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, `dashboard-${width}.png`), fullPage: true });
     if (width === 1512 && process.env.TRIAGE_DASHBOARD_SCREENSHOT) await page.screenshot({ path: process.env.TRIAGE_DASHBOARD_SCREENSHOT, fullPage: true });
   }
@@ -1991,6 +2043,31 @@ test('offline update section is separate and file field aligns with install butt
   const button = await page.locator('#offlineUpdateInstall').evaluate(node => node.getBoundingClientRect());
   assert.ok(file.top >= row.top - 1 && file.bottom <= row.bottom + 1, 'file input must stay in offline row');
   assert.ok(button.top >= row.top - 1 && button.bottom <= row.bottom + 1, 'install button must stay in offline row');
+});
+
+test('Explorer and decision share the desktop workspace and stack cleanly on narrow screens', async t => {
+  const { page } = await setup(t);
+  const screenshotDir = process.env.TRIAGE_SCREENSHOT_DIR;
+  await open(page, 1);
+  if (screenshotDir) {
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    await page.setViewportSize({ width: 1512, height: 1080 });
+    await page.screenshot({ path: path.join(screenshotDir, 'explorer-decision-1512.png'), fullPage: true });
+  }
+  for (const width of [1512, 1280]) {
+    await page.setViewportSize({ width, height: 1080 });
+    const boxes = await page.locator('#documentationGrid').evaluate(node => [node.querySelector('#inventoryPanel'), node.querySelector('.decision-panel')].map(item => item.getBoundingClientRect()));
+    assert.ok(Math.abs(boxes[0].top - boxes[1].top) <= 1);
+    assert.ok(boxes[0].left < boxes[1].left);
+    assert.ok(boxes[0].width / boxes[1].width > 1.8 && boxes[0].width / boxes[1].width < 2.3);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  }
+  for (const width of [1000, 800]) {
+    await page.setViewportSize({ width, height: 1080 });
+    const boxes = await page.locator('#documentationGrid').evaluate(node => [node.querySelector('#inventoryPanel'), node.querySelector('.decision-panel')].map(item => item.getBoundingClientRect()));
+    assert.ok(boxes[0].top < boxes[1].top, `workspace stacks at ${width}px`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  }
 });
 
 // ── DIAGNOSE-Konsole (Alpha 70) ──
