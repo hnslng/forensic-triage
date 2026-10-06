@@ -50,12 +50,13 @@ def test_power_status_is_unknown_when_vcgencmd_is_unavailable(monkeypatch) -> No
 
 @pytest.mark.parametrize("exact_path", [None, "Ordner/Übergabe ' & # % <Test>.bin"])
 @pytest.mark.parametrize("archive_status", ["", "encrypted", "unknown"])
-def test_file_inventory_endpoint_forwards_filters(exact_path, archive_status) -> None:
+@pytest.mark.parametrize("sort_by", ["", "size"])
+def test_file_inventory_endpoint_forwards_filters(exact_path, archive_status, sort_by) -> None:
     from urllib.parse import urlencode
     import forensic_triage.web as web
 
     handler = web.TriageHandler.__new__(web.TriageHandler)
-    query = {"archive_status": archive_status}
+    query = {"archive_status": archive_status, "sort_by": sort_by}
     if exact_path is not None:
         query["exact_path"] = exact_path
     handler.path = "/api/media/12/files?" + urlencode(query)
@@ -74,6 +75,7 @@ def test_file_inventory_endpoint_forwards_filters(exact_path, archive_status) ->
         "exact_path": exact_path,
         "archive_status": archive_status,
         "period_filter": "",
+        "sort_by": sort_by,
     }
     assert responses[0][0] == 200
 

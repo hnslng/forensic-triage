@@ -1217,7 +1217,7 @@ test('iPhone without reported serial uses UDID path for online and pending decis
   assert.match(await page.locator('#decisionQueueList').innerText(), /UDID udid-77/);
 });
 
-test('largest-file sizes remain visible without horizontal scrolling for long paths', async t => {
+test('largest-file size and filename stay in the compact data-volume metric at narrow widths', async t => {
   const longPath = 'Sehr langer Ordner/'.repeat(12) + 'Langer Dateiname '.repeat(20) + '.mkv';
   const { page } = await setup(t, url => {
     if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, largest_files: [{ path: longPath, size: 22 * 1024 ** 3 }] } } };
@@ -1225,35 +1225,21 @@ test('largest-file sizes remain visible without horizontal scrolling for long pa
   await open(page, 1);
   for (const width of [1440, 800, 470]) {
     await page.setViewportSize({ width, height: 900 });
-    const geometry = await page.locator('.files-panel').evaluate(panel => {
-      const wrap = panel.querySelector('.table-wrap');
-      const size = panel.querySelector('.largest-size').getBoundingClientRect();
-      const bounds = panel.getBoundingClientRect();
-      return { overflow: wrap.scrollWidth > wrap.clientWidth, sizeVisible: size.left >= bounds.left && size.right <= bounds.right };
-    });
-    assert.deepEqual(geometry, { overflow: false, sizeVisible: true });
-    assert.equal(await page.locator('.largest-size').innerText(), '22 GB');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `no horizontal overflow at ${width}px`);
+    assert.equal(await page.locator('#largestFileSummary').isVisible(), true);
+    assert.match(await page.locator('#largestFileSummary').innerText(), /22 GB.*\.mkv/);
   }
-  assert.match(await page.locator('.largest-file-link').getAttribute('title'), /Sehr langer Ordner/);
+  assert.equal(await page.locator('#files').count(), 0);
 });
 
-test('largest-file click navigates to the exact stored path and filter reset still works', async t => {
-  const exactPath = "Ordner/Übergabe ' & # % <Test>.mkv";
+test('Explorer can sort largest files first and filter reset still works', async t => {
   const { page, requests } = await setup(t, url => {
-    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, largest_files: [{ path: exactPath, size: 300 }] } } };
-    if (url.pathname === '/api/media/1/files' && url.searchParams.has('exact_path')) {
-      assert.equal(url.searchParams.get('exact_path'), exactPath);
-      assert.equal(url.searchParams.has('category'), false);
-      return { json: { files: [{ path: exactPath, size: 300, category: 'Video', source: 'readonly_mount' }], total: 1, shown: 1 } };
-    }
+    if (url.pathname === '/api/media/1') return { json: { ...record(1), summary: { ...record(1).summary, largest_files: [{ path: 'Ordner/gross.mkv', size: 300 }] } } };
   });
-  await open(page, 1); await filter(page);
-  await page.locator('.largest-file-link').focus();
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => document.getElementById('inventoryCount').textContent === '1 / 1 FUNDSTELLEN');
-  assert.equal(await page.locator('#inventorySearch').inputValue(), exactPath);
-  assert.match(await page.locator('#inventoryFiles').innerText(), /Übergabe/);
-  assert.equal(await page.locator('.result-filter.active').count(), 0);
+  await open(page, 1);
+  await page.locator('#inventorySort').selectOption('size');
+  await page.waitForFunction(() => document.getElementById('inventorySearchResults').hidden === false);
+  assert.ok(requests.some(request => request.path === '/api/media/1/files' && request.query.includes('sort_by=size')));
   assert.equal(requests.filter(request => request.method !== 'GET').length, 0);
   await page.locator('#inventoryReset').click();
   await page.waitForFunction(() => !document.getElementById('inventoryTree').hidden);
@@ -1297,6 +1283,7 @@ test('compact archive counts filter the correct status, keep pagination and rese
     const box = await page.locator('#archiveStatus').boundingBox();
     assert.ok(box.height <= 70, `Compact labelled status row at ${width}px: ${box.height}`);
   }
+  await page.setViewportSize({ width: 1440, height: 1080 });
   const encrypted = page.locator('[data-inventory-archive-status="encrypted"]');
   const unknown = page.locator('[data-inventory-archive-status="unknown"]');
   for (const [button, state, count] of [[encrypted, 'encrypted', 4], [unknown, 'unknown', 2]]) {
@@ -1500,7 +1487,7 @@ test('new case keeps dates entered before the case is started', async t => {
   assert.equal(posted.date_to, '2026-04-05');
 });
 
-test('period summary shows counts and top ten, stays quiet without a period, and fits target widths', async t => {
+test('compact period summary shows counts and at most five timestamps and fits target widths', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
     renderArchive({});
@@ -1522,8 +1509,9 @@ test('period summary shows counts and top ten, stays quiet without a period, and
     period_evaluation: 'configured', period_file_count: 4, file_count: 12,
     categories_in_period: { Dokumente: 3, Bilder: 1 }, latest_period_files: latest,
   }), latest);
-  assert.equal(await page.locator('#latestPeriodFiles li').count(), 10);
+  assert.equal(await page.locator('#latestPeriodFiles li').count(), 5);
   assert.match(await page.locator('#latestPeriodFiles').innerText(), /M\+C/);
+  assert.doesNotMatch(await page.locator('#latestPeriodFiles').innerText(), /docs\//);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' }, period_evaluation: 'not_applicable' }));
   assert.equal(await page.locator('#periodPhoneContext').isVisible(), true);
   assert.equal(await page.locator('#latestPeriodFiles li').count(), 0);
@@ -1541,6 +1529,50 @@ test('period summary shows counts and top ten, stays quiet without a period, and
   });
   assert.match(await page.locator('#deviceList').innerText(), /ANDROID-UNTERSTÜTZUNG AUF DER BOX FEHLT/);
   assert.doesNotMatch(await page.locator('#deviceList').innerText(), /USB-Debugging am Telefon bestätigen/i);
+});
+
+test('result layout keeps files compact, aggregates crypto hints, and opens exact timestamp paths in explorer', async t => {
+  const { page, requests } = await setup(t, settingsFixture);
+  await page.evaluate(mediaFixture => {
+    renderRecord({ media: { ...mediaFixture, id: 1 }, archive: {}, summary: {
+      case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' },
+      period_evaluation: 'configured', period_file_count: 2, file_count: 8,
+      categories_by_count: { Dokumente: 5, Bilder: 3 }, categories_in_period: { Dokumente: 1, Bilder: 1 },
+      largest_files: [{ path: 'Archiv/sehr-grosse-datei.bin', size: 1048576 }],
+      latest_period_files: [{ path: 'Langer/Pfad/dokument.pdf', category: 'Dokumente', latest_period_timestamp: 1790000000, latest_period_timestamp_type: 'M' }],
+    }, crypto: { rules: { version: 2 }, file_hints: [
+      { path: 'Wallet/one.db', matches: [{ category: 'wallet', id: 'wallet-db', reason: 'Dateiname: one.db' }] },
+      { path: 'Exchange/two.csv', matches: [{ category: 'exchange', id: 'exchange-export', reason: 'Endung: csv' }] },
+      { path: 'Wallet/three.json', matches: [{ category: 'wallet', id: 'wallet-json', reason: 'Endung: json' }] },
+    ] } });
+  }, media[2]);
+  assert.equal(await page.locator('#files').count(), 0, 'largest files must not have a separate card');
+  assert.match(await page.locator('#largestFileSummary').innerText(), /1 MB.*sehr-grosse-datei\.bin/i);
+  assert.match(await page.locator('#categoriesPanel .panel-title').innerText(), /05.*DATEIEN.*ZEITRAUM/);
+  assert.match(await page.locator('#hintsPanel .panel-title').innerText(), /06.*HINWEISE/);
+  assert.equal(await page.locator('#cryptoDetails').evaluate(node => node.open), false);
+  assert.match(await page.locator('#cryptoSummary').innerText(), /SELF-CUSTODY WALLETS.*2/);
+  assert.doesNotMatch(await page.locator('#hintsPanel').innerText(), /Wallet\/one\.db/);
+  await page.evaluate(() => { activeCaseNumber = 'TEST'; updateStartOverlay(); });
+  await page.locator('#cryptoDetails > summary').click();
+  assert.match(await page.locator('#cryptoHintList').innerText(), /Wallet\/one\.db/);
+  assert.deepEqual(await page.locator('#categories .category-period-count').allTextContents(), ['1 IM ZEITRAUM', '1 IM ZEITRAUM']);
+  const request = page.waitForRequest(request => request.url().includes('/api/media/1/files') && request.url().includes('exact_path='));
+  await page.locator('#latestPeriodFiles button').click();
+  const navigation = new URL((await request).url());
+  assert.equal(navigation.searchParams.get('exact_path'), 'Langer/Pfad/dokument.pdf');
+  assert.equal(await page.locator('#inventoryPanel').evaluate(node => node.open), true);
+  await page.locator('#inventorySort').selectOption('size');
+  await page.waitForFunction(() => [...performance.getEntriesByType('resource')].some(item => item.name.includes('sort_by=size')));
+  assert.ok(requests.some(item => item.path === '/api/media/1/files' && item.query.includes('sort_by=size')));
+  await page.locator('#cryptoDetails').evaluate(node => { node.open = false; });
+  for (const width of [1512, 1280, 1000, 800]) {
+    await page.setViewportSize({ width, height: 1080 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `no horizontal overflow at ${width}px`);
+    const rows = await page.locator('.analysis-grid > *').evaluateAll(nodes => new Set(nodes.map(node => Math.round(node.getBoundingClientRect().top))).size);
+    assert.equal(rows, width <= 900 ? 2 : 1, `dashboard panel layout at ${width}px`);
+    if (width === 1512 && process.env.TRIAGE_DASHBOARD_SCREENSHOT) await page.screenshot({ path: process.env.TRIAGE_DASHBOARD_SCREENSHOT, fullPage: true });
+  }
 });
 
 test('important system buttons use inline SVG instead of problematic Unicode glyphs', async t => {

@@ -802,6 +802,7 @@ class TriageHandler(BaseHTTPRequestHandler):
                     exact_path=query.get("exact_path", [None])[0],
                     archive_status=str(query.get("archive_status", [""])[0]),
                     period_filter=str(query.get("period_filter", [""])[0]),
+                    sort_by=str(query.get("sort_by", [""])[0]),
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:

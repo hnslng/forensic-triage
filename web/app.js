@@ -1287,12 +1287,18 @@ function renderResults(summary, hits = {}) {
   $("directoryCount").textContent = Number(summary.directory_count || 0).toLocaleString("de-AT");
   $("keywordMatches").textContent = Number(summary.keyword_matches || 0).toLocaleString("de-AT");
   $("totalBytes").textContent = formatBytes(summary.total_file_bytes);
+  const largest = (summary.largest_files || [])[0];
+  const largestSummary = $("largestFileSummary");
+  largestSummary.hidden = !largest;
+  largestSummary.textContent = largest ? `GRÖSSTE DATEI: ${formatBytes(largest.size)} · ${String(largest.path || "").split("/").pop()}` : "";
   renderPeriodSummary(summary);
   const categories = Object.entries(summary.categories_by_count || {}).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...categories.map(([, count]) => count), 1);
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
-    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count)}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
+    const periodCount = Number(summary.categories_in_period?.[name] || 0);
+    const periodNote = summary.case_period && periodCount < Number(count) ? `<small class="category-period-count">${periodCount.toLocaleString("de-AT")} IM ZEITRAUM</small>` : "";
+    return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}${periodNote}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
   $("archiveEncryptedCount").textContent = Number(archiveEncryption.encrypted || 0).toLocaleString("de-AT");
@@ -1303,13 +1309,6 @@ function renderResults(summary, hits = {}) {
   $("keywords").innerHTML = Object.entries(hits).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([word, count]) => `
     <button class="keyword-row result-filter" type="button" data-inventory-keyword="${escapeHtml(word)}" aria-pressed="false" title="Trefferpfade für ${escapeHtml(word)} anzeigen"><span>${escapeHtml(word.toUpperCase())}</span><b>${Number(count)}</b></button>
   `).join("");
-  $("largestFiles").innerHTML = (summary.largest_files || []).map((file) => {
-    const path = String(file.path || "");
-    const separator = path.lastIndexOf("/");
-    const name = path.slice(separator + 1);
-    const folder = separator >= 0 ? path.slice(0, separator) : "Stammverzeichnis";
-    return `<tr><td class="largest-size">${formatBytes(file.size)}</td><td><button class="largest-file-link" type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}" aria-label="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(folder)}</small><span aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg></span></button></td></tr>`;
-  }).join("") || '<tr><td colspan="2">KEINE DATEIEN ERFASST</td></tr>';
   $("results").hidden = false;
 }
 
@@ -1329,10 +1328,7 @@ function renderPeriodSummary(summary = {}) {
   $("periodFileCount").textContent = phone
     ? "ZEITRAUM ALS FALLKONTEXT GESPEICHERT · KEINE DATEIAUSWERTUNG"
     : `${Number(summary.period_file_count || 0).toLocaleString("de-AT")} / ${Number(summary.file_count || 0).toLocaleString("de-AT")} DATEIEN IM ZEITRAUM`;
-  $("periodCategories").innerHTML = phone ? "" : Object.entries(summary.categories_in_period || {})
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"))
-    .map(([name, count]) => `<div class="period-category"><span>${escapeHtml(name)}</span><b>${Number(count).toLocaleString("de-AT")}</b></div>`).join("") || "<small>Keine Dateien im Zeitraum</small>";
-  const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 10);
+  const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 5);
   const zone = period.timezone && period.timezone !== "local" ? period.timezone : undefined;
   $("latestPeriodFiles").innerHTML = rows.map((file) => {
     let time = "Zeitstempel nicht darstellbar";
@@ -1342,7 +1338,9 @@ function renderPeriodSummary(summary = {}) {
         time = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "medium", ...(zone ? { timeZone: zone } : {}) }).format(new Date(epoch * 1000));
       } catch { time = new Date(epoch * 1000).toLocaleString("de-AT"); }
     }
-    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(file.path || "")}">${escapeHtml(file.path || "")}</button></li>`;
+    const path = String(file.path || "");
+    const filename = path.split("/").pop() || path;
+    return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
   }).join("");
   $("periodSummary").querySelector(".period-summary-grid").hidden = phone;
 }
@@ -1461,13 +1459,28 @@ function renderCryptoFindings(crypto, isPhone) {
   $("cryptoScope").textContent = isPhone
     ? "Hinweise aus Apps und zugänglichen Dateinamen · keine Inhaltsanalyse."
     : "Hinweise nur aus Dateinamen und Pfaden des Grobindex. Keine Inhaltsanalyse und kein Nachweis für Krypto-Vermögenswerte.";
-  const appRows = apps.slice(0, 100).map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
-  const fileRows = files.slice(0, 100).map(item => {
-    const matches = item.matches || [item];
-    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(item.path || "")}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(item.path || "DATEI")}</strong><span>${escapeHtml(matches.map(match => `${appCategoryLabels[match.category] || match.category}: ${match.reason || match.id}`).join(" · "))}</span></button></li>`;
+  const groupedFiles = new Map();
+  for (const item of files) for (const match of (item.matches || [item])) {
+    const category = match.category || "other";
+    if (!groupedFiles.has(category)) groupedFiles.set(category, []);
+    groupedFiles.get(category).push({ ...item, match });
+  }
+  const categoryCounts = new Map([...groupedFiles].map(([category, rows]) => [category, rows.length]));
+  for (const item of apps) {
+    const category = item.category || "other";
+    categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+  }
+  const categorySummary = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])
+    .map(([category, count]) => `<span>${escapeHtml(appCategoryLabels[category] || category.toUpperCase())} <b>${count.toLocaleString("de-AT")}</b></span>`).join("");
+  $("cryptoSummary").innerHTML = categorySummary || '<span>KEINE DATEIHINWEISE</span>';
+  const appRows = apps.map(item => `<li><strong>${escapeHtml(item.name || "APP")}</strong><span>${escapeHtml(appCategoryLabels[item.category] || item.category || "HINWEIS")} · ${escapeHtml(item.reason || item.id || "REGELTREFFER")}</span></li>`);
+  const fileRows = [...groupedFiles.values()].flat().map(({ path, match, ...item }) => {
+    const reason = match.reason || match.id || "REGELTREFFER";
+    return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(path || "")}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(path || "DATEI")}</strong><span>${escapeHtml(appCategoryLabels[match.category] || match.category || "HINWEIS")} · ${escapeHtml(reason)}${item.extension ? ` · ${escapeHtml(item.extension)}` : ""}</span></button></li>`;
   });
+  $("cryptoDetails").open = false;
   $("cryptoHintList").innerHTML = appRows.length || fileRows.length
-    ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>${apps.length > 100 || files.length > 100 ? `<p class="iphone-empty">ANZEIGE AUF 100 APP- UND 100 DATEIHINWEISE BEGRENZT · VOLLSTÄNDIGE LISTE IN DER FALLAKTE</p>` : ""}`
+    ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>`
     : '<p class="iphone-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</p>';
 }
 
@@ -1477,6 +1490,7 @@ function renderBackupFindings(backup) {
   const hints = backup?.backup_hints || [];
   container.hidden = !hints.length;
   if (!hints.length) return;
+  $("backupFindingCount").textContent = `${hints.length.toLocaleString("de-AT")} BACKUP-HINWEISE`;
   const items = hints.slice(0, 50).map(hit => `
     <div class="backup-hint">
       <div class="backup-hint-name">${escapeHtml(hit.name || hit.id || "BACKUP")}</div>
@@ -1485,7 +1499,7 @@ function renderBackupFindings(backup) {
       <small>${escapeHtml((hit.matched_indicators || []).join(" · "))} · Inhalt wurde nicht analysiert.</small>
     </div>
   `).join("");
-  container.innerHTML = `<h3><span>↗</span>GERÄTE-BACKUPS · ${hints.length}</h3>${items}${hints.length > 50 ? '<p class="iphone-empty">ANZEIGE AUF 50 HINWEISE BEGRENZT · VOLLSTÄNDIGE LISTE IN DER FALLAKTE</p>' : ""}`;
+  $("backupFindingList").innerHTML = items;
 }
 
 const decisionLabels = {
@@ -1543,11 +1557,12 @@ function renderRecord(record) {
   if (isPhone && $("inventoryPanel").dataset.mediaId !== String(record.media?.id ?? "")) $("inventoryPanel").open = false;
   $("inventoryPanel").dataset.mediaId = String(record.media?.id ?? "");
   if (isPhone) {
+    $("iphoneSummary").append($("periodSummary"));
     $("iphoneSummary").after($("cryptoFindings"));
     $("cryptoFindings").after($("backupFindings"));
   } else {
-    $("classicHome").after($("cryptoFindings"));
-    $("cryptoFindings").after($("backupFindings"));
+    $("categoriesPanel").querySelector(".panel-title").after($("periodSummary"));
+    $("hintsPanel").append($("cryptoFindings"), $("backupFindings"));
   }
   renderIphoneSummary(phone);
   renderCryptoFindings(record.crypto || null, isPhone);
@@ -2291,6 +2306,7 @@ function clearInventoryView() {
   $("inventoryReset").hidden = true;
   $("inventoryMore").hidden = true;
   $("inventorySearch").value = "";
+  $("inventorySort").value = "path";
   $("inventoryCount").textContent = "—";
 }
 
@@ -2406,17 +2422,17 @@ async function resetInventoryView() {
   await loadInventoryTree();
 }
 
-async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, archiveStatus = "", offset = 0 } = {}) {
+async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, archiveStatus = "", sortBy = $("inventorySort").value, offset = 0 } = {}) {
   if (!currentMediaId) return;
   const searchText = search === null ? $("inventorySearch").value.trim() : search;
-  if (!searchText && !category && !keyword && exactPath === null && !archiveStatus) {
+  if (!searchText && !category && !keyword && exactPath === null && !archiveStatus && sortBy === "path") {
     $("inventorySearch").focus();
     return;
   }
   if (exactPath !== null || (searchText && !category && !keyword && !archiveStatus)) clearInventoryFilterState();
   if (offset === 0) {
     inventoryViewRevision += 1;
-    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, nextOffset: 0 };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, nextOffset: 0 };
     $("inventoryFiles").innerHTML = '<tr><td colspan="5">FUNDSTELLEN WERDEN GELADEN …</td></tr>';
   }
   const target = $("inventoryFiles");
@@ -2440,6 +2456,7 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     if (keyword) parameters.set("keyword", keyword);
     if (exactPath !== null) parameters.set("exact_path", exactPath);
     if (archiveStatus) parameters.set("archive_status", archiveStatus);
+    if (sortBy !== "path") parameters.set("sort_by", sortBy);
     const response = await fetch(`/api/media/${request.mediaId}/files?${parameters}`);
     const data = await response.json();
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -2449,7 +2466,7 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
-    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, nextOffset: Number(data.next_offset || visible) };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, nextOffset: Number(data.next_offset || visible) };
     $("inventoryMore").hidden = !data.has_more;
   } catch (error) {
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -3198,12 +3215,14 @@ $("inventoryMore").addEventListener("click", () => {
   if (inventoryListState) loadInventory({ ...inventoryListState, offset: inventoryListState.nextOffset });
 });
 $("inventorySearch").addEventListener("keydown", (event) => { if (event.key === "Enter") loadInventory(); });
-$("largestFiles").addEventListener("click", (event) => {
+$("inventorySort").addEventListener("change", (event) => loadInventory({ sortBy: event.target.value }));
+$("latestPeriodFiles").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-file]");
   if (!button || !currentMediaId) return;
+  const exactPath = button.dataset.inventoryFile;
   $("inventoryPanel").open = true;
-  $("inventorySearch").value = button.dataset.inventoryFile;
-  loadInventory({ exactPath: button.dataset.inventoryFile, search: "" });
+  $("inventorySearch").value = exactPath;
+  loadInventory({ exactPath, search: "" });
   $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("cryptoHintList").addEventListener("click", (event) => {

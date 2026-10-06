@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.77 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.78 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -197,8 +197,8 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a77` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.77`
+- Paketversion: `0.2.0a78` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.78`
 - automatisierte Tests: 296 Python-Prüfungen und 101 isolierte Browserprüfungen; darin Fallzeitraum-Validierung, B/M/C/A-Coverage und Klassifikation, FAST/statx-Sicherheitsverhalten, persistente Snapshots und Exporte sowie responsive Zeitraum-UI
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert

@@ -102,6 +102,28 @@ def test_exact_file_navigation_does_not_match_similar_paths_or_change_audit(tmp_
     assert audit.read_bytes() == before
 
 
+def test_file_inventory_sorting_is_stable_and_applied_before_paging(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    result_dir = make_result(store, "FALL-SORT", "SICHT-001")
+    with (result_dir / "files.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["path", "size", "mtime"])
+        writer.writeheader()
+        writer.writerows([
+            {"path": "z-last.txt", "size": 10, "mtime": "2025-01-01T00:00:00Z"},
+            {"path": "B-large.bin", "size": 90, "mtime": "2024-01-01T00:00:00Z"},
+            {"path": "a-largest.bin", "size": 100, "mtime": "2023-01-01T00:00:00Z"},
+        ])
+    media_id = store.record_scan("FALL-SORT", "SICHT-001", "TEST", {"path": "/dev/sdb"}, result_dir)["media"]["id"]
+
+    first = store.file_inventory(media_id, sort_by="size", limit=1)
+    second = store.file_inventory(media_id, sort_by="size", limit=1, offset=1)
+    by_path = store.file_inventory(media_id, sort_by="path", limit=3)
+
+    assert first["files"][0]["path"] == "a-largest.bin"
+    assert second["files"][0]["path"] == "B-large.bin"
+    assert [item["path"] for item in by_path["files"]] == ["a-largest.bin", "B-large.bin", "z-last.txt"]
+
+
 def test_case_is_created_only_by_explicit_start(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
 

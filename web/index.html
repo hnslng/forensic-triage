@@ -132,26 +132,26 @@
           </details>
         </section>
 
-        <section id="cryptoFindings" class="panel crypto-findings" hidden>
-          <div class="panel-title"><span>↗</span> KRYPTO-HINWEISE <small id="cryptoRulesVersion"></small></div>
-          <p id="cryptoScope"></p>
-          <div id="cryptoHintList"></div>
-        </section>
-        <section id="backupFindings" class="panel backup-findings" hidden>
-        </section>
-
         <div id="classicHome">
         <div id="classicAnalysis">
         <div class="metrics">
           <article><span>DATEIEN</span><strong id="fileCount">960</strong><small>ERFASST</small></article>
           <article><span>ORDNER</span><strong id="directoryCount">18</strong><small>ERFASST</small></article>
           <article class="hot"><span>STICHWORTTREFFER</span><strong id="keywordMatches">60</strong><small>IN NAMEN / PFADEN</small></article>
-          <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small></article>
+          <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small><small id="largestFileSummary" class="largest-file-summary" hidden></small></article>
         </div>
 
         <div class="analysis-grid">
-          <article class="panel categories-panel">
-            <div class="panel-title"><span>05</span> DATEITYPEN</div>
+          <article id="categoriesPanel" class="panel categories-panel">
+            <div class="panel-title"><span>05</span> DATEIEN &amp; ZEITRAUM</div>
+            <section id="periodSummary" class="period-summary" hidden>
+              <div class="period-heading"><strong id="periodRange">—</strong><span id="periodTimezone" class="period-timezone"></span></div>
+              <div id="periodPhoneContext" class="period-phone-context" hidden>ZEITRAUM ALS FALLKONTEXT · KEINE DATEIAUSWERTUNG</div>
+              <strong id="periodFileCount" class="period-file-count"></strong>
+              <div class="period-summary-grid">
+                <ol id="latestPeriodFiles" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
+              </div>
+            </section>
             <div id="categories" class="bar-list"></div>
             <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
               <span class="archive-status-label">ARCHIVE</span>
@@ -159,38 +159,38 @@
               <button class="archive-status-filter result-filter" type="button" data-inventory-archive-status="unknown" aria-pressed="false" title="Archive mit ungeklärtem Verschlüsselungsstatus anzeigen, etwa beschädigte oder nicht unterstützte Archive"><b id="archiveUnknownCount">0</b> ungeprüft</button>
             </section>
           </article>
-          <article class="panel keywords-panel">
-            <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
+          <article id="hintsPanel" class="panel hints-panel">
+            <div class="panel-title"><span>06</span> HINWEISE</div>
+            <h3 class="hint-section-title">STICHWORTTREFFER</h3>
             <div id="keywords" class="keyword-list"></div>
-          </article>
-          <article class="panel files-panel">
-            <div class="panel-title"><span>07</span> GRÖSSTE DATEIEN</div>
-            <div class="table-wrap">
-              <table class="largest-files-table">
-                <colgroup><col class="largest-size-column" /><col /></colgroup>
-                <thead><tr><th>GRÖSSE</th><th>DATEI / ORDNER</th></tr></thead>
-                <tbody id="largestFiles"></tbody>
-              </table>
-            </div>
+            <section id="cryptoFindings" class="crypto-findings" hidden>
+              <div class="hint-section-title"><span>KRYPTO-HINWEISE</span><small id="cryptoRulesVersion"></small></div>
+              <div id="cryptoSummary"></div>
+              <details id="cryptoDetails" class="crypto-details">
+                <summary>DETAILS ANZEIGEN</summary>
+                <p id="cryptoScope"></p>
+                <div id="cryptoHintList"></div>
+              </details>
+            </section>
+            <details id="backupFindings" class="backup-findings" hidden>
+              <summary>GERÄTE-BACKUPS · <span id="backupFindingCount">0</span></summary>
+              <div id="backupFindingList"></div>
+            </details>
           </article>
         </div>
         </div>
         </div>
         <div id="documentationGrid" class="detail-workspace" hidden>
-          <section id="periodSummary" class="panel period-summary" hidden>
-            <div class="panel-title"><span>ZEITRAUM</span><strong id="periodRange">—</strong></div>
-            <small id="periodTimezone" class="period-timezone"></small>
-            <div id="periodPhoneContext" class="period-phone-context" hidden>Historischer Fallkontext · keine Dateiauswertung bei Telefonen</div>
-            <div id="periodFileCount" class="period-file-count"></div>
-            <div class="period-summary-grid">
-              <div><h3>KATEGORIEN IM ZEITRAUM</h3><div id="periodCategories"></div></div>
-              <div><h3>JÜNGSTE DATEISYSTEM-ZEITSTEMPEL</h3><ol id="latestPeriodFiles"></ol></div>
-            </div>
-          </section>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
             <summary class="panel-title"><span>08</span> <b id="inventoryTitle">DATEIEN DIESES MEDIUMS</b> <small>EXPLORER &amp; SUCHE</small></summary>
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
+              <label class="inventory-sort-label" for="inventorySort">SORTIERUNG</label>
+              <select id="inventorySort" aria-label="Dateiliste sortieren">
+                <option value="path">SCAN-REIHENFOLGE</option>
+                <option value="size">GRÖSSE ↓</option>
+                <option value="timestamp">JÜNGSTER ZEITSTEMPEL ↓</option>
+              </select>
               <button id="inventoryLoad" type="button">SUCHEN</button>
               <button id="inventoryReset" type="button" hidden>× FILTER AUFHEBEN</button>
               <span id="inventoryCount">—</span>

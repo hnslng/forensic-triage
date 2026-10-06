@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.78] – 2026-10-06
+
+- Ergebnisdashboard in die Bereiche „Dateien & Zeitraum“ und „Hinweise“ verdichtet; Zeitraumbereich zeigt maximal fünf Zeitstempel mit Dateinamen und exakter Explorer-Navigation.
+- Dateityp-Zeitraumwerte kompakt an den Kategorien ergänzt, Krypto-Dateihinweise nach bestehenden Regelkategorien gruppiert und Detailpfade eingeklappt.
+- Separate Liste der größten Dateien entfernt; größte Datei bleibt als kompakter Namens-/Größenhinweis im Datenvolumen. Explorer erhält reproduzierbare Pfad-, Größen- und Zeitstempelsortierung.
+- Keine Änderungen an Scanner, Erkennung oder Forensiklogik.
+- Version auf `0.2.0-alpha.78` (`0.2.0a78`) angehoben.
+
 ## [0.2.0-alpha.77] – 2026-10-06
 
 - CI-/Regressionstest-Fix: Der Boolean-Exporttest öffnet jetzt den Media-Record gezielt über Sichtungsnummer und Scan-ID statt eine beliebige JSON-Datei per Traversal-Reihenfolge auszuwählen.

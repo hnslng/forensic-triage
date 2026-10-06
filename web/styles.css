@@ -374,20 +374,17 @@ h1 span { color: var(--acid); }
 .progress-track div { width: 8%; height: 100%; background: repeating-linear-gradient(90deg, var(--acid) 0 8px, transparent 8px 11px); transition: width .25s ease; }
 .progress-panel code { display: block; color: var(--muted); margin: 10px 16px 0; font-size: 11px; line-height: 1.4; }
 .results { margin-top: 26px; }
-.period-summary { grid-column: 1 / -1; margin: 12px 0; padding: 14px; }
-.period-summary > .panel-title { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
-.period-summary > .panel-title strong { color: var(--ink); font-size: 12px; }
-.period-timezone { display: block; padding: 0 12px 6px; color: var(--muted); font-size: 10px; }
+.period-summary { margin: 0; padding: 12px; border-bottom: 1px solid var(--line); }
+.period-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.period-heading strong { color: var(--ink); font-size: 12px; }
+.period-timezone { color: var(--muted); font-size: 10px; }
 .period-phone-context { padding: 10px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-.period-file-count { padding: 12px; color: var(--acid); font-size: 13px; font-weight: 900; }
-.period-summary-grid { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); gap: 18px; }
-.period-summary-grid h3 { color: var(--muted); font-size: 10px; letter-spacing: .04em; }
-.period-category { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 12px; }
-.period-category b { color: var(--acid); }
-#latestPeriodFiles { margin: 0; padding-left: 24px; }
-#latestPeriodFiles li { display: grid; grid-template-columns: auto auto auto minmax(0,1fr); align-items: baseline; gap: 9px; padding: 5px 0; color: var(--muted); font-size: 11px; }
+.period-file-count { display: block; padding: 8px 0; color: var(--acid); font-size: 11px; font-weight: 900; }
+.period-summary-grid { display: block; }
+#latestPeriodFiles { margin: 0; padding-left: 23px; }
+#latestPeriodFiles li { display: grid; grid-template-columns: minmax(112px, auto) auto minmax(0, 1fr); align-items: baseline; gap: 7px; padding: 3px 0; color: var(--muted); font-size: 10px; }
 #latestPeriodFiles li time, #latestPeriodFiles li b { color: var(--acid); white-space: nowrap; }
-#latestPeriodFiles li button { min-width: 0; padding: 0; overflow-wrap: anywhere; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+#latestPeriodFiles li button { min-width: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
 #latestPeriodFiles li button:hover { color: var(--acid); }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid var(--ink); padding-bottom: 10px; }
 .result-title-line { display: flex; align-items: center; gap: 16px; }
@@ -400,7 +397,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .result-stamp { width: 142px; min-height: 58px; display: grid; align-content: center; color: var(--acid); border: 1px solid var(--acid); padding: 8px 10px; font-size: 11px; }
 .result-stamp b { display: block; font-size: 16px; margin-top: 3px; }
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); border-left: 1px solid var(--line); margin-top: 10px; }
-.metrics article { padding: 11px 13px; border: 1px solid var(--line); border-left: 0; background: var(--panel); }
+.metrics article { min-width: 0; padding: 11px 13px; border: 1px solid var(--line); border-left: 0; background: var(--panel); }
 .metrics span, .metrics small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
 .metrics strong { display: block; margin: 6px 0 4px; font: 900 33px/1 Arial Black, Impact, sans-serif; }
 .metrics .hot strong { color: var(--amber); }
@@ -490,7 +487,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .android-guidance-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
 .android-guidance-actions button:last-child { border-color: var(--line); color: var(--ink); }
 .android-guidance-message { min-height: 14px; margin: 0; color: var(--amber); font-size: 11px; font-weight: 800; }
-.analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
+.analysis-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: stretch; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }
 .keyword-list { padding: 14px 15px; }
@@ -502,6 +499,20 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .bar-fill { display: block; height: 100%; background: var(--acid); min-width: 2px; }
 .bar-value { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .bar-name { overflow: hidden; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.category-period-count { display: block; color: var(--muted); font-size: 10px; }
+.largest-file-summary { margin-top: 2px; color: var(--acid) !important; font-size: 10px !important; letter-spacing: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hint-section-title { display: flex; justify-content: space-between; gap: 8px; margin: 12px 12px 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.hints-panel > .hint-section-title { border-top: 0; margin-top: 0; }
+.crypto-findings { margin: 8px 12px; }
+#cryptoSummary { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
+#cryptoSummary > span { padding: 4px 6px; border: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+#cryptoSummary b { margin-left: 4px; color: var(--acid); }
+.crypto-details, .backup-findings { border-top: 1px solid var(--line); }
+.crypto-details > summary, .backup-findings > summary { padding: 9px 0; color: var(--acid); cursor: pointer; font-size: 10px; font-weight: 800; list-style: none; }
+.crypto-details > summary::-webkit-details-marker, .backup-findings > summary::-webkit-details-marker { display: none; }
+.crypto-hint-list { max-height: 360px; overflow: auto; }
+.backup-findings { margin: 0 12px 8px; }
+.backup-hint { padding: 8px 0; border-top: 1px solid var(--line); }
 .archive-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 12px 12px; padding-top: 6px; border-top: 1px solid var(--line); }
 .archive-status-label { flex-basis: 100%; color: var(--muted); font-size: 11px; letter-spacing: .03em; }
 .archive-status-filter { min-height: 34px; padding: 5px 2px; border: 0; border-bottom: 1px dotted var(--muted); background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
@@ -532,7 +543,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .largest-file-link small { margin-top: 5px; color: var(--muted); font-size: 11px; }
 .largest-file-link > span { position: absolute; right: 0; top: 5px; color: var(--muted); }
 .largest-file-link:hover, .largest-file-link:hover > span { color: var(--acid); }
-.detail-workspace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: stretch; }
+.detail-workspace { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: stretch; }
 .detail-workspace.phone-view { grid-template-columns: minmax(0, 1fr); }
 .phone-view .decision-panel { order: -1; grid-column: 1; width: 100%; max-width: 880px; justify-self: start; }
 .phone-view .inventory-panel { grid-column: 1; }
@@ -621,9 +632,13 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .inventory-container-detail td { padding: 0 12px 12px 24px; background: rgba(201, 242, 82, .02); text-align: left !important; }
 .inventory-container-detail .tree-children { margin-left: 0; }
 .inventory-panel { container-type: inline-size; }
+.inventory-sort-label { color: var(--muted); font-size: 10px; white-space: nowrap; }
+#inventorySort { min-width: 0; max-width: 190px; padding: 10px 6px; border: 1px solid var(--line); background: #090b08; color: var(--ink); font: inherit; font-size: 11px; }
 @container (max-width: 640px) {
-  .inventory-tools { grid-template-columns: auto 1fr; }
+  .inventory-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inventory-tools input { grid-column: 1 / -1; }
+  .inventory-tools #inventorySort { grid-column: 1 / -1; max-width: none; }
+  .inventory-tools .inventory-sort-label { grid-column: 1 / -1; }
   .inventory-tools > span { grid-column: 1 / -1; text-align: left; }
 }
 .inventory-tree { max-height: 520px; overflow: auto; padding: 8px 12px 14px; }
@@ -785,6 +800,12 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 footer button { color: var(--ink); background: transparent; border: 1px solid var(--line); padding: 9px 12px; cursor: pointer; }
 footer button:hover { border-color: var(--acid); color: var(--acid); }
 [hidden] { display: none !important; }
+
+@media (max-width: 900px) {
+  .analysis-grid, .detail-workspace { grid-template-columns: 1fr; }
+  .inventory-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inventory-tools input { grid-column: 1 / -1; }
+}
 
 @media (max-width: 800px) {
   .shell { width: min(100% - 18px, 1480px); padding-top: 14px; }
@@ -954,8 +975,7 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
 @media (max-width: 900px) {
   .diag-row { grid-template-columns: 84px 62px 74px minmax(0, 1fr); gap: 6px; }
   .period-summary-grid { grid-template-columns: 1fr; }
-  #latestPeriodFiles li { grid-template-columns: auto auto minmax(0, 1fr); }
-  #latestPeriodFiles li button { grid-column: 1 / -1; }
+  #latestPeriodFiles li { grid-template-columns: minmax(112px, auto) auto minmax(0, 1fr); }
 }
 
 /* Detection rules workspace */

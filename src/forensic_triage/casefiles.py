@@ -575,11 +575,14 @@ class CaseStore:
         exact_path: str | None = None,
         archive_status: str = "",
         period_filter: str = "",
+        sort_by: str = "",
     ) -> dict[str, Any]:
         if archive_status not in {"", "encrypted", "unknown"}:
             raise ValueError("Ungültiger Archivstatus.")
         if period_filter not in {"", "in", "out"}:
             raise ValueError("Ungültiger Zeitraumfilter.")
+        if sort_by not in {"", "path", "size", "timestamp"}:
+            raise ValueError("Ungültige Sortierung.")
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT result_path, period_date_from FROM media WHERE id=?",
@@ -631,9 +634,9 @@ class CaseStore:
             if keyword_paths is not None and path not in keyword_paths:
                 continue
             total += 1
-            if total <= start:
+            if not sort_by and total <= start:
                 continue
-            if len(matches) < capped:
+            if sort_by or len(matches) < capped:
                 record = {
                     "path": path,
                     "size": int(item.get("size", 0) or 0),
@@ -688,6 +691,20 @@ class CaseStore:
                 elif container_format:
                     record["match_source"] = f"{container_format}-INHALT"
                 matches.append(record)
+        if sort_by:
+            if sort_by == "path":
+                matches.sort(key=lambda item: (item["path"].casefold(), item["path"]))
+            elif sort_by == "size":
+                matches.sort(key=lambda item: (-item["size"], item["path"].casefold(), item["path"]))
+            else:
+                def timestamp_key(item: dict[str, Any]) -> float:
+                    selected = item.get("latest_period_timestamp")
+                    if selected is not None:
+                        return float(selected)
+                    values = [_csv_optional(item.get(field)) for field in ("mtime", "atime", "ctime", "crtime")]
+                    return max((float(value) for value in values if value is not None), default=float("-inf"))
+                matches.sort(key=lambda item: (-timestamp_key(item), item["path"].casefold(), item["path"]))
+            matches = matches[start:start + capped]
         next_offset = start + len(matches)
         return {
             "total": total,
