@@ -416,7 +416,10 @@ def test_timezone_boolean_persists_and_exports_as_boolean_values(tmp_path, monke
         saved = connection.execute("SELECT period_timezone_reproducible, typeof(period_timezone_reproducible) FROM media").fetchone()
     assert tuple(saved) == (0, "integer")
     assert json.loads((result / "summary.json").read_text())["case_period"]["timezone_reproducible"] is False
-    record = json.loads(next((store.case_path("FALL-TZ") / "media").rglob("*.json")).read_text())
+    record_path = store.case_path("FALL-TZ") / "media" / media["sighting_number"] / "records" / f"{media['scan_id']}.json"
+    assert record_path.parent.name == "records"
+    assert record_path.is_file()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["period_timezone_reproducible"] is False
 
 

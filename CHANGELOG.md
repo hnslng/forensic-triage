@@ -2,6 +2,12 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.77] – 2026-10-06
+
+- CI-/Regressionstest-Fix: Der Boolean-Exporttest öffnet jetzt den Media-Record gezielt über Sichtungsnummer und Scan-ID statt eine beliebige JSON-Datei per Traversal-Reihenfolge auszuwählen.
+- Produktionslogik und Alpha-76-Boolean-Semantik unverändert.
+- Version auf `0.2.0-alpha.77` (`0.2.0a77`) angehoben.
+
 ## [0.2.0-alpha.76] – 2026-10-06
 
 - Gezielter Persistenzfix für `period_timezone_reproducible`: neue Fallspalten sind `INTEGER`; Writes binden `1`, `0` oder `NULL`.
