@@ -1297,7 +1297,8 @@ function renderResults(summary, hits = {}) {
   const archiveEncryption = summary.archive_encryption || {};
   $("categories").innerHTML = categories.map(([name, count]) => {
     const periodCount = Number(summary.categories_in_period?.[name] || 0);
-    const periodNote = summary.case_period && periodCount < Number(count) ? `<small class="category-period-count">${periodCount.toLocaleString("de-AT")} IM ZEITRAUM</small>` : "";
+    const periodNote = summary.case_period && summary.period_evaluation !== "not_applicable"
+      ? `<small class="category-period-count">DAVON ${periodCount.toLocaleString("de-AT")} IM ZEITRAUM</small>` : "";
     return `<button class="bar-row result-filter" type="button" data-inventory-category="${escapeHtml(name)}" aria-pressed="false" title="${escapeHtml(name)} im Dateiverzeichnis anzeigen"><span class="bar-value">${Number(count).toLocaleString("de-AT")}</span><span class="bar-name">${escapeHtml(name.toUpperCase())}${periodNote}</span><span class="bar-track"><span class="bar-fill" style="width:${(count / max) * 100}%"></span></span></button>`;
   }).join("");
   $("archiveStatus").hidden = !Number(archiveEncryption.total || 0);
@@ -1317,7 +1318,11 @@ function renderPeriodSummary(summary = {}) {
   const panel = $("periodSummary");
   const configured = Boolean(period?.date_from && period?.date_to);
   panel.hidden = !configured;
-  if (!configured) return;
+  if (!configured) {
+    $("openTimestampModal").hidden = true;
+    $("latestPeriodFiles").innerHTML = "";
+    return;
+  }
   const formatDate = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("de-AT");
   $("periodRange").textContent = `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`;
   $("periodTimezone").textContent = period.timezone_reproducible === false
@@ -1328,7 +1333,12 @@ function renderPeriodSummary(summary = {}) {
   $("periodFileCount").textContent = phone
     ? "ZEITRAUM ALS FALLKONTEXT GESPEICHERT · KEINE DATEIAUSWERTUNG"
     : `${Number(summary.period_file_count || 0).toLocaleString("de-AT")} / ${Number(summary.file_count || 0).toLocaleString("de-AT")} DATEIEN IM ZEITRAUM`;
-  const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 5);
+  const rows = phone ? [] : (summary.latest_period_files || []).slice(0, 10);
+  $("openTimestampModal").hidden = phone || rows.length === 0;
+  $("timestampModalContext").textContent = [
+    `${formatDate(period.date_from)} – ${formatDate(period.date_to)}`,
+    period.timezone && period.timezone !== "local" ? period.timezone : null,
+  ].filter(Boolean).join(" · ");
   const zone = period.timezone && period.timezone !== "local" ? period.timezone : undefined;
   $("latestPeriodFiles").innerHTML = rows.map((file) => {
     let time = "Zeitstempel nicht darstellbar";
@@ -1342,7 +1352,6 @@ function renderPeriodSummary(summary = {}) {
     const filename = path.split("/").pop() || path;
     return `<li><time>${escapeHtml(time)}</time><b>${escapeHtml(file.latest_period_timestamp_type || "")}</b><span>${escapeHtml(file.category || "Unbekannt")}</span><button type="button" data-inventory-file="${escapeHtml(path)}" title="Im Dateiverzeichnis anzeigen: ${escapeHtml(path)}">${escapeHtml(filename)}</button></li>`;
   }).join("");
-  $("periodSummary").querySelector(".period-summary-grid").hidden = phone;
 }
 
 function renderArchive(archive) {
@@ -1478,7 +1487,6 @@ function renderCryptoFindings(crypto, isPhone) {
     const reason = match.reason || match.id || "REGELTREFFER";
     return `<li><button class="crypto-file-link" type="button" data-inventory-file="${escapeHtml(path || "")}" title="Im Dateiverzeichnis anzeigen"><strong>${escapeHtml(path || "DATEI")}</strong><span>${escapeHtml(appCategoryLabels[match.category] || match.category || "HINWEIS")} · ${escapeHtml(reason)}${item.extension ? ` · ${escapeHtml(item.extension)}` : ""}</span></button></li>`;
   });
-  $("cryptoDetails").open = false;
   $("cryptoHintList").innerHTML = appRows.length || fileRows.length
     ? `<ul class="crypto-hint-list">${appRows.join("")}${fileRows.join("")}</ul>`
     : '<p class="iphone-empty">KEINE KRYPTO-HINWEISE IN DEN ERFASSTEN METADATEN · KEINE AUSSAGE ÜBER NICHT ZUGÄNGLICHE BEREICHE</p>';
@@ -1561,7 +1569,7 @@ function renderRecord(record) {
     $("iphoneSummary").after($("cryptoFindings"));
     $("cryptoFindings").after($("backupFindings"));
   } else {
-    $("categoriesPanel").querySelector(".panel-title").after($("periodSummary"));
+    $("categoriesPanel").append($("periodSummary"));
     $("hintsPanel").append($("cryptoFindings"), $("backupFindings"));
   }
   renderIphoneSummary(phone);
@@ -3224,6 +3232,20 @@ $("latestPeriodFiles").addEventListener("click", (event) => {
   $("inventorySearch").value = exactPath;
   loadInventory({ exactPath, search: "" });
   $("inventoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("openTimestampModal").addEventListener("click", () => {
+  if (!$("timestampModal").open) $("timestampModal").showModal();
+});
+$("closeTimestampModal").addEventListener("click", () => $("timestampModal").close());
+$("timestampModal").addEventListener("click", (event) => {
+  if (event.target === $("timestampModal")) $("timestampModal").close();
+});
+$("cryptoDetails").addEventListener("click", () => {
+  if (!$("cryptoModal").open) $("cryptoModal").showModal();
+});
+$("closeCryptoModal").addEventListener("click", () => $("cryptoModal").close());
+$("cryptoModal").addEventListener("click", (event) => {
+  if (event.target === $("cryptoModal")) $("cryptoModal").close();
 });
 $("cryptoHintList").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-inventory-file]");

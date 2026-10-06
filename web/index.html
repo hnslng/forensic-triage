@@ -148,9 +148,7 @@
               <div class="period-heading"><strong id="periodRange">—</strong><span id="periodTimezone" class="period-timezone"></span></div>
               <div id="periodPhoneContext" class="period-phone-context" hidden>ZEITRAUM ALS FALLKONTEXT · KEINE DATEIAUSWERTUNG</div>
               <strong id="periodFileCount" class="period-file-count"></strong>
-              <div class="period-summary-grid">
-                <ol id="latestPeriodFiles" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
-              </div>
+              <button id="openTimestampModal" class="period-detail-button" type="button" hidden>ZEITSTEMPEL ANZEIGEN</button>
             </section>
             <div id="categories" class="bar-list"></div>
             <section id="archiveStatus" class="archive-status" aria-label="Prüfstatus der Archive" hidden>
@@ -166,11 +164,7 @@
             <section id="cryptoFindings" class="crypto-findings" hidden>
               <div class="hint-section-title"><span>KRYPTO-HINWEISE</span><small id="cryptoRulesVersion"></small></div>
               <div id="cryptoSummary"></div>
-              <details id="cryptoDetails" class="crypto-details">
-                <summary>DETAILS ANZEIGEN</summary>
-                <p id="cryptoScope"></p>
-                <div id="cryptoHintList"></div>
-              </details>
+              <button id="cryptoDetails" class="crypto-details-button" type="button">DETAILS ANZEIGEN</button>
             </section>
             <details id="backupFindings" class="backup-findings" hidden>
               <summary>GERÄTE-BACKUPS · <span id="backupFindingCount">0</span></summary>
@@ -347,6 +341,16 @@
         <div class="decision-queue-intro"><strong id="decisionQueueSummary">1 ENTSCHEIDUNG OFFEN</strong><small>Abgezogene Medien bleiben anhand ihrer gespeicherten Geräte- und Sichtungsdaten eindeutig zuordenbar.</small></div>
         <div id="decisionQueueList" class="decision-queue-list"></div>
       </div>
+    </dialog>
+    <dialog id="timestampModal" class="evidence-modal result-detail-modal" aria-labelledby="timestampModalTitle">
+      <div class="modal-head"><div><span>05</span> <b id="timestampModalTitle">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL</b></div><button id="closeTimestampModal" type="button">SCHLIESSEN ×</button></div>
+      <p id="timestampModalContext" class="result-detail-context"></p>
+      <ol id="latestPeriodFiles" class="timestamp-list" aria-label="Jüngste Dateisystem-Zeitstempel"></ol>
+    </dialog>
+    <dialog id="cryptoModal" class="evidence-modal result-detail-modal crypto-detail-modal" aria-labelledby="cryptoModalTitle">
+      <div class="modal-head"><div><span>06</span> <b id="cryptoModalTitle">KRYPTO-HINWEISE · DETAILS</b></div><button id="closeCryptoModal" type="button">SCHLIESSEN ×</button></div>
+      <p id="cryptoScope" class="result-detail-context"></p>
+      <div id="cryptoHintList"></div>
     </dialog>
     <dialog id="deleteModal" class="delete-modal">
       <form id="deleteForm" method="dialog">

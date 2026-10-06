@@ -380,12 +380,8 @@ h1 span { color: var(--acid); }
 .period-timezone { color: var(--muted); font-size: 10px; }
 .period-phone-context { padding: 10px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .period-file-count { display: block; padding: 8px 0; color: var(--acid); font-size: 11px; font-weight: 900; }
-.period-summary-grid { display: block; }
-#latestPeriodFiles { margin: 0; padding-left: 23px; }
-#latestPeriodFiles li { display: grid; grid-template-columns: minmax(112px, auto) auto minmax(0, 1fr); align-items: baseline; gap: 7px; padding: 3px 0; color: var(--muted); font-size: 10px; }
-#latestPeriodFiles li time, #latestPeriodFiles li b { color: var(--acid); white-space: nowrap; }
-#latestPeriodFiles li button { min-width: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
-#latestPeriodFiles li button:hover { color: var(--acid); }
+.period-detail-button { min-height: 34px; padding: 7px 10px; border: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 900; }
+.period-detail-button:hover { border-color: var(--acid); background: rgba(201, 242, 82, .05); }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid var(--ink); padding-bottom: 10px; }
 .result-title-line { display: flex; align-items: center; gap: 16px; }
 .result-title-line > span { padding: 6px 8px; border: 1px solid var(--line); font-size: 11px; font-weight: 900; white-space: nowrap; }
@@ -487,7 +483,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .android-guidance-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
 .android-guidance-actions button:last-child { border-color: var(--line); color: var(--ink); }
 .android-guidance-message { min-height: 14px; margin: 0; color: var(--amber); font-size: 11px; font-weight: 800; }
-.analysis-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: stretch; }
+.analysis-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
 .analysis-grid > *, .detail-workspace > * { min-width: 0; }
 .bar-list { padding: 14px 8px; }
 .keyword-list { padding: 14px 15px; }
@@ -507,9 +503,8 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 #cryptoSummary { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
 #cryptoSummary > span { padding: 4px 6px; border: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 #cryptoSummary b { margin-left: 4px; color: var(--acid); }
-.crypto-details, .backup-findings { border-top: 1px solid var(--line); }
-.crypto-details > summary, .backup-findings > summary { padding: 9px 0; color: var(--acid); cursor: pointer; font-size: 10px; font-weight: 800; list-style: none; }
-.crypto-details > summary::-webkit-details-marker, .backup-findings > summary::-webkit-details-marker { display: none; }
+.crypto-details-button { width: 100%; padding: 9px 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--acid); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; text-align: left; }
+.crypto-details-button:hover { color: var(--ink); }
 .crypto-hint-list { max-height: 360px; overflow: auto; }
 .backup-findings { margin: 0 12px 8px; }
 .backup-hint { padding: 8px 0; border-top: 1px solid var(--line); }
@@ -543,7 +538,7 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .largest-file-link small { margin-top: 5px; color: var(--muted); font-size: 11px; }
 .largest-file-link > span { position: absolute; right: 0; top: 5px; color: var(--muted); }
 .largest-file-link:hover, .largest-file-link:hover > span { color: var(--acid); }
-.detail-workspace { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: stretch; }
+.detail-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
 .detail-workspace.phone-view { grid-template-columns: minmax(0, 1fr); }
 .phone-view .decision-panel { order: -1; grid-column: 1; width: 100%; max-width: 880px; justify-self: start; }
 .phone-view .inventory-panel { grid-column: 1; }
@@ -575,7 +570,8 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .archive-list div { display: grid; grid-template-columns: 150px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
 .archive-list dt { color: var(--muted); font-size: 11px; line-height: 1.35; }
 .archive-list dd { margin: 0; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
-.decision-panel { grid-column: span 1; height: 100%; padding-bottom: 12px; }
+.decision-panel { grid-column: 1 / -1; height: auto; padding-bottom: 12px; }
+.decision-panel .decision-help, .decision-panel .decision-headline, .decision-panel .decision-fields, .decision-panel .decision-message { max-width: 880px; }
 .decision-help { margin: 0; padding: 14px 14px 4px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .decision-help b { color: var(--acid); }
 .decision-headline { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: stretch; margin: 10px 11px 2px; }
@@ -596,6 +592,16 @@ h2 { margin: 0; font: 900 clamp(25px, 4vw, 43px)/1 Arial Black, Impact, sans-ser
 .save-decision { display: block; width: 100%; min-width: 0; min-height: 46px; margin: 0; padding: 11px 18px; background: var(--acid); color: #111; border: 0; font-size: 12px; font-weight: 950; cursor: pointer; }
 .save-decision:disabled { filter: grayscale(1); cursor: not-allowed; }
 .decision-message { min-height: 15px; margin: 8px 14px 0; color: var(--acid); font-size: 11px; line-height: 1.4; }
+.result-detail-modal { width: min(760px, calc(100% - 28px)); overflow: hidden; }
+.result-detail-context { margin: 0; padding: 11px 14px; border-bottom: 1px dashed var(--line); color: var(--muted); font-size: 11px; line-height: 1.4; }
+.timestamp-list { display: grid; gap: 0; max-height: min(62vh, 620px); margin: 0; padding: 4px 14px 12px 38px; overflow-y: auto; }
+.timestamp-list li { display: grid; grid-template-columns: minmax(138px, auto) 72px minmax(90px, auto) minmax(0, 1fr); gap: 8px; align-items: center; min-width: 0; padding: 11px 0; border-bottom: 1px dashed var(--line); }
+.timestamp-list time, .timestamp-list li > b, .timestamp-list li > span { color: var(--muted); font-size: 11px; }
+.timestamp-list li > b { color: var(--amber); }
+.timestamp-list button { min-width: 0; overflow: hidden; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.timestamp-list button:hover { color: var(--acid); text-decoration: underline; }
+.crypto-detail-modal #cryptoHintList { max-height: min(62vh, 620px); padding: 0 14px 12px; overflow-y: auto; }
+.crypto-detail-modal .crypto-hint-list { max-height: none; }
 .case-panel { margin-top: 10px; }
 .inventory-panel { grid-column: span 2; height: 100%; margin-top: 0; }
 .case-panel .panel-title b { color: var(--ink); }

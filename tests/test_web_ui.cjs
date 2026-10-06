@@ -1487,7 +1487,7 @@ test('new case keeps dates entered before the case is started', async t => {
   assert.equal(posted.date_to, '2026-04-05');
 });
 
-test('compact period summary shows counts and at most five timestamps and fits target widths', async t => {
+test('compact period summary shows counts and at most ten timestamps and fits target widths', async t => {
   const { page } = await setup(t, settingsFixture);
   await page.evaluate(() => {
     renderArchive({});
@@ -1509,7 +1509,7 @@ test('compact period summary shows counts and at most five timestamps and fits t
     period_evaluation: 'configured', period_file_count: 4, file_count: 12,
     categories_in_period: { Dokumente: 3, Bilder: 1 }, latest_period_files: latest,
   }), latest);
-  assert.equal(await page.locator('#latestPeriodFiles li').count(), 5);
+  assert.equal(await page.locator('#latestPeriodFiles li').count(), 10);
   assert.match(await page.locator('#latestPeriodFiles').innerText(), /M\+C/);
   assert.doesNotMatch(await page.locator('#latestPeriodFiles').innerText(), /docs\//);
   await page.evaluate(() => renderResults({ case_period: { date_from: '2026-01-01', date_to: '2026-01-31', timezone: 'UTC' }, period_evaluation: 'not_applicable' }));
@@ -1550,17 +1550,33 @@ test('result layout keeps files compact, aggregates crypto hints, and opens exac
   assert.match(await page.locator('#largestFileSummary').innerText(), /1 MB.*sehr-grosse-datei\.bin/i);
   assert.match(await page.locator('#categoriesPanel .panel-title').innerText(), /05.*DATEIEN.*ZEITRAUM/);
   assert.match(await page.locator('#hintsPanel .panel-title').innerText(), /06.*HINWEISE/);
-  assert.equal(await page.locator('#cryptoDetails').evaluate(node => node.open), false);
+  assert.equal(await page.locator('#timestampModal').isVisible(), false);
+  assert.equal(await page.locator('#cryptoModal').isVisible(), false);
   assert.match(await page.locator('#cryptoSummary').innerText(), /SELF-CUSTODY WALLETS.*2/);
   assert.doesNotMatch(await page.locator('#hintsPanel').innerText(), /Wallet\/one\.db/);
   await page.evaluate(() => { activeCaseNumber = 'TEST'; updateStartOverlay(); });
-  await page.locator('#cryptoDetails > summary').click();
+  await page.locator('#cryptoDetails').click();
+  assert.equal(await page.locator('#cryptoModal').isVisible(), true);
   assert.match(await page.locator('#cryptoHintList').innerText(), /Wallet\/one\.db/);
-  assert.deepEqual(await page.locator('#categories .category-period-count').allTextContents(), ['1 IM ZEITRAUM', '1 IM ZEITRAUM']);
+  assert.deepEqual(await page.locator('#categories .category-period-count').allTextContents(), ['DAVON 1 IM ZEITRAUM', 'DAVON 1 IM ZEITRAUM']);
+  assert.equal(await page.locator('#categoriesPanel').evaluate(node => {
+    const ids = [...node.children].map(child => child.id);
+    return ids.indexOf('categories') < ids.indexOf('archiveStatus') && ids.indexOf('archiveStatus') < ids.indexOf('periodSummary');
+  }), true);
+  await page.locator('#closeCryptoModal').click();
+  const timestampModal = page.locator('#timestampModal');
+  await page.locator('#openTimestampModal').click();
+  assert.equal(await timestampModal.isVisible(), true);
+  assert.equal(await timestampModal.locator('#latestPeriodFiles li').count(), 1);
+  assert.match(await timestampModal.innerText(), /M/);
+  assert.match(await timestampModal.innerText(), /dokument\.pdf/);
+  const panelHeights = await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height)));
+  assert.equal(await page.locator('.decision-panel').evaluate(node => getComputedStyle(node).gridColumn), '1 / -1');
   const request = page.waitForRequest(request => request.url().includes('/api/media/1/files') && request.url().includes('exact_path='));
   await page.locator('#latestPeriodFiles button').click();
   const navigation = new URL((await request).url());
   assert.equal(navigation.searchParams.get('exact_path'), 'Langer/Pfad/dokument.pdf');
+  assert.deepEqual(await page.locator('.analysis-grid > *').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height))), panelHeights);
   assert.equal(await page.locator('#inventoryPanel').evaluate(node => node.open), true);
   await page.locator('#inventorySort').selectOption('size');
   await page.waitForFunction(() => [...performance.getEntriesByType('resource')].some(item => item.name.includes('sort_by=size')));

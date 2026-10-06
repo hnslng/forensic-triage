@@ -2,6 +2,14 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.79] – 2026-10-06
+
+- Ergebnisdashboard beruhigt: Dateitypen stehen vor der kompakten Zeitraumzusammenfassung; Zeitraumwerte werden pro Kategorie als „davon … im Zeitraum“ gezeigt.
+- Jüngste Dateisystem-Zeitstempel und Krypto-Details erscheinen in scrollbaren Modals; Dateiname bleibt sichtbar, die bestehende exakte Explorer-Navigation bleibt erhalten.
+- Dashboard-Panels verwenden ihre natürliche Höhe; Explorer und Entscheidungsbereich nutzen die verfügbare Breite.
+- Keine Änderungen an Scanner, Erkennung oder Forensiklogik.
+- Version auf `0.2.0-alpha.79` (`0.2.0a79`) angehoben.
+
 ## [0.2.0-alpha.78] – 2026-10-06
 
 - Ergebnisdashboard in die Bereiche „Dateien & Zeitraum“ und „Hinweise“ verdichtet; Zeitraumbereich zeigt maximal fünf Zeitstempel mit Dateinamen und exakter Explorer-Navigation.
