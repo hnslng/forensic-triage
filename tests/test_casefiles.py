@@ -24,6 +24,21 @@ def make_result(store: CaseStore, case: str, sighting: str):
     return result
 
 
+def test_incomplete_scan_warns_in_detail_and_reports_without_rewriting_scan(tmp_path):
+    from forensic_triage.pdf_report import load_summary
+    store = CaseStore(tmp_path / "casefiles")
+    result = make_result(store, "TEST", "SICHT-001")
+    original = (result / "summary.json").read_bytes()
+    (result / "partitions.json").write_text(json.dumps([
+        {"allocated": True, "scan_status": "unsupported_or_error", "error": "unreadable"}
+    ]))
+    record = store.record_scan("TEST", "SICHT-001", "TEST", {"path": "/dev/test"}, result)
+    assert record["summary"]["scan_status"] == "failed"
+    assert "Sichtung unvollständig oder fehlgeschlagen" in (store.root / "TEST" / "case-report.txt").read_text()
+    assert load_summary(store.root, result.relative_to(store.root))["scan_status"] == "failed"
+    assert (result / "summary.json").read_bytes() == original
+
+
 def test_connection_identity_persists_without_merging_reused_device_paths(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     ids = []

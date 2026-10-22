@@ -4,6 +4,10 @@ Diese Seite erklärt das System ohne Programmierkenntnisse. Die technische Modul
 
 Seit Alpha 83 werden USB-Sticks anhand ihrer aktuellen Verbindung zugeordnet. Ein Linux-Gerätepfad wie `/dev/sda` kann beim nächsten Stick wiederverwendet werden und genügt daher nicht als Identitätsnachweis. Die Box nutzt nach Möglichkeit die Kernel-Datenträgersequenz zusammen mit der Boot-Kennung. Ohne diese Kernelangabe dienen Seriennummer, Größe und Volume-Metadaten sowie beobachtetes Abziehen als Rückfall. Ein vollständig gleich gemeldeter Wechsel zwischen zwei Abfragen lässt sich auf solchen älteren Systemen ohne weitere Kernelkennung nicht sicher unterscheiden. Alte Sichtungen bleiben erhalten; nach dem Update werden sie nicht allein aufgrund ihres alten Gerätepfads als angeschlossen angezeigt.
 
+## Umgang mit Lesefehlern
+
+Bei einzelnen nicht lesbaren Dateieinträgen bleiben die übrigen erfassten Dateien erhalten. Fehlerhafte Pfade und nicht lesbare Verzeichnisse werden in `raw/fast_mount_*.json` und `partitions.json` dokumentiert. Die Sichtung erscheint dann ausdrücklich als **unvollständig**, bei vollständig fehlgeschlagener Partitionserfassung als **fehlgeschlagen** – auch in den Text- und PDF-Berichten. Eine Anzeige von 0 Dateien belegt in diesen Fällen keinen leeren Datenträger. Ältere Ergebnisse werden anhand ihrer gespeicherten Partitionsfehler beim Anzeigen eingeordnet; ursprüngliche Scanunterlagen bleiben unverändert. Bereits verworfene Dateilisten lassen sich damit nicht wiederherstellen: Dafür ist eine erneute Sichtung erforderlich.
+
 ## Der Ablauf in einem Satz
 
 Die Bedienoberfläche erkennt angeschlossene Datenträger und Telefone automatisch, startet den passenden isolierten Scanner und schreibt Ergebnis, Verlauf und Entscheidung in eine lokale Fallakte.

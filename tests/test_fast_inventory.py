@@ -46,6 +46,34 @@ def test_inventory_tree_includes_hidden_files_and_directories(tmp_path):
     assert {item["path"] for item in files} == {".hinweis.txt", ".intern/.daten.csv"}
 
 
+def test_missing_file_preserves_files_before_and_after_error(tmp_path, monkeypatch):
+    for name in ("a.txt", "broken.jpg", "z.txt"):
+        (tmp_path / name).touch()
+    original = fast_inventory._stat_metadata
+    def metadata(path):
+        if path.name == "broken.jpg":
+            raise FileNotFoundError(2, "No such file or directory", str(path))
+        return original(path)
+    monkeypatch.setattr(fast_inventory, "_stat_metadata", metadata)
+    errors = []
+    files, _ = inventory_tree(tmp_path, "002", read_errors=errors)
+    assert [item["path"] for item in files] == ["a.txt", "z.txt"]
+    assert errors == [{"path": "broken.jpg", "errno": 2, "error": "No such file or directory"}]
+    with pytest.raises(FileNotFoundError):
+        inventory_tree(tmp_path, "002")
+
+
+def test_unreadable_directory_is_not_silently_ignored(tmp_path, monkeypatch):
+    def walk(root, **kwargs):
+        kwargs["onerror"](PermissionError(13, "Permission denied", str(root / "restricted")))
+        return iter(())
+    monkeypatch.setattr(fast_inventory.os, "walk", walk)
+    errors = []
+    assert inventory_tree(tmp_path, "002", read_errors=errors) == ([], [])
+    assert errors[0]["path"] == "restricted"
+    assert errors[0]["errno"] == 13
+
+
 def test_statx_metadata_reads_birth_time_without_subprocess(tmp_path, monkeypatch):
     target = tmp_path / "item"
     target.write_text("x")

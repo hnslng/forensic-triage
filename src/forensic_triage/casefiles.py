@@ -16,6 +16,15 @@ from .container_inventory import archive_encryption_state, archive_encryption_st
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 from .period import optional_bool, period_timezone_info, sqlite_optional_bool, validate_period
+from .scan_quality import apply_scan_quality
+
+
+def _scan_summary(result_dir: Path) -> dict[str, Any]:
+    summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
+    partitions_path = result_dir / "partitions.json"
+    if partitions_path.is_file():
+        apply_scan_quality(summary, json.loads(partitions_path.read_text(encoding="utf-8")))
+    return summary
 
 
 DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
@@ -368,7 +377,7 @@ class CaseStore:
         device: dict[str, Any],
         result_dir: Path,
     ) -> dict[str, Any]:
-        summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
+        summary = _scan_summary(result_dir)
         now = utc_now()
         case_number = safe_component(case_number)
         sighting_number = safe_component(sighting_number)
@@ -510,7 +519,7 @@ class CaseStore:
         if row is None:
             return None
         result_dir = self.root / str(row["result_path"])
-        summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
+        summary = _scan_summary(result_dir)
         hits_data = json.loads((result_dir / "hits.json").read_text(encoding="utf-8"))
         device: dict[str, Any] = {}
         try:
@@ -1014,6 +1023,14 @@ class CaseStore:
         ]
         for row in media:
             is_phone = str(row["device_path"]).startswith(("android:", "iphone:"))
+            try:
+                quality = _scan_summary(self.root / str(row["result_path"]))
+            except (OSError, ValueError):
+                quality = {"scan_status": "failed", "scan_warnings": [{"error": "Scanunterlagen fehlen oder sind nicht lesbar."}]}
+            if quality.get("scan_status") in {"partial", "failed"}:
+                report_lines.append(f"ACHTUNG {row['sighting_number']}: Sichtung unvollständig oder fehlgeschlagen. "
+                                    "0 Dateien belegt keinen leeren Datenträger.")
+                report_lines.extend(str(item["error"]) for item in quality.get("scan_warnings", []))
             period_label = (f"{row['period_date_from']} – {row['period_date_to']}" if row["period_date_from"] and row["period_date_to"] else "nicht festgelegt")
             report_lines.extend(
                 [

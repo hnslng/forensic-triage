@@ -1431,9 +1431,11 @@ class TriageHandler(BaseHTTPRequestHandler):
             if record.get("summary", {}).get("period_evaluation") == "configured":
                 period_detail = (f" · Zeitraum: {current_case['date_from']} → {current_case['date_to']} · "
                                  f"{record['summary'].get('period_file_count', 0)} / {record['summary'].get('file_count', 0)} Dateien")
-            diag.event("SCAN", f"Scan abgeschlossen: {sighting_number} in {time.monotonic() - scan_started:.1f} s{period_detail}", {
-                "case": case_number, "device": device_path,
-            })
+            scan_status = record.get("summary", {}).get("scan_status", "complete")
+            scan_label = {"partial": "Sichtung unvollständig", "failed": "Sichtung fehlgeschlagen"}.get(scan_status, "Scan abgeschlossen")
+            diag.event("SCAN", f"{scan_label}: {sighting_number} in {time.monotonic() - scan_started:.1f} s{period_detail}", {
+                "case": case_number, "device": device_path, "scan_status": scan_status,
+            }, level="warning" if scan_status in {"partial", "failed"} else "info")
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.CREATED, record)
         except ScanTimeoutError as exc:

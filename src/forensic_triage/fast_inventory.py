@@ -100,11 +100,21 @@ def partition_path_for_start(device: Path, start_sector: int) -> Path:
     return find_partition_path(data, start_sector)
 
 
-def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] | None = None,
+                   read_errors: list[dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Collect active file metadata without opening file contents."""
     files: list[dict[str, Any]] = []
     directories: list[dict[str, Any]] = []
-    for current, dirnames, filenames in os.walk(root, followlinks=False):
+    def record_error(exc: OSError, path: Path) -> None:
+        if read_errors is None:
+            raise exc  # Callers without an error channel must not get silent partial results.
+        read_errors.append({"path": path.relative_to(root).as_posix(),
+                            "errno": exc.errno, "error": exc.strerror or str(exc)})
+
+    def walk_error(exc: OSError) -> None:
+        record_error(exc, Path(exc.filename) if exc.filename else root)
+
+    for current, dirnames, filenames in os.walk(root, followlinks=False, onerror=walk_error):
         dirnames.sort()
         current_path = Path(current)
         for name in sorted(dirnames):
@@ -122,7 +132,11 @@ def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] 
         for name in sorted(filenames):
             path = current_path / name
             relative = path.relative_to(root).as_posix()
-            stat = _stat_metadata(path)
+            try:
+                stat = _stat_metadata(path)
+            except OSError as exc:
+                record_error(exc, path)
+                continue
             extension, category = classify(relative)
             record = {
                     "partition_slot": partition_slot,
@@ -173,7 +187,9 @@ def readonly_mount_inventory(
         options = set(str(mount_info.get("options", "")).split(","))
         if "ro" not in options:
             raise SafetyError(f"mount is not read-only: {mount_info.get('options')}")
-        files, directories = inventory_tree(mountpoint, partition_slot, case_period)
+        read_errors: list[dict[str, Any]] = []
+        files, directories = inventory_tree(mountpoint, partition_slot, case_period, read_errors)
+        mount_info["read_errors"] = read_errors
         containers = index_containers(mountpoint, files, partition_slot, container_limits)
         return files, directories, mount_info, containers
     finally:

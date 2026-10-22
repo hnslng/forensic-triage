@@ -16,6 +16,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from . import __version__
+from .scan_quality import apply_scan_quality
 
 
 INK = colors.HexColor("#171a16")
@@ -56,9 +57,13 @@ def format_timestamp(value: Any) -> str:
 def load_summary(root: Path, result_path: Any) -> dict[str, Any]:
     path = root / str(result_path) / "summary.json"
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        summary = json.loads(path.read_text(encoding="utf-8"))
+        partitions_path = path.parent / "partitions.json"
+        if partitions_path.is_file():
+            apply_scan_quality(summary, json.loads(partitions_path.read_text(encoding="utf-8")))
+        return summary
     except (OSError, json.JSONDecodeError):
-        return {}
+        return {"scan_status": "failed"}
 
 
 def rough_content(summary: Mapping[str, Any], limit: int = 4) -> str:
@@ -258,6 +263,8 @@ def build_case_pdf(
                 pass
         app_hint_count = len(phone_data.get("app_hints", [])) if isinstance(phone_data, dict) else 0
         content = (f"Telefon-Krypto-Schnellscan: {app_hint_count} relevante App-Hinweise" if is_phone else rough_content(summary))
+        if summary.get("scan_status") in {"partial", "failed"}:
+            content = "ACHTUNG: Sichtung unvollständig oder fehlgeschlagen. 0 Dateien belegt keinen leeren Datenträger. " + content
         period_text = (f"{row.get('period_date_from')} – {row.get('period_date_to')} · {row.get('period_timezone') or 'lokale Systemzeit'}"
                        if row.get("period_date_from") and row.get("period_date_to") else "nicht festgelegt")
         period_count_text = ("nicht anwendbar" if is_phone else

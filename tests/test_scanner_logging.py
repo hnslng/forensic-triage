@@ -1,7 +1,33 @@
 import json
 import logging
+import pytest
 
 from forensic_triage import scanner
+
+
+@pytest.mark.parametrize("broken_partition", [False, True])
+def test_scan_persists_incomplete_partition_status(tmp_path, monkeypatch, broken_partition):
+    monkeypatch.setattr(scanner, "inspect_device", lambda _device: {})
+    monkeypatch.setattr(scanner, "enforce_read_only", lambda _device: None)
+    monkeypatch.setattr(scanner, "_command", lambda _args: "File System Type: NTFS\n")
+    monkeypatch.setattr(scanner, "parse_mmls", lambda _output: [
+        {"allocated": True, "slot": "002", "start_sector": 32}])
+    monkeypatch.setattr(scanner, "partition_path_for_start", lambda *args: tmp_path / "partition")
+    def inventory(*args):
+        if broken_partition:
+            raise OSError("partition unreadable")
+        return ([{"path": "good.txt", "size": 4, "category": "Text/Logs", "extension": "txt"}], [],
+                {"options": "ro", "read_errors": [{"path": "broken.jpg", "errno": 2, "error": "missing"}]},
+                {"status": "ok", "containers": []})
+    monkeypatch.setattr(scanner, "readonly_mount_inventory", inventory)
+    monkeypatch.setattr(scanner, "load_profile", lambda _path: {"keywords": [], "version": "1", "sha256": "x"})
+    result = scanner.scan(tmp_path / "device", tmp_path / "profile", "TEST", tmp_path / "results")
+    summary = json.loads((result / "summary.json").read_text())
+    assert summary["scan_status"] == ("failed" if broken_partition else "partial")
+    assert summary["file_count"] == (0 if broken_partition else 1)
+    assert summary["scan_warnings"]
+    if not broken_partition:
+        assert summary["scan_warnings"][0]["read_errors"][0]["path"] == "broken.jpg"
 
 
 def test_scan_does_not_replace_root_logging(tmp_path, monkeypatch) -> None:

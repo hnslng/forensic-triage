@@ -2,6 +2,12 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.84] – 2026-10-22
+
+- Einzelne Metadaten-Lesefehler verwerfen nicht länger das komplette Partitionsinventar. Lesbare Einträge bleiben erhalten; fehlerhafte Pfade und Fehlernummern werden separat dokumentiert. Nicht lesbare Verzeichnisse werden nicht mehr stillschweigend übergangen.
+- Unvollständige oder vollständig fehlgeschlagene Inventare werden im Ergebnisdashboard und in Text-/PDF-Berichten ausdrücklich gekennzeichnet. Auch ältere Sichtungen werden anhand ihrer gespeicherten Partitionsfehler eingeordnet, ohne ursprüngliche Scanunterlagen zu verändern.
+- Keine Änderung am Nur-Lesen-Schutz oder den Zeitlimits. Bereits verworfene Dateilisten können nur durch eine erneute Sichtung erfasst werden.
+
 ## [0.2.0-alpha.83] – 2026-10-22
 
 - Stickwechsel am wiederverwendeten Linux-Gerätepfad werden getrennt erkannt: Kernel-Verbindungskennung und Boot-ID ersetzen den Gerätepfad als Zuordnungsnachweis.

@@ -15,6 +15,21 @@ const entry = (name, kind = 'file') => ({ name, path: name, kind, category: 'Tex
 const pageData = entries => ({ entries, total: entries.length, shown: entries.length, offset: 0, next_offset: entries.length, has_more: false });
 const record = id => ({ media: media.find(item => item.id === id), summary: { evidence: `SICHT-${id}`, categories_by_count: { Archive: 1, Dokumente: 1 }, largest_files: [] }, hits: { rechnung: 1 }, archive: {} });
 
+test('incomplete scans warn explicitly and reset when displaying a complete scan', async t => {
+  const { page } = await setup(t);
+  for (const status of ['partial', 'failed']) {
+    await page.evaluate(status => renderResults({ scan_status: status, file_count: 0,
+      scan_warnings: [{ error: '<b>Lesefehler</b>' }] }), status);
+    assert.equal(await page.locator('#scanQualityWarning').evaluate(el => el.hidden), false);
+    assert.match(await page.locator('#scanQualityWarning').textContent(), /0 Dateien belegt keinen leeren Datenträger/);
+    assert.equal(await page.locator('#scanQualityWarning b').count(), 0);
+    assert.match(await page.locator('#resultScanStatus').textContent(), status === 'partial' ? /UNVOLLSTÄNDIG/ : /FEHLGESCHLAGEN/);
+  }
+  await page.evaluate(() => renderResults({ scan_status: 'complete' }));
+  assert.equal(await page.locator('#scanQualityWarning').evaluate(el => el.hidden), true);
+  assert.equal(await page.locator('#resultScanStatus').textContent(), 'SCAN ABGESCHLOSSEN');
+});
+
 async function setup(t, override = () => null) {
   diagReset();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });

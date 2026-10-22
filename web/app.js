@@ -1282,6 +1282,14 @@ async function loadProfiles(preferredIds = activeProfileIds) {
 }
 
 function renderResults(summary, hits = {}) {
+  const incomplete = ["partial", "failed"].includes(summary.scan_status);
+  $("resultScanStatus").textContent = summary.scan_status === "failed" ? "SICHTUNG FEHLGESCHLAGEN"
+    : incomplete ? "SICHTUNG UNVOLLSTÄNDIG" : "SCAN ABGESCHLOSSEN";
+  const qualityWarning = $("scanQualityWarning");
+  qualityWarning.hidden = !incomplete;
+  qualityWarning.textContent = incomplete
+    ? "ACHTUNG: Nicht alle Bereiche konnten gelesen werden. Zahlen und Treffer sind unvollständig; 0 Dateien belegt keinen leeren Datenträger. "
+      + (summary.scan_warnings || []).map(item => item.error).join(" · ") : "";
   const catalog = summary.filetype_catalog;
   $("archiveFiletypeCatalog").textContent = catalog
     ? `V${catalog.version} · SHA-256 ${catalog.sha256} · filetype-catalog.json`

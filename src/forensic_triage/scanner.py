@@ -29,6 +29,7 @@ from .keywords import build_hits, load_profile
 from .partitions import parse_mmls
 from .reporting import write_files_csv, write_json
 from .statistics import summarize
+from .scan_quality import apply_scan_quality
 from .validation import compare_expected
 from .settings import apply_catalog, catalog_snapshot, load_catalog
 from .period import evaluate_file_period, period_snapshot, timestamp_coverage
@@ -79,7 +80,9 @@ def _inventory_optical_medium(
             partition["inventory_method"] = "kernel_readonly_mount"
         else:
             raise ValueError(f"unsupported scan mode: {mode}")
-        partition["scan_status"] = "ok"
+        partition["scan_status"] = "partial" if mode == "fast" and mount_info.get("read_errors") else "ok"
+        if mode == "fast" and mount_info.get("read_errors"):
+            partition["read_errors"] = mount_info["read_errors"]
         return files, directories, [partition], containers
     except Exception as exc:
         partition["scan_status"] = "unsupported_or_error"
@@ -184,7 +187,10 @@ def scan(
                     container_catalogs.append(containers)
                     indexed_containers += int(containers.get("containers_indexed", 0))
                     indexed_entries += int(containers.get("entries_indexed", 0))
-                    partition["scan_status"] = "ok"
+                    partition["scan_status"] = "partial" if mode == "fast" and mount_info.get("read_errors") else "ok"
+                    if mode == "fast" and mount_info.get("read_errors"):
+                        partition["read_errors"] = mount_info["read_errors"]
+                        scan_logger.warning("partition %s incomplete: %d read errors", slot, len(mount_info["read_errors"]))
                 except subprocess.TimeoutExpired:
                     raise
                 except (OSError, ValueError, SafetyError, subprocess.SubprocessError) as exc:
@@ -231,6 +237,7 @@ def scan(
             "selected_keywords": selected_keywords,
         }
         summary = summarize(all_files, all_directories)
+        apply_scan_quality(summary, partitions)
         period_files = [item for item in all_files if item.get("in_period") is True]
         if case_period:
             coverage = timestamp_coverage(all_files, case_period)
@@ -277,7 +284,7 @@ def scan(
             if not validation["passed"]:
                 scan_logger.error("fixture validation failed: %s", validation["mismatches"])
                 raise ValueError(f"fixture validation failed; see {result_dir / 'validation.json'}")
-        scan_logger.info("scan complete files=%d directories=%d", len(all_files), len(all_directories))
+        scan_logger.info("scan %s files=%d directories=%d", summary["scan_status"], len(all_files), len(all_directories))
         return result_dir
     finally:
         scan_logger.removeHandler(handler)
