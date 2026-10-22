@@ -200,6 +200,7 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 - Paketversion: `0.2.0a84` (Python/PEP 440)
 - Git-/Releasebezeichnung: `v0.2.0-alpha.84`
 - aktueller Nachweis: [Alpha-84-Prüfprotokoll und Offline-Paketprüfsumme](docs/validation-2026-10-22-alpha84.md); Installation und erneuter NTFS-Scan auf dem Pi noch nicht bestätigt
+- offene Arbeiten: [vollständige Gegenprüfung K1–K5/W1–W9 mit priorisierten To-dos](docs/AUDIT_ALPHA84_TODOS.md)
 - automatisierte Tests: 319 Python-Prüfungen und 107 isolierte Browserprüfungen; darin Lesefehler mit erhaltenem Teilinventar und deutlichen Warnungen, Stickwechsel am wiederverwendeten Gerätepfad, Fallzeitraum-Validierung, B/M/C/A-Coverage und Klassifikation, FAST/statx-Sicherheitsverhalten, persistente Snapshots und Exporte sowie responsive Zeitraum-UI
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026
 - praktisch in Betrieb: Raspberry Pi 3B+, Hotspot/LAN, portfreie Adresse, USB-Sichtungen und bewusste Updates; drei reale USB-Sticks wurden bereits ausprobiert

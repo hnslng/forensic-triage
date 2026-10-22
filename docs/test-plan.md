@@ -4,6 +4,8 @@ Stand: 22. Oktober 2026 · Anwendung: `v0.2.0-alpha.84`. Dies ist ein Prüfplan,
 
 ## Priorisierter Nachtest Alpha 83/84
 
+Zusätzlich gelten die befundbezogenen Abnahmekriterien aus [AUDIT_ALPHA84_TODOS.md](AUDIT_ALPHA84_TODOS.md). Offene Implementierungsaufgaben sind dort nicht als bereits bestandene Tests zu verstehen.
+
 Nur autorisierte Testmedien verwenden; Schäden nicht auf echten Medien provozieren. Lesefehler gezielt in synthetischen Tests oder entbehrlichen Testabbildern nachstellen.
 
 1. Alpha 84 bewusst offline installieren, Version in der Oberfläche und Dienstzustand prüfen. Die lokale Paketprüfung gilt nicht als Installationsbestätigung.

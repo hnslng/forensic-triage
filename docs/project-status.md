@@ -9,6 +9,8 @@ Stand: **22. Oktober 2026 · v0.2.0-alpha.84**, Release-Commit `c171badef3dfc2ff
 
 Reproduzierbare Befehle, Paketgröße, SHA-256 und Grenzen: [Release-Prüfnachweis Alpha 84](validation-2026-10-22-alpha84.md). Aktueller [Testplan](test-plan.md) und [Offline-Ablauf](offline-updates.md).
 
+Die [Gegenprüfung mit priorisierten To-dos](AUDIT_ALPHA84_TODOS.md) ordnet sämtliche K1–K5/W1–W9 des übergebenen Alpha-82-Berichts ein. Insbesondere sind K1/K2 nur teilweise abgeschlossen; zusätzliche Entscheidungssperren, Timeout-Teilstände und Webzugriffsschutz bleiben offen.
+
 ## Historischer Entwicklungsverlauf bis Alpha 78
 
 Die folgenden Versions- und Testzahlen beschreiben frühere Arbeitsstände, nicht den aktuellen Prüfumfang.

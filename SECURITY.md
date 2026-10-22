@@ -6,6 +6,12 @@ TRIAGE//BOX ist ein Alpha-Prototyp und derzeit für keine Version zum ungeprüft
 
 Der Webdienst bindet standardmäßig nur an `127.0.0.1`. Er besitzt derzeit keine Benutzeranmeldung. Der Installer richtet zusätzlich nginx auf Port 80 für private IPv4-Netze ein, auch ohne Pi-Modus. Damit ist die Oberfläche im privaten LAN/Hotspot ohne Web-Anmeldung erreichbar. Loopback am Python-Dienst allein ist keine Zugriffssperre für diese Oberfläche. Netzwerkzugriff darf nur über die kontrollierte lokale Verbindung erfolgen; HTTPS, gemeinsame Entsperrung und verschlüsselte Fallablage bleiben offen.
 
+## Bekannte Zugriffsschutz-Lücken (Alpha 84)
+
+Der Webdienst hat bislang keine zentrale Host-/Origin-Prüfung und keinen CSRF-Schutz. Der nginx-Default-Server ist keine Host-Whitelist. Deshalb sind auch Browserangriffe über fremde Webseiten und DNS-Rebinding im Schutzkonzept zu berücksichtigen; eine konkrete Ausnutzung wurde bei der lokalen Gegenprüfung nicht durchgeführt. Der Webdienst läuft als root, mit privatem Mount-Namensraum, jedoch ohne umfassende Diensthärtung. UI-Bestätigungen sind kein Ersatz für serverseitigen Zugriffsschutz.
+
+Vorhandene Sperren für aktive Fälle, Scans und Updates sowie die Signaturprüfung von Offline-Paketen müssen erhalten bleiben. Bei zusätzlicher Content-Type-Prüfung benötigt der Offline-Upload weiterhin seinen Binärtyp; eine pauschale JSON-Pflicht wäre falsch. Maßnahmen und Abnahmetests: [Gegenprüfung K4/K5](docs/AUDIT_ALPHA84_TODOS.md).
+
 ## Sicherheitsprobleme melden
 
 - Keine Schwachstellendetails, echten Falldaten, Zugangsdaten oder Gerätekennungen in öffentliche Issues schreiben.

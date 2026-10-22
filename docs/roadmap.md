@@ -1,6 +1,21 @@
 # Roadmap und nächste Schritte
 
-Dokumentationsstand: 3. Oktober 2026 · Anwendung: `v0.2.0-alpha.64`.
+Dokumentationsstand: 22. Oktober 2026 · Anwendung: `v0.2.0-alpha.84`.
+
+## Priorisierte Gegenprüfung Alpha 84
+
+Die vollständige Gegenprüfung des übergebenen Alpha-82-Berichts steht in [AUDIT_ALPHA84_TODOS.md](AUDIT_ALPHA84_TODOS.md): alle K1–K5/W1–W9 mit Codebezug, Teilerledigungen, offenen Aufgaben und Abnahmekriterien. Diese Liste ergänzt die weiterhin offenen Betriebs-/Hardwareaufgaben unten; historische Alpha-Nummern sind keine aktuellen Freigaben.
+
+1. **Fehlerergebnisse vervollständigen:** begrenzte Fehlerdetails mit genauen Zählern, Teilinventar auch bei Abbruch, Qualitätsstatus in Medienregister/Audit und Bestätigung vor „Nicht sichern“. Verständliche Fehler und sicheres „Neu einlesen“ ergänzen.
+2. **Schutz absichern:** Automount vor der Schutzfolge prüfen; Host/Origin/CSRF und routenspezifische Content-Types absichern, serverseitige Bestätigungen/Löschsperren und Root-Dienst-Härtung testen.
+3. **Datum und Zeitraum:** Jahres-/Eingabeprüfung, zusätzliche unveränderlich versionierte Neuauswertung und FAT-/exFAT-Zeitzonentests.
+4. **Prozess:** Browsertests in CI, reproduzierbare Abhängigkeiten und verbleibende Doku-Widersprüche.
+5. **Wartbarkeit:** anschließend kleine Module ohne Funktionsänderung ausgliedern.
+
+- [x] Alpha 83: Stickwechsel am wiederverwendeten Gerätepfad lokal regressionsgeprüft.
+- [x] Alpha 84: einzelne Metadatenfehler erhalten übrige Einträge; Warnungen in Ergebnis, Diagnose und Berichten. K1/K2 insgesamt **nur teilweise** erledigt.
+- [x] Aktueller lokaler Nachweis: 319 Python- und 107 Browserprüfungen erfolgreich; kein Hardwareabnahmeersatz.
+- [ ] Alpha 84 auf dem Pi installieren, NTFS-Testbestand erneut sichten und schnellen Stickwechsel praktisch prüfen.
 
 ## Telefon-Schnellscan – nächste Abnahme
 
@@ -38,7 +53,7 @@ Der [Projektstand](project-status.md) trennt implementierte Funktionen, bisherig
 - Fallstart und Fallende, parallele USB-Scans, neutrale Sichtungsnummern, Online-/Offline-Dashboard und gemeinsame Warteschlange für abgezogene Medien mit offener Entscheidung.
 - Metadatenverzeichnis, Suchprofile, Kategorien, größte Dateien und begrenzte ZIP-/ISO-/7Z-/RAR-Verzeichnisse.
 - Archivstatusfilter, zwei Entscheidungen, Geräteangaben, Audit, PDF-Bericht und ZIP-Export.
-- Doppelbestätigung beim Entfernen, Dateierhalt im Papierkorb, Prozesszeitlimits und persistente Diagnoseprotokolle.
+- Doppelbestätigung beim Entfernen, Dateierhalt im Papierkorb, Prozesszeitlimits und begrenzte Systemprotokolle. Die Diagnosekonsole ist RAM-only; sie ersetzt keinen dauerhaft gesicherten Fehlernachweis.
 - Reine Updateprüfung und bewusste Installation; Fallende direkt im Updatefenster seit Alpha 43.
 - Signierte Offline-Updates über den eigenen Hotspot, ohne Internetzugang des Pi; Abhängigkeitsänderungen bleiben bewusst online.
 
