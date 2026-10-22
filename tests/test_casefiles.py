@@ -24,6 +24,23 @@ def make_result(store: CaseStore, case: str, sighting: str):
     return result
 
 
+def test_connection_identity_persists_without_merging_reused_device_paths(tmp_path) -> None:
+    store = CaseStore(tmp_path / "casefiles")
+    ids = []
+    for sequence, identity in enumerate(["kernel:stick-a", "kernel:stick-b"], 1):
+        sighting = f"SICHT-{sequence:03d}"
+        result = make_result(store, "TEST", sighting)
+        record = store.record_scan("TEST", sighting, "HL", {
+            "path": "/dev/sda", "serial": "DUPLICATE", "media_identity": identity,
+        }, result)
+        ids.append(record["media"]["id"])
+        assert record["media"]["media_identity"] == identity
+    reopened = CaseStore(tmp_path / "casefiles")
+    assert reopened.media_detail(ids[0])["media"]["media_identity"] == "kernel:stick-a"
+    assert reopened.media_detail(ids[1])["media"]["media_identity"] == "kernel:stick-b"
+    assert ids[0] != ids[1]
+
+
 def test_case_archive_records_scan_and_decision(tmp_path) -> None:
     store = CaseStore(tmp_path / "casefiles")
     result_dir = make_result(store, "FALL-2026-1", "SICHT-001")

@@ -2,6 +2,13 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.83] – 2026-10-22
+
+- Stickwechsel am wiederverwendeten Linux-Gerätepfad werden getrennt erkannt: Kernel-Verbindungskennung und Boot-ID ersetzen den Gerätepfad als Zuordnungsnachweis.
+- Verbindung und Medium-Metadaten werden mit der Sichtung gespeichert; neue Sticks erhalten einen frischen Bereitschaftsstatus, auch bei fehlenden oder identischen Seriennummern. Verspätete Scanantworten markieren keinen nachfolgend eingesteckten Stick als fertig.
+- Zusätzliche Python- und Browserprüfungen für schnelle Wechsel, wiederverwendete Seriennummern, Rückfallverhalten und die persistente Zuordnung. Alte Sichtungen bleiben lesbar, werden aber ohne passenden Verbindungsnachweis nicht automatisch einem neuen Stick zugeordnet.
+- Signiertes Offline-Update mit unveränderten Python-Abhängigkeiten. Keine Änderung an Scanner oder Nur-Lesen-Schutz.
+
 ## [0.2.0-alpha.82] – 2026-10-06
 
 - Ergebnisdashboard: Analyse-Karten auf gleiche Höhe gebracht, Dateityp-Spalten klar getrennt und Archivstatus als kompakte Fußzeile in „07 Hinweise“ integriert.

@@ -1048,6 +1048,68 @@ test('dashboard and case table sort sightings numerically, preserving online/off
   assert.deepEqual(await labels(), ['SICHT-1', 'SICHT-3', 'SICHT-8']);
 });
 
+test('quick USB swap at the same path resets completion and allows auto scan', async t => {
+  const { page, requests } = await setup(t, (url, request) => {
+    if (url.pathname === '/api/scans' && request.method() === 'POST') return { json: record(10) };
+    return settingsFixture(url, request);
+  });
+  const state = await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    currentCaseMedia = [{ id: 81, sighting_number: 'SICHT-081', device_path: '/dev/sda',
+      serial: 'SERIAL-A', media_identity: 'kernel:A', decision: 'not_selected', file_count: 5 }];
+    renderDevices([{ path: '/dev/sda', serial: 'SERIAL-A', media_identity: 'kernel:A', scan_supported: true }]);
+    deviceErrors.set('/dev/sda', 'old error');
+    renderDevices([{ path: '/dev/sda', serial: 'SERIAL-B', media_identity: 'kernel:B', scan_supported: true }]);
+    const result = { state: deviceStates.get('/dev/sda'), error: deviceErrors.has('/dev/sda'),
+      matches: deviceMatchesMedium(devices[0], currentCaseMedia[0]) };
+    document.getElementById('autoScanToggle').checked = true;
+    maybeAutoScan();
+    return result;
+  });
+  assert.deepEqual(state, { state: 'ready', error: false, matches: false });
+  await page.waitForFunction(() => !runningPaths.size);
+  assert.ok(requests.some(item => item.path === '/api/scans' && item.method === 'POST'));
+});
+
+test('late USB scan completion does not mark the replacement stick complete', async t => {
+  const waiting = gate();
+  const { page } = await setup(t, async (url, request) => {
+    if (url.pathname === '/api/scans' && request.method() === 'POST') {
+      await waiting.wait();
+      return { json: record(10) };
+    }
+    return settingsFixture(url, request);
+  });
+  await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL'; currentCaseMedia = [];
+    renderDevices([{ path:'/dev/sda', media_identity:'kernel:A', scan_supported:true }]);
+    runScan('/dev/sda');
+  });
+  await waiting.arrived;
+  await page.evaluate(() => renderDevices([{ path:'/dev/sda', media_identity:'kernel:B', scan_supported:true }], ['/dev/sda']));
+  waiting.release();
+  await page.waitForFunction(() => !runningPaths.size);
+  assert.equal(await page.evaluate(() => deviceStates.get('/dev/sda')), 'ready');
+});
+
+test('USB connection identity separates missing or duplicate serials and old path-only records', async t => {
+  const { page } = await setup(t, settingsFixture);
+  const results = await page.evaluate(() => {
+    activeCaseNumber = 'TEST'; activeOperator = 'HL';
+    return ['', 'DUPLICATE'].map(serial => {
+      currentCaseMedia = [{ id: 81, sighting_number: 'SICHT-081', device_path: '/dev/sda', serial,
+        media_identity: 'kernel:A', decision: 'not_selected', file_count: 5 }];
+      renderDevices([{ path: '/dev/sda', serial, media_identity: 'kernel:A', scan_supported: true }]);
+      const first = deviceStates.get('/dev/sda');
+      renderDevices([{ path: '/dev/sda', serial, media_identity: 'kernel:B', scan_supported: true }]);
+      return { first, next: deviceStates.get('/dev/sda'), visible: document.querySelectorAll('#deviceList .device-card').length,
+        oldOffline: document.querySelectorAll('#offlineMediaCards .media-card').length,
+        legacyMismatch: deviceMatchesMedium({ path:'/dev/sda', serial:'NEW' }, {device_path:'/dev/sda',serial:'OLD'}) };
+    });
+  });
+  for (const result of results) assert.deepEqual(result, { first:'complete', next:'ready', visible:1, oldOffline:1, legacyMismatch:false });
+});
+
 test('multiple removed undecided media use one queue and return there from details', async t => {
   const { page } = await setup(t, url => {
     if (url.pathname === '/api/status') return { json: { devices: [], cases: [{ case_number: 'TEST' }], active_case: { case_number: 'TEST', operator: 'HL' }, update: {} } };

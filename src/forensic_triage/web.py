@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import logging
@@ -15,6 +16,7 @@ import tempfile
 import threading
 import time
 import zipfile
+import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,6 +45,8 @@ QUARANTINED_DEVICES: set[str] = set()
 CASE_SESSION_LOCK = threading.Lock()
 ACTIVE_CASE_SESSION: dict[str, str] | None = None
 DEVICE_DISCOVERY_LOCK = threading.Lock()
+MEDIA_IDENTITY_LOCK = threading.Lock()
+MEDIA_CONNECTIONS: dict[str, tuple[str, str]] = {}
 DEVICE_DISCOVERY_UNHEALTHY_UNTIL = 0.0
 LAST_DEVICE_DISCOVERY: list[dict[str, Any]] = []
 LAST_DEVICE_DISCOVERY_ERROR = ""
@@ -325,7 +329,37 @@ def list_block_devices(timeout: float | None = None) -> list[dict[str, Any]]:
 
 def discover_media_devices() -> list[dict[str, Any]]:
     """Return USB media and visible optical drives without touching their contents."""
-    return parse_media_devices(list_block_devices())
+    with MEDIA_IDENTITY_LOCK:
+        nodes = list_block_devices()
+        devices = parse_media_devices(nodes)
+        by_path = {str(node.get("path")): node for node in nodes}
+        present = {str(device["path"]) for device in devices}
+        for path in set(MEDIA_CONNECTIONS) - present:
+            del MEDIA_CONNECTIONS[path]
+        for device in devices:
+            path = str(device["path"])
+            node = by_path[path]
+
+            def volumes(item):
+                return [str(item.get("uuid") or ""), str(item.get("label") or ""),
+                        *[volumes(child) for child in item.get("children") or []]]
+
+            descriptor = json.dumps([device["serial"], device["vendor"], device["model"],
+                                     device["size"], volumes(node)], sort_keys=True)
+            try:
+                # Kernel disk sequence changes on reconnect, even if a swap falls
+                # between polls. Boot ID prevents reuse after a system reboot.
+                sequence = (Path("/sys/class/block") / Path(path).name / "diskseq").read_text().strip()
+                boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+                if not sequence.isdecimal() or not boot:
+                    raise ValueError("kernel connection identity unavailable")
+                identity = "kernel:" + hashlib.sha256(f"{boot}:{sequence}:{descriptor}".encode()).hexdigest()
+            except (OSError, ValueError):
+                previous = MEDIA_CONNECTIONS.get(path)
+                identity = previous[1] if previous and previous[0] == descriptor else "session:" + uuid.uuid4().hex
+            MEDIA_CONNECTIONS[path] = (descriptor, identity)
+            device["media_identity"] = identity
+        return devices
 
 
 def cached_iphone_discovery() -> tuple[list[dict[str, Any]], str]:

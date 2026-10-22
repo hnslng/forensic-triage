@@ -2,6 +2,8 @@
 
 Diese Seite erklärt das System ohne Programmierkenntnisse. Die technische Modulübersicht steht ergänzend in [architecture.md](architecture.md).
 
+Seit Alpha 83 werden USB-Sticks anhand ihrer aktuellen Verbindung zugeordnet. Ein Linux-Gerätepfad wie `/dev/sda` kann beim nächsten Stick wiederverwendet werden und genügt daher nicht als Identitätsnachweis. Die Box nutzt nach Möglichkeit die Kernel-Datenträgersequenz zusammen mit der Boot-Kennung. Ohne diese Kernelangabe dienen Seriennummer, Größe und Volume-Metadaten sowie beobachtetes Abziehen als Rückfall. Ein vollständig gleich gemeldeter Wechsel zwischen zwei Abfragen lässt sich auf solchen älteren Systemen ohne weitere Kernelkennung nicht sicher unterscheiden. Alte Sichtungen bleiben erhalten; nach dem Update werden sie nicht allein aufgrund ihres alten Gerätepfads als angeschlossen angezeigt.
+
 ## Der Ablauf in einem Satz
 
 Die Bedienoberfläche erkennt angeschlossene Datenträger und Telefone automatisch, startet den passenden isolierten Scanner und schreibt Ergebnis, Verlauf und Entscheidung in eine lokale Fallakte.

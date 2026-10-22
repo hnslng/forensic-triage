@@ -1733,14 +1733,19 @@ function decisionIsOpen(medium) {
 
 function presenceKey(item) {
   const path = String(item?.device_path || item?.path || "");
-  return path.startsWith("iphone:") ? path : String(item?.serial || path);
+  if (path.startsWith("iphone:") || path.startsWith("android:")) return path;
+  return String(item?.media_identity || item?.serial || path);
 }
 
 function deviceMatchesMedium(device, medium) {
   const path = String(medium?.device_path || "");
-  if (path.startsWith("iphone:")) return device.path === path;
-  return Boolean(device.serial && medium.serial && device.serial === medium.serial)
-    || Boolean(device.path && device.path === path);
+  if (path.startsWith("iphone:") || path.startsWith("android:")) return device.path === path;
+  if (device.media_identity || medium.media_identity) {
+    return Boolean(device.media_identity && medium.media_identity && device.media_identity === medium.media_identity);
+  }
+  // Compatibility for older API records: a recycled /dev name is never
+  // proof of identity. Newly discovered block media always carry an ID.
+  return Boolean(device.serial && medium.serial && device.serial === medium.serial);
 }
 
 function pendingOfflineMedia() {
@@ -1934,6 +1939,7 @@ function resetDeviceStatesForCase() {
 }
 
 function renderDevices(items, activePaths = [], blockedPaths = null) {
+  const previousDevices = new Map(devices.map(device => [device.path, presenceKey(device)]));
   observeConfirmedDevicePresence(items);
   devices = items || [];
   if (blockedPaths !== null) quarantinedPaths = new Set(blockedPaths);
@@ -1942,9 +1948,14 @@ function renderDevices(items, activePaths = [], blockedPaths = null) {
   for (const path of deviceStates.keys()) if (!presentPaths.has(path)) deviceStates.delete(path);
   for (const path of deviceErrors.keys()) if (!presentPaths.has(path)) deviceErrors.delete(path);
   for (const device of devices) {
-    if (active.has(device.path)) deviceStates.set(device.path, "scanning");
+    if (previousDevices.get(device.path) !== presenceKey(device)) {
+      deviceStates.delete(device.path);
+      deviceErrors.delete(device.path);
+    }
+    if (active.has(device.path) || runningPaths.has(device.path)) deviceStates.set(device.path, "scanning");
     else if (quarantinedPaths.has(device.path)) deviceStates.set(device.path, "timeout");
     else if (!device.scan_supported) deviceStates.set(device.path, "unavailable");
+    else if (deviceStates.get(device.path) === "scanning") deviceStates.set(device.path, "ready");
     else if (deviceStates.get(device.path) === "unavailable") deviceStates.set(device.path, "ready");
     else if (!deviceStates.has(device.path)) deviceStates.set(device.path, device.scan_supported ? "ready" : "unavailable");
   }
@@ -2186,6 +2197,8 @@ async function runScan(devicePath, standalone = true) {
     return;
   }
   if (standalone) { batchTotal = 1; batchDone = 0; }
+  const scanDeviceKey = presenceKey(devices.find(device => device.path === devicePath));
+  const sameScanDevice = () => presenceKey(devices.find(device => device.path === devicePath)) === scanDeviceKey;
   deviceErrors.delete(devicePath);
   runningPaths.add(devicePath);
   deviceStates.set(devicePath, "scanning");
@@ -2205,14 +2218,18 @@ async function runScan(devicePath, standalone = true) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
-    deviceStates.set(devicePath, "complete");
-    deviceErrors.delete(devicePath);
+    if (sameScanDevice()) {
+      deviceStates.set(devicePath, "complete");
+      deviceErrors.delete(devicePath);
+    }
     await loadCase(data.media.case_number);
     $("results").hidden = true;
   } catch (error) {
     $("progressLabel").textContent = `FEHLER: ${error.message}`;
-    deviceErrors.set(devicePath, error.message);
-    deviceStates.set(devicePath, error.message.includes("Zeitlimit") ? "timeout" : "error");
+    if (sameScanDevice()) {
+      deviceErrors.set(devicePath, error.message);
+      deviceStates.set(devicePath, error.message.includes("Zeitlimit") ? "timeout" : "error");
+    }
     setSystemState("SCAN FEHLGESCHLAGEN", "error");
   } finally {
     runningPaths.delete(devicePath);

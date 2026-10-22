@@ -145,6 +145,8 @@ class CaseStore:
                 """
             )
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(media)")}
+            if "media_identity" not in columns:
+                connection.execute("ALTER TABLE media ADD COLUMN media_identity TEXT")
             if "specialist_name" not in columns:
                 connection.execute("ALTER TABLE media ADD COLUMN specialist_name TEXT")
             for name in ("period_date_from", "period_date_to", "period_timezone", "period_file_count", "period_timezone_source", "period_timezone_reproducible"):
@@ -388,15 +390,16 @@ class CaseStore:
                 """
                 INSERT INTO media(
                     case_id, evidence_number, sighting_number, scan_id, result_path, scanned_at,
-                    device_path, vendor, model, serial, size, file_count,
+                    device_path, vendor, model, serial, media_identity, size, file_count,
                     directory_count, keyword_matches, duration_seconds, period_date_from, period_date_to,
                     period_timezone, period_file_count, period_timezone_source, period_timezone_reproducible
-                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     case_id, sighting_number, result_dir.name, relative_result, now,
                     str(device.get("path", "")), str(device.get("vendor", "")),
                     str(device.get("model", "")), str(device.get("serial", "")),
+                    device.get("media_identity"),
                     int(device.get("size", 0) or 0), int(summary.get("file_count", 0)),
                     int(summary.get("directory_count", 0)), int(summary.get("keyword_matches", 0)),
                     float(summary.get("duration_seconds", 0)),
@@ -946,7 +949,7 @@ class CaseStore:
     def _media_dict(self, row: sqlite3.Row) -> dict[str, Any]:
         keys = {
             "id", "case_number", "sighting_number", "evidence_number", "scan_id", "scanned_at", "device_path",
-            "vendor", "model", "serial", "size", "file_count", "directory_count",
+            "vendor", "model", "serial", "media_identity", "size", "file_count", "directory_count",
             "keyword_matches", "duration_seconds", "decision", "reason_code", "reason_note",
             "decision_operator", "decided_at", "specialist_name",
             "period_date_from", "period_date_to", "period_timezone", "period_file_count",

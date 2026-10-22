@@ -127,6 +127,56 @@ def test_media_discovery_supports_usb_and_loaded_optical_media() -> None:
     assert devices[3]["mounted"] is False
 
 
+@pytest.mark.parametrize("serial", ["", "DUPLICATE-SERIAL"])
+def test_discovery_distinguishes_quick_swaps_with_reused_path_and_serial(monkeypatch, serial) -> None:
+    import forensic_triage.web as web
+
+    monkeypatch.setattr(web, "MEDIA_CONNECTIONS", {})
+    nodes = [{"path": "/dev/sda", "type": "disk", "tran": "usb", "size": 100, "serial": serial}]
+    monkeypatch.setattr(web, "list_block_devices", lambda: nodes)
+    sequence = ["1"]
+    original = Path.read_text
+
+    def read(path, *args, **kwargs):
+        if str(path) == "/sys/class/block/sda/diskseq":
+            return sequence[0]
+        if str(path) == "/proc/sys/kernel/random/boot_id":
+            return "test-boot"
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read)
+    first = web.discover_media_devices()[0]["media_identity"]
+    assert web.discover_media_devices()[0]["media_identity"] == first
+    sequence[0] = "2"
+    assert web.discover_media_devices()[0]["media_identity"] != first
+
+
+def test_discovery_fallback_uses_volume_metadata_and_observed_disconnect(monkeypatch) -> None:
+    import forensic_triage.web as web
+
+    monkeypatch.setattr(web, "MEDIA_CONNECTIONS", {})
+    nodes = [{"path": "/dev/test", "type": "disk", "tran": "usb", "size": 100,
+              "children": [{"uuid": "VOLUME-A"}]}]
+    monkeypatch.setattr(web, "list_block_devices", lambda: nodes)
+    original = Path.read_text
+
+    def read(path, *args, **kwargs):
+        if str(path).startswith("/sys/class/block/"):
+            raise FileNotFoundError
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read)
+    first = web.discover_media_devices()[0]["media_identity"]
+    assert web.discover_media_devices()[0]["media_identity"] == first
+    nodes[0]["children"][0]["uuid"] = "VOLUME-B"
+    second = web.discover_media_devices()[0]["media_identity"]
+    assert second != first
+    saved = nodes.pop()
+    assert web.discover_media_devices() == []
+    nodes.append(saved)
+    assert web.discover_media_devices()[0]["media_identity"] != second
+
+
 def test_empty_optical_drive_can_open_tray_but_mounted_media_cannot() -> None:
     assert _device_ejectable({"media_type": "optical", "mounted": False, "scan_supported": False})
     assert not _device_ejectable({"media_type": "optical", "mounted": True, "scan_supported": False})
