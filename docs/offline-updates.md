@@ -2,12 +2,23 @@
 
 Seit `v0.2.0-alpha.45` kann TRIAGE//BOX ein freigegebenes Anwendungspaket über den eigenen WLAN-Hotspot erhalten. Der Raspberry Pi benötigt dabei keinen Internetzugang. Das Verfahren ergänzt den Git-basierten Online-Updater; es installiert weiterhin niemals automatisch.
 
+## Aktuelles Paket: Alpha 84
+
+Stand: 22. Oktober 2026. `triagebox-v0.2.0-alpha.84.tbu` enthält die Stickwechsel-Korrektur aus Alpha 83 und die Lesefehler-Behandlung aus Alpha 84. Lesbare Teilinventare bleiben bei einzelnen Metadatenfehlern erhalten; unvollständige oder fehlgeschlagene Sichtungen erhalten Warnungen. Details und Paketnachweis: [Alpha-84-Prüfnachweis](validation-2026-10-22-alpha84.md).
+
+- Release-Commit: `c171badef3dfc2ffd242313f9c9f11c1406ccf37`
+- Größe: 446089 Bytes
+- SHA-256: `51bde7045bc2d95178e44638d809dcfa49d4f7f380e1061bebe8f562d802c61b`
+- Lokal geprüft: Signatur, Dateiprüfsummen, getrennte Vorbereitung und unveränderte Abhängigkeiten gegenüber Alpha 83. Keine bestätigte Alpha-84-Installation auf dem Pi.
+
+Nach Installation zuerst die angezeigte Version prüfen und den betroffenen Teststick erneut sichten. Alte, bereits verworfene Dateilisten werden nicht wiederhergestellt. Historische Scanunterlagen bleiben unverändert; gespeicherte Partitionsfehler werden beim Anzeigen berücksichtigt. Ein Ergebnis mit 0 Dateien und Lesefehlern ist kein Nachweis eines leeren Mediums.
+
 ## Bedienablauf
 
 1. Das freigegebene Paket `triagebox-v…tbu` auf einem vertrauenswürdigen Laptop bereithalten.
 2. Laptop mit dem WLAN **TRIAGEBOX** verbinden und `http://triagebox.local/` öffnen.
 3. Aktiven Fall beenden und laufende Scans vollständig abwarten.
-4. **System & Updates** öffnen, unter **Offline über TRIAGEBOX-WLAN** das `.tbu`-Paket auswählen und die Installation bestätigen.
+4. Einstellungen öffnen, **UPDATES → OFFLINE-UPDATE** wählen, das `.tbu`-Paket auswählen und **PAKET INSTALLIEREN** bestätigen.
 5. Upload, Signaturprüfung, Vorbereitung, Python-Tests und Dienstneustart abwarten. Die Oberfläche verbindet sich nach dem kurzen Neustart erneut.
 
 Alpha 45 selbst muss auf einem vorhandenen Alpha-44-Gerät noch einmal über den bisherigen Online-Weg installiert werden. Ab der danach folgenden Version kann der Offline-Weg verwendet werden.
@@ -40,7 +51,7 @@ Der Codewechsel ist atomar und ein fehlgeschlagener Dienststart wechselt auf den
 Das Paket wird ausschließlich aus dem angegebenen, bereits committed Git-Tag gebaut – niemals aus ungespeicherten Arbeitsdateien:
 
 ```bash
-.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.60
+.venv/bin/python scripts/build_offline_update.py v0.2.0-alpha.84
 ```
 
 Die Ausgabe liegt standardmäßig unter `dist/` und wird durch `.gitignore` ausgeschlossen. Das Skript erwartet den privaten Signaturschlüssel standardmäßig unter:

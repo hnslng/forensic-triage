@@ -79,7 +79,7 @@ Das Speichern einer Entscheidung erzeugt einen dauerhaften Protokolleintrag. Des
 
 ## Einstellungen verwalten
 
-**Einstellungen** in der oberen Leiste öffnet die vier Bereiche **Stichwortprofile**, **Dateitypen**, **Erkennungsregeln** und **System & Updates** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen, verifizierte iOS-/Android-App-Kennungen pflegen oder Updates verwalten. Im Fallfenster bleibt die Auswahl der Profile für Dateimedien. Änderungen gelten für neue Scans; alte Ergebnisse behalten ihren gespeicherten Regel-/Katalogstand. Siehe [ausführliche Bedienung](settings.md).
+**Einstellungen** in der oberen Leiste öffnet **Stichwortprofile**, **Dateitypen**, **Erkennungsregeln**, **Updates** und **Diagnose** außerhalb des Fallfensters. Dort lassen sich Profile bearbeiten/duplizieren, Endungen einer Kategorie zuordnen, verifizierte iOS-/Android-App-Kennungen pflegen, Updates verwalten oder Diagnoseereignisse lesen. Im Fallfenster bleibt die Auswahl der Profile für Dateimedien. Änderungen gelten für neue Scans; alte Ergebnisse behalten ihren gespeicherten Regel-/Katalogstand. Siehe [ausführliche Bedienung](settings.md).
 
 ## 6. Auswerfen und Aktualisieren
 
@@ -112,7 +112,7 @@ Der Fall muss dafür nicht zuerst geöffnet oder gestartet werden. Das Archiv bl
 
 ## 9. Fall beenden
 
-„Fall beenden“ sperrt neue Scans und entfernt die aktive Sitzung aus dem Webdienst sowie der Oberfläche. Die gespeicherte Fallakte bleibt im Archiv. Auch im Fenster „System & Updates“ ist Fallende möglich; die Updateinstallation wird danach separat gestartet. Vor Standort- oder Fallwechsel immer den alten Fall beenden. Ein Fall kann nicht beendet werden, solange ein Scan läuft.
+„Fall beenden“ sperrt neue Scans und entfernt die aktive Sitzung aus dem Webdienst sowie der Oberfläche. Die gespeicherte Fallakte bleibt im Archiv. Auch unter „Updates“ ist Fallende möglich; die Updateinstallation wird danach separat gestartet. Vor Standort- oder Fallwechsel immer den alten Fall beenden. Ein Fall kann nicht beendet werden, solange ein Scan läuft.
 
 ## Störungen
 
