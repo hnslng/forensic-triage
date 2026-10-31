@@ -16,7 +16,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from . import __version__
-from .scan_quality import apply_scan_quality
+from .scan_quality import load_scan_quality, INCOMPLETE_NOTICE, NO_INVENTORY, LABELS
 
 
 INK = colors.HexColor("#171a16")
@@ -55,15 +55,7 @@ def format_timestamp(value: Any) -> str:
 
 
 def load_summary(root: Path, result_path: Any) -> dict[str, Any]:
-    path = root / str(result_path) / "summary.json"
-    try:
-        summary = json.loads(path.read_text(encoding="utf-8"))
-        partitions_path = path.parent / "partitions.json"
-        if partitions_path.is_file():
-            apply_scan_quality(summary, json.loads(partitions_path.read_text(encoding="utf-8")))
-        return summary
-    except (OSError, json.JSONDecodeError):
-        return {"scan_status": "failed"}
+    return load_scan_quality(root / str(result_path))
 
 
 def rough_content(summary: Mapping[str, Any], limit: int = 4) -> str:
@@ -193,7 +185,7 @@ def build_case_pdf(
     ]
     meta = Table(
         [
-            [Paragraph("FALLNUMMER", meta_label), Paragraph("BEARBEITER", meta_label), Paragraph("ZEITRAUM", meta_label), Paragraph("DATENTRÄGER", meta_label)],
+            [Paragraph("FALLNUMMER", meta_label), Paragraph("BEARBEITER", meta_label), Paragraph("ZEITRAUM", meta_label), Paragraph("SICHTUNGEN", meta_label)],
             [
                 Paragraph(html.escape(case_number), meta_value),
                 Paragraph(html.escape(operator_names(audit_rows)), meta_value),
@@ -239,7 +231,7 @@ def build_case_pdf(
         Paragraph("ERGEBNIS / BEGRÜNDUNG", header),
     ]]
     for row in rows:
-        summary = load_summary(casefiles_root, row.get("result_path"))
+        summary = dict(row) if row.get("attempt_only") else load_summary(casefiles_root, row.get("result_path"))
         sighting = html.escape(str(row.get("sighting_number") or "-"))
         scanned = html.escape(format_timestamp(row.get("scanned_at")))
         device_name = " ".join(
@@ -263,8 +255,13 @@ def build_case_pdf(
                 pass
         app_hint_count = len(phone_data.get("app_hints", [])) if isinstance(phone_data, dict) else 0
         content = (f"Telefon-Krypto-Schnellscan: {app_hint_count} relevante App-Hinweise" if is_phone else rough_content(summary))
-        if summary.get("scan_status") in {"partial", "failed"}:
-            content = "ACHTUNG: Sichtung unvollständig oder fehlgeschlagen. 0 Dateien belegt keinen leeren Datenträger. " + content
+        if not is_phone:
+            content = summary.get("scan_quality_label", LABELS["unknown"]) + ". " + content
+            if summary.get("scan_status") != "complete":
+                content = "ACHTUNG: Sichtung unvollständig oder fehlgeschlagen. 0 Dateien belegt keinen leeren Datenträger. " + INCOMPLETE_NOTICE + " " + content
+            content += f" · Inventarisierungsfehler: {summary.get('scan_error_count', 'unbekannt')} · Partitionen: {', '.join(summary.get('scan_affected_partitions', [])) or 'nicht dokumentiert'}"
+            if row.get("attempt_only") or summary.get("scan_inventory_present") is False:
+                content = summary.get("scan_quality_label", LABELS["unknown"]) + ". " + NO_INVENTORY
         period_text = (f"{row.get('period_date_from')} – {row.get('period_date_to')} · {row.get('period_timezone') or 'lokale Systemzeit'}"
                        if row.get("period_date_from") and row.get("period_date_to") else "nicht festgelegt")
         period_count_text = ("nicht anwendbar" if is_phone else
@@ -277,15 +274,16 @@ def build_case_pdf(
             Paragraph(
                 f"<b>{html.escape(device_name)}</b><br/>Seriennummer: {html.escape(serial)}"
                 + (f"<br/>Gerätekennung: {html.escape(str(device_data.get('udid') or device_data.get('adb_serial') or 'nicht gemeldet'))}<br/>{'Apple-App-Metadaten' if is_iphone else 'Android-Paketmetadaten'} · keine Dateisichtung" if is_phone
-                   else f"<br/>Kapazität: {html.escape(format_bytes(row.get('size')))}"),
+                   else f"<br/>Kapazität: {html.escape(format_bytes(row.get('size'))) if row.get('size') else 'nicht gemeldet'}"),
                 cell,
                 ),
                 Paragraph(
                     f"<b>{html.escape(content)}</b><br/>" +
                     (f"{format_count(len(phone_data.get('apps', [])) if isinstance(phone_data, dict) else 0)} Benutzer-Apps · "
                  f"Erfassung: {html.escape(str(phone_data.get('apps_status') or 'unbekannt'))}" if is_phone else
-                 f"{format_count(row.get('file_count'))} Dateien, {format_count(row.get('directory_count'))} Ordner, "
-                 f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer") +
+                 (html.escape(summary.get("scan_quality_message", "").replace(NO_INVENTORY, "").strip()) if row.get("attempt_only") else NO_INVENTORY if summary.get("scan_inventory_present") is False else
+                  f"{format_count(row.get('file_count'))} Dateien, {format_count(row.get('directory_count'))} Ordner, "
+                  f"{html.escape(format_bytes(total_bytes))}, {format_count(row.get('keyword_matches'))} Stichworttreffer")) +
                     f"<br/>Fallzeitraum beim Scan: {html.escape(period_text)}<br/>Dateien im Zeitraum: {html.escape(period_count_text)}",
                 cell,
             ),

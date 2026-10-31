@@ -7,6 +7,7 @@ import os
 import tempfile
 import ctypes
 import errno
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,16 @@ from .commands import run_command
 from .container_inventory import ContainerLimits, index_containers
 from .device import SafetyError, enforce_read_only
 from .period import evaluate_file_period
+from .scan_quality import InventoryErrors
+from .container_inventory import empty_catalog
+
+
+class InventoryCleanupError(SafetyError):
+    """Preserve captured metadata while preventing unsafe continuation."""
+    def __init__(self, result, cause):
+        super().__init__("Sicherer Abschluss des Read-only-Zugriffs fehlgeschlagen.")
+        self.result = result
+        self.cause = cause
 
 
 class _StatxTimestamp(ctypes.Structure):
@@ -101,22 +112,37 @@ def partition_path_for_start(device: Path, start_sector: int) -> Path:
 
 
 def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] | None = None,
-                   read_errors: list[dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+                   read_errors: list[dict[str, Any]] | InventoryErrors | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Collect active file metadata without opening file contents."""
     files: list[dict[str, Any]] = []
     directories: list[dict[str, Any]] = []
-    def record_error(exc: OSError, path: Path) -> None:
+    def record_error(exc: OSError, path: Path, kind: str) -> None:
         if read_errors is None:
             raise exc  # Callers without an error channel must not get silent partial results.
-        read_errors.append({"path": path.relative_to(root).as_posix(),
-                            "errno": exc.errno, "error": exc.strerror or str(exc)})
+        try:
+            relative = path.relative_to(root).as_posix()
+        except ValueError:
+            relative = "."
+        if isinstance(read_errors, InventoryErrors):
+            read_errors.record(kind, relative, exc)
+            return
+        # Legacy list callers retain examples only; production callers pass
+        # InventoryErrors so the exact total remains independent of this cap.
+        if len(read_errors) < 50:
+            read_errors.append({"path": relative,
+                                "errno": exc.errno, "error": exc.strerror or "Inventarisierungsfehler"})
 
     def walk_error(exc: OSError) -> None:
-        record_error(exc, Path(exc.filename) if exc.filename else root)
+        record_error(exc, Path(exc.filename) if exc.filename else root, "directory")
 
     for current, dirnames, filenames in os.walk(root, followlinks=False, onerror=walk_error):
         dirnames.sort()
         current_path = Path(current)
+        if isinstance(read_errors, InventoryErrors):
+            if current_path == root:
+                read_errors.root_read = True
+            else:
+                read_errors.successful_entries += 1
         for name in sorted(dirnames):
             path = current_path / name
             relative = path.relative_to(root).as_posix()
@@ -135,8 +161,10 @@ def inventory_tree(root: Path, partition_slot: str, case_period: dict[str, Any] 
             try:
                 stat = _stat_metadata(path)
             except OSError as exc:
-                record_error(exc, path)
+                record_error(exc, path, "file")
                 continue
+            if isinstance(read_errors, InventoryErrors):
+                read_errors.successful_entries += 1
             extension, category = classify(relative)
             record = {
                     "partition_slot": partition_slot,
@@ -172,6 +200,7 @@ def readonly_mount_inventory(
     enforce_read_only(partition_device)
     mountpoint = Path(tempfile.mkdtemp(prefix="forensic-triage-", dir="/mnt"))
     mounted = False
+    files, directories, mount_info, containers = [], [], {}, empty_catalog()
     try:
         run_command(
             ["mount", "-o", "ro,nosuid,nodev,noexec", str(partition_device), str(mountpoint)],
@@ -187,12 +216,28 @@ def readonly_mount_inventory(
         options = set(str(mount_info.get("options", "")).split(","))
         if "ro" not in options:
             raise SafetyError(f"mount is not read-only: {mount_info.get('options')}")
-        read_errors: list[dict[str, Any]] = []
+        read_errors = InventoryErrors()
         files, directories = inventory_tree(mountpoint, partition_slot, case_period, read_errors)
-        mount_info["read_errors"] = read_errors
-        containers = index_containers(mountpoint, files, partition_slot, container_limits)
+        mount_info.update(read_errors.snapshot())
+        try:
+            containers = index_containers(mountpoint, files, partition_slot, container_limits)
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            read_errors.record("other", ".", OSError(None, "Container-Metadaten konnten nicht vollständig erfasst werden."))
+            mount_info.update(read_errors.snapshot())
+            mount_info["container_index_error"] = str(exc)
+            mount_info["interrupted"] = isinstance(exc, subprocess.TimeoutExpired)
+            containers = empty_catalog("failed")
         return files, directories, mount_info, containers
     finally:
         if mounted:
-            run_command(["umount", str(mountpoint)])
-        mountpoint.rmdir()
+            try:
+                run_command(["umount", str(mountpoint)])
+            except Exception as exc:
+                mount_info["cleanup_failed"] = True
+                mount_info["cleanup_error"] = str(exc)
+                raise InventoryCleanupError((files, directories, mount_info, containers), exc) from exc
+        try:
+            mountpoint.rmdir()
+        except OSError as exc:
+            mount_info["cleanup_failed"] = True
+            raise InventoryCleanupError((files, directories, mount_info, containers), exc) from exc

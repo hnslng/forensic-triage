@@ -17,6 +17,7 @@ def make_result(store: CaseStore, case: str, sighting: str):
         "total_file_bytes": 4096,
         "categories_by_count": {"Dokumente": 8, "Bilder": 4},
     }), encoding="utf-8")
+    (result / "partitions.json").write_text(json.dumps([{"allocated": True, "scan_status": "ok"}]), encoding="utf-8")
     (result / "hits.json").write_text(json.dumps({
         "by_keyword": {"rechnung": {"count": 2, "paths": ["a", "b"]}},
     }), encoding="utf-8")

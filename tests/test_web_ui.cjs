@@ -27,7 +27,7 @@ test('incomplete scans warn explicitly and reset when displaying a complete scan
   }
   await page.evaluate(() => renderResults({ scan_status: 'complete' }));
   assert.equal(await page.locator('#scanQualityWarning').evaluate(el => el.hidden), true);
-  assert.equal(await page.locator('#resultScanStatus').textContent(), 'SCAN ABGESCHLOSSEN');
+  assert.equal(await page.locator('#resultScanStatus').textContent(), 'SCAN VOLLSTÄNDIG');
 });
 
 async function setup(t, override = () => null) {
@@ -2422,4 +2422,65 @@ test('diagnose tab stays usable at 800px width', async t => {
   assert.ok(bodyOverflow <= 800, 'page must not scroll horizontally at 800px');
   const toolbar = await page.locator('.diagnose-toolbar').boundingBox();
   assert.ok(toolbar, 'toolbar must remain reachable');
+});
+
+test('quality is visible on cards, case register, results and evidence at every required width', async t => {
+  const synthetic = { id: 1, case_number: 'TEST', sighting_number: 'SICHT-001', device_path: '/dev/synthetic',
+    serial: 'SYNTHETIC', model: 'Synthetic USB', file_count: 47, keyword_matches: 0, decision: 'open',
+    scan_status: 'partial', scan_error_count: 26 };
+  const attempt = { attempt_only: true, id: null, sighting_number: 'SICHT-004', model: 'Synthetic attempt',
+    scanned_at: '2026-01-01T12:00:00Z', file_count: null, keyword_matches: null, scan_status: 'failed',
+    scan_quality_message: 'Die Partitionsanalyse konnte nicht abgeschlossen werden.', error_details: '<script>synthetic</script>' };
+  const detail = { media: synthetic, summary: { file_count: 47, directory_count: 38, keyword_matches: 0,
+    scan_status: 'partial', scan_error_count: 26, scan_affected_partitions: ['002'],
+    scan_warnings: [{ partition_slot: '002', error: 'Partition nicht vollständig erfasst.', read_error_count: 26,
+      read_errors: [{ access: 'directory', path: 'synthetic-folder', errno: 5, error: 'Input/output error' }] }], categories_by_count: { Bilder: 47 } }, hits: {}, archive: {} };
+  const { page } = await setup(t, (url) => {
+    if (url.pathname === '/api/cases/TEST') return { json: { case: { case_number: 'TEST' }, media: [synthetic], scan_attempts: [attempt] } };
+    if (url.pathname === '/api/media/1') return { json: detail };
+    return null;
+  });
+  for (const width of [1512, 1280, 1000, 800]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.evaluate(async () => {
+      activeCaseNumber = 'TEST'; activeOperator = 'TEST'; serverActiveCase = { case_number: 'TEST', operator: 'TEST' };
+      updateStartOverlay(); await loadCase('TEST');
+      document.getElementById('casePanel').open = true;
+    });
+    assert.match(await page.locator('#caseMedia').textContent(), /SICHTUNG UNVOLLSTÄNDIG/);
+    assert.match(await page.locator('#caseMedia').textContent(), /Kein auswertbares Dateiinventar erstellt/);
+    assert.match(await page.locator('#offlineMediaCards').textContent(), /SICHTUNG FEHLGESCHLAGEN/);
+    assert.equal(await page.locator('#caseMedia script').count(), 0);
+    await open(page, 1);
+    assert.equal(await page.locator('#resultScanStatus').textContent(), 'SICHTUNG UNVOLLSTÄNDIG');
+    assert.match(await page.locator('#scanQualityWarning').textContent(), /26 Inventarisierungsfehler/);
+    assert.equal(await page.locator('#evidenceScanQuality').textContent(), 'SICHTUNG UNVOLLSTÄNDIG');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `page overflow at ${width}`);
+    await page.screenshot({ path: `/tmp/triage-phase1-quality-${width}.png`, fullPage: true });
+  }
+});
+
+test('non-selection of partial failed and unknown USB results requires a fresh deliberate acknowledgement and note', async t => {
+  const { page } = await setup(t);
+  for (const status of ['partial', 'failed', 'unknown']) {
+    await page.evaluate(status => {
+      currentMediaId = 1; currentQuality = status; currentIsPhone = false; activeOperator = 'TEST';
+      currentDecision = 'not_selected';
+      document.getElementById('decisionReason').value = 'technical';
+      document.getElementById('decisionNote').value = '';
+      document.getElementById('qualityAcknowledged').checked = false;
+      updateDecisionFields(); updateDecisionAvailability();
+    }, status);
+    assert.equal(await page.locator('#qualityConfirmation').evaluate(el => el.hidden), false);
+    assert.equal(await page.locator('#saveDecision').isDisabled(), true);
+    await page.evaluate(() => { document.getElementById('qualityAcknowledged').checked = true; updateDecisionAvailability(); });
+    assert.equal(await page.locator('#saveDecision').isDisabled(), true);
+    await page.evaluate(() => { document.getElementById('decisionNote').value = 'Synthetic limitation reviewed.'; updateDecisionAvailability(); });
+    assert.equal(await page.locator('#saveDecision').isDisabled(), false);
+  }
+  await page.evaluate(() => { currentQuality = 'complete'; updateDecisionFields(); updateDecisionAvailability(); });
+  assert.equal(await page.locator('#qualityConfirmation').evaluate(el => el.hidden), true);
+  await page.evaluate(() => { currentIsPhone = true; currentQuality = 'unknown'; currentDecision = 'specialist_not_consulted'; updateDecisionFields(); updateDecisionAvailability(); });
+  assert.equal(await page.locator('#qualityConfirmation').evaluate(el => el.hidden), true);
+  assert.equal(await page.locator('#saveDecision').isDisabled(), false);
 });

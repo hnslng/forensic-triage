@@ -1571,3 +1571,17 @@ footer button:hover { border-color: var(--acid); color: var(--acid); }
   .result-detail-table { min-width: 700px; }
   .crypto-table { min-width: 620px; }
 }
+
+/* Inventory quality stays beside the counts and decision, within existing CRT panels. */
+.scan-quality-tag { display: block; font: inherit; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.quality-complete { color: var(--green, #b6ff39); }
+.quality-partial, .quality-unknown { color: #e9bf55; }
+.quality-failed { color: #ff8d7b; }
+.scan-quality-details, .quality-confirmation { margin: 12px 0; padding: 12px; border: 1px solid #8d7438; color: #e9bf55; }
+.scan-quality-details pre, .scan-attempt pre, .scan-attempt-row pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; }
+.quality-confirmation label { display: flex; align-items: flex-start; gap: 10px; }
+.quality-confirmation input { width: auto; flex: 0 0 auto; }
+.scan-attempt { min-width: 0; padding: 14px; border: 1px solid #8d7438; }
+.scan-attempt p { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+
+.result-actions { align-items: stretch; }

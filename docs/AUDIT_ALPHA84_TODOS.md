@@ -12,8 +12,8 @@ Status: **teilweise** = bereits wirksame Korrektur, aber Berichtsforderungen nic
 
 | ID | Alpha-84-Stand | Nachweis im Projekt | Nächster Schritt |
 |---|---|---|---|
-| K1 | Teilweise behoben | `fast_inventory.py: inventory_tree`, `scanner.py`, Tests für fehlende Datei und Verzeichnisfehler | Fehlerliste begrenzen, Gesamtzähler und Fehlerart ergänzen; EIO und Unmount-Ausfall gezielt prüfen |
-| K2 | Teilweise behoben | `scan_quality.py`, `casefiles.py`, `pdf_report.py`, `web/app.js: renderResults` | Qualitätsstatus in Register/Medienliste/Audit; Bestätigung bei „Nicht sichern“ |
+| K1 | Software Phase 1 umgesetzt; Realtest offen | `fast_inventory.py: inventory_tree`, `scanner.py`, Tests für fehlende Datei und Verzeichnisfehler | Fehlerliste begrenzen, Gesamtzähler und Fehlerart ergänzen; EIO und Unmount-Ausfall gezielt prüfen |
+| K2 | Software Phase 1 umgesetzt; Realtest offen | `scan_quality.py`, `casefiles.py`, `pdf_report.py`, `web/app.js: renderResults` | Qualitätsstatus in Register/Medienliste/Audit; Bestätigung bei „Nicht sichern“ |
 | K3 | Offen; konkrete Vorfallsursache korrigiert | `commands.py`, `scan_process.py`, `scanner.py`, `web.py`, nginx-Vorlage | Fortschritt/Teilspeicherung planen und testen; nicht pauschal Limits erhöhen |
 | K4 | Offen, Hardwareauswirkung nicht nachgestellt | `device.py`, `scripts/install_debian.sh`, `deploy/` | Automount-Schutz für dedizierte Box entwerfen und auf Testgerät validieren |
 | K5 | Offen; vorhandene Arbeitssperren berücksichtigen | `web.py`, nginx-/systemd-Vorlagen, `SECURITY.md` | Route-spezifischer Browserzugriffsschutz, serverseitige Bestätigungen und Härtung |
@@ -33,10 +33,10 @@ Status: **teilweise** = bereits wirksame Korrektur, aber Berichtsforderungen nic
 
 Bereits vorhanden: `OSError` pro Dateieintrag wird im Mountpfad protokolliert, `os.walk` hat einen Fehlerhandler, nachfolgende lesbare Einträge werden weiter erfasst. Ohne Fehlerkanal wird ein Fehler weiterhin ausgelöst statt stillschweigend ein vollständiges Ergebnis zu behaupten. Tests prüfen fehlenden Eintrag (`ENOENT`), simulierten Verzeichniszugriffsfehler und Erhalt der lesbaren Nachbareinträge.
 
-- [ ] Fehlerliste begrenzen, aber Gesamtzahl aller Fehler weiterzählen; getrennte Datei-/Verzeichniszähler und Fehlerart speichern. Aktuell unbeschränkte Liste mit Pfad, errno und Text.
-- [ ] `EIO`, sehr viele Fehler, fehlgeschlagene Wurzelbegehung und ausschließlich nicht lesbare Einträge testen. Aktuell kann eine komplett fehlgeschlagene Begehung als `partial` statt `failed` gelten; nie als Leerbefund behandeln.
-- [ ] Umgang mit Fehlern nach der Begehung festlegen: etwa beim Unmount kann die Rückgabe des Inventars weiterhin verloren gehen. Teildaten sichern, aber fehlenden sicheren Abschluss ausdrücklich dokumentieren.
-- [ ] Fehler während Dateisystem-/Partitionsbeschreibung von wirklich leeren, erfolgreich gelesenen Beständen unterscheiden.
+- [x] Fehlerliste begrenzen, aber Gesamtzahl aller Fehler weiterzählen; getrennte Datei-/Verzeichniszähler und Fehlerart speichern. Aktuell unbeschränkte Liste mit Pfad, errno und Text.
+- [x] `EIO`, sehr viele Fehler, fehlgeschlagene Wurzelbegehung und ausschließlich nicht lesbare Einträge testen. Aktuell kann eine komplett fehlgeschlagene Begehung als `partial` statt `failed` gelten; nie als Leerbefund behandeln.
+- [x] Umgang mit Fehlern nach der Begehung festlegen: etwa beim Unmount kann die Rückgabe des Inventars weiterhin verloren gehen. Teildaten sichern, aber fehlenden sicheren Abschluss ausdrücklich dokumentieren.
+- [x] Fehler während Dateisystem-/Partitionsbeschreibung von wirklich leeren, erfolgreich gelesenen Beständen unterscheiden.
 
 Abnahme: Datei vor/nach künstlichem `EIO` bleibt erhalten; Verzeichnisfehler ist gezählt; bei mehr Fehlern als Detail-Limit bleiben genaue Zähler erhalten. Komplettausfall und Cleanup-Fehler werden eindeutig angezeigt, ohne Schreibschutz oder Unmount-Prüfung zu lockern.
 
@@ -44,12 +44,14 @@ Abnahme: Datei vor/nach künstlichem `EIO` bleibt erhalten; Verzeichnisfehler is
 
 Bereits vorhanden: `complete`/`partial`/`failed` und Warnungen in der Zusammenfassung; Ergebnisansicht, Diagnose sowie Text-/PDF-Berichte kennzeichnen Fehler. Historische Partitionsfehler werden lesend berücksichtigt. Noch nicht durchgängig vorhanden: Status in den Medienlisten und CSV-Registern, genaue Fehlerzähler und entscheidungsbezogene Bestätigung. `scan_completed` im Fall-Audit enthält derzeit keinen Qualitätsstatus.
 
-- [ ] Status und Fehlerzähler in Medienübersicht, Medienregister und Fall-Audit ergänzen; additive, getestete Migration beziehungsweise nachvollziehbare Ableitung wählen.
-- [ ] Bei „Nicht sichern“ nach unvollständiger/fehlgeschlagener Sichtung zusätzliche ausdrückliche Bestätigung und Begründung verlangen, serverseitig prüfen und auditieren.
-- [ ] Alte und fehlende Qualitätsangaben konservativ behandeln; keine pauschale Vollständigkeit für unbewertbare Unterlagen behaupten.
-- [ ] Detailanzeige von technischen Rohfehlern trennen, Anzahl übersprungener Einträge verständlich nennen.
+- [x] Status und Fehlerzähler in Medienübersicht, Medienregister und Fall-Audit ergänzen; additive, getestete Migration beziehungsweise nachvollziehbare Ableitung wählen.
+- [x] Bei „Nicht sichern“ nach unvollständiger/fehlgeschlagener Sichtung zusätzliche ausdrückliche Bestätigung und Begründung verlangen, serverseitig prüfen und auditieren.
+- [x] Alte und fehlende Qualitätsangaben konservativ behandeln; keine pauschale Vollständigkeit für unbewertbare Unterlagen behaupten.
+- [x] Detailanzeige von technischen Rohfehlern trennen, Anzahl übersprungener Einträge verständlich nennen.
 
 Abnahme: Ein Nullergebnis mit Fehlern trägt überall eine Warnung. Eine direkte API-Anfrage ohne zusätzliche Bestätigung kann die Schutzabfrage nicht umgehen; Bestätigung und Qualitätsstand stehen im Audit und Export.
+
+**Phase-1-Umsetzung (31.10.2026, Alpha 85):** Die angehakten Softwarepunkte sind implementiert und mit synthetischen Regressionen geprüft; historische Beschreibungen oben beziehen sich auf Alpha 84. Fehlerlisten sind begrenzt, Zähler bleiben vollständig, Root-/Partitionsausfälle werden vom Leerbefund getrennt und Teildaten bei Unmount-Fehlern erhalten. Fehlversuche werden aus dem bestehenden Audit angezeigt, ohne neue Datenbanktabelle. Qualität und Nichtauswahlbestätigung stehen in Register, Nachweisen und Audit. Details und Grenzen: [Scanqualität](scan-quality.md). **K1/K2 bleiben hinsichtlich Pi-Hardwareabnahme offen**: echte EIO-/Unmount-/Kernel-Wartezustände, Schreibschutz-Vor-/Nachvergleich und Neustart der flüchtigen Quarantäne sind nicht durch lokale Tests abgedeckt. Kein produktiver Pi wurde migriert oder aktualisiert.
 
 ### K3 – Zeitlimit und Fortschritt
 

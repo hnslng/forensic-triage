@@ -1397,13 +1397,14 @@ class TriageHandler(BaseHTTPRequestHandler):
             return
         sighting_number = ""
         scan_started = time.monotonic()
+        record = None
         try:
             diag.event("SCAN", f"Scan gestartet: {case_number} · {_device_label(device)}", {
                 "device": device_path, "scan_kind": str(device.get("media_type") or "block"),
                 "profiles": ",".join(profile_ids),
             })
             sighting_number = self.server.case_store.allocate_sighting_number(
-                case_number, operator, device_path,
+                case_number, operator, device_path, device,
             )
             result_dir = run_isolated_scan({
                 "device": device_path,
@@ -1427,11 +1428,13 @@ class TriageHandler(BaseHTTPRequestHandler):
             record = self.server.case_store.record_scan(
                 case_number, sighting_number, operator, device, result_dir,
             )
+            if record.get("summary", {}).get("scan_cleanup_failed") or record.get("summary", {}).get("scan_interrupted"):
+                quarantine_device(device_path)
             period_detail = ""
             if record.get("summary", {}).get("period_evaluation") == "configured":
                 period_detail = (f" · Zeitraum: {current_case['date_from']} → {current_case['date_to']} · "
                                  f"{record['summary'].get('period_file_count', 0)} / {record['summary'].get('file_count', 0)} Dateien")
-            scan_status = record.get("summary", {}).get("scan_status", "complete")
+            scan_status = record.get("summary", {}).get("scan_status", "unknown")
             scan_label = {"partial": "Sichtung unvollständig", "failed": "Sichtung fehlgeschlagen"}.get(scan_status, "Scan abgeschlossen")
             diag.event("SCAN", f"{scan_label}: {sighting_number} in {time.monotonic() - scan_started:.1f} s{period_detail}", {
                 "case": case_number, "device": device_path, "scan_status": scan_status,
@@ -1444,7 +1447,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             diag.event("SCAN", f"Scan-Zeitlimit: {sighting_number or case_number}", {
                 "case": case_number, "device": device_path,
             }, level="error")
-            if sighting_number:
+            if sighting_number and record is None:
                 self.server.case_store.record_scan_failure(
                     case_number, sighting_number, operator, device_path, str(exc),
                 )
@@ -1454,11 +1457,11 @@ class TriageHandler(BaseHTTPRequestHandler):
             diag.event("SCAN", f"Scan fehlgeschlagen: {sighting_number or case_number}", {
                 "case": case_number, "device": device_path, "error": str(exc)[:200],
             }, level="error")
-            if sighting_number:
+            if sighting_number and record is None:
                 self.server.case_store.record_scan_failure(
                     case_number, sighting_number, operator, device_path, str(exc),
                 )
-            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Die Sichtung konnte nicht vollständig abgeschlossen werden. Verbindung prüfen und Fallregister beachten.", "details": str(exc)[:1000]})
         finally:
             release_device(device_path)
 
@@ -1473,6 +1476,8 @@ class TriageHandler(BaseHTTPRequestHandler):
                 str(payload.get("operator", "")),
                 str(payload.get("evidence_number", "")) or None,
                 str(payload.get("specialist_name", "")) or None,
+                quality_acknowledged=payload.get("quality_acknowledged") is True,
+                quality_status=payload.get("quality_status"),
             )
             record["cases"] = self.server.case_store.list_cases()
             self._json(HTTPStatus.OK, record)

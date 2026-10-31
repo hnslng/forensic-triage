@@ -2,6 +2,9 @@
 
 Stand: **22. Oktober 2026 · v0.2.0-alpha.84**, Release-Commit `c171badef3dfc2ffd242313f9c9f11c1406ccf37`.
 
+**Aktueller Entwicklungsstand: 31.10.2026, v0.2.0-alpha.85.** Phase 1 ergänzt Scanqualität, begrenzte Fehlerdetails bei vollständigen Zählern, Erhalt bei Unmount-Fehler, sichtbare Fehlversuche und serverseitige Bestätigung bei Nichtauswahl. [Prüfstand](validation-2026-10-31-alpha85.md), [Bedeutung und Grenzen](scan-quality.md). Keine automatische Pi-Installation; Hardwareabnahme offen. Die folgenden Alpha-84-Angaben bleiben historischer Bezug.
+
+
 - **Alpha 83:** getrennte Zuordnung schnell gewechselter Sticks am wiederverwendeten Gerätepfad, einschließlich gespeicherter Verbindungskennung und Schutz vor verspäteten Scanantworten.
 - **Alpha 84:** einzelne Metadaten-Lesefehler erhalten das übrige Inventar; nicht lesbare Verzeichnisse werden dokumentiert. Unvollständige beziehungsweise fehlgeschlagene Sichtungen werden in Oberfläche, Diagnose und Text-/PDF-Berichten gekennzeichnet. Historische Partitionsfehler werden beim Anzeigen ausgewertet, ohne ursprüngliche Scan-Dateien umzuschreiben.
 - **Geprüft:** 319 Python-Tests und 107 isolierte Chromium-Prüfungen erfolgreich. Signatur, Paketdateiprüfsummen, lokales Entpacken und unveränderte Abhängigkeiten des Alpha-84-Offline-Pakets geprüft.

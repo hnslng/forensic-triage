@@ -24,12 +24,12 @@ from .backup_detection import find_backup_hints, summarize_backup_hints
 from .crypto_rules import bundled_rules, find_file_hints
 from .device import SafetyError, enforce_read_only, inspect_device
 from .filesystem import filesystem_type, parse_fls
-from .fast_inventory import partition_path_for_start, readonly_mount_inventory
+from .fast_inventory import InventoryCleanupError, partition_path_for_start, readonly_mount_inventory
 from .keywords import build_hits, load_profile
 from .partitions import parse_mmls
 from .reporting import write_files_csv, write_json
 from .statistics import summarize
-from .scan_quality import apply_scan_quality
+from .scan_quality import apply_scan_quality, partition_status
 from .validation import compare_expected
 from .settings import apply_catalog, catalog_snapshot, load_catalog
 from .period import evaluate_file_period, period_snapshot, timestamp_coverage
@@ -38,6 +38,25 @@ from .period import evaluate_file_period, period_snapshot, timestamp_coverage
 def _command(args: list[str]) -> str:
     result = run_command(args, capture_output=True)
     return result.stdout
+
+
+def _mount_inventory(*args, **kwargs):
+    try:
+        return readonly_mount_inventory(*args, **kwargs)
+    except InventoryCleanupError as exc:
+        # The mount helper already attempted safe cleanup. Preserve metadata,
+        # stop this medium below, and let the web layer retain its quarantine.
+        return exc.result
+
+
+def _mount_quality(partition, info):
+    partition["scan_status"] = partition_status(info)
+    for key in ("read_errors", "read_error_count", "read_error_counts", "read_errors_truncated",
+                "inventory_root_read", "inventory_successful_entries", "cleanup_failed", "interrupted"):
+        if key in info and (info[key] or key != "read_errors"):
+            partition[key] = info[key]
+    if info.get("cleanup_failed"):
+        partition["scan_status"] = "partial" if info.get("inventory_successful_entries", 0) else "failed"
 
 
 def _inventory_optical_medium(
@@ -72,17 +91,17 @@ def _inventory_optical_medium(
             containers = empty_catalog("unavailable_in_tsk_mode")
         elif mode == "fast":
             if case_period:
-                files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT", case_period=case_period)
+                files, directories, mount_info, containers = _mount_inventory(device, "OPT", case_period=case_period)
             else:
-                files, directories, mount_info, containers = readonly_mount_inventory(device, "OPT")
+                files, directories, mount_info, containers = _mount_inventory(device, "OPT")
             write_json(raw_dir / "fast_mount_OPT.json", mount_info)
             partition["partition_device"] = str(device)
             partition["inventory_method"] = "kernel_readonly_mount"
         else:
             raise ValueError(f"unsupported scan mode: {mode}")
-        partition["scan_status"] = "partial" if mode == "fast" and mount_info.get("read_errors") else "ok"
-        if mode == "fast" and mount_info.get("read_errors"):
-            partition["read_errors"] = mount_info["read_errors"]
+        partition["scan_status"] = "ok"
+        if mode == "fast":
+            _mount_quality(partition, mount_info)
         return files, directories, [partition], containers
     except Exception as exc:
         partition["scan_status"] = "unsupported_or_error"
@@ -171,7 +190,7 @@ def scan(
                             max_entries_per_container=configured_container_limits.max_entries_per_container,
                             max_total_entries=max(0, configured_container_limits.max_total_entries - indexed_entries),
                         )
-                        files, directories, mount_info, containers = readonly_mount_inventory(
+                        files, directories, mount_info, containers = _mount_inventory(
                             partition_device, slot, remaining_limits, case_period,
                         )
                         write_json(raw_dir / f"fast_mount_{slot}.json", mount_info)
@@ -187,12 +206,19 @@ def scan(
                     container_catalogs.append(containers)
                     indexed_containers += int(containers.get("containers_indexed", 0))
                     indexed_entries += int(containers.get("entries_indexed", 0))
-                    partition["scan_status"] = "partial" if mode == "fast" and mount_info.get("read_errors") else "ok"
-                    if mode == "fast" and mount_info.get("read_errors"):
-                        partition["read_errors"] = mount_info["read_errors"]
-                        scan_logger.warning("partition %s incomplete: %d read errors", slot, len(mount_info["read_errors"]))
-                except subprocess.TimeoutExpired:
-                    raise
+                    partition["scan_status"] = "ok"
+                    if mode == "fast":
+                        _mount_quality(partition, mount_info)
+                        if partition["scan_status"] != "ok":
+                            scan_logger.warning("partition %s incomplete: %d read errors", slot,
+                                                mount_info.get("read_error_count", len(mount_info.get("read_errors", []))))
+                        if mount_info.get("cleanup_failed") or mount_info.get("interrupted"):
+                            scan_logger.error("safe cleanup failed for partition %s; no further media reads: %s", slot, mount_info.get("cleanup_error", "cleanup failed"))
+                            break
+                except subprocess.TimeoutExpired as exc:
+                    partition.update(scan_status="failed", error=str(exc), interrupted=True)
+                    scan_logger.exception("partition command timed out; no further media reads")
+                    break
                 except (OSError, ValueError, SafetyError, subprocess.SubprocessError) as exc:
                     partition["scan_status"] = "unsupported_or_error"
                     partition["error"] = str(exc)
@@ -237,6 +263,9 @@ def scan(
             "selected_keywords": selected_keywords,
         }
         summary = summarize(all_files, all_directories)
+        summary.update(scan_quality_version=1, scan_inventory_present=True,
+                       scan_cleanup_failed=any(p.get("cleanup_failed") for p in partitions),
+                       scan_interrupted=any(p.get("interrupted") for p in partitions))
         apply_scan_quality(summary, partitions)
         period_files = [item for item in all_files if item.get("in_period") is True]
         if case_period:

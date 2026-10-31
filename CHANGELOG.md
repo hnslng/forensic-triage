@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.85] – 2026-10-31
+
+- Einheitliche Scanqualität `complete`/`partial`/`failed`/`unknown` in Kacheln, Register, Ergebnissen, Nachweisen, CSV, Text und PDF. Null erfasste Dateien nach Fehlern sind kein Leerbefund; historische Unterlagen werden nur lesend bewertet.
+- Vollständige Fehlerzähler nach Datei-/Verzeichnis-/sonstigen Zugriffen bei höchstens 50 Detailbeispielen je Partition. Fehlgeschlagene Root-Begehung und ausschließlich fehlgeschlagene Dateizugriffe gelten als `failed`.
+- Erfasste Metadaten bleiben bei fehlgeschlagenem Unmount erhalten. Der Lauf liest anschließend keine weitere Partition; bestehende Quarantäne und Zeitlimits bleiben erhalten. Kein neues Wiederaufnahme- oder Reparatursystem.
+- Fehlversuche ohne Inventar werden aus dem vorhandenen Audit rekonstruiert und mit unbekannten Dateizahlen sichtbar; keine neue Datenbanktabelle oder künstliche Null-Inventare. Neue Abschlussereignisse enthalten den fachlichen Qualitätsstatus; doppelte/widersprüchliche Abschlussmeldungen werden verhindert.
+- „Nicht sichern“ bei unvollständiger, fehlgeschlagener oder nicht bewertbarer USB-Sichtung verlangt eine frische Bestätigung und sachliche Begründung, serverseitig geprüft und mit dem Qualitätsstatus auditiert. Telefon-Fachpersonenentscheidungen bleiben getrennt.
+- Synthetische Python-/Browserregressionen einschließlich Fehlerflut, sicherem Abschluss, historischen Datenbankkopien, direkter API-Anfragen sowie Responsive-Prüfungen. Keine neuen Abhängigkeiten oder Inhaltsanalysen. Pi-Hardwareabnahme und Installation stehen ausdrücklich aus.
+
 ## [0.2.0-alpha.84] – 2026-10-22
 
 - Einzelne Metadaten-Lesefehler verwerfen nicht länger das komplette Partitionsinventar. Lesbare Einträge bleiben erhalten; fehlerhafte Pfade und Fehlernummern werden separat dokumentiert. Nicht lesbare Verzeichnisse werden nicht mehr stillschweigend übergangen.

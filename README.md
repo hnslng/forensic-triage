@@ -1,6 +1,6 @@
 # TRIAGE//BOX
 
-**Version 0.2.0-alpha.84 · private Alpha-Entwicklungsfassung · Deutsch / English**
+**Version 0.2.0-alpha.85 · private Alpha-Entwicklungsfassung · Deutsch / English**
 
 > [!CAUTION]
 > **Nicht für ungeprüften Einsatz mit echten Beweismitteln freigegeben.** Das Projekt ist ein transparenter Entwicklungsprototyp. Es ersetzt weder validierte Forensikwerkzeuge noch Hardware-Schreibblocker, Verfahrensanweisungen oder eine fachliche Sicherstellungsentscheidung.
@@ -197,9 +197,9 @@ Vor realem Betrieb muss das Fallarchiv auf verschlüsseltem, zugriffsgeschützte
 
 ## Projektstatus
 
-- Paketversion: `0.2.0a84` (Python/PEP 440)
-- Git-/Releasebezeichnung: `v0.2.0-alpha.84`
-- aktueller Nachweis: [Alpha-84-Prüfprotokoll und Offline-Paketprüfsumme](docs/validation-2026-10-22-alpha84.md); Installation und erneuter NTFS-Scan auf dem Pi noch nicht bestätigt
+- Paketversion: `0.2.0a85` (Python/PEP 440)
+- Git-/Releasebezeichnung: `v0.2.0-alpha.85`
+- aktueller Nachweis: [Alpha-85-Prüfprotokoll](docs/validation-2026-10-31-alpha85.md); Installation und Pi-Hardwareabnahme stehen aus. [Scanqualität und Entscheidungen](docs/scan-quality.md).
 - offene Arbeiten: [vollständige Gegenprüfung K1–K5/W1–W9 mit priorisierten To-dos](docs/AUDIT_ALPHA84_TODOS.md)
 - automatisierte Tests: 319 Python-Prüfungen und 107 isolierte Browserprüfungen; darin Lesefehler mit erhaltenem Teilinventar und deutlichen Warnungen, Stickwechsel am wiederverwendeten Gerätepfad, Fallzeitraum-Validierung, B/M/C/A-Coverage und Klassifikation, FAST/statx-Sicherheitsverhalten, persistente Snapshots und Exporte sowie responsive Zeitraum-UI
 - dokumentierter Sollvergleich: SanDisk/exFAT im beschriebenen VM-Test vom 26. August 2026

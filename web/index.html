@@ -101,6 +101,7 @@
           <div class="result-actions"><button id="openEvidenceModal" type="button">NACHWEIS ANZEIGEN</button><div class="result-stamp"><span id="resultScanStatus">SCAN ABGESCHLOSSEN</span> <b id="resultDuration">0,732 s</b></div></div>
         </div>
         <p id="scanQualityWarning" class="case-start-message warning" role="alert" hidden></p>
+        <details id="scanQualityDetails" class="scan-quality-details" hidden><summary>ERFASSUNGSFEHLER ANZEIGEN</summary><pre id="scanQualityExamples"></pre></details>
 
         <section id="iphoneSummary" class="panel iphone-summary" hidden>
           <div class="panel-title"><span>TELEFON</span> KRYPTO-SCHNELLSCAN</div>
@@ -241,6 +242,11 @@
               <label id="decisionNoteWrap" for="decisionNote">SACHLICHE FESTSTELLUNG / ERGÄNZUNG
                 <textarea id="decisionNote" rows="3" maxlength="1000" placeholder="Kurz festhalten, was sichtbar war und warum das Medium nicht gesichert wurde …"></textarea>
               </label>
+              <div id="qualityConfirmation" class="quality-confirmation" hidden>
+                <strong>ACHTUNG – SICHTUNG NICHT VOLLSTÄNDIG</strong>
+                <p>Fehlende Treffer oder null erfasste Dateien sind kein Nachweis für fehlende relevante Inhalte. Begründen Sie die Nicht-Sicherung unter Berücksichtigung dieser Einschränkung.</p>
+                <label><input id="qualityAcknowledged" type="checkbox" /> Ich bestätige ausdrücklich, dass ich die Einschränkung dieser Sichtung bei „Nicht sichern“ berücksichtigt habe.</label>
+              </div>
               <button id="saveDecision" class="save-decision" type="button" disabled>ENTSCHEIDUNG PROTOKOLLIEREN</button>
             </div>
             <p id="decisionMessage" class="decision-message"></p>
@@ -319,6 +325,8 @@
           <div><dt>KAPAZITÄT</dt><dd id="evidenceDeviceCapacity">—</dd></div>
           <div><dt>MEDIENTYP</dt><dd id="evidenceDeviceType">—</dd></div>
           <div><dt>TECHNISCHER PFAD</dt><dd id="evidenceDevicePath">—</dd></div>
+          <div><dt>SCANQUALITÄT</dt><dd id="evidenceScanQuality">—</dd></div>
+          <div><dt>ERFASSUNGSFEHLER</dt><dd id="evidenceScanErrors">—</dd></div>
           <div><dt>SCHREIBSCHUTZ</dt><dd id="evidenceDeviceReadOnly">—</dd></div>
         </dl>
       </section>

@@ -16,15 +16,12 @@ from .container_inventory import archive_encryption_state, archive_encryption_st
 from .pdf_report import build_case_pdf
 from .keywords import match_keywords
 from .period import optional_bool, period_timezone_info, sqlite_optional_bool, validate_period
-from .scan_quality import apply_scan_quality
+from .scan_quality import load_scan_quality, quality_fields, LABELS, INCOMPLETE_NOTICE, NO_INVENTORY
+from .scan_attempts import scan_attempts
 
 
 def _scan_summary(result_dir: Path) -> dict[str, Any]:
-    summary = json.loads((result_dir / "summary.json").read_text(encoding="utf-8"))
-    partitions_path = result_dir / "partitions.json"
-    if partitions_path.is_file():
-        apply_scan_quality(summary, json.loads(partitions_path.read_text(encoding="utf-8")))
-    return summary
+    return load_scan_quality(result_dir)
 
 
 DECISIONS = {"open", "secure", "not_selected", "specialist_consulted", "specialist_not_consulted"}
@@ -287,6 +284,7 @@ class CaseStore:
         case_number: str,
         operator: str,
         device_path: str,
+        device: dict[str, Any] | None = None,
     ) -> str:
         """Atomically reserve one sighting number for concurrent media scans."""
         case_number = safe_component(case_number)
@@ -317,7 +315,7 @@ class CaseStore:
                     now,
                     operator.strip()[:120] or None,
                     json.dumps(
-                        {"sighting_number": sighting_number, "device_path": device_path},
+                        {"sighting_number": sighting_number, "device_path": device_path, "device": device or {}},
                         ensure_ascii=False,
                     ),
                 ),
@@ -341,8 +339,15 @@ class CaseStore:
             ).fetchone()
             if row is None:
                 return
+            case_id = int(row["id"])
+            connection.execute("BEGIN IMMEDIATE")
+            if connection.execute("SELECT 1 FROM media WHERE case_id=? AND sighting_number=?", (case_id, sighting_number)).fetchone():
+                return
+            for previous in connection.execute("SELECT details_json FROM audit_events WHERE case_id=? AND event_type='scan_failed'", (case_id,)):
+                if json.loads(previous["details_json"]).get("sighting_number") == sighting_number:
+                    return
             connection.execute(
-                "UPDATE cases SET updated_at=? WHERE id=?", (now, int(row["id"]))
+                "UPDATE cases SET updated_at=? WHERE id=?", (now, case_id)
             )
             connection.execute(
                 "INSERT INTO audit_events(case_id, media_id, occurred_at, event_type, operator, details_json) "
@@ -355,7 +360,7 @@ class CaseStore:
                         {
                             "sighting_number": sighting_number,
                             "device_path": device_path,
-                            "error": error[:1000],
+                            "error": error[:1000], "scan_status": "failed", "inventory_present": False,
                         },
                         ensure_ascii=False,
                     ),
@@ -378,6 +383,8 @@ class CaseStore:
         result_dir: Path,
     ) -> dict[str, Any]:
         summary = _scan_summary(result_dir)
+        if summary.get("scan_inventory_present") is False:
+            raise ValueError("Kein auswertbares Dateiinventar erstellt.")
         now = utc_now()
         case_number = safe_component(case_number)
         sighting_number = safe_component(sighting_number)
@@ -395,6 +402,11 @@ class CaseStore:
                     "UPDATE cases SET next_sighting_sequence=MAX(next_sighting_sequence, ?) WHERE id=?",
                     (next_sequence, case_id),
                 )
+            existing = connection.execute("SELECT id, scan_id FROM media WHERE case_id=? AND sighting_number=?", (case_id, sighting_number)).fetchone()
+            if existing:
+                if existing["scan_id"] != result_dir.name:
+                    raise ValueError("Diese Sichtung wurde bereits registriert.")
+                return self.media_detail(int(existing["id"]))
             cursor = connection.execute(
                 """
                 INSERT INTO media(
@@ -429,6 +441,10 @@ class CaseStore:
                         "scan_id": result_dir.name,
                         "sighting_number": sighting_number,
                         "container_index": summary.get("container_index", {}),
+                        "scan_status": summary.get("scan_status", "unknown"),
+                        "inventory_complete": summary.get("scan_status") == "complete",
+                        "scan_error_count": summary.get("scan_error_count"),
+                        "affected_partitions": summary.get("scan_affected_partitions", []),
                     }, ensure_ascii=False),
                 ),
             )
@@ -447,6 +463,8 @@ class CaseStore:
         operator: str,
         evidence_number: str | None = None,
         specialist_name: str | None = None,
+        quality_acknowledged: bool = False,
+        quality_status: str | None = None,
     ) -> dict[str, Any]:
         if decision not in DECISIONS - {"open"}:
             raise ValueError("Unbekannter Entscheidungsstatus.")
@@ -467,13 +485,17 @@ class CaseStore:
         now = utc_now()
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT media.id, media.case_id, media.device_path, cases.case_number FROM media "
+                "SELECT media.id, media.case_id, media.device_path, media.result_path, media.scan_id, cases.case_number FROM media "
                 "JOIN cases ON cases.id=media.case_id WHERE media.id=?",
                 (media_id,),
             ).fetchone()
             if row is None:
                 raise KeyError("Medienakte nicht gefunden.")
             is_phone = str(row["device_path"]).startswith(("iphone:", "android:"))
+            quality = _scan_summary(self.root / str(row["result_path"]))
+            requires_ack = not is_phone and decision == "not_selected" and quality.get("scan_status") != "complete"
+            if requires_ack and (quality_acknowledged is not True or quality_status != quality.get("scan_status") or not reason_note.strip()):
+                raise ValueError("Sichtung nicht vollständig: Nicht sichern erfordert eine ausdrückliche Bestätigung des aktuellen Qualitätsstatus und eine sachliche Begründung.")
             if decision.startswith("specialist_") and not is_phone:
                 raise ValueError("Die Fachpersonen-Dokumentation ist nur für Telefone vorgesehen.")
             if decision in {"secure", "not_selected"} and is_phone:
@@ -498,6 +520,10 @@ class CaseStore:
                             "reason_code": reason_code,
                             "reason_note": reason_note.strip()[:1000],
                             "specialist_name": specialist or None,
+                            "scan_status": quality.get("scan_status", "unknown"),
+                            "scan_id": row["scan_id"],
+                            "quality_acknowledged": requires_ack and quality_acknowledged is True,
+                            "scan_error_count": quality.get("scan_error_count"),
                         },
                         ensure_ascii=False,
                     ),
@@ -520,7 +546,10 @@ class CaseStore:
             return None
         result_dir = self.root / str(row["result_path"])
         summary = _scan_summary(result_dir)
-        hits_data = json.loads((result_dir / "hits.json").read_text(encoding="utf-8"))
+        try:
+            hits_data = json.loads((result_dir / "hits.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            hits_data = {}
         device: dict[str, Any] = {}
         try:
             stored_device = json.loads((result_dir / "device.json").read_text(encoding="utf-8"))
@@ -953,7 +982,10 @@ class CaseStore:
             ).fetchall()
         case_dict = dict(case)
         case_dict["period_timezone_reproducible"] = optional_bool(case_dict.get("period_timezone_reproducible"))
-        return {"case": case_dict, "media": [self._media_dict(row) for row in rows], "archive": self._archive_info(str(case["case_number"]))}
+        with self._connect() as connection:
+            audit = connection.execute("SELECT * FROM audit_events WHERE case_id=? ORDER BY id", (int(case["id"]),)).fetchall()
+        return {"case": case_dict, "media": [self._media_dict(row) for row in rows],
+                "scan_attempts": scan_attempts(audit, rows), "archive": self._archive_info(str(case["case_number"]))}
 
     def _media_dict(self, row: sqlite3.Row) -> dict[str, Any]:
         keys = {
@@ -967,6 +999,10 @@ class CaseStore:
         result = {key: row[key] for key in keys if key in row.keys()}
         if "period_timezone_reproducible" in result:
             result["period_timezone_reproducible"] = optional_bool(result["period_timezone_reproducible"])
+        quality = _scan_summary(self.root / str(row["result_path"])) if "result_path" in row.keys() else {"scan_status": "unknown"}
+        result.update(quality_fields(quality))
+        if quality.get("scan_inventory_present") is False:
+            result.update(file_count=None, directory_count=None, keyword_matches=None)
         return result
 
     def refresh_exports(self, case_number: str) -> None:
@@ -989,6 +1025,12 @@ class CaseStore:
                 "WHERE case_id=? ORDER BY id",
                 (int(case["id"]),),
             ).fetchall()
+        media = [{**dict(row), **quality_fields(_scan_summary(self.root / str(row["result_path"])))} for row in media]
+        for row in media:
+            if row.get("scan_inventory_present") is False:
+                row.update(file_count=None, directory_count=None, keyword_matches=None)
+        attempts = scan_attempts(audit, media)
+        export_media = sorted([*media, *attempts], key=lambda row: row["sighting_number"])
         (case_dir / "case.json").write_text(
             json.dumps({"case_number": case_number, "created_at": case["created_at"], "updated_at": case["updated_at"], "media_count": len(media),
                         "case_period": ({"date_from": case["date_from"], "date_to": case["date_to"], "timezone": case["period_timezone"],
@@ -1001,12 +1043,13 @@ class CaseStore:
             "file_count", "directory_count", "keyword_matches", "duration_seconds", "decision",
             "reason_code", "reason_note", "decision_operator", "decided_at", "specialist_name",
             "period_date_from", "period_date_to", "period_timezone", "period_file_count",
+            "scan_status", "scan_quality_label", "scan_error_count", "scan_affected_partitions", "scan_inventory_present",
         ]
         with (case_dir / "media-register.csv").open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
-            for row in media:
-                writer.writerow({field: row[field] for field in fields})
+            for row in export_media:
+                writer.writerow({field: row.get(field) for field in fields})
         with (case_dir / "audit.log").open("w", encoding="utf-8") as handle:
             for event in audit:
                 handle.write(json.dumps({**dict(event), "details": json.loads(event["details_json"])}, ensure_ascii=False) + "\n")
@@ -1021,16 +1064,17 @@ class CaseStore:
             f"Fallzeitzone: {case['period_timezone'] or '—'}" + (" (Systemlokalzeit, keine eindeutige IANA-Zone)" if optional_bool(case["period_timezone_reproducible"]) is False else ""),
             "",
         ]
-        for row in media:
+        for row in export_media:
             is_phone = str(row["device_path"]).startswith(("android:", "iphone:"))
-            try:
-                quality = _scan_summary(self.root / str(row["result_path"]))
-            except (OSError, ValueError):
-                quality = {"scan_status": "failed", "scan_warnings": [{"error": "Scanunterlagen fehlen oder sind nicht lesbar."}]}
-            if quality.get("scan_status") in {"partial", "failed"}:
-                report_lines.append(f"ACHTUNG {row['sighting_number']}: Sichtung unvollständig oder fehlgeschlagen. "
-                                    "0 Dateien belegt keinen leeren Datenträger.")
-                report_lines.extend(str(item["error"]) for item in quality.get("scan_warnings", []))
+            quality = row
+            report_lines.append(f"{row['sighting_number']}: {row.get('scan_quality_label', LABELS['unknown'])}")
+            report_lines.append(f"Inventarisierungsfehler: {row.get('scan_error_count', 'unbekannt')} · Partitionen: {', '.join(row.get('scan_affected_partitions', [])) or 'nicht dokumentiert'}")
+            if row.get("attempt_only"):
+                report_lines.extend([NO_INVENTORY, row.get("scan_quality_message", ""), ""])
+                continue
+            if quality.get("scan_status") != "complete" and not is_phone:
+                report_lines.append("Sichtung unvollständig oder fehlgeschlagen. 0 Dateien belegt keinen leeren Datenträger.")
+                report_lines.append(INCOMPLETE_NOTICE)
             period_label = (f"{row['period_date_from']} – {row['period_date_to']}" if row["period_date_from"] and row["period_date_to"] else "nicht festgelegt")
             report_lines.extend(
                 [
@@ -1040,7 +1084,7 @@ class CaseStore:
                     f"Seriennummer: {row['serial'] or 'nicht gemeldet'}",
                     f"Größe (Byte): {row['size']}",
                     f"Scan: {row['scanned_at']} · {row['duration_seconds']} s",
-                    f"Dateien / Ordner / Treffer: {row['file_count']} / {row['directory_count']} / {row['keyword_matches']}",
+                    (f"Dateien / Ordner / Treffer: {row['file_count']} / {row['directory_count']} / {row['keyword_matches']}" if row.get("scan_inventory_present") is not False else NO_INVENTORY),
                     f"Fallzeitraum beim Scan: {period_label}",
                     f"Zeitzone: {row['period_timezone'] or '—'}",
                     f"Dateien im Zeitraum: {'nicht anwendbar' if is_phone else (row['period_file_count'] if row['period_file_count'] is not None else 'nicht ausgewertet')}",
@@ -1070,7 +1114,7 @@ class CaseStore:
         build_case_pdf(
             case_dir / "case-report.pdf",
             {**dict(case), "period_timezone_reproducible": optional_bool(case["period_timezone_reproducible"])},
-            [{**dict(row), "period_timezone_reproducible": optional_bool(row["period_timezone_reproducible"])} for row in media],
+            [{**dict(row), "period_timezone_reproducible": optional_bool(row.get("period_timezone_reproducible"))} for row in export_media],
             [dict(event) for event in audit],
             self.root,
         )

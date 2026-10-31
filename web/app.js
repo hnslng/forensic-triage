@@ -20,6 +20,8 @@ let batchTotal = 0;
 let batchDone = 0;
 let autoStartTimer = null;
 let currentCaseMedia = [];
+let currentCaseAttempts = [];
+let currentQuality = "unknown";
 let currentMediaId = null;
 let currentDecision = null;
 let currentIsPhone = false;
@@ -1282,24 +1284,33 @@ async function loadProfiles(preferredIds = activeProfileIds) {
 }
 
 function renderResults(summary, hits = {}) {
-  const incomplete = ["partial", "failed"].includes(summary.scan_status);
-  $("resultScanStatus").textContent = summary.scan_status === "failed" ? "SICHTUNG FEHLGESCHLAGEN"
-    : incomplete ? "SICHTUNG UNVOLLSTÄNDIG" : "SCAN ABGESCHLOSSEN";
+  const status = summary.scan_status || "unknown";
+  const incomplete = status !== "complete";
+  $("resultScanStatus").textContent = qualityLabel(status);
+  $("evidenceScanQuality").textContent = qualityLabel(status);
+  $("evidenceScanErrors").textContent = summary.scan_error_count == null ? "NICHT DOKUMENTIERT" : `${summary.scan_error_count} · PARTITIONEN ${(summary.scan_affected_partitions || []).join(", ") || "—"}`;
   const qualityWarning = $("scanQualityWarning");
   qualityWarning.hidden = !incomplete;
   qualityWarning.textContent = incomplete
-    ? "ACHTUNG: Nicht alle Bereiche konnten gelesen werden. Zahlen und Treffer sind unvollständig; 0 Dateien belegt keinen leeren Datenträger. "
-      + (summary.scan_warnings || []).map(item => item.error).join(" · ") : "";
+    ? "ACHTUNG: Nicht alle Bereiche sind verlässlich erfasst. Zahlen und Treffer können unvollständig sein; 0 Dateien belegt keinen leeren Datenträger. "
+      + `${summary.scan_error_count ?? "Unbekannte Anzahl"} Inventarisierungsfehler. `
+      + (summary.scan_quality_action || "Verbindung prüfen und eine erneute Sichtung in Betracht ziehen.") : "";
+  $("scanQualityDetails").hidden = !incomplete;
+  $("scanQualityExamples").textContent = (summary.scan_warnings || []).map(item =>
+    `Partition ${item.partition_slot || "—"}: ${item.error || "Nicht vollständig erfasst"}\n` +
+    (item.read_errors || []).map(error => `${error.access || "Zugriff"} · ${error.path || "."} · ${error.errno ?? "—"}: ${error.error || "Lesefehler"}`).join("\n") +
+    (item.read_errors_truncated ? "\nWeitere Fehlerdetails ausgelassen; Gesamtzähler umfasst alle Fehler." : "")
+  ).join("\n");
   const catalog = summary.filetype_catalog;
   $("archiveFiletypeCatalog").textContent = catalog
     ? `V${catalog.version} · SHA-256 ${catalog.sha256} · filetype-catalog.json`
     : "Bei dieser älteren Sichtung noch nicht separat gespeichert";
   $("resultEvidence").textContent = summary.evidence || "SICHTUNG";
   $("resultDuration").textContent = `${Number(summary.duration_seconds || 0).toLocaleString("de-AT")} s`;
-  $("fileCount").textContent = Number(summary.file_count || 0).toLocaleString("de-AT");
-  $("directoryCount").textContent = Number(summary.directory_count || 0).toLocaleString("de-AT");
-  $("keywordMatches").textContent = Number(summary.keyword_matches || 0).toLocaleString("de-AT");
-  $("totalBytes").textContent = formatBytes(summary.total_file_bytes);
+  $("fileCount").textContent = summary.scan_inventory_present === false ? "UNBEKANNT" : Number(summary.file_count || 0).toLocaleString("de-AT");
+  $("directoryCount").textContent = summary.scan_inventory_present === false ? "UNBEKANNT" : Number(summary.directory_count || 0).toLocaleString("de-AT");
+  $("keywordMatches").textContent = summary.scan_inventory_present === false ? "UNBEKANNT" : Number(summary.keyword_matches || 0).toLocaleString("de-AT");
+  $("totalBytes").textContent = summary.scan_inventory_present === false ? "UNBEKANNT" : formatBytes(summary.total_file_bytes);
   const largest = (summary.largest_files || [])[0];
   const largestSummary = $("largestFileSummary");
   largestSummary.hidden = !largest;
@@ -1596,9 +1607,12 @@ function updateDecisionFields() {
   $("decisionReasonWrap").hidden = currentIsPhone || secure;
   $("decisionNoteWrap").hidden = currentIsPhone || secure;
   $("decisionHelp").hidden = !currentIsPhone && secure;
+  $("qualityConfirmation").hidden = currentIsPhone || currentDecision !== "not_selected" || currentQuality === "complete";
 }
 
 function renderRecord(record) {
+  currentQuality = record.summary?.scan_status || record.media?.scan_status || "unknown";
+  $("qualityAcknowledged").checked = false;
   renderResults(record.summary, record.hits);
   const phone = record.phone || record.iphone || record.android || null;
   const isPhone = Boolean(phone);
@@ -1643,6 +1657,20 @@ function renderRecord(record) {
   }
 }
 
+function qualityLabel(status) {
+  return ({complete: "SCAN VOLLSTÄNDIG", partial: "SICHTUNG UNVOLLSTÄNDIG", failed: "SICHTUNG FEHLGESCHLAGEN", unknown: "SCANQUALITÄT NICHT BEWERTBAR"})[status] || "SCANQUALITÄT NICHT BEWERTBAR";
+}
+
+function qualityTag(medium) {
+  if (String(medium.device_path || "").startsWith("iphone:") || String(medium.device_path || "").startsWith("android:")) return "";
+  const status = medium.scan_status || "unknown";
+  return `<span class="scan-quality-tag quality-${escapeHtml(status)}">${qualityLabel(status)}${medium.scan_error_count ? ` · ${Number(medium.scan_error_count)} FEHLER` : ""}</span>`;
+}
+
+function attemptCard(attempt) {
+  return `<article class="media-card scan-attempt">${qualityTag(attempt)}<strong>${escapeHtml(attempt.sighting_number)}</strong><small>${escapeHtml([attempt.vendor, attempt.model].filter(Boolean).join(" ") || "MEDIUM NICHT NÄHER DOKUMENTIERT")}</small><small>${escapeHtml(attempt.scanned_at)}</small><p>Kein auswertbares Dateiinventar erstellt.</p><details><summary>FEHLERDETAILS</summary><p>${escapeHtml(attempt.scan_quality_message || "Abschluss nicht dokumentiert.")}</p><p>${escapeHtml(attempt.scan_quality_action || "Verbindung prüfen.")}</p><pre>${escapeHtml(attempt.error_details || "Keine weiteren Details gespeichert.")}</pre></details></article>`;
+}
+
 function statusTag(decision) {
   return `<span class="status-tag status-${decision}">${decisionLabels[decision] || decisionLabels.open}</span>`;
 }
@@ -1663,6 +1691,7 @@ async function loadCase(caseNumber) {
   const revision = ++caseLoadRevision;
   if (!caseNumber) {
     currentCaseMedia = [];
+    currentCaseAttempts = [];
     renderMediaCards([]);
     $("casePanel").hidden = true;
     setCaseDownloads();
@@ -1674,6 +1703,7 @@ async function loadCase(caseNumber) {
     if (revision !== caseLoadRevision) return;
     if (response.status === 404) {
       currentCaseMedia = [];
+      currentCaseAttempts = [];
       renderMediaCards([]);
       $("casePanel").hidden = true;
       setCaseDownloads();
@@ -1681,6 +1711,7 @@ async function loadCase(caseNumber) {
     }
     if (!response.ok) throw new Error(data.error || "Fallakte nicht verfügbar");
     currentCaseMedia = sortedSightings(data.media || []);
+    currentCaseAttempts = data.scan_attempts || [];
     if ($("caseNumber").value.trim().toUpperCase() === data.case.case_number) {
       $("dateFrom").value = data.case.date_from || "";
       $("dateTo").value = data.case.date_to || "";
@@ -1696,8 +1727,8 @@ async function loadCase(caseNumber) {
     $("casePanelNumber").textContent = data.case.case_number;
     setCaseDownloads(data.case.case_number);
     $("caseMedia").innerHTML = currentCaseMedia.map((medium) => `
-      <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${Number(medium.file_count).toLocaleString("de-AT")}</td><td>${Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${statusTag(medium.decision)}</td></tr>
-    `).join("");
+      <tr data-media-id="${Number(medium.id)}"><td>${escapeHtml(medium.sighting_number)}</td><td>${escapeHtml(medium.evidence_number || "—")}</td><td>${escapeHtml([medium.vendor, medium.model].filter(Boolean).join(" ") || medium.device_path)}</td><td>${medium.file_count == null ? "UNBEKANNT" : Number(medium.file_count).toLocaleString("de-AT")}</td><td>${medium.keyword_matches == null ? "UNBEKANNT" : Number(medium.keyword_matches).toLocaleString("de-AT")}</td><td>${qualityTag(medium)}${statusTag(medium.decision)}</td></tr>
+    `).join("") + currentCaseAttempts.map(attempt => `<tr class="scan-attempt-row"><td>${escapeHtml(attempt.sighting_number)}</td><td>—</td><td>${escapeHtml(attempt.model || "MEDIUM UNBEKANNT")}<br>${escapeHtml(attempt.scanned_at)}</td><td colspan="2">Kein auswertbares Dateiinventar erstellt.</td><td>${qualityTag(attempt)}<details><summary>FEHLERDETAILS</summary><p>${escapeHtml(attempt.scan_quality_message)}</p><pre>${escapeHtml(attempt.error_details || "Keine Details gespeichert")}</pre></details></td></tr>`).join("");
   } catch (error) {
     if (revision !== caseLoadRevision) return;
     $("decisionMessage").textContent = error.message;
@@ -1839,7 +1870,8 @@ function renderMediaCards(media) {
       <span class="media-card-top">${evidenceLabel}${statusTag(medium.decision)}</span>
       <strong>${escapeHtml(medium.sighting_number)}</strong>
       <small>${escapeHtml(model)}</small>
-      <span class="media-card-metrics"><i>${Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
+      ${qualityTag(medium)}
+      <span class="media-card-metrics"><i>${medium.file_count == null ? "UNBEKANNT" : Number(medium.file_count).toLocaleString("de-AT")} DATEIEN</i><i>${medium.keyword_matches == null ? "UNBEKANNT" : Number(medium.keyword_matches).toLocaleString("de-AT")} TREFFER</i></span>
       <span class="connection-badge ${connected && !deviceDiscoveryError ? "connected" : "disconnected"}">${deviceDiscoveryError ? "STATUS UNBEKANNT" : connected ? "● ONLINE" : "○ OFFLINE"}</span>
       <em>DETAILS ÖFFNEN →</em>
     </button>${connected && !isIphone ? `<button class="media-eject" type="button" data-eject-device="${escapeHtml(medium.device_path)}" ${deviceDiscoveryError ? "disabled" : ""}>${ejectLabel}</button>` : ""}</div>`;
@@ -1849,8 +1881,8 @@ function renderMediaCards(media) {
   const pendingOffline = offlineMedia.filter(decisionIsOpen);
   const offlineHistory = offlineMedia.filter((medium) => !decisionIsOpen(medium));
   $("mediaCards").innerHTML = onlineMedia.map((medium) => renderCard(medium, true)).join("");
-  $("offlineMediaCards").innerHTML = offlineHistory.map((medium) => renderCard(medium, false)).join("");
-  $("offlineMediaPanel").hidden = offlineHistory.length === 0;
+  $("offlineMediaCards").innerHTML = offlineHistory.map((medium) => renderCard(medium, false)).join("") + currentCaseAttempts.map(attemptCard).join("");
+  $("offlineMediaPanel").hidden = offlineHistory.length === 0 && currentCaseAttempts.length === 0;
   $("offlineMediaCount").textContent = `${offlineHistory.length} ${offlineHistory.length === 1 ? "MEDIUM" : "MEDIEN"}`;
   renderPendingDecisionState(pendingOffline);
   updateDashboardState();
@@ -2070,7 +2102,8 @@ function updateDecisionAvailability() {
   const hasReason = $("decisionReason").value.length > 0;
   const hasEvidence = $("decisionEvidence").value.trim().length > 0;
   const hasSpecialist = $("decisionSpecialist").value.trim().length > 0;
-  $("saveDecision").disabled = !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || (currentDecision === "specialist_consulted" && !hasSpecialist) || !activeOperator;
+  const qualityConfirmationRequired = !currentIsPhone && reasonRequired && currentQuality !== "complete";
+  $("saveDecision").disabled = (qualityConfirmationRequired && (!$("qualityAcknowledged").checked || !$("decisionNote").value.trim())) || !currentMediaId || !currentDecision || (reasonRequired && !hasReason) || (currentDecision === "secure" && !hasEvidence) || (currentDecision === "specialist_consulted" && !hasSpecialist) || !activeOperator;
 }
 
 function renderCaseHistory(cases) {
@@ -2105,6 +2138,7 @@ async function syncCaseSessionFromServer(session) {
     activeCasePeriod = null;
     periodFieldsCase = null;
     currentCaseMedia = [];
+    currentCaseAttempts = [];
     currentMediaId = null;
     currentDecision = null;
     inventoryTreeMediaId = null;
@@ -2227,7 +2261,9 @@ async function runScan(devicePath, standalone = true) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Scan fehlgeschlagen");
     if (sameScanDevice()) {
-      deviceStates.set(devicePath, "complete");
+      const quarantined = data.summary?.scan_cleanup_failed || data.summary?.scan_interrupted;
+      deviceStates.set(devicePath, quarantined ? "timeout" : "complete");
+      if (quarantined) quarantinedPaths.add(devicePath);
       deviceErrors.delete(devicePath);
     }
     await loadCase(data.media.case_number);
@@ -2239,6 +2275,7 @@ async function runScan(devicePath, standalone = true) {
       deviceStates.set(devicePath, error.message.includes("Zeitlimit") ? "timeout" : "error");
     }
     setSystemState("SCAN FEHLGESCHLAGEN", "error");
+    await loadCase(activeCaseNumber);
   } finally {
     runningPaths.delete(devicePath);
     batchDone += 1;
@@ -2285,6 +2322,8 @@ async function saveDecision() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         decision: currentDecision,
+        quality_acknowledged: !currentIsPhone && currentDecision === "not_selected" && currentQuality !== "complete" && $("qualityAcknowledged").checked,
+        quality_status: currentQuality,
         evidence_number: currentDecision === "secure" ? $("decisionEvidence").value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "-").slice(0, 80) : null,
         reason_code: currentDecision === "secure" ? null : ($("decisionReason").value || null),
         reason_note: currentDecision === "secure" ? "" : $("decisionNote").value,
@@ -2590,6 +2629,7 @@ async function startCaseSession() {
     $("caseNumber").value = activeCaseNumber;
     currentMediaId = null;
     currentCaseMedia = [];
+    currentCaseAttempts = [];
     caseHistorySignature = "";
     await loadCase(activeCaseNumber);
     resetDeviceStatesForCase();
@@ -2620,6 +2660,7 @@ async function stopCaseSession({ keepUpdateOpen = false } = {}) {
   activeCasePeriod = null;
   periodFieldsCase = null;
   currentCaseMedia = [];
+  currentCaseAttempts = [];
   currentMediaId = null;
   currentDecision = null;
   inventoryTreeMediaId = null;
@@ -3422,6 +3463,8 @@ $("caseMedia").addEventListener("click", (event) => {
   if (row) openMedia(Number(row.dataset.mediaId));
 });
 $("decisionReason").addEventListener("change", updateDecisionAvailability);
+$("qualityAcknowledged").addEventListener("change", updateDecisionAvailability);
+$("decisionNote").addEventListener("input", updateDecisionAvailability);
 $("updateCheck").addEventListener("click", () => requestUpdate("check"));
 $("updateInstall").addEventListener("click", () => requestUpdate("install"));
 $("offlineUpdateFile").addEventListener("change", () => {
@@ -3436,6 +3479,7 @@ $("decisionSpecialist").addEventListener("input", updateDecisionAvailability);
 for (const button of document.querySelectorAll("[data-decision]")) {
   button.addEventListener("click", () => {
     currentDecision = button.dataset.decision;
+    $("qualityAcknowledged").checked = false;
     if (currentDecision !== "secure") $("decisionEvidence").value = "";
     if (currentDecision !== "specialist_consulted") $("decisionSpecialist").value = "";
     updateDecisionFields();
