@@ -2,7 +2,9 @@
 
 Stand: **22. Oktober 2026 · v0.2.0-alpha.84**, Release-Commit `c171badef3dfc2ffd242313f9c9f11c1406ccf37`.
 
-**Aktueller Entwicklungsstand: 31.10.2026, v0.2.0-alpha.85.** Phase 1 ergänzt Scanqualität, begrenzte Fehlerdetails bei vollständigen Zählern, Erhalt bei Unmount-Fehler, sichtbare Fehlversuche und serverseitige Bestätigung bei Nichtauswahl. [Prüfstand](validation-2026-10-31-alpha85.md), [Bedeutung und Grenzen](scan-quality.md). Keine automatische Pi-Installation; Hardwareabnahme offen. Die folgenden Alpha-84-Angaben bleiben historischer Bezug.
+**Aktueller Entwicklungsstand: 01.11.2026, v0.2.0-alpha.86.** Phase 2 ergänzt [versionierte Metadatenauswertungen](metadata-evaluations.md), Zeitraum-/B/M/C/A-Transparenz und kombinierbare Explorerfilter. [Prüfnachweis Alpha 86](validation-2026-11-01-alpha86.md). Keine Alpha-86-Installation oder Hardwareprüfung am Pi durchgeführt.
+
+**Historischer Entwicklungsstand: 31.10.2026, v0.2.0-alpha.85.** Phase 1 ergänzt Scanqualität, begrenzte Fehlerdetails bei vollständigen Zählern, Erhalt bei Unmount-Fehler, sichtbare Fehlversuche und serverseitige Bestätigung bei Nichtauswahl. [Prüfstand](validation-2026-10-31-alpha85.md), [Bedeutung und Grenzen](scan-quality.md). Keine automatische Pi-Installation; Hardwareabnahme offen. Die folgenden Alpha-84-Angaben bleiben historischer Bezug.
 
 
 - **Alpha 83:** getrennte Zuordnung schnell gewechselter Sticks am wiederverwendeten Gerätepfad, einschließlich gespeicherter Verbindungskennung und Schutz vor verspäteten Scanantworten.

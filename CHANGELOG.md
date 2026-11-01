@@ -2,6 +2,15 @@
 
 Das Format orientiert sich an „Keep a Changelog". Das Projekt verwendet semantische Versionsnummern; Alpha-Versionen sind nicht für ungeprüften Einsatz bestimmt.
 
+## [0.2.0-alpha.86] – 2026-11-01
+
+- Versionierte nachträgliche Zeitraumauswertungen ausschließlich aus gespeicherten Metadaten, mit ausdrücklicher IANA-Zeitzone, Bearbeiter, Quellprüfsummen und Audit. Atomare Veröffentlichung ohne Ersetzen früherer Versionen; Originalscanartefakte und historische Scanrecords bleiben erhalten.
+- B/M/C/A-Transparenz mit überlappenden und exklusiven Beiträgen, unbekannter Zuordnung, fehlenden/ungültigen Werten, Null-Epochen und Werten nach dem Scan. Lokale inklusive Kalendertage und vorhandene ODER-Regel bleiben maßgeblich.
+- Historische Stichwortzuordnungen getrennt von eindeutig zugeordneten Originaldateien, virtuellen Archivnamen und mehrdeutigen Partitionspfaden. Aktive damalige Begriffe einschließlich Nulltreffern; keine Anwendung heutiger Profile auf alte Sichtungen.
+- Explorer mit kombinierbaren Auswertungs-, Zeitraum-, Kategorie-, Stichwort-, Quellen- und Bestandsfiltern, stabiler Pagination und Sortierung; veraltete Antworten bei Medien-/Auswertungswechseln werden verworfen. Robuste Datumsprüfung mit bewusster Bestätigung ungewöhnlicher Jahre.
+- Getrennte Nachweise in Text/PDF, Audit, Prüfsummenmanifest und Export; begrenzte SQLite-Auswertung ohne neue Laufzeitabhängigkeit. Host-/Origin-/CSRF-Schutz für die neuen Metadatenrouten; verbleibende Legacy-Lücken ausdrücklich dokumentiert.
+- Synthetische Referenz-, Sicherheits-, Browser- und Responsiveprüfungen; Browserregressionen zusätzlich in GitHub-CI. Keine Geräteaktionen, Inhaltsvorschau oder Änderungen am FAST-/TSK-Scanner und an Telefonabläufen. Pi-Installation und Alpha-86-Hardwareabnahme stehen aus.
+
 ## [0.2.0-alpha.85] – 2026-10-31
 
 - Einheitliche Scanqualität `complete`/`partial`/`failed`/`unknown` in Kacheln, Register, Ergebnissen, Nachweisen, CSV, Text und PDF. Null erfasste Dateien nach Fehlern sind kein Leerbefund; historische Unterlagen werden nur lesend bewertet.

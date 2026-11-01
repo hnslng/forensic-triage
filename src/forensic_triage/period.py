@@ -154,3 +154,34 @@ def period_snapshot(date_from: str | None, date_to: str | None, timezone_info: d
     info = timezone_info or period_timezone_info()
     normalized_info = {**info, "timezone_reproducible": optional_bool(info.get("timezone_reproducible"))}
     return {"date_from": start, "date_to": end, **normalized_info, "inclusive": True}
+
+
+def period_input_warnings(date_from: str | None, date_to: str | None, *, current_year: int | None = None) -> list[str]:
+    """Plausibility warnings, never an arbitrary ban on legitimate historical dates."""
+    start, end = validate_period(date_from, date_to)
+    if not start:
+        return []
+    year = current_year if current_year is not None else date.today().year
+    warnings = []
+    if int(start[:4]) < 1900 or int(end[:4]) < 1900:
+        warnings.append("Ungewöhnlich frühes Jahr (vor 1900). Bitte Eingabe bewusst bestätigen.")
+    if int(start[:4]) > year + 1 or int(end[:4]) > year + 1:
+        warnings.append("Zeitraum liegt ungewöhnlich weit in der Zukunft. Bitte Eingabe bewusst bestätigen.")
+    return warnings
+
+
+def validate_period_submission(date_from: str | None, date_to: str | None, acknowledged: bool = False):
+    period = validate_period(date_from, date_to)
+    if period_input_warnings(*period) and acknowledged is not True:
+        raise ValueError("Ungewöhnlicher Zeitraum: ausdrückliche Datumsbestätigung erforderlich.")
+    return period
+
+
+def require_iana_timezone(name: str) -> str:
+    if not isinstance(name, str) or not name or len(name) > 100 or name == "local":
+        raise ValueError("Eine ausdrücklich gewählte gültige IANA-Zeitzone ist erforderlich.")
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError) as exc:
+        raise ValueError("Ungültige IANA-Zeitzone.") from exc
+    return name

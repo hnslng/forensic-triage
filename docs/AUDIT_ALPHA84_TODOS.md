@@ -1,5 +1,7 @@
 # Gegenprüfung des Alpha-82-Berichts und Arbeitsliste für Alpha 84
 
+**Ergänzung 01.11.2026 / Alpha 86:** W1/W2 sowie Teile der Zeitzonentransparenz und Browser-CI werden durch die [nachträgliche Metadatenauswertung](metadata-evaluations.md) erweitert; Softwareprüfstand in [Alpha-86-Nachweis](validation-2026-11-01-alpha86.md). B/M/C/A und gespeicherte Profile bleiben historisch nachvollziehbar. Host-/Origin-/CSRF-Schutz gilt für die neuen Routen und erweiterten Dateienabfragen, nicht pauschal für Legacy-Routen: K4/K5 bleiben offen. Native Safari- und Pi-Dateisystemabnahme sind gesondert zu bewerten. Die folgenden alten Checkboxen bleiben historischer Auditstand; diese Ergänzung behauptet keinen pauschalen Abschluss.
+
 Stand: **22. Oktober 2026**. Grundlage: der vom Projektinhaber übergebene Prüfbericht zu Alpha 82, gegengeprüft am lokalen Alpha-84-Code (`v0.2.0-alpha.84`, Commit `c171badef3dfc2ffd242313f9c9f11c1406ccf37`) samt nachfolgender Dokumentation. Keine Programm-, Installer- oder Systemänderung bei dieser Gegenprüfung. Keine Server-/GitHub-Zugriffe, keine Prüfung oder Änderung am FCA-Projekt.
 
 ## Umfang und Aussagegrenzen

@@ -12,6 +12,12 @@ Der Webdienst hat bislang keine zentrale Host-/Origin-Prüfung und keinen CSRF-S
 
 Vorhandene Sperren für aktive Fälle, Scans und Updates sowie die Signaturprüfung von Offline-Paketen müssen erhalten bleiben. Bei zusätzlicher Content-Type-Prüfung benötigt der Offline-Upload weiterhin seinen Binärtyp; eine pauschale JSON-Pflicht wäre falsch. Maßnahmen und Abnahmetests: [Gegenprüfung K4/K5](docs/AUDIT_ALPHA84_TODOS.md).
 
+## Ergänzung Alpha 86: abgegrenzte Metadatenrouten
+
+Neue Zeitraumauswertungsrouten und erweiterte Dateiabfragen prüfen Host und Browser-Origin; neue POSTs verlangen JSON und einen zufälligen pro Dienststart gültigen CSRF-Header. Fall-/Medienzuordnung, Kennungen, explizite IANA-Zone, private Pfade, Quellen- und Versionsprüfsummen werden serverseitig geprüft. Fremde Origin-/Host-/CSRF-Anfragen werden vor einer Mutation abgewiesen. Versionsveröffentlichung ersetzt keine bestehende Datei; Staging, Symlinks und nicht registrierte Crash-Waisen sind vom Export ausgeschlossen.
+
+Dies ist keine Benutzeranmeldung und kein globaler Sicherheitsabschluss. Die alten Scan-, Power-, Update-, Lösch- und sonstigen Export-/Leserouten behalten ihren gesonderten Auditbedarf. Die oben beschriebenen Legacy-Lücken bleiben bestehen; Alpha 86 ist keine uneingeschränkte Einsatzfreigabe. Gegen einen Angreifer mit Schreibzugriff auf Daten und Audit sind SHA-256-Nachweise allein kein Manipulationsschutz. Einzelheiten: [Datenmodell und API-Grenze](docs/metadata-evaluations.md).
+
 ## Sicherheitsprobleme melden
 
 - Keine Schwachstellendetails, echten Falldaten, Zugangsdaten oder Gerätekennungen in öffentliche Issues schreiben.

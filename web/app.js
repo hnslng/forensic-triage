@@ -1,4 +1,10 @@
 const $ = (id) => document.getElementById(id);
+let analysisData = null;
+let analysisRecord = null;
+let selectedEvaluation = "";
+let analysisRevision = 0;
+let evaluationContext = null;
+let evaluationContextPromise = null;
 const SVG_ICONS = {
   settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   power: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`,
@@ -1655,6 +1661,7 @@ function renderRecord(record) {
     $("inventoryPanel").hidden = isPhone;
     if (!isPhone && $("inventoryPanel").open) loadInventoryTree();
   }
+  beginAnalysisRecord(record);
 }
 
 function qualityLabel(status) {
@@ -1930,7 +1937,8 @@ function updateCaseSessionUi(message = "") {
   const ready = openRequirements.length === 0;
   const dateFrom = $("dateFrom").value || "";
   const dateTo = $("dateTo").value || "";
-  const periodError = dateFrom && !dateTo ? "ZEITRAUM BIS FEHLT" : !dateFrom && dateTo ? "ZEITRAUM VON FEHLT" : dateFrom && dateTo && dateFrom > dateTo ? "ZEITRAUM VON LIEGT NACH BIS" : "";
+  const detailedDateError = dateFieldError('dateFrom','dateTo') || validateDateRange(dateFrom, dateTo).error;
+  const periodError = (dateFrom && !dateTo ? "ZEITRAUM BIS FEHLT" : !dateFrom && dateTo ? "ZEITRAUM VON FEHLT" : dateFrom && dateTo && dateFrom > dateTo ? "ZEITRAUM VON LIEGT NACH BIS" : "") || detailedDateError;
   const samePeriod = (activeCasePeriod?.date_from || "") === dateFrom && (activeCasePeriod?.date_to || "") === dateTo;
   const sameIdentity = activeCaseNumber === draftCase && activeOperator === draftOperator;
   const sameSession = sameIdentity && samePeriod;
@@ -2394,6 +2402,8 @@ function treeEntriesHtml(entries, containerPath = "") {
 function inventoryRowsHtml(files) {
   return files.map((file) => {
     const path = escapeHtml(file.path);
+    const identity = analysisData && file.original_file ? `<small class="inventory-entry-note">${file.partition_slot ? 'PARTITION '+escapeHtml(file.partition_slot) : 'PARTITION NICHT DOKUMENTIERT'}</small>` : '';
+    const terms = analysisData && file.keyword_terms?.length ? `<small class="inventory-entry-note">STICHWÖRTER: ${file.keyword_terms.map(escapeHtml).join(' · ')}</small>` : '';
     const pathCell = file.container_id
       ? `<button class="inventory-container-toggle" type="button" data-container-path="${escapeHtml(file.container_id)}" aria-expanded="false"><span>▶</span><b>${path}</b></button>`
       : path;
@@ -2405,13 +2415,14 @@ function inventoryRowsHtml(files) {
       ? `<small class="inventory-entry-note">${escapeHtml(file.match_source)}</small>` : "";
     const marker = archiveStatusMark(file);
     const statusNote = marker ? `<small class="inventory-archive-state">${marker}</small>` : "";
-    const row = `<tr${inside ? ' class="inventory-inner-file"' : ""}><td title="${path}">${pathCell}${statusNote}${note}</td><td><span class="inventory-location">${escapeHtml(location)}</span>${matchNote}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
+    const row = `<tr${inside ? ' class="inventory-inner-file"' : ""}><td title="${path}">${pathCell}${identity}${terms}${statusNote}${note}${fileTimeDetails(file)}</td><td><span class="inventory-location">${escapeHtml(location)}</span>${matchNote}</td><td>${escapeHtml(file.category)}</td><td>${escapeHtml(file.extension || "—")}</td><td>${file.size_known === false ? "—" : formatBytes(file.size)}</td></tr>`;
     if (!file.container_id) return row;
     return `${row}<tr class="inventory-container-detail" hidden><td colspan="5"><div class="tree-children"><p class="tree-loading">ARCHIVVERZEICHNIS ÖFFNEN …</p></div></td></tr>`;
   }).join("") || '<tr class="inventory-empty"><td colspan="5">KEINE PASSENDEN DATEIEN GEFUNDEN</td></tr>';
 }
 
 function clearInventoryView() {
+  resetAdvancedFilters();
   inventoryViewRevision += 1;
   inventoryTreeMediaId = null;
   inventoryListState = null;
@@ -2429,6 +2440,7 @@ function clearInventoryView() {
 }
 
 function invalidateMediaView() {
+  resetAnalysisView();
   mediaViewRevision += 1;
   caseLoadRevision += 1;
   currentMediaId = null;
@@ -2440,13 +2452,13 @@ function invalidateMediaView() {
 function beginInventoryRequest(target) {
   // Bind responses to the view incarnation, not just an ID: A → B → A must
   // also reject the first A's response. Per-target tokens keep sibling folders independent.
-  const request = { mediaId: currentMediaId, mediaRevision: mediaViewRevision, inventoryRevision: inventoryViewRevision };
+  const request = { mediaId: currentMediaId, mediaRevision: mediaViewRevision, inventoryRevision: inventoryViewRevision, analysisRevision, evaluationId: selectedEvaluation };
   inventoryRequests.set(target, request);
   return request;
 }
 
 function inventoryRequestIsCurrent(target, request) {
-  return target.isConnected && inventoryRequests.get(target) === request
+  return target.isConnected && request.analysisRevision === analysisRevision && request.evaluationId === selectedEvaluation && inventoryRequests.get(target) === request
     && currentMediaId === request.mediaId && mediaViewRevision === request.mediaRevision
     && inventoryViewRevision === request.inventoryRevision;
 }
@@ -2540,17 +2552,24 @@ async function resetInventoryView() {
   await loadInventoryTree();
 }
 
-async function loadInventory({ category = "", keyword = "", search = null, exactPath = null, archiveStatus = "", sortBy = $("inventorySort").value, offset = 0 } = {}) {
+async function loadInventory(options = {}) {
+  const values = {...(analysisData ? advancedFilters() : {}), ...options};
+  const {category = "", keyword = "", search = null, exactPath = null, archiveStatus = "", sortBy = $("inventorySort").value, offset = 0,
+    periodFilter = "", sourceFilter = "", timestampFilter = "", hitsOnly = false, originalsOnly = false} = values;
+  if (analysisData) {
+    if (options.category !== undefined) $('inventoryCategory').value = category;
+    if (options.keyword !== undefined) $('inventoryKeyword').value = keyword;
+  }
   if (!currentMediaId) return;
   const searchText = search === null ? $("inventorySearch").value.trim() : search;
-  if (!searchText && !category && !keyword && exactPath === null && !archiveStatus && sortBy === "path") {
+  if (!analysisData && !searchText && !category && !keyword && exactPath === null && !archiveStatus && sortBy === "path") {
     $("inventorySearch").focus();
     return;
   }
   if (exactPath !== null || (searchText && !category && !keyword && !archiveStatus)) clearInventoryFilterState();
   if (offset === 0) {
     inventoryViewRevision += 1;
-    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, nextOffset: 0 };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, periodFilter, sourceFilter, timestampFilter, hitsOnly, originalsOnly, nextOffset: 0 };
     $("inventoryFiles").innerHTML = '<tr><td colspan="5">FUNDSTELLEN WERDEN GELADEN …</td></tr>';
   }
   const target = $("inventoryFiles");
@@ -2575,6 +2594,16 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     if (exactPath !== null) parameters.set("exact_path", exactPath);
     if (archiveStatus) parameters.set("archive_status", archiveStatus);
     if (sortBy !== "path") parameters.set("sort_by", sortBy);
+    if (analysisData) {
+      parameters.set('analysis_view','1'); parameters.set('evaluation_id',selectedEvaluation);
+      parameters.set('sort_by',sortBy);
+      if (periodFilter) parameters.set('period_filter',periodFilter);
+      if (sourceFilter) parameters.set('source_filter',sourceFilter);
+      if (timestampFilter) parameters.set('timestamp_filter',timestampFilter);
+      if (hitsOnly) parameters.set('hits_only','1');
+      if (originalsOnly) parameters.set('originals_only','1');
+      $('inventoryFilterLabel').textContent = [selectedEvaluation ? 'NACHTRÄGLICHE AUSWERTUNG' : 'ORIGINALSCAN', category, keyword || (hitsOnly ? 'ALLE TREFFER' : ''), ({'in':'im Zeitraum','out':'außerhalb','unknown':'nicht bestimmbar'})[periodFilter], ({filename:'Dateiname',folder:'Ordnerpfad',both:'Dateiname und Ordnerpfad',virtual:'Archivpfad',ambiguous:'mehrdeutiger Pfad',path:'pfadübergreifend'})[sourceFilter], timestampGroupLabel(timestampFilter)].filter(Boolean).join(' · ');
+    }
     const response = await fetch(`/api/media/${request.mediaId}/files?${parameters}`);
     const data = await response.json();
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -2584,7 +2613,7 @@ async function loadInventory({ category = "", keyword = "", search = null, exact
     const rows = inventoryRowsHtml(data.files);
     if (offset === 0) $("inventoryFiles").innerHTML = rows;
     else $("inventoryFiles").insertAdjacentHTML("beforeend", rows);
-    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, nextOffset: Number(data.next_offset || visible) };
+    inventoryListState = { category, keyword, search: searchText, exactPath, archiveStatus, sortBy, periodFilter, sourceFilter, timestampFilter, hitsOnly, originalsOnly, nextOffset: Number(data.next_offset || visible) };
     $("inventoryMore").hidden = !data.has_more;
   } catch (error) {
     if (!inventoryRequestIsCurrent(target, request)) return;
@@ -2605,6 +2634,9 @@ async function startCaseSession() {
     $("caseStartMessage").textContent = "UNGÜLTIGER FALLZEITRAUM";
     return;
   }
+  const dateValidation = validateDateRange(dateFrom, dateTo);
+  if (dateFieldError('dateFrom','dateTo') || dateValidation.error) { $('caseStartMessage').textContent=dateFieldError('dateFrom','dateTo') || dateValidation.error; return; }
+  if (dateValidation.warnings.length && !window.confirm(dateValidation.warnings.join('\n'))) return;
   if (!caseNumber) { $("caseNumber").focus(); return; }
   if (!operator) { $("operator").focus(); return; }
   if (runningPaths.size) {
@@ -2618,7 +2650,7 @@ async function startCaseSession() {
     const response = await fetch("/api/cases/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_number: caseNumber, operator, date_from: dateFrom, date_to: dateTo }),
+      body: JSON.stringify({ case_number: caseNumber, operator, date_from: dateFrom, date_to: dateTo, date_warning_acknowledged: dateValidation.warnings.length > 0 }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Fall konnte nicht gestartet werden");
@@ -3747,3 +3779,221 @@ $("diagConsole").addEventListener("scroll", () => {
   else if (diagAutoScroll) diagAutoScroll = false;
   $("diagScrollEnd").hidden = atBottom;
 });
+
+// Phase 2: derived metadata views; original records and quality remain untouched.
+
+async function loadEvaluationContext() {
+  try {
+    const response = await fetch('/api/evaluation-context');
+    if (!response.ok) return null;
+    evaluationContext = await response.json();
+    $('evaluationTimezones').innerHTML = (evaluationContext.timezones || []).map(zone => `<option value="${escapeHtml(zone)}"></option>`).join('');
+    return evaluationContext;
+  } catch (_) { return null; }
+}
+function dateFieldError(fromId, toId) {
+  return [$(fromId), $(toId)].some(field => field.validity.badInput || field.validity.rangeOverflow || field.validity.rangeUnderflow)
+    ? 'Datumsfeld vollständig mit gültigem vierstelligem Jahr ausfüllen.' : '';
+}
+function validateDateRange(start, end, required = false) {
+  if (!start && !end && !required) return { error: '', warnings: [] };
+  if (!start || !end) return { error: 'Beginn und Ende des Zeitraums sind erforderlich.', warnings: [] };
+  const valid = value => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [y,m,d] = value.split('-').map(Number);
+    if (y < 1 || m < 1 || m > 12 || d < 1) return false;
+    const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+    return d <= [31,leap?29:28,31,30,31,30,31,31,30,31,30,31][m-1];
+  };
+  if (!valid(start) || !valid(end)) return { error: 'Ungültiges Datum. Vierstelliges Jahr und gültigen Kalendertag eingeben.', warnings: [] };
+  if (start > end) return { error: 'Beginn darf nicht nach Ende liegen.', warnings: [] };
+  const years = [Number(start.slice(0,4)), Number(end.slice(0,4))];
+  const policy = evaluationContext?.date_policy || { early_year: 1900, future_year: new Date().getFullYear() + 1 };
+  const warnings = [];
+  if (years.some(y => y < policy.early_year)) warnings.push('Ungewöhnlich frühes Jahr (vor 1900). Eingabe bewusst bestätigen.');
+  if (years.some(y => y > policy.future_year)) warnings.push('Ungewöhnlich weit in der Zukunft liegendes Jahr. Eingabe bewusst bestätigen.');
+  return { error: '', warnings };
+}
+function resetAdvancedFilters() {
+  for (const id of ['inventoryPeriod','inventoryCategory','inventoryKeyword','inventorySource','inventoryScope']) $(id).value = '';
+  $('inventoryTimestampFilter').dataset.value = '';
+  $('inventoryTimestampFilter').textContent = '';
+  $('inventoryTimestampFilter').hidden = true;
+}
+function resetAnalysisView() {
+  analysisRevision += 1;
+  analysisData = null; analysisRecord = null; selectedEvaluation = '';
+  $('evaluationPanel').hidden = true;
+  $('advancedInventoryFilters').hidden = true;
+  $('keywordStatistics').hidden = true;
+  if ($('periodEvaluationModal').open) $('periodEvaluationModal').close();
+  resetAdvancedFilters();
+}
+function beginAnalysisRecord(record) {
+  resetAnalysisView();
+  if (currentIsPhone || !record.media) return;
+  analysisRecord = record;
+  loadAnalysis('');
+}
+async function loadAnalysis(evaluationId = '') {
+  if (!currentMediaId || !analysisRecord || currentIsPhone) return;
+  const revision = ++analysisRevision, medium = currentMediaId, mediaRevision = mediaViewRevision;
+  const wasAnalysis = Boolean(analysisData);
+  selectedEvaluation = evaluationId;
+  analysisData = null;
+  $('analysisCounts').hidden = true;
+  $('analysisTimestampRows').closest('details').hidden = true;
+  $('analysisQuality').textContent = '';
+  $('analysisContext').textContent = 'AUSWERTUNG WIRD GELADEN …';
+  $('keywordStatistics').hidden = true;
+  $('advancedInventoryFilters').hidden = true;
+  if (wasAnalysis) {
+    $('categories').innerHTML = ''; $('keywords').innerHTML = '';
+    $('timestampSummary').hidden = true;
+    if ($('timestampModal').open) $('timestampModal').close();
+  }
+  clearInventoryView();
+  $('analysisMessage').textContent = 'GESPEICHERTE METADATEN WERDEN AUSGEWERTET …';
+  try {
+    const response = await fetch(`/api/media/${medium}/analysis?evaluation_id=${encodeURIComponent(evaluationId)}`);
+    const data = await response.json();
+    if (revision !== analysisRevision || medium !== currentMediaId || mediaRevision !== mediaViewRevision) return;
+    if (!response.ok) {
+      // Older fixtures/services have no analysis API; never misrepresent them as empty.
+      $('evaluationPanel').hidden = response.status === 404;
+      $('advancedInventoryFilters').hidden = true;
+      if (response.status !== 404) $('analysisMessage').textContent = data.error || 'Metadatenauswertung nicht verfügbar.';
+      if ($('inventoryPanel').open) loadInventoryTree();
+      return;
+    }
+    analysisData = data;
+    renderAnalysis();
+    if ($('inventoryPanel').open) loadInventoryTree();
+  } catch (error) {
+    if (revision === analysisRevision && medium === currentMediaId) $('analysisMessage').textContent = `FEHLER: ${error.message}`;
+  }
+}
+function renderAnalysis() {
+  const data = analysisData;
+  if (!data || !analysisRecord) return;
+  const stats = data.statistics, period = data.period;
+  $('evaluationPanel').hidden = false;
+  $('analysisCounts').hidden = false;
+  $('analysisTimestampRows').closest('details').hidden = false;
+  $('advancedInventoryFilters').hidden = false;
+  $('inventorySort').querySelector('[value="path"]').textContent = 'DATEINAME / PFAD';
+  const original = data.original_period;
+  const label = p => p?.date_from ? `${p.date_from} – ${p.date_to} · ${p.timezone || 'Zeitzone nicht dokumentiert'}` : 'kein Zeitraum gespeichert';
+  $('analysisSelection').innerHTML = '<option value="">Originalscan</option>' + (data.evaluations || []).map(e => `<option value="${escapeHtml(e.evaluation_id)}">Nachträglich: ${escapeHtml(label(e.period))} · ${escapeHtml(e.created_at)}</option>`).join('');
+  $('analysisSelection').value = selectedEvaluation;
+  $('analysisContext').textContent = `ORIGINALSCAN: ${label(original)} · AKTIV: ${selectedEvaluation ? 'NACHTRÄGLICHE AUSWERTUNG' : 'GESPEICHERTE ORIGINALZUORDNUNG'} · ${label(period)}${data.original_period_file_count != null ? ` · ORIGINALER ZEITRAUMZÄHLER: ${data.original_period_file_count}` : ''}${data.created_at ? ` · erstellt ${data.created_at} · ${data.operator}` : ''}`;
+  $('analysisQuality').textContent = `${stats.files_total.toLocaleString('de-AT')} Originaldateien ausgewertet. ${qualityLabel(stats.source_scan_status)}. ${stats.scope_notice}${stats.timezone_uncertain ? ' Historische Zeitzone nicht sicher reproduzierbar; gespeicherte Zuordnung wird nicht stillschweigend neu berechnet.' : ''}`;
+  $('analysisQuality').classList.toggle('warning', stats.source_scan_status !== 'complete' || stats.timezone_uncertain);
+  const counts = [
+    ['', 'Erfasste Originaldateien', stats.files_total], ['in','Im Zeitraum',stats.in_period],
+    ['out','Außerhalb',stats.out_of_period], ['unknown','Nicht bestimmbar',stats.undetermined],
+  ];
+  $('analysisCounts').innerHTML = counts.map(([filter,name,count]) => `<button type="button" data-period-group="${filter}"><span>${name}</span><b>${Number(count).toLocaleString('de-AT')}</b></button>`).join('');
+  const columns = [['matched','matched'],['exclusive','exclusive'],['missing','missing'],['invalid','invalid'],['zero_epoch','zero'],['after_scan','future']];
+  $('analysisTimestampRows').innerHTML = Object.entries(stats.by_type).map(([type,values]) => `<tr><th>${type}</th>${columns.map(([key,filter]) => `<td><button type="button" data-timestamp-group="${filter}:${type}" aria-label="${escapeHtml(type+' '+({matched:'passend',exclusive:'ausschließlich',missing:'fehlend',invalid:'ungültig',zero_epoch:'Null-Epoche',after_scan:'nach Scan'})[key])}">${Number(values[key]).toLocaleString('de-AT')}</button></td>`).join('')}</tr>`).join('');
+  $('analysisTimestampGroups').innerHTML = `<button type="button" data-timestamp-group="multiple">${stats.multiple_matches} MEHRERE PASSENDE TYPEN</button><button type="button" data-timestamp-group="no_timestamps">${stats.without_timestamps} OHNE AUSWERTBARE ZEITSTEMPEL</button>`;
+  $('analysisMessage').textContent = `${data.assignment_origin || `Auswertungsversion ${data.analysis_version} · ${stats.duration_seconds} s`} · ${stats.malformed_records} unvollständige Datensätze${stats.scan_time_available ? '' : ' · Scanzeitpunkt nicht dokumentiert; Nach-Scan-Prüfung nicht möglich.'}`;
+  const displaySummary = {...analysisRecord.summary, categories_by_count: stats.categories,
+    case_period: period, categories_in_period: stats.categories_in_period, period_file_count: stats.in_period,
+    period_evaluation: period ? 'configured' : 'not_configured', latest_period_files: stats.latest_period_files || []};
+  renderResults(displaySummary, analysisRecord.hits);
+  renderKeywordStatistics(data.keyword_statistics);
+  $('inventoryCategory').innerHTML = '<option value="">Alle Kategorien</option>' + (data.filetype_categories || []).map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+  $('inventoryKeyword').innerHTML = '<option value="">Alle Dateien</option><option value="__all_hits__">Alle Treffer</option>' + (data.keyword_statistics.terms || []).map(({term}) => `<option value="${escapeHtml(term)}">${escapeHtml(term)}</option>`).join('');
+}
+function renderKeywordStatistics(stats) {
+  const panel = $('keywordStatistics'); panel.hidden = false;
+  const lower = stats.unique_counts_are_lower_bounds ? 'mindestens ' : '';
+  panel.innerHTML = `<p><b>${stats.stored_total_matches ?? 'unbekannt'}</b> GESPEICHERTE ZUORDNUNGEN · ${stats.path_assignments} dokumentierte Trefferpfade</p>
+    <p><b>${lower}${stats.unique_original_files}</b> EINDEUTIGE ORIGINALDATEIEN · <b>${lower}${stats.unique_virtual_entries}</b> VIRTUELLE EINTRÄGE · <b>${stats.terms_with_hits}</b> BEGRIFFE MIT TREFFERN</p>
+    <details><summary>TREFFERQUELLEN & HISTORISCHE PROFILE</summary><p>${Object.entries(stats.sources).map(([source,count]) => `${escapeHtml(({filename:'nur Dateiname',folder:'nur Ordnerpfad',both:'Dateiname + Ordnerpfad',virtual:'virtueller Archivpfad',ambiguous:'historisch mehrdeutig',unresolved:'nicht zugeordnet',path:'pfadübergreifend'})[source] || source)}: ${count}`).join(' · ')}</p>
+    <p>${(stats.historical_profile?.sources || []).map(p => `${escapeHtml(p.name || p.id)} · V${escapeHtml(p.version)} · SHA-256 ${escapeHtml(p.sha256)}`).join('<br>') || `Historische Profilversion: ${escapeHtml(stats.historical_profile?.version || 'nicht dokumentiert')} · SHA-256 ${escapeHtml(stats.historical_profile?.sha256 || 'nicht dokumentiert')}`}</p>
+    <p>${stats.unique_counts_are_lower_bounds ? 'Mehrdeutige historische Pfade sind keiner Partition oder Originaldatei künstlich eindeutig zugeordnet. Filter zeigen mögliche Zuordnungen mit Hinweis.' : 'Originaldateien und virtuelle Archivnamen werden getrennt gezählt.'}</p></details>`;
+  $('keywords').innerHTML = stats.terms.map(({term,stored_count,recorded_paths}) => `<button type="button" class="keyword-row result-filter" data-inventory-keyword="${escapeHtml(term)}" aria-pressed="false"><span>${escapeHtml(term.toUpperCase())}</span><b>${stored_count ?? recorded_paths}</b></button>`).join('') || '<p>Aktive historische Begriffe nicht dokumentiert.</p>';
+}
+function fileTimeDetails(file) {
+  if (!analysisData) return '';
+  if (file.source === 'container_index') return '<small class="inventory-entry-note">Zeitraum nicht eigenständig bestimmbar · virtueller Archivpfad</small>';
+  const labels = {crtime:'B',mtime:'M',ctime:'C',atime:'A'};
+  const zone = analysisData.period?.timezone;
+  const usableZone = zone && zone !== 'local' && !analysisData.statistics.timezone_uncertain ? zone : 'UTC';
+  const time = (value, raw, type) => {
+    if (file.timestamp_flags?.invalid?.includes(type)) return `UNGÜLTIG: ${String(raw ?? '').slice(0,120)}`;
+    if (value === null || value === undefined || value === '') return 'nicht vorhanden';
+    try { return new Intl.DateTimeFormat('de-AT',{timeZone:usableZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date(Number(value)*1000)) + ` · ${usableZone}`; }
+    catch (_) { return 'technisch nicht darstellbar'; }
+  };
+  const flags = Object.entries(file.timestamp_flags || {}).filter(([,types]) => types.length).map(([kind,types]) => `${({missing:'fehlt',invalid:'ungültig',zero_epoch:'Null-Epoche',after_scan:'nach Scan'})[kind]}: ${types.join('/')}`).join(' · ');
+  return `<details class="file-time-details"><summary>B/M/C/A · ${escapeHtml(file.period_matches || ({in:'im Zeitraum',out:'außerhalb',unknown:'nicht bestimmbar'})[file.period_state] || 'nicht bestimmt')}</summary><dl>${Object.entries(labels).map(([key,type]) => `<dt>${type}</dt><dd>${escapeHtml(time(file[key],file.timestamp_raw?.[key],type))}</dd>`).join('')}</dl><p>${escapeHtml(flags)}${usableZone === 'UTC' && zone !== 'UTC' ? ' · UTC-Anzeige, Originalzeitzone ungeklärt.' : ''}</p></details>`;
+}
+async function openEvaluationDialog() {
+  if (!analysisData) return;
+  await evaluationContextPromise;
+  if (!evaluationContext) { $('analysisMessage').textContent = 'Sichere Auswertungssitzung nicht verfügbar. Ansicht erneut laden.'; return; }
+  const p = analysisData.period;
+  $('evaluationFrom').value = p?.date_from || '';
+  $('evaluationTo').value = p?.date_to || '';
+  $('evaluationTimezone').value = p?.timezone_reproducible === true && p.timezone !== 'local' ? p.timezone : '';
+  $('evaluationOperator').value = activeOperator || '';
+  $('evaluationValidation').textContent = 'Neue Version aus gespeicherten Metadaten. Vorherige Auswertungen bleiben erhalten.';
+  $('createPeriodEvaluation').disabled = false;
+  $('periodEvaluationModal').showModal();
+}
+async function createPeriodEvaluation() {
+  if (!analysisData || !evaluationContext || !analysisRecord) return;
+  const from=$('evaluationFrom').value, to=$('evaluationTo').value, zone=$('evaluationTimezone').value.trim(), operator=$('evaluationOperator').value.trim();
+  const validation=validateDateRange(from,to,true);
+  const fieldError = dateFieldError('evaluationFrom','evaluationTo');
+  if (fieldError || validation.error || !operator || !evaluationContext.timezones.includes(zone)) {
+    $('evaluationValidation').textContent=fieldError || validation.error || (!operator ? 'Bearbeiter erforderlich.' : 'Gültige IANA-Zeitzone ausdrücklich auswählen.'); return;
+  }
+  if (validation.warnings.length && !window.confirm(validation.warnings.join('\n'))) return;
+  const medium=currentMediaId, revision=analysisRevision, mediaRevision=mediaViewRevision;
+  const caseNumber=analysisRecord.media.case_number;
+  $('createPeriodEvaluation').disabled=true; $('evaluationValidation').textContent='AUSWERTUNG WIRD GESPEICHERT …';
+  try {
+    const response=await fetch(`/api/cases/${encodeURIComponent(caseNumber)}/media/${medium}/period-evaluations`,{
+      method:'POST',headers:{'Content-Type':'application/json','X-Triage-CSRF':evaluationContext.csrf_token},
+      body:JSON.stringify({operator,date_from:from,date_to:to,timezone:zone,date_warning_acknowledged:validation.warnings.length>0})});
+    const data=await response.json();
+    if (medium!==currentMediaId || revision!==analysisRevision || mediaRevision!==mediaViewRevision) return;
+    if (!response.ok) throw new Error(data.error || 'Auswertung nicht gespeichert.');
+    $('periodEvaluationModal').close();
+    await loadAnalysis(data.evaluation_id);
+    if (data.export_warning) $('analysisMessage').textContent=data.export_warning;
+  } catch(error) { if (medium===currentMediaId && revision===analysisRevision) $('evaluationValidation').textContent=`FEHLER: ${error.message}`; }
+  finally { if (medium===currentMediaId && revision===analysisRevision) $('createPeriodEvaluation').disabled=false; }
+}
+function timestampGroupLabel(value) {
+  if (!value) return '';
+  if (value === 'multiple') return 'Mehrere passende Typen';
+  if (value === 'no_timestamps') return 'Ohne auswertbare Zeitstempel';
+  const [kind,type] = value.split(':');
+  return `${type}: ${{matched:'passend',exclusive:'ausschließlich',missing:'fehlend',invalid:'ungültig',zero:'Null-Epoche',future:'nach Scan'}[kind] || kind}`;
+}
+function advancedFilters() {
+  const selected=$('inventoryKeyword').value;
+  return {periodFilter:$('inventoryPeriod').value,category:$('inventoryCategory').value,
+    keyword:selected==='__all_hits__'?'':selected,hitsOnly:selected==='__all_hits__',sourceFilter:$('inventorySource').value,
+    originalsOnly:$('inventoryScope').value==='original',timestampFilter:$('inventoryTimestampFilter').dataset.value || ''};
+}
+$('analysisSelection').addEventListener('change',()=>loadAnalysis($('analysisSelection').value));
+$('openPeriodEvaluation').addEventListener('click',openEvaluationDialog);
+$('closePeriodEvaluation').addEventListener('click',()=>$('periodEvaluationModal').close());
+$('createPeriodEvaluation').addEventListener('click',createPeriodEvaluation);
+$('evaluationPanel').addEventListener('click',event=>{
+  const period=event.target.closest('[data-period-group]'), stamp=event.target.closest('[data-timestamp-group]');
+  if (period) { $('inventoryPeriod').value=period.dataset.periodGroup; $('inventoryScope').value='original'; loadInventory(); }
+  if (stamp) {
+    $('inventoryTimestampFilter').dataset.value=stamp.dataset.timestampGroup;
+    $('inventoryTimestampFilter').textContent=`ZEITSTEMPEL: ${timestampGroupLabel(stamp.dataset.timestampGroup)}`; $('inventoryTimestampFilter').hidden=false;
+    $('inventoryScope').value='original'; loadInventory();
+  }
+});
+$('inventoryApply').addEventListener('click',()=>loadInventory());
+evaluationContextPromise=loadEvaluationContext();

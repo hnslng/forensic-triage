@@ -143,6 +143,22 @@
           <article><span>DATENVOLUMEN</span><strong id="totalBytes">527,8 MB</strong><small>GESAMT</small><small id="largestFileSummary" class="largest-file-summary" hidden></small></article>
         </div>
 
+        <section id="evaluationPanel" class="panel evaluation-panel" hidden aria-label="Zeitraumauswertung">
+          <div class="evaluation-toolbar"><strong>ZEITRAUMAUSWERTUNG</strong>
+            <label>AUSWERTUNG <select id="analysisSelection"><option value="">Originalscan</option></select></label>
+            <button id="openPeriodEvaluation" type="button">NEU AUSWERTEN</button></div>
+          <p id="analysisContext" class="analysis-context"></p>
+          <p id="analysisQuality" class="analysis-quality"></p>
+          <div id="analysisCounts" class="analysis-counts"></div>
+          <details class="timestamp-explanation" open><summary>WARUM IM ZEITRAUM? · B / M / C / A</summary>
+            <p>Ein gültiger passender Zeitstempel genügt. Beiträge überschneiden sich und sind nicht addierbar.</p>
+            <div class="analysis-table-wrap"><table class="analysis-table"><thead><tr><th>Typ</th><th>Passend</th><th>Exklusiv</th><th>Fehlend</th><th>Ungültig</th><th>Null-Epoche</th><th>Nach Scan</th></tr></thead><tbody id="analysisTimestampRows"></tbody></table></div>
+            <div id="analysisTimestampGroups" class="analysis-groups"></div>
+            <p>B: Erstellung, sofern vorhanden · M: Inhaltsänderung · C: Metadatenänderung, keine Erstellung · A: Zugriff, kein Beweis bewussten Handelns. Dateisysteme liefern unterschiedliche Zeitwerte; keine automatische Korrektur.</p>
+          </details>
+          <p id="analysisMessage" role="status"></p>
+        </section>
+
         <div class="analysis-grid">
           <article id="categoriesPanel" class="panel categories-panel">
             <div class="panel-title"><span>05</span> DATEITYPEN</div>
@@ -162,6 +178,7 @@
           </article>
           <article id="keywordsPanel" class="panel keywords-panel">
             <div class="panel-title"><span>06</span> STICHWORTTREFFER</div>
+            <div id="keywordStatistics" class="keyword-statistics" hidden></div>
             <div id="keywords" class="keyword-list"></div>
           </article>
           <article id="hintsPanel" class="panel hints-panel">
@@ -185,13 +202,23 @@
         <div id="documentationGrid" class="detail-workspace" hidden>
           <details id="inventoryPanel" class="panel inventory-panel disclosure" open hidden>
             <summary class="panel-title"><span>08</span> <b id="inventoryTitle">DATEIEN DIESES MEDIUMS</b> <small>EXPLORER &amp; SUCHE</small></summary>
+            <div id="advancedInventoryFilters" class="advanced-inventory-filters" hidden>
+              <label>ZEITRAUM<select id="inventoryPeriod"><option value="">Alle</option><option value="in">Im Zeitraum</option><option value="out">Außerhalb</option><option value="unknown">Nicht bestimmbar</option></select></label>
+              <label>DATEITYP<select id="inventoryCategory"><option value="">Alle Kategorien</option></select></label>
+              <label>STICHWORT<select id="inventoryKeyword"><option value="">Alle Dateien</option><option value="__all_hits__">Alle Treffer</option></select></label>
+              <label>TREFFERQUELLE<select id="inventorySource"><option value="">Alle Quellen</option><option value="filename">Nur Dateiname</option><option value="folder">Nur Ordnerpfad</option><option value="both">Dateiname + Ordnerpfad</option><option value="virtual">Virtueller Archivpfad</option><option value="path">Pfadübergreifend</option><option value="ambiguous">Historisch mehrdeutig</option></select></label>
+              <label>BESTAND<select id="inventoryScope"><option value="">Originale + Archivverzeichnis</option><option value="original">Nur Originaldateien</option></select></label>
+              <button id="inventoryApply" type="button">FILTER ANWENDEN</button>
+              <span id="inventoryTimestampFilter" hidden></span>
+            </div>
             <div class="inventory-tools">
               <input id="inventorySearch" placeholder="DATEINAME ODER PFAD FILTERN …" autocomplete="off" spellcheck="false" />
               <label class="inventory-sort-label" for="inventorySort">SORTIERUNG</label>
               <select id="inventorySort" aria-label="Dateiliste sortieren">
                 <option value="path">SCAN-REIHENFOLGE</option>
                 <option value="size">GRÖSSE ↓</option>
-                <option value="timestamp">JÜNGSTER ZEITSTEMPEL ↓</option>
+                <option value="timestamp">JÜNGSTER PASSENDER ZEITSTEMPEL ↓</option>
+                <option value="category">KATEGORIE</option>
               </select>
               <button id="inventoryLoad" type="button">SUCHEN</button>
               <button id="inventoryReset" type="button" hidden>× FILTER AUFHEBEN</button>
@@ -268,8 +295,8 @@
             <input id="caseNumber" class="case-input" placeholder="Z. B. 2026-1234" autocomplete="off" spellcheck="false" />
           </label>
           <div class="case-period-fields">
-            <label class="case-field" for="dateFrom">ZEITRAUM VON<input id="dateFrom" class="case-input" type="date" /></label>
-            <label class="case-field" for="dateTo">ZEITRAUM BIS<input id="dateTo" class="case-input" type="date" /></label>
+            <label class="case-field" for="dateFrom">ZEITRAUM VON<input id="dateFrom" class="case-input" type="date" min="0001-01-01" max="9999-12-31" /></label>
+            <label class="case-field" for="dateTo">ZEITRAUM BIS<input id="dateTo" class="case-input" type="date" min="0001-01-01" max="9999-12-31" /></label>
           </div>
           <small class="case-profile-hint">OPTIONAL · DATEISYSTEM-ZEITSTEMPEL</small>
           <button id="openCaseArchive" class="case-archive-open" type="button">▤ FALLARCHIV ÖFFNEN <small id="caseListCount">0 FALLAKTEN</small></button>
@@ -357,6 +384,19 @@
         <div id="decisionQueueList" class="decision-queue-list"></div>
       </div>
     </dialog>
+    <dialog id="periodEvaluationModal" class="evaluation-modal" aria-labelledby="periodEvaluationTitle">
+      <div class="modal-head"><b id="periodEvaluationTitle">NEUE ZEITRAUMAUSWERTUNG</b><button id="closePeriodEvaluation" type="button">SCHLIESSEN ×</button></div>
+      <p>Nur gespeicherte Metadaten. Originalscan unverändert; kein Medium, kein Mount und keine Inhaltsanalyse.</p>
+      <div class="evaluation-form">
+        <label>ZEITRAUM VON<input id="evaluationFrom" type="date" min="0001-01-01" max="9999-12-31" required></label>
+        <label>ZEITRAUM BIS<input id="evaluationTo" type="date" min="0001-01-01" max="9999-12-31" required></label>
+        <label>IANA-ZEITZONE<input id="evaluationTimezone" list="evaluationTimezones" placeholder="z. B. Europe/Vienna oder UTC" autocomplete="off" required><datalist id="evaluationTimezones"></datalist></label>
+        <label>BEARBEITER<input id="evaluationOperator" maxlength="120" required autocomplete="off"></label>
+      </div>
+      <p id="evaluationValidation" role="status"></p>
+      <button id="createPeriodEvaluation" type="button">AUSWERTUNG SPEICHERN</button>
+    </dialog>
+
     <dialog id="timestampModal" class="evidence-modal result-detail-modal" aria-labelledby="timestampModalTitle">
       <div class="modal-head result-detail-head"><div><span>07</span> <b id="timestampModalTitle">JÜNGSTE DATEISYSTEM-ZEITSTEMPEL</b></div><button id="closeTimestampModal" type="button">SCHLIESSEN ×</button></div>
       <p id="timestampModalContext" class="result-detail-context"></p>

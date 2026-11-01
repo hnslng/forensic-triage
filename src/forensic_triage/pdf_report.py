@@ -13,7 +13,7 @@ from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak
 
 from . import __version__
 from .scan_quality import load_scan_quality, INCOMPLETE_NOTICE, NO_INVENTORY, LABELS
@@ -329,6 +329,30 @@ def build_case_pdf(
             small,
         ),
     ])
+
+    evaluations = [json.loads(event["details_json"]) for event in audit_rows if event.get("event_type") == "period_evaluation_created"]
+    if evaluations:
+        story.extend([PageBreak(), Paragraph("NACHTRÄGLICHE ZEITRAUMAUSWERTUNGEN", title_style),
+                      Paragraph("Originalscan und ursprüngliche Zahlen bleiben unverändert. B/M/C/A-Beiträge können sich überschneiden.", small), Spacer(1, 4 * mm)])
+        for evaluation in evaluations:
+            period = evaluation["period"]; stats = evaluation["statistics"]
+            lines = [
+                f"Auswertung {evaluation['evaluation_id']} · Version {evaluation['analysis_version']}",
+                f"Quell-Scan: {evaluation['source_scan_id']}",
+                f"Erstellt: {evaluation['created_at']} · Bearbeiter: {evaluation['operator']}",
+                f"Zeitraum: {period['date_from']} – {period['date_to']} · Zeitzone: {period['timezone']}",
+                f"Quell-CSV SHA-256: {evaluation['source_csv_sha256']}",
+                f"Originalqualität: {stats['source_scan_status']} · {stats['scope_notice']}",
+                f"{stats['files_total']} Originaldateien · {stats['in_period']} im Zeitraum · {stats['out_of_period']} außerhalb · {stats['undetermined']} nicht bestimmbar",
+                f"Ohne auswertbare Zeitstempel: {stats['without_timestamps']} · Mehrfachzuordnungen: {stats['multiple_matches']}",
+            ]
+            story.extend(Paragraph(html.escape(line), cell) for line in lines)
+            data = [[Paragraph(x, header) for x in ("TYP", "PASSEND", "EXKLUSIV", "FEHLEND", "UNGÜLTIG", "NULL-EPOCHE", "NACH SCAN")]]
+            for label, values in stats['by_type'].items():
+                data.append([Paragraph(str(x), cell) for x in (label, values['matched'], values['exclusive'], values['missing'], values['invalid'], values['zero_epoch'], values['after_scan'])])
+            table = Table(data, colWidths=[20*mm,35*mm,35*mm,35*mm,35*mm,45*mm,48*mm], repeatRows=1)
+            table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),INK),('GRID',(0,0),(-1,-1),0.3,LINE),('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5)]))
+            story.extend([Spacer(1,3*mm),table,Spacer(1,7*mm)])
 
     document = SimpleDocTemplate(
         str(temporary), pagesize=landscape(A4),

@@ -5,6 +5,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
+import tempfile
+import uuid
+from collections import OrderedDict
 import shutil
 import sqlite3
 import threading
@@ -18,6 +22,8 @@ from .keywords import match_keywords
 from .period import optional_bool, period_timezone_info, sqlite_optional_bool, validate_period
 from .scan_quality import load_scan_quality, quality_fields, LABELS, INCOMPLETE_NOTICE, NO_INVENTORY
 from .scan_attempts import scan_attempts
+from . import metadata_analysis as analysis
+from .period import require_iana_timezone, validate_period_submission
 
 
 def _scan_summary(result_dir: Path) -> dict[str, Any]:
@@ -88,6 +94,8 @@ class CaseStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "case-index.sqlite3"
         self._export_lock = threading.RLock()
+        self._analysis_lock = threading.RLock()
+        self._analysis_cache = OrderedDict()
         self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
@@ -448,7 +456,7 @@ class CaseStore:
                     }, ensure_ascii=False),
                 ),
             )
-        self.refresh_exports(case_number)
+        self.refresh_exports(case_number, preserve_scan_records=False)
         result = self.media_detail(media_id)
         if result is None:
             raise RuntimeError("Medienakte konnte nicht geladen werden.")
@@ -530,7 +538,7 @@ class CaseStore:
                 ),
             )
             case_number = str(row["case_number"])
-        self.refresh_exports(case_number)
+        self.refresh_exports(case_number, preserve_scan_records=False)
         result = self.media_detail(media_id)
         if result is None:
             raise RuntimeError("Medienakte konnte nicht geladen werden.")
@@ -605,7 +613,190 @@ class CaseStore:
             row = connection.execute("SELECT id FROM media ORDER BY id DESC LIMIT 1").fetchone()
         return self.media_detail(int(row["id"])) if row else None
 
-    def file_inventory(
+    def _analysis_context(self, media_id: int, case_number: str | None = None):
+        if not isinstance(media_id, int) or isinstance(media_id, bool) or not 0 < media_id <= 2**63 - 1:
+            raise ValueError("Ungültige Medienkennung.")
+        with self._connect() as connection:
+            row = connection.execute("SELECT media.*, cases.case_number FROM media JOIN cases ON cases.id=media.case_id WHERE media.id=?", (media_id,)).fetchone()
+        if row is None or (case_number is not None and row["case_number"] != case_number):
+            raise KeyError("Medienakte gehört nicht zu dieser Fallakte.")
+        if str(row["device_path"]).startswith(("iphone:", "android:")):
+            raise ValueError("Nachträgliche Dateiauswertung ist nur für gespeicherte Dateiinventare vorgesehen.")
+        relative = Path(str(row["result_path"]))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError("Nicht freigegebener Quellpfad.")
+        source = self.root / relative
+        case = self.case_path(row["case_number"])
+        if not source.resolve().is_relative_to(case.resolve()):
+            raise ValueError("Quell-Snapshot liegt außerhalb der Fallakte.")
+        current = self.root
+        for part in relative.parts:
+            current = current / part
+            if current.is_symlink():
+                raise ValueError("Symlinks sind in der Quellzuordnung nicht zulässig.")
+        return dict(row), source
+
+    def _analysis_summary(self, source: Path):
+        # Validate bounded structured input before the legacy quality interpreter reads it.
+        analysis.read_json(source / "summary.json")
+        analysis.read_json(source / "partitions.json", [])
+        summary = _scan_summary(source)
+        if summary.get("scan_inventory_present") is False:
+            raise ValueError("Kein auswertbares Dateiinventar erstellt.")
+        return summary
+
+    def _evaluation_root(self, row: dict):
+        base = self.case_path(row["case_number"]) / "period-evaluations" / str(row["id"])
+        for candidate in (base.parent, base):
+            if candidate.is_symlink():
+                raise ValueError("Nicht freigegebener Auswertungspfad.")
+        return base
+
+    def list_period_evaluations(self, media_id: int, case_number: str | None = None):
+        row, _source = self._analysis_context(media_id, case_number)
+        with self._connect() as connection:
+            events = connection.execute("SELECT details_json FROM audit_events WHERE media_id=? AND event_type='period_evaluation_created' ORDER BY id", (media_id,)).fetchall()
+        results = []
+        for event in events:
+            details = json.loads(event["details_json"])
+            # The audit is the committed registry; filesystem staging/orphans are never listed.
+            results.append({key: details.get(key) for key in ("evaluation_id", "created_at", "operator", "period", "analysis_version", "source_scan_id", "source_csv_sha256", "statistics", "evaluation_sha256")})
+        return results
+
+    def _analysis_index(self, media_id: int, evaluation_id: str = "", case_number: str | None = None):
+        import re
+        row, source = self._analysis_context(media_id, case_number)
+        manifest = analysis.snapshot_manifest(source)
+        if evaluation_id:
+            if not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+                raise ValueError("Ungültige Auswertungskennung.")
+            registered = next((x for x in self.list_period_evaluations(media_id, row["case_number"]) if x["evaluation_id"] == evaluation_id), None)
+            if registered is None:
+                raise KeyError("Auswertung nicht registriert.")
+            path = self._evaluation_root(row) / (evaluation_id + ".sqlite3")
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("Gespeicherte Auswertung fehlt oder ist nicht freigegeben.")
+            if analysis.file_sha256(path) != registered.get("evaluation_sha256"):
+                raise ValueError("Gespeicherte Auswertung verändert.")
+            info = analysis.metadata(path)
+            if info.get("evaluation_id") != evaluation_id or info.get("analysis_version") != analysis.ANALYSIS_VERSION:
+                raise ValueError("Auswertungskennung oder Version stimmt nicht überein.")
+            if info.get("source_manifest") != manifest or info.get("source_scan_id") != row["scan_id"] or info.get("media_id") != media_id:
+                raise ValueError("Quell-Snapshot verändert oder Auswertung nicht dieser Sichtung zugeordnet.")
+            return path, info
+        fingerprint = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+        key = (media_id, fingerprint)
+        with self._analysis_lock:
+            if key in self._analysis_cache:
+                directory, info = self._analysis_cache.pop(key)
+                self._analysis_cache[key] = (directory, info)
+                return Path(directory.name) / "analysis.sqlite3", info
+            directory = tempfile.TemporaryDirectory(prefix="triage-metadata-")
+            path = Path(directory.name) / "analysis.sqlite3"
+            try:
+                summary = self._analysis_summary(source)
+                info = analysis.build_index(path, source, summary, period=summary.get("case_period"), original=True,
+                    metadata={"evaluation_id": "", "selection": "original", "source_scan_id": row["scan_id"], "media_id": media_id,
+                              "source_csv_sha256": manifest["files.csv"], "source_manifest": manifest,
+                              "assignment_origin": "Gespeicherte Originalzuordnung; Zusatzstatistiken aus dem Metadatensnapshot."})
+                if analysis.snapshot_manifest(source) != manifest:
+                    raise ValueError("Quell-Snapshot während der Auswertung verändert.")
+            except Exception:
+                directory.cleanup()
+                raise
+            self._analysis_cache[key] = (directory, info)
+            while len(self._analysis_cache) > 8:
+                _key, (old, _info) = self._analysis_cache.popitem(last=False)
+                old.cleanup()
+            return path, info
+
+    def period_analysis(self, media_id: int, evaluation_id: str = "", case_number: str | None = None):
+        with self._analysis_lock:
+            _path, info = self._analysis_index(media_id, evaluation_id, case_number)
+            return {**info, "evaluations": self.list_period_evaluations(media_id, case_number)}
+
+    def create_period_evaluation(self, case_number: str, media_id: int, operator: str,
+                                 date_from: str, date_to: str, timezone: str, *, date_warning_acknowledged=False):
+        if not isinstance(operator, str) or not operator.strip() or len(operator) > 120 or any(ord(c) < 32 for c in operator):
+            raise ValueError("Ein gültiges Bearbeiterkürzel ist erforderlich.")
+        start, end = validate_period_submission(date_from, date_to, date_warning_acknowledged)
+        if not start:
+            raise ValueError("Beginn und Ende sind erforderlich.")
+        timezone = require_iana_timezone(timezone)
+        period = {"date_from": start, "date_to": end, "timezone": timezone, "timezone_reproducible": True,
+                  "timezone_source": "explicit_evaluation_choice", "inclusive": True}
+        # One metadata job per store; device discovery/scanning is not used here.
+        if not self._analysis_lock.acquire(blocking=False):
+            raise ValueError("Eine Metadatenauswertung läuft bereits.")
+        staging = None; published = None
+        try:
+            row, source = self._analysis_context(media_id, case_number)
+            manifest = analysis.snapshot_manifest(source)
+            summary = self._analysis_summary(source)
+            if summary.get("scan_inventory_present") is False:
+                raise ValueError("Kein auswertbares Dateiinventar erstellt.")
+            evaluation_id = uuid.uuid4().hex
+            base = self._evaluation_root(row); base.mkdir(parents=True, exist_ok=True, mode=0o700)
+            descriptor, name = tempfile.mkstemp(prefix=".evaluation-", suffix=".tmp", dir=base)
+            os.close(descriptor); staging = Path(name)
+            info = analysis.build_index(staging, source, summary, period=period, original=False,
+                metadata={"evaluation_id": evaluation_id, "selection": "reevaluation", "created_at": utc_now(),
+                          "operator": operator.strip(), "source_scan_id": row["scan_id"], "media_id": media_id,
+                          "source_csv_sha256": manifest["files.csv"], "source_manifest": manifest,
+                          "date_warning_acknowledged": date_warning_acknowledged is True})
+            if analysis.snapshot_manifest(source) != manifest:
+                raise ValueError("Quell-Snapshot während der Auswertung verändert.")
+            with staging.open("rb") as stream:
+                os.fsync(stream.fileno())
+            if staging.stat().st_size > 2 * 1024 * 1024 * 1024:
+                raise ValueError("Auswertungsindex überschreitet 2 GiB; keine Version gespeichert.")
+            info["evaluation_sha256"] = analysis.file_sha256(staging)
+            target = base / (evaluation_id + ".sqlite3")
+            with self._export_lock:
+                with self._connect() as connection:
+                    connection.execute("BEGIN IMMEDIATE")
+                    connection.execute("INSERT INTO audit_events(case_id,media_id,occurred_at,event_type,operator,details_json) VALUES (?,?,?,'period_evaluation_created',?,?)",
+                        (row["case_id"], media_id, info["created_at"], operator.strip(), json.dumps({key:info[key] for key in (
+                            "evaluation_id", "created_at", "operator", "period", "analysis_version", "source_scan_id", "source_csv_sha256", "source_manifest", "statistics", "evaluation_sha256")}, ensure_ascii=False)))
+                    # Atomic no-replace publication. A UUID collision fails; never truncates a version.
+                    os.link(staging, target); published = target
+                    directory = os.open(base, os.O_RDONLY)
+                    try: os.fsync(directory)
+                    finally: os.close(directory)
+                published = None  # committed version must never be removed/overwritten
+                try:
+                    self.refresh_exports(case_number)
+                except Exception:
+                    info = {**info, "export_warning": "Auswertung und Audit gespeichert; abgeleitete Berichte konnten nicht aktualisiert werden."}
+            return info
+        except Exception:
+            if published is not None:
+                published.unlink(missing_ok=True)  # uncommitted publication only
+            raise
+        finally:
+            if staging is not None: staging.unlink(missing_ok=True)
+            self._analysis_lock.release()
+
+    def file_inventory(self, media_id: int, query: str = "", limit: int = 250, category: str = "", keyword: str = "",
+                       offset: int = 0, exact_path: str | None = None, archive_status: str = "", period_filter: str = "",
+                       sort_by: str = "", *, evaluation_id: str = "", source_filter: str = "", timestamp_filter: str = "",
+                       hits_only: bool = False, originals_only: bool = False, analysis_view: bool = False):
+        if not (analysis_view or evaluation_id or source_filter or timestamp_filter or hits_only or originals_only or period_filter == "unknown" or sort_by == "category"):
+            return self._legacy_file_inventory(media_id, query, limit, category, keyword, offset, exact_path, archive_status, period_filter, sort_by)
+        if not isinstance(media_id, int) or isinstance(media_id, bool) or not 0 < media_id <= 2**63 - 1:
+            raise ValueError("Ungültige Medienkennung.")
+        with self._connect() as connection:
+            row = connection.execute("SELECT device_path FROM media WHERE id=?", (media_id,)).fetchone()
+        if row and str(row["device_path"]).startswith(("iphone:", "android:")):
+            return self._legacy_file_inventory(media_id, query, limit, category, keyword, offset, exact_path, archive_status, period_filter, sort_by)
+        with self._analysis_lock:
+            path, _info = self._analysis_index(media_id, evaluation_id)
+            return analysis.query_index(path, query=query, limit=max(1,min(int(limit),500)), category=category,
+                keyword=keyword, offset=offset, exact_path=exact_path, archive_status=archive_status,
+                period_filter=period_filter, sort_by=sort_by, source_filter=source_filter,
+                timestamp_filter=timestamp_filter, hits_only=hits_only, originals_only=originals_only)
+
+    def _legacy_file_inventory(
         self,
         media_id: int,
         query: str = "",
@@ -1005,11 +1196,11 @@ class CaseStore:
             result.update(file_count=None, directory_count=None, keyword_matches=None)
         return result
 
-    def refresh_exports(self, case_number: str) -> None:
+    def refresh_exports(self, case_number: str, *, preserve_scan_records: bool = True) -> None:
         with self._export_lock:
-            self._refresh_exports(case_number)
+            self._refresh_exports(case_number, preserve_scan_records=preserve_scan_records)
 
-    def _refresh_exports(self, case_number: str) -> None:
+    def _refresh_exports(self, case_number: str, *, preserve_scan_records: bool = True) -> None:
         case_number = safe_component(case_number)
         case_dir = self.case_path(case_number)
         case_dir.mkdir(parents=True, exist_ok=True)
@@ -1096,6 +1287,23 @@ class CaseStore:
                     "-" * 72,
                 ]
             )
+        evaluation_events = [event for event in audit if event["event_type"] == "period_evaluation_created"]
+        if evaluation_events:
+            report_lines.extend(["", "NACHTRÄGLICHE ZEITRAUMAUSWERTUNGEN (ORIGINALSCAN UNVERÄNDERT)", "=" * 72])
+            for event in evaluation_events:
+                evaluation = json.loads(event["details_json"])
+                period = evaluation["period"]; stats = evaluation["statistics"]
+                report_lines.extend([
+                    f"Auswertung: {evaluation['evaluation_id']} · Version {evaluation['analysis_version']}",
+                    f"Erstellt: {evaluation['created_at']} · Bearbeiter: {evaluation['operator']}",
+                    f"Quell-Scan: {evaluation['source_scan_id']}",
+                    f"Zeitraum: {period['date_from']} – {period['date_to']} · {period['timezone']}",
+                    f"Quell-CSV SHA-256: {evaluation['source_csv_sha256']}",
+                    f"Originaldateien: {stats['files_total']} · im Zeitraum: {stats['in_period']} · außerhalb: {stats['out_of_period']} · nicht bestimmbar: {stats['undetermined']}",
+                    f"Originalqualität: {stats['source_scan_status']} · {stats['scope_notice']}",
+                    "B/M/C/A-Beiträge überschneiden sich und sind nicht addierbar.",
+                    json.dumps(stats['by_type'], ensure_ascii=False), "",
+                ])
         report_lines.extend(
             [
                 "HINWEIS",
@@ -1107,10 +1315,10 @@ class CaseStore:
         for row in media:
             media_dir = case_dir / "media" / safe_component(str(row["sighting_number"])) / "records"
             media_dir.mkdir(parents=True, exist_ok=True)
-            (media_dir / f"{safe_component(str(row['scan_id']))}.json").write_text(
-                json.dumps(self._media_dict(row), ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            record_path = media_dir / f"{safe_component(str(row['scan_id']))}.json"
+            record_text = json.dumps(self._media_dict(row), ensure_ascii=False, indent=2) + "\n"
+            if not record_path.exists() or (not preserve_scan_records and record_path.read_text(encoding="utf-8") != record_text):
+                record_path.write_text(record_text, encoding="utf-8")
         build_case_pdf(
             case_dir / "case-report.pdf",
             {**dict(case), "period_timezone_reproducible": optional_bool(case["period_timezone_reproducible"])},
@@ -1120,10 +1328,33 @@ class CaseStore:
         )
         self._write_manifest(case_dir)
 
+    def exportable_files(self, case_dir: Path):
+        """Export only committed evaluations; exclude staging and symlinks."""
+        with self._connect() as connection:
+            registered = {(str(row["media_id"]), json.loads(row["details_json"])["evaluation_id"]) for row in connection.execute(
+                "SELECT audit_events.media_id,audit_events.details_json FROM audit_events JOIN cases ON cases.id=audit_events.case_id "
+                "WHERE event_type='period_evaluation_created' AND cases.case_number=?", (case_dir.name,))}
+        for path in case_dir.rglob("*"):
+            relative = path.relative_to(case_dir)
+            if any(part.startswith(".evaluation-") for part in relative.parts):
+                continue
+            current = case_dir
+            unsafe = current.is_symlink()
+            for part in relative.parts:
+                current = current / part
+                unsafe = unsafe or current.is_symlink()
+            if unsafe:
+                continue
+            if relative.parts[0] == "period-evaluations" and path.is_file():
+                if len(relative.parts) != 3 or path.suffix != ".sqlite3" or (relative.parts[1], path.stem) not in registered:
+                    continue
+            if path.is_file():
+                yield path
+
     def _write_manifest(self, case_dir: Path) -> None:
         lines = []
-        for path in sorted(item for item in case_dir.rglob("*") if item.is_file() and item.name != "manifest.sha256"):
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(item for item in self.exportable_files(case_dir) if item.name != "manifest.sha256"):
+            digest = analysis.file_sha256(path)
             lines.append(f"{digest}  {path.relative_to(case_dir).as_posix()}")
         (case_dir / "manifest.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
 

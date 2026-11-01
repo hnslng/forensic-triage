@@ -3,11 +3,11 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { chromium } = require('playwright');
+const { chromium, webkit } = require('playwright');
 const root = path.resolve(__dirname, '..');
 let browser;
 before(async () => {
-  browser = await chromium.launch({ headless: true, ...(process.env.TRIAGE_BROWSER_CHANNEL ? { channel: process.env.TRIAGE_BROWSER_CHANNEL } : {}) });
+  browser = await (process.env.TRIAGE_BROWSER_ENGINE === 'webkit' ? webkit : chromium).launch({ headless: true, ...(process.env.TRIAGE_BROWSER_CHANNEL ? { channel: process.env.TRIAGE_BROWSER_CHANNEL } : {}) });
 });
 after(async () => { await browser?.close(); });
 const media = [10, 3, 1, 8, 2].map(id => ({ id, case_number: 'TEST', sighting_number: `SICHT-${id}`, serial: `TEST-${id}`, model: `Testmedium ${id}`, file_count: 4, decision: 'open' }));
@@ -2483,4 +2483,179 @@ test('non-selection of partial failed and unknown USB results requires a fresh d
   await page.evaluate(() => { currentIsPhone = true; currentQuality = 'unknown'; currentDecision = 'specialist_not_consulted'; updateDecisionFields(); updateDecisionAvailability(); });
   assert.equal(await page.locator('#qualityConfirmation').evaluate(el => el.hidden), true);
   assert.equal(await page.locator('#saveDecision').isDisabled(), false);
+});
+
+// Alpha 86: real Python backend reference, all records synthesized in a tempdir.
+let metadataReference;
+function metadataFixture() {
+  if (!metadataReference) {
+    const result = require('node:child_process').spawnSync(process.env.TRIAGE_TEST_PYTHON || 'python3', [path.join(__dirname,'metadata_browser_fixture.py')], {cwd:root,encoding:'utf8',timeout:30000});
+    assert.equal(result.status,0,result.stderr);
+    metadataReference=JSON.parse(result.stdout);
+  }
+  return structuredClone(metadataReference);
+}
+async function setupMetadata(t, intercept = async () => null) {
+  const reference=metadataFixture();
+  const response=await setup(t,async (url,request)=>{
+    const custom=await intercept(url,request,reference);if(custom)return custom;
+    if(url.pathname==='/api/evaluation-context')return {json:{csrf_token:'synthetic-token',date_policy:{early_year:1900,future_year:2027},timezones:['UTC','Europe/Vienna','America/New_York']}};
+    const match=url.pathname.match(/^\/api\/media\/(\d+)\/analysis$/);
+    if(match){const identity=url.searchParams.get('evaluation_id');const selected=identity===reference.year24.evaluation_id?reference.year24:identity===reference.year25.evaluation_id?reference.year25:reference.original;return {json:selected};}
+    if(url.pathname==='/api/media/10')return {json:{...reference.record,media:{...media[0],scan_status:'partial'}}};
+    if(url.pathname==='/api/media/10/files'){
+      const q=url.searchParams,identity=q.get('evaluation_id');
+      let rows=(identity===reference.year24.evaluation_id?reference.year24:identity===reference.year25.evaluation_id?reference.year25:reference.original).files;
+      if(q.get('period_filter'))rows=rows.filter(r=>r.period_state===q.get('period_filter'));
+      if(q.get('category'))rows=rows.filter(r=>r.category===q.get('category'));
+      if(q.get('keyword'))rows=rows.filter(r=>r.keyword_terms.includes(q.get('keyword')));
+      if(q.get('hits_only'))rows=rows.filter(r=>r.keyword_terms.length);
+      if(q.get('originals_only'))rows=rows.filter(r=>r.original_file);
+      if(q.get('source_filter'))rows=rows.filter(r=>r.keyword_sources.includes(q.get('source_filter')));
+      const offset=Number(q.get('offset')||0),files=rows.slice(offset,offset+1);
+      return {json:{files,total:rows.length,shown:files.length,offset,next_offset:offset+files.length,has_more:offset+files.length<rows.length}};
+    }
+    return null;
+  });
+  await open(response.page,10);
+  await response.page.waitForFunction(()=>Boolean(analysisData));
+  return {...response,reference};
+}
+async function selectMetadata(page,identity) {
+  await page.locator('#analysisSelection').selectOption(identity);
+  await page.waitForFunction(identity=>analysisData?.evaluation_id===identity,identity);
+}
+
+test('metadata UI matches exact backend counts, B/M/C/A and historic keyword sources',async t=>{
+  const {page,reference}=await setupMetadata(t);
+  assert.match(await page.locator('#analysisContext').textContent(),/kein Zeitraum gespeichert/);
+  await selectMetadata(page,reference.year24.evaluation_id);
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','5','3','1']);
+  const rows=await page.locator('#analysisTimestampRows tr').allTextContents();
+  assert.match(rows[0],/^B10/);assert.match(rows[1],/^M43/);assert.match(rows[3],/^A11/);
+  assert.match(await page.locator('#analysisQuality').textContent(),/UNVOLLSTÄNDIG.*Weitere Dateien können vorhanden sein/);
+  assert.match(await page.locator('#keywordStatistics').textContent(),/6.*GESPEICHERTE ZUORDNUNGEN/);
+  assert.match(await page.locator('#keywordStatistics').textContent(),/mindestens 3.*ORIGINALDATEIEN.*mindestens 1.*VIRTUELLE/);
+  assert.equal(await page.locator('#keywords [data-inventory-keyword="nothit"] b').textContent(),'0');
+  assert.deepEqual(await page.locator('#categories .bar-period-value').allTextContents(),['4','1','0']);
+  await selectMetadata(page,reference.year25.evaluation_id);
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','1','7','1']);
+  await selectMetadata(page,'');
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','0','0','9']);
+});
+
+test('metadata combined filters, pagination, sort and virtual timestamp notice retain context',async t=>{
+  const {page,reference,requests}=await setupMetadata(t);
+  await selectMetadata(page,reference.year24.evaluation_id);
+  await page.locator('#inventoryPeriod').selectOption('in');await page.locator('#inventoryCategory').selectOption('Dokumente');
+  await page.locator('#inventoryKeyword').selectOption('Rechnung');await page.locator('#inventoryScope').selectOption('original');
+  await page.locator('#inventoryApply').click();
+  await page.waitForFunction(()=>$('inventoryCount').textContent==='1 / 2 FUNDSTELLEN');
+  await page.locator('#inventoryMore').click();
+  await page.waitForFunction(()=>$('inventoryCount').textContent==='2 / 2 FUNDSTELLEN');
+  assert.equal(await page.locator('#inventoryFiles > tr').count(),2);
+  assert.match(await page.locator('#inventoryFiles').textContent(),/HISTORISCH MEHRDEUTIG/);
+  const query=new URLSearchParams(requests.filter(r=>r.path==='/api/media/10/files').at(-1).query);
+  assert.equal(query.get('evaluation_id'),reference.year24.evaluation_id);assert.equal(query.get('offset'),'1');
+  assert.equal(query.get('period_filter'),'in');assert.equal(query.get('category'),'Dokumente');assert.equal(query.get('keyword'),'Rechnung');
+  await page.locator('#inventorySort').selectOption('category');
+  await page.waitForFunction(()=>$('inventoryCount').textContent==='1 / 2 FUNDSTELLEN');
+  assert.match(requests.filter(r=>r.path==='/api/media/10/files').at(-1).query,/sort_by=category/);
+  await page.locator('#inventoryReset').click();
+  await page.locator('#inventoryPeriod').selectOption('unknown');await page.locator('#inventorySource').selectOption('virtual');
+  await page.locator('#inventoryApply').click();await page.waitForFunction(()=>$('inventoryCount').textContent==='1 / 1 FUNDSTELLEN');
+  assert.match(await page.locator('#inventoryFiles').textContent(),/Zeitraum nicht eigenständig bestimmbar/);
+  assert.equal(await page.locator('#inventoryFiles .file-time-details').count(),0);
+});
+
+test('metadata evaluation A-B-A rejects stale analysis and filtered file replies',async t=>{
+  const delayed=gate();let delay=false;
+  const {page,reference}=await setupMetadata(t,async(url,_req,ref)=>{
+    if(delay&&url.pathname==='/api/media/10/analysis'&&url.searchParams.get('evaluation_id')===ref.year24.evaluation_id){delay=false;await delayed.wait();return {json:{...ref.year24,statistics:{...ref.year24.statistics,in_period:999}}};}
+    return null;
+  });
+  delay=true;
+  await page.locator('#analysisSelection').selectOption(reference.year24.evaluation_id);await delayed.arrived;
+  await selectMetadata(page,reference.year25.evaluation_id);
+  await selectMetadata(page,reference.year24.evaluation_id);
+  delayed.release();await page.waitForTimeout(150);
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','5','3','1']);
+  const fileGate=gate();await page.route('**/api/media/10/files?*',async route=>{await fileGate.wait();await route.fulfill({json:{files:[{path:'STALE.txt'}],total:1,shown:1}});});
+  await page.locator('#inventoryApply').click();await fileGate.arrived;
+  await selectMetadata(page,reference.year25.evaluation_id);fileGate.release();await page.waitForTimeout(150);
+  assert.doesNotMatch(await page.locator('#inventoryFiles').textContent(),/STALE/);
+  assert.equal(await page.locator('#inventoryPeriod').inputValue(),'');
+});
+
+test('metadata create validates dates and explicit timezone, sends CSRF and unusual-year confirmation',async t=>{
+  let sent=null;
+  const {page,reference}=await setupMetadata(t,async(url,request,ref)=>{
+    if(request.method()==='POST'&&url.pathname.endsWith('/period-evaluations')){sent={body:request.postDataJSON(),headers:request.headers()};return {json:ref.year24,status:201};}
+    return null;
+  });
+  await page.locator('#openPeriodEvaluation').click();
+  await page.locator('#evaluationFrom').fill('2024-01-01');await page.locator('#evaluationTo').fill('2024-12-31');await page.locator('#evaluationOperator').fill('TEST');
+  await page.locator('#createPeriodEvaluation').click();assert.match(await page.locator('#evaluationValidation').textContent(),/IANA/);assert.equal(sent,null);
+  assert.deepEqual(await page.evaluate(()=>[validateDateRange('2023-02-29','2023-03-01',true).error.length>0,validateDateRange('20240-01-01','20240-12-31',true).error.length>0,validateDateRange('2025-01-01','2024-01-01',true).error.length>0,validateDateRange('2024-02-29','2024-02-29',true).error]),[true,true,true,'']);
+  await page.locator('#evaluationTimezone').fill('UTC');await page.locator('#evaluationFrom').fill('0202-01-01');await page.locator('#evaluationTo').fill('0202-12-31');
+  page.once('dialog',dialog=>dialog.dismiss());await page.locator('#createPeriodEvaluation').click();assert.equal(sent,null);
+  page.once('dialog',dialog=>dialog.accept());await page.locator('#createPeriodEvaluation').click();
+  await page.waitForFunction(()=>!$('periodEvaluationModal').open);
+  assert.equal(sent.headers['x-triage-csrf'],'synthetic-token');assert.equal(sent.body.date_warning_acknowledged,true);assert.equal(sent.body.timezone,'UTC');
+  assert.equal(sent.body.date_from,'0202-01-01');
+});
+
+test('metadata layout and creation dialog fit 1512, 1280, 1000 and 800 pixels',async t=>{
+  const {page,reference}=await setupMetadata(t);await selectMetadata(page,reference.year24.evaluation_id);
+  for(const width of [1512,1280,1000,800]){
+    await page.setViewportSize({width,height:1050});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`body at ${width}`);
+    for(const selector of ['#evaluationPanel','.analysis-table','#advancedInventoryFilters']){
+      const bounds=await page.locator(selector).boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width,`${selector} at ${width}`);
+    }
+    await page.locator('#openPeriodEvaluation').click();
+    const box=await page.locator('#periodEvaluationModal').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width&&box.y>=0&&box.y+box.height<=1050);
+    await page.locator('#closePeriodEvaluation').click();
+  }
+});
+
+test('metadata delayed analysis from previous medium cannot enter a new A-B-A view',async t=>{
+  const pending=gate();let hold=false;
+  const {page,reference}=await setupMetadata(t,async(url,_request,ref)=>{
+    if(hold&&url.pathname==='/api/media/10/analysis'){hold=false;await pending.wait();return {json:{...ref.year24,statistics:{...ref.year24.statistics,in_period:999}}};}
+    return null;
+  });
+  hold=true;
+  await page.locator('#analysisSelection').selectOption(reference.year24.evaluation_id);await pending.arrived;
+  await open(page,3);await page.waitForFunction(()=>Boolean(analysisData));
+  await open(page,10);await page.waitForFunction(()=>Boolean(analysisData));
+  pending.release();await page.waitForTimeout(150);
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','0','0','9']);
+  assert.equal(await page.locator('#analysisSelection').inputValue(),'');
+});
+
+test('metadata late creation response cannot select an evaluation of another view',async t=>{
+  const pending=gate();
+  const {page}=await setupMetadata(t,async(url,request,ref)=>{
+    if(request.method()==='POST'&&url.pathname.endsWith('/period-evaluations')){await pending.wait();return {status:201,json:ref.year24};}
+    return null;
+  });
+  await page.locator('#openPeriodEvaluation').click();
+  for(const [id,value] of [['evaluationFrom','2024-01-01'],['evaluationTo','2024-12-31'],['evaluationTimezone','UTC'],['evaluationOperator','TEST']])await page.locator('#'+id).fill(value);
+  await page.locator('#createPeriodEvaluation').click();await pending.arrived;
+  await page.evaluate(()=>showDashboard());await open(page,3);await page.waitForFunction(()=>Boolean(analysisData));
+  pending.release();await page.waitForTimeout(150);
+  assert.equal(await page.locator('#analysisSelection').inputValue(),'');
+  assert.equal(await page.locator('#periodEvaluationModal').isVisible(),false);
+  assert.deepEqual(await page.locator('#analysisCounts b').allTextContents(),['9','0','0','9']);
+});
+
+test('metadata timestamp contribution opens explorer with the active evaluation and original scope',async t=>{
+  const {page,reference,requests}=await setupMetadata(t);await selectMetadata(page,reference.year24.evaluation_id);
+  await page.locator('[data-timestamp-group="exclusive:A"]').click();
+  await page.waitForFunction(()=>Boolean(inventoryListState));
+  await page.waitForFunction(()=>$('inventoryCount').textContent.includes('FUNDSTELLEN'));
+  const query=new URLSearchParams(requests.filter(r=>r.path==='/api/media/10/files').at(-1).query);
+  assert.equal(query.get('timestamp_filter'),'exclusive:A');assert.equal(query.get('evaluation_id'),reference.year24.evaluation_id);assert.equal(query.get('originals_only'),'1');
+  assert.match(await page.locator('#inventoryTimestampFilter').textContent(),/A: ausschließlich/);
 });

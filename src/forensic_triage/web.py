@@ -10,6 +10,10 @@ import logging
 import math
 import os
 import re
+import secrets
+import sqlite3
+from datetime import date
+from zoneinfo import available_timezones
 import shlex
 import subprocess
 import tempfile
@@ -28,6 +32,8 @@ from .casefiles import CaseStore
 from .commands import run_command
 from .crypto_rules import bundled_rules as bundled_crypto_rules, load_rules as load_crypto_rules, save_rules as save_crypto_rules, seed_rules as seed_crypto_rules
 from . import diagnostics as diag
+from .browser_access import validate_request
+from .period import validate_period_submission
 from .keywords import PROFILE_ID_PATTERN, list_profiles, load_profile, save_profile
 from .iphone import discover_iphones
 from .android import discover_androids
@@ -642,6 +648,7 @@ class TriageHTTPServer(ThreadingHTTPServer):
         self.update_guard_file = Path(os.environ.get(
             "FORENSIC_TRIAGE_UPDATE_GUARD_FILE", "/run/forensic-triage-update-requested",
         ))
+        self.analysis_csrf_token = secrets.token_urlsafe(32)
         self.case_store = CaseStore(casefiles_root)
         self.scan_timeout_seconds = scan_timeout_seconds
         self.command_timeout_seconds = command_timeout_seconds
@@ -687,12 +694,13 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "Fallakte nicht gefunden."})
             return
         safe_case = str(detail["case"]["case_number"])
-        self.server.case_store.refresh_exports(safe_case)
-        case_dir = self.server.case_store.case_path(safe_case)
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for path in sorted(item for item in case_dir.rglob("*") if item.is_file()):
-                archive.write(path, arcname=f"TRIAGE-{safe_case}/{path.relative_to(case_dir)}")
+        with self.server.case_store._export_lock:
+            self.server.case_store.refresh_exports(safe_case)
+            case_dir = self.server.case_store.case_path(safe_case)
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for path in sorted(item for item in self.server.case_store.exportable_files(case_dir)):
+                    archive.write(path, arcname=f"TRIAGE-{safe_case}/{path.relative_to(case_dir)}")
         body = buffer.getvalue()
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/zip")
@@ -721,8 +729,56 @@ class TriageHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _analysis_access(self, mutation=False):
+        try:
+            validate_request(self.headers, self.server.analysis_csrf_token, mutation=mutation)
+            return True
+        except ValueError as exc:
+            self.close_connection = True
+            self._json(HTTPStatus.FORBIDDEN, {"error": str(exc)})
+            return False
+
+    def _metadata_request(self, route: str, *, mutation=False):
+        import re
+        match = re.fullmatch(r"/api/cases/([A-Za-z0-9][A-Za-z0-9_.-]{0,79})/media/([1-9][0-9]*)/period-evaluations", route)
+        detail = re.fullmatch(r"/api/media/([1-9][0-9]*)/analysis", route)
+        if route != "/api/evaluation-context" and not match and not detail:
+            return False
+        if not self._analysis_access(mutation):
+            return True
+        try:
+            if route == "/api/evaluation-context" and not mutation:
+                self._json(HTTPStatus.OK, {"csrf_token": self.server.analysis_csrf_token,
+                    "date_policy": {"early_year": 1900, "future_year": date.today().year + 1},
+                    "timezones": sorted(available_timezones())})
+            elif match and mutation:
+                payload = self._read_payload()
+                expected = {"operator", "date_from", "date_to", "timezone", "date_warning_acknowledged"}
+                if set(payload) - expected:
+                    raise ValueError("Unzulässige Auswertungsfelder; keine lokalen Pfade erlaubt.")
+                result = self.server.case_store.create_period_evaluation(match[1], int(match[2]),
+                    payload.get("operator"), payload.get("date_from"), payload.get("date_to"), payload.get("timezone"),
+                    date_warning_acknowledged=payload.get("date_warning_acknowledged") is True)
+                self._json(HTTPStatus.CREATED, result)
+            elif match:
+                self._json(HTTPStatus.OK, {"evaluations": self.server.case_store.list_period_evaluations(int(match[2]), match[1])})
+            elif detail and not mutation:
+                query = parse_qs(urlsplit(self.path).query)
+                self._json(HTTPStatus.OK, self.server.case_store.period_analysis(int(detail[1]), query.get("evaluation_id", [""])[0]))
+            else:
+                self._json(HTTPStatus.METHOD_NOT_ALLOWED, {"error": "Methode nicht zulässig."})
+        except KeyError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "Fall, Sichtung oder Auswertung nicht gefunden."})
+        except (ValueError, json.JSONDecodeError, RecursionError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+        except (OSError, sqlite3.DatabaseError):
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "Metadatenauswertung nicht verfügbar; Quelle oder Ablage prüfen."})
+        return True
+
     def do_GET(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if self._metadata_request(route):
+            return
         if route == "/api/status":
             try:
                 devices, device_error, _ = cached_media_discovery()
@@ -825,6 +881,8 @@ class TriageHandler(BaseHTTPRequestHandler):
         inventory_match = re.fullmatch(r"/api/media/(\d+)/files", route)
         if inventory_match:
             query = parse_qs(urlsplit(self.path).query)
+            if any(key in query for key in ("evaluation_id", "source_filter", "timestamp_filter", "hits_only", "originals_only", "analysis_view")) and not self._analysis_access():
+                return
             try:
                 result = self.server.case_store.file_inventory(
                     int(inventory_match.group(1)),
@@ -837,12 +895,16 @@ class TriageHandler(BaseHTTPRequestHandler):
                     archive_status=str(query.get("archive_status", [""])[0]),
                     period_filter=str(query.get("period_filter", [""])[0]),
                     sort_by=str(query.get("sort_by", [""])[0]),
+                    **{key: (query[key][0] == "1" if key in ("hits_only", "originals_only", "analysis_view") else query[key][0])
+                       for key in ("evaluation_id", "source_filter", "timestamp_filter", "hits_only", "originals_only", "analysis_view") if key in query},
                 )
                 self._json(HTTPStatus.OK, result)
             except KeyError as exc:
                 self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
-            except ValueError:
-                self._json(HTTPStatus.BAD_REQUEST, {"error": "Ungültiger Dateifilter oder ungültiges Limit."})
+            except ValueError as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            except (OSError, sqlite3.DatabaseError):
+                self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "Gespeichertes Dateiinventar nicht verfügbar."})
             return
         tree_match = re.fullmatch(r"/api/media/(\d+)/tree", route)
         if tree_match:
@@ -898,6 +960,8 @@ class TriageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = urlsplit(self.path).path
+        if self._metadata_request(route, mutation=True):
+            return
         if route == "/api/logs/mode":
             self._post_logs_mode()
             return
@@ -1048,6 +1112,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "Bearbeiterkürzel ist erforderlich."})
             return
         try:
+            validate_period_submission(date_from, date_to, payload.get("date_warning_acknowledged") is True)
             result = self.server.case_store.start_case(case_number, operator, date_from, date_to)
             set_active_case_session(result["case"]["case_number"], operator)
             self._json(HTTPStatus.OK, result)
@@ -1065,7 +1130,7 @@ class TriageHandler(BaseHTTPRequestHandler):
         global POWER_ACTION_REQUESTED
         try:
             payload = self._read_payload()
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (ValueError, json.JSONDecodeError, RecursionError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
         action = str(payload.get("action", ""))
@@ -1483,7 +1548,7 @@ class TriageHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, record)
         except KeyError as exc:
             self._json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (ValueError, json.JSONDecodeError, RecursionError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
 

@@ -32,3 +32,7 @@ Sommer- und Winterzeit werden durch `ZoneInfo` berücksichtigt. `UTC` ist eine g
 Der Scan speichert seinen Fallzeitraum, seine Zeitzone und seine Auswertung in `summary.json`, `files.csv` und dem Medien-Snapshot. Spätere Änderungen der Fallakte schreiben diese Scan-Artefakte nicht neu. `case.json` bildet dagegen den aktuellen Fallzustand ab.
 
 Coverage zählt einen Timestamp als verfügbar, wenn er technisch als Epoch-Wert interpretierbar ist. Fehlende und ungültige Werte werden getrennt behandelt. Es gibt keine künstlichen Jahresgrenzen. Containerinhalte werden nicht mit dem Zeitstempel des Containerdateieintrags als eigene Dateien bewertet. Android- und iPhone-Schnellscans inventarisieren keine Dateien; sie speichern den Zeitraum nur als historischen Kontext und kennzeichnen die Auswertung als `not_applicable`.
+
+## Nachträgliche Auswertungen ab Alpha 86
+
+Die ursprüngliche Scanregel und der Scanner bleiben unverändert. Die neue Metadatenansicht trennt bekannte negative Treffer von unbekannter Zuordnung, macht B/M/C/A-Beiträge und Zeitqualität sichtbar und erlaubt unveränderliche spätere Versionen mit ausdrücklich gewählter IANA-Zone. Historische unsichere Zeitzonen werden nicht stillschweigend ersetzt. Details zu Bedienung, Archivzeiten, Stichwörtern, Speicherung, API-Schutz und Grenzen: [Nachträgliche Metadatenauswertung](metadata-evaluations.md).
